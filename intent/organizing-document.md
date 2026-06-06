@@ -24,14 +24,15 @@ by `material/hypercore.md` and `material/check.sh`, divided along one axis:
 
 The **governed work** -- durable child nodes and mounted work under this root:
 
-- **work-home** -- the named child node at `material/work-home/`, with its own `intent/`
-  and `material/`, that mounts the operator's work folders and governs them within itself.
-  work-home holds zero mounted work folders yet.
+- **home** -- the named child node at `material/home/`, with its own `intent/` and
+  `material/`, that mounts linked project nodes and governs them within itself. home holds
+  zero mounted project nodes yet.
 
 Each segment has an intent document at `intent/<segment>.md` and a machine-statements file
-at `intent/machine-statements/<segment>.md`. A child node is housed under `material/` and
-carries its own `intent/` plus `material/`; a mounted work folder is in turn a child node of
-work-home, a separate corpus governed within its own repository.
+at `intent/machine-statements/<segment>.md`. A child node is housed under `material/` or
+reached through a settled mount path, carrying its own `intent/` plus `material/`; a
+mounted project is a child node of home, a separate corpus exposed through
+`material/home/material/<name>` as a symbolic link to its own repository.
 
 This is two groups, not a tag: nothing is partitioned twice. A tag is added only the first
 time a real second partition of the whole corpus forces it, not before.

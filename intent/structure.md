@@ -6,9 +6,11 @@ the intent is divided into segments; there is no universal taxonomy, so each nod
 segments that fit its work.
 the organizing document names this node's segments and how the intent is divided.
 each segment has one intent document holding that segment's current intended state.
-material is either leaf code or child nodes housed by this node.
-a child node is a governed node housed in its parent's material, with its own `intent/` and
-`material/`, and nests to any depth.
+material is leaf code, child nodes housed by this node, or settled external references to
+child nodes.
+a child node is a governed node housed in its parent's material, or reached through a
+settled external reference in that material, with its own `intent/` and `material/`, and
+nests to any depth.
 childness is bounded freedom: the parent's intent bounds the child only through statements
 whose reach includes that child.
 a parent intent statement defines its own reach: node-local, a named child, all direct
@@ -35,10 +37,11 @@ the organizing document is `intent/organizing-document.md`.
 each segment's intent document is `intent/<segment>.md`.
 each segment's machine statements are in `intent/machine-statements/<segment>.md`.
 the methodology prose is materialized in `material/hypercore.md`.
-a child node is inlined at `material/<name>/` unless a machine statement settles it as an
-external reference.
+a child node is inlined at `material/<name>/` unless a machine statement settles a mount
+path there as an external reference.
 `material/check.sh` checks every node in the tree -- the root and each child node, a child
-node being any directory holding both `intent/` and `material/`.
+node being any directory or settled linked entry point holding both `intent/` and
+`material/`.
 
 ---
 endorsed by qqp-dev

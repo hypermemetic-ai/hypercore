@@ -46,7 +46,8 @@ context.
 `material/adapter/loop.sh` accepts a node-local work name in the addressed node, not a
 slash-separated child path, for new work.
 the root node is the default addressed node.
-`loop.sh -C <node-path> <gate> <work-name>` addresses work in a child node.
+`loop.sh -C <node-path> <gate> <work-name>` addresses work in a child node, including a
+linked mounted child when `<node-path>` is its mount path.
 `loop.sh start <work-name>` creates a work node directly under the addressed node's
 `material/`.
 `loop.sh frame`, `signoff`, `execute`, and `status` resolve the addressed node-local work

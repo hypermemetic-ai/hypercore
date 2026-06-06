@@ -487,7 +487,7 @@ cmd_execute() {
     check_green || die "check.sh red after implement — drift, stopping"
     printf 'check.sh green\n'
   fi
-  run_gate check "Read Bash" resume "$sid" \
+  run_gate check "Read Write Bash" resume "$sid" \
     "Run the sweep on the built node-local work $work_name in addressed node $NODE_REL at $active_rel against the whole corpus and work in flight across the node tree, including related work named by the frame; return coherent (bool) and notes."
 
   # honor the sweep's flag: read the check gate's verdict sentinel and, when it flags the

@@ -58,10 +58,12 @@ the operator's **sign-off**:
   parent amendments current.
 
 A work name is a node-local `NNN-slug`. The root node is assumed when no node is named.
-`loop.sh -C material/work-home start 001-example` addresses work in the work-home child
-node. Slash-separated child-change paths and five-file change folders are legacy history
-when retained, not the route for new work; legacy nested child-change archives may be read
-if present, but the orchestrator no longer scaffolds them.
+`loop.sh -C material/home start 001-example` addresses work in the home child node, and
+`loop.sh -C material/home/material/<name> start 001-example` addresses work through a
+linked mounted node's mount path. Slash-separated child-change paths and five-file change
+folders are legacy history when retained, not the route for new work; legacy nested
+child-change archives may be read if present, but the orchestrator no longer scaffolds
+them.
 
 The gates and their order are the loop, already intent (`intent/loop.md`); the
 orchestrator only operationalizes them and blocks a gate whose preconditions fail.

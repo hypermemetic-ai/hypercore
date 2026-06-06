@@ -13,8 +13,8 @@ truth.
 a work node may be temporary, durable, adopted, shelved, abandoned, or indefinitely active.
 purpose, rationale, proof state, route, sign-off, and adoption claims are recoverable as
 intent or material within the work node; they are not universal required filenames.
-root-directed active work lives directly under root `material/` as a sibling to
-`work-home`, not under `work-home`.
+root-directed active work lives directly under root `material/` as a sibling to `home`,
+not under `home`.
 the root active-work contract spans root child work nodes and grants them the general
 ability to parent their own child work nodes unless their own contract narrows that
 freedom.

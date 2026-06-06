@@ -1,0 +1,123 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$SCRIPT_DIR/../.." && pwd -P)"
+CALL_PWD="$(pwd -P)"
+MOUNT_DIR="$ROOT/material/home/material"
+
+die() {
+  printf 'home: %s\n' "$1" >&2
+  exit 1
+}
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  material/bin/home greenfield <name> <target-path>
+  material/bin/home help
+
+Create a greenfield external project repository and mount it under:
+  material/home/material/<name>
+
+The target gets only its local node shape:
+  intent/organizing-document.md
+  material/
+
+No root methodology prose, root check script, root adapter, or root AGENTS.md is copied.
+Inherited methodology is available when the operator or machine works through the mount
+path in hypercore. Directly opening the external target path only sees the target's local
+node shape.
+USAGE
+}
+
+validate_mount_name() {
+  local name=$1
+  [ -n "$name" ] || die "missing mount name"
+  [[ "$name" != */* && "$name" != *\\* ]] || die "mount name must not be a path: $name"
+  [[ "$name" != "." && "$name" != ".." ]] || die "mount name must not be $name"
+  [[ "$name" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] \
+    || die "mount name must start with a letter or number and contain only letters, numbers, dots, underscores, and hyphens: $name"
+}
+
+absolute_target_path() {
+  local path=$1
+  case "$path" in
+    /*) realpath -m -- "$path" ;;
+    *)  realpath -m -- "$CALL_PWD/$path" ;;
+  esac
+}
+
+ensure_target_outside_root() {
+  local target=$1
+  case "$target" in
+    "$ROOT"|"$ROOT"/*)
+      die "target path must be outside the hypercore root: $target"
+      ;;
+  esac
+}
+
+ensure_empty_target() {
+  local target=$1 first
+  if [ -e "$target" ]; then
+    [ -d "$target" ] || die "target exists and is not a directory: $target"
+    first="$(find "$target" -mindepth 1 -maxdepth 1 -print -quit 2>/dev/null || true)"
+    [ -z "$first" ] || die "target directory is not empty: $target"
+  else
+    mkdir -p "$target"
+  fi
+}
+
+write_organizing_document() {
+  local target=$1 name=$2
+  mkdir -p "$target/intent" "$target/material"
+  cat > "$target/intent/organizing-document.md" <<EOF
+# organizing document
+
+This node is the greenfield project mounted as \`$name\` through hypercore home.
+It starts with only its local node shape. Project-specific intent segments are added by
+later signed work in this node.
+EOF
+}
+
+cmd_greenfield() {
+  local name=${1:-} target_arg=${2:-} target mount_path
+  [ -n "$name" ] && [ -n "$target_arg" ] && [ -z "${3:-}" ] \
+    || die "usage: material/bin/home greenfield <name> <target-path>"
+  validate_mount_name "$name"
+  command -v git >/dev/null 2>&1 || die "git is required"
+  command -v realpath >/dev/null 2>&1 || die "realpath is required"
+
+  target="$(absolute_target_path "$target_arg")"
+  ensure_target_outside_root "$target"
+
+  mkdir -p "$MOUNT_DIR"
+  mount_path="$MOUNT_DIR/$name"
+  [ ! -e "$mount_path" ] && [ ! -L "$mount_path" ] \
+    || die "mount path already exists: ${mount_path#"$ROOT"/}"
+
+  ensure_empty_target "$target"
+  git -C "$target" init --quiet
+  write_organizing_document "$target" "$name"
+  ln -s "$target" "$mount_path"
+
+  printf 'created %s\n' "$target"
+  printf 'mounted %s -> %s\n' "${mount_path#"$ROOT"/}" "$target"
+}
+
+case "${1:-}" in
+  greenfield)
+    shift
+    cmd_greenfield "$@"
+    ;;
+  help|-h|--help)
+    usage
+    ;;
+  "")
+    usage >&2
+    exit 2
+    ;;
+  *)
+    die "unknown command: $1"
+    ;;
+esac
