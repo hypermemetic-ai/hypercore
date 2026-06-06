@@ -1,0 +1,39 @@
+# organizing document
+
+hypercore's intent is held in two groups of segments, one document each.
+
+The **methodology** -- the ten segments describing the rules themselves, leaf-materialized
+by `material/hypercore.md` and `material/check.sh`, divided along one axis:
+
+- **foundations** -- the premise, the three properties, and what the intent is.
+- **collaboration** -- how operator and machine work together: role partition, common
+  ground, reliance calibration, control, feedback, handoff, and graceful failure.
+- **structure** -- the two trees, how the corpus is laid out, and how a node nests inside
+  another.
+- **statements** -- what a statement is, and ownership.
+- **endorsement** -- who stands behind a set, per segment and per work, and where the node
+  boundary stops it.
+- **active-work** -- the work-node lifecycle and the root contract for active child work.
+- **loop** -- the five gates a work node goes through.
+- **sweep** -- how coherence is checked across the corpus, work in flight, proposed parent
+  amendments, and node boundaries.
+- **adapter** -- the binding between a harness and the loop: what the harness loads at the
+  start of work, promising agreement and enforcing it as a rigid workflow. Materialized at
+  the root by the methodology prose, the harness adapters (`CLAUDE.md` for Claude Code and
+  `AGENTS.md` for Codex), and the orchestrator under `material/adapter/`.
+- **hardening** -- how hypercore examines every segment, node boundary, adapter, and
+  materialization against real-world use before calling it hardened.
+
+The **governed work** -- durable child nodes and mounted work under this root:
+
+- **work-home** -- the named child node at `material/work-home/`, with its own `intent/`
+  and `material/`, that mounts the operator's work folders and governs them within itself.
+  work-home holds zero mounted work folders yet.
+
+Each segment has an intent document at `intent/<segment>.md` and a machine-statements file
+at `intent/machine-statements/<segment>.md`. A child node is housed under `material/` and
+carries its own `intent/` plus `material/`; a mounted work folder is in turn a child node of
+work-home, a separate corpus governed within its own repository.
+
+This is two groups, not a tag: nothing is partitioned twice. A tag is added only the first
+time a real second partition of the whole corpus forces it, not before.

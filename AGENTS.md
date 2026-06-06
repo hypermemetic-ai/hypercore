@@ -1,0 +1,1 @@
+material/adapter/codex.md

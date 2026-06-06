@@ -1,1 +1,1 @@
-implementation/adapter/claude-code.md
+material/adapter/claude-code.md
