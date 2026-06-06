@@ -2,4 +2,4 @@
 set -euo pipefail
 
 cd "$(dirname "$0")"
-exec ./material/adapter/loop.sh signoff "$@"
+exec ./adapter/loop.sh signoff "$@"

@@ -4,7 +4,7 @@ a work address names the addressed node and one node-local work name in that nod
 when no node is named, the root node is assumed.
 `loop.sh -C <node-path> <gate> <work-name>` addresses work in a child node.
 `loop.sh start <work-name>` creates a work node directly under the addressed node's
-`material/`.
+corpus.
 `loop.sh frame`, `signoff`, `execute`, and `status` resolve the addressed node-local work and
 act only on that addressed work.
 from the root, `./signoff` invokes the root loop sign-off gate and preserves any explicit

@@ -2,17 +2,12 @@
 # hypercore structural check.
 #
 # Re-runs the mechanically-checkable statements of the intent against this
-# corpus — the root node, and every child node nested under it. A node is any
-# directory holding both intent/ and material/; each child is a node too, so the
-# same checks run at every depth. Each line names the statement it
-# holds. A non-zero exit is drift — a check that fell, at any depth.
-#
-# The semantic statements (one name one concept; a statement strong enough to
-# be wrong; the sweep's graded read, now across node boundaries too) are held
-# by the sweep, not by this script.
+# corpus: the root node and every current child node nested under it. A node is
+# any current corpus entry point holding intent/. Each line names the statement
+# it holds. A non-zero exit is drift.
 
 set -u
-cd "$(dirname "$0")/.." || exit 2
+cd "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" || exit 2
 root=$(pwd)
 
 fail=0
@@ -128,17 +123,13 @@ check_work_node_history_collection() {
     [ -d "$d/intent" ] \
       && ok "$label/$name has intent/" \
       || bad "$label/$name missing intent/"
-    [ -d "$d/material" ] \
-      && ok "$label/$name has material/" \
-      || bad "$label/$name missing material/"
   done
 }
 
 check_history() {
-  local node=$1 label=$2 legacy_changes historical_changes work_history adopted shelved
+  local node=$1 label=$2 legacy_changes historical_changes adopted shelved
   legacy_changes=$node/intent/changes
   historical_changes=$node/intent/history/change-folders
-  work_history=$node/intent/history
   adopted=$node/intent/history/adopted
   shelved=$node/intent/history/shelved
 
@@ -155,40 +146,80 @@ check_history() {
 }
 
 node_intent_dirs() {
-  local home_mount_dir="$root/material/home/material" mount
+  local mount
   {
-    find "$root" -type d -name intent
-    if [ -d "$home_mount_dir" ]; then
-      for mount in "$home_mount_dir"/*; do
+    find "$root" \
+      \( -path "$root/.git" \
+      -o -path "$root/.agents" \
+      -o -path "$root/.codex" \
+      -o -path "$root/.claude" \
+      -o -path "$root/material" \
+      -o -path "*/intent/history" \) -prune \
+      -o -type d -name intent -print
+
+    if [ -d "$root/home" ]; then
+      for mount in "$root/home"/*; do
         [ -L "$mount" ] || continue
-        [ -d "$mount/intent" ] && [ -d "$mount/material" ] || continue
+        [ -d "$mount/intent" ] || continue
         printf '%s\n' "$mount/intent"
-        find "$mount/material" -type d -name intent 2>/dev/null
+        find -H "$mount" \
+          \( -path "*/.git" \
+          -o -path "*/.agents" \
+          -o -path "*/.codex" \
+          -o -path "*/.claude" \
+          -o -path "*/intent/history" \) -prune \
+          -o -type d -name intent -print 2>/dev/null
       done
     fi
   } | sort -u
 }
 
-setup_home_greenfield_self_test() {
-  local cli="$root/material/bin/home" tmp name target mount target_link nonempty_target
-  local inside_target repeated_target retired_home_dir
-  retired_home_dir="$root/material/work"-home
+tracked_live_material_paths() {
+  command -v git >/dev/null 2>&1 || return 0
+  git -C "$root" rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 0
+  git -C "$root" ls-files | while IFS= read -r p; do
+    [ -e "$root/$p" ] || [ -L "$root/$p" ] || continue
+    case "$p" in
+      material/001-flatten-material-tree/*) ;;
+      material/check.sh|material/adapter/gates/*)
+        [ ! -e "$root/.hypercore-flatten-final-cleanup" ] || printf '%s\n' "$p"
+        ;;
+      material|material/*|*/material|*/material/*) printf '%s\n' "$p" ;;
+    esac
+  done
+}
 
-  echo "root — home greenfield"
-  [ -d "$root/material/home" ] \
-    && ok "material/home child node exists" \
-    || bad "material/home child node missing"
-  [ -d "$root/material/home/material" ] \
-    && ok "material/home/material mount point exists" \
-    || bad "material/home/material mount point missing"
-  require_absent "$retired_home_dir" \
-    "retired material home path is absent"
+check_no_tracked_live_material_paths() {
+  local paths
+  paths="$(tracked_live_material_paths)"
+  if [ -z "$paths" ]; then
+    ok "tracked live material/ paths are retired"
+  else
+    bad "tracked live material/ paths remain: $(printf '%s' "$paths" | tr '\n' ' ')"
+  fi
+}
+
+setup_home_greenfield_self_test() {
+  local cli="$root/bin/home" tmp name target mount target_link nonempty_target
+  local inside_target repeated_target
+
+  echo "root - home greenfield"
+  [ -d "$root/home/intent" ] \
+    && ok "home child node exists with intent/" \
+    || bad "home child node missing intent/"
+  [ -f "$root/home/README.md" ] \
+    && ok "home README exists at the flat mount surface" \
+    || bad "home README missing ($root/home/README.md)"
+  require_absent "$root/material/home" \
+    "retired material/home path is absent"
+  require_absent "$root/home/material" \
+    "retired home/material mount point is absent"
   [ -x "$cli" ] \
-    && ok "material/bin/home exists and is executable" \
-    || bad "material/bin/home is missing or not executable"
+    && ok "bin/home exists and is executable" \
+    || bad "bin/home is missing or not executable"
   [ -f "$cli" ] || return
   require_text "$cli" \
-    "material/home/material/<name>" \
+    "home/<name>" \
     "home CLI explains the linked mount path"
 
   tmp="$(mktemp -d "${TMPDIR:-/tmp}/hypercore-home-check.XXXXXX")" \
@@ -196,18 +227,18 @@ setup_home_greenfield_self_test() {
   HOME_GREENFIELD_CHECK_TMP="$tmp"
   name="check-$(basename "$tmp")"
   target="$tmp/project"
-  mount="$root/material/home/material/$name"
+  mount="$root/home/$name"
   HOME_GREENFIELD_CHECK_MOUNT="$mount"
 
   "$cli" greenfield "../bad" "$tmp/bad-name-target" >/dev/null 2>"$tmp/bad-name.err" \
     && bad "greenfield rejects path-like mount names" \
     || ok "greenfield rejects path-like mount names"
 
-  inside_target="$root/material/home/material/$name-inside-target"
+  inside_target="$root/home/$name-inside-target"
   "$cli" greenfield "$name-inside" "$inside_target" >/dev/null 2>"$tmp/inside-target.err" \
     && bad "greenfield rejects targets inside the hypercore root" \
     || ok "greenfield rejects targets inside the hypercore root"
-  rm -f "$root/material/home/material/$name-inside"
+  rm -f "$root/home/$name-inside"
 
   nonempty_target="$tmp/nonempty"
   mkdir -p "$nonempty_target"
@@ -215,7 +246,7 @@ setup_home_greenfield_self_test() {
   "$cli" greenfield "$name-nonempty" "$nonempty_target" >/dev/null 2>"$tmp/nonempty.err" \
     && bad "greenfield refuses non-empty targets" \
     || ok "greenfield refuses non-empty targets"
-  rm -f "$root/material/home/material/$name-nonempty"
+  rm -f "$root/home/$name-nonempty"
 
   if "$cli" greenfield "$name" "$target" >/dev/null 2>"$tmp/greenfield.err"; then
     ok "greenfield creates a temporary external project"
@@ -235,9 +266,8 @@ setup_home_greenfield_self_test() {
   [ -f "$target/intent/organizing-document.md" ] \
     && ok "greenfield target has a local organizing document" \
     || bad "greenfield target missing intent/organizing-document.md"
-  [ -d "$target/material" ] \
-    && ok "greenfield target has a local material tree" \
-    || bad "greenfield target missing material/"
+  require_absent "$target/material" \
+    "greenfield target has no material/ tree"
   [ -L "$mount" ] \
     && ok "greenfield creates a mount symlink" \
     || bad "greenfield mount symlink missing"
@@ -248,43 +278,41 @@ setup_home_greenfield_self_test() {
   node_intent_dirs | grep -Fxq "$mount/intent" \
     && ok "linked mounted project is discoverable as a child node" \
     || bad "linked mounted project is not discoverable as a child node"
-  [ ! -e "$target/material/hypercore.md" ] \
+  [ ! -e "$target/hypercore.md" ] \
     && ok "greenfield does not copy root methodology prose" \
-    || bad "greenfield copied material/hypercore.md"
-  [ ! -e "$target/material/check.sh" ] \
+    || bad "greenfield copied hypercore.md"
+  [ ! -e "$target/check.sh" ] \
     && ok "greenfield does not copy the root check script" \
-    || bad "greenfield copied material/check.sh"
-  [ ! -e "$target/material/adapter" ] \
+    || bad "greenfield copied check.sh"
+  [ ! -e "$target/adapter" ] \
     && ok "greenfield does not copy the root adapter directory" \
-    || bad "greenfield copied material/adapter"
+    || bad "greenfield copied adapter/"
+  [ ! -e "$target/bin" ] \
+    && ok "greenfield does not copy the root bin directory" \
+    || bad "greenfield copied bin/"
   [ ! -e "$target/AGENTS.md" ] \
     && ok "greenfield does not copy the root adapter entry point" \
     || bad "greenfield copied AGENTS.md"
 }
 
-# --- one node: its organizing document, segments, and history are well-formed ---
 check_node() {
-  local node=$1 label=$2
-  local intent=$node/intent
-  local ms=$intent/machine-statements
+  local node=$1 label=$2 intent=$1/intent ms=$1/intent/machine-statements
+  local segs s
 
-  echo "$label — structure"
+  echo "$label - structure"
   [ ! -e "$node/documentation" ] && ok "documentation tree is retired" \
     || bad "documentation tree remains at $node/documentation"
   [ ! -e "$node/implementation" ] && ok "implementation tree is retired" \
     || bad "implementation tree remains at $node/implementation"
-  [ -d "$node/material" ] && ok "material tree exists" \
-    || bad "material tree missing ($node/material)"
+  [ -d "$intent" ] && ok "intent tree exists" \
+    || bad "intent tree missing ($intent)"
   [ -f "$intent/organizing-document.md" ] && ok "organizing document exists" \
     || bad "organizing document missing ($intent/organizing-document.md)"
 
-  # segments = intent documents other than the organizing document
-  local segs
   segs=$(find "$intent" -maxdepth 1 -name '*.md' ! -name 'organizing-document.md' \
            -printf '%f\n' 2>/dev/null | sed 's/\.md$//' | sort)
 
-  echo "$label — segments"
-  local s
+  echo "$label - segments"
   for s in $segs; do
     [ -f "$ms/$s.md" ] \
       && ok "$s has a machine-statements file" \
@@ -297,17 +325,19 @@ check_node() {
       || bad "$s has no foot endorsement"
   done
 
-  echo "$label — history"
+  echo "$label - history"
   check_history "$node" "$label"
 }
 
-# --- the methodology node alone must materialize its prose ---
-echo "root — methodology"
-[ -f "$root/material/hypercore.md" ] && ok "material/hypercore.md exists" \
-  || bad "material/hypercore.md missing"
-require_text "$root/material/hypercore.md" \
+echo "root - methodology"
+[ -f "$root/hypercore.md" ] && ok "hypercore.md exists" \
+  || bad "hypercore.md missing"
+require_text "$root/hypercore.md" \
   "## collaboration" \
-  "material/hypercore.md materializes collaboration"
+  "hypercore.md materializes collaboration"
+[ -x "$root/check.sh" ] \
+  && ok "check.sh exists and is executable" \
+  || bad "check.sh is missing or not executable"
 if [ -f "$root/intent/collaboration.md" ] ||
    grep -Fq -- "- **collaboration**" "$root/intent/organizing-document.md"; then
   require_text "$root/intent/organizing-document.md" \
@@ -324,16 +354,32 @@ if [ -f "$root/intent/collaboration.md" ] ||
     || bad "intent/machine-statements/collaboration.md missing"
 fi
 
-echo "root — adapter design phase"
+echo "root - flat paths"
+check_no_tracked_live_material_paths
+[ -f "$root/adapter/codex.md" ] && ok "adapter/codex.md exists" \
+  || bad "adapter/codex.md missing"
+[ -x "$root/adapter/loop.sh" ] && ok "adapter/loop.sh exists and is executable" \
+  || bad "adapter/loop.sh is missing or not executable"
+for gate in orient frame implement check archive; do
+  [ -f "$root/adapter/gates/$gate.md" ] \
+    && ok "adapter/gates/$gate.md exists" \
+    || bad "adapter/gates/$gate.md missing"
+done
+[ -d "$root/home/intent" ] && ok "home/intent/ exists" \
+  || bad "home/intent/ missing"
+[ -f "$root/home/README.md" ] && ok "home/README.md exists" \
+  || bad "home/README.md missing"
+
+echo "root - adapter design phase"
 retired_entry="$root"/C'LAUDE.md'
-retired_prose="$root/material/adapter"/clau'de-code.md'
+retired_prose="$root/adapter"/clau'de-code.md'
 retired_local_state=.clau'de/'
 require_text "$root/AGENTS.md" \
-  "material/hypercore.md" \
-  "AGENTS.md routes Codex into the renamed material tree"
+  "hypercore.md" \
+  "AGENTS.md routes Codex into the methodology prose"
 require_text "$root/AGENTS.md" \
-  "material/adapter/loop.sh" \
-  "AGENTS.md routes Codex into the renamed loop"
+  "adapter/loop.sh" \
+  "AGENTS.md routes Codex into the loop"
 require_absent "$retired_entry" \
   "retired root adapter entry point is absent"
 require_absent "$retired_prose" \
@@ -341,71 +387,74 @@ require_absent "$retired_prose" \
 reject_text "$root/.gitignore" \
   "$retired_local_state" \
   "tracked ignore material does not hide retired local state"
-require_text "$root/material/adapter/gates/orient.md" \
+require_text "$root/adapter/gates/orient.md" \
   "open direction that needs operator input" \
   "orient gate names open direction for operator input"
-require_text "$root/material/adapter/gates/orient.md" \
+require_text "$root/adapter/gates/orient.md" \
   "addressed node" \
   "orient gate names the addressed node"
-require_text "$root/material/adapter/gates/orient.md" \
+require_text "$root/adapter/gates/orient.md" \
   "node-local work name" \
   "orient gate names the node-local work name"
-require_text "$root/material/adapter/gates/orient.md" \
+require_text "$root/adapter/gates/orient.md" \
   "target segments" \
   "orient gate names target segments"
-require_text "$root/material/adapter/gates/orient.md" \
+require_text "$root/adapter/gates/orient.md" \
   "work in flight" \
   "orient gate names work in flight"
-require_text "$root/material/adapter/gates/frame.md" \
+require_text "$root/adapter/gates/frame.md" \
   "problem, constraints, and decision surface" \
   "frame gate names the problem, constraints, and decision surface"
-require_text "$root/material/adapter/gates/frame.md" \
+require_text "$root/adapter/gates/frame.md" \
   "operator direction is missing" \
   "frame gate handles missing operator direction"
-require_text "$root/material/adapter/gates/frame.md" \
+require_text "$root/adapter/gates/frame.md" \
   "wait for operator direction" \
   "frame gate waits rather than inventing a route"
-require_text "$root/material/adapter/codex.md" \
+require_text "$root/adapter/gates/check.md" \
+  "./check.sh" \
+  "check gate names the flat check command"
+require_text "$root/adapter/codex.md" \
   "design-phase collaboration" \
   "Codex adapter describes phase one as design-phase collaboration"
-require_text "$root/material/adapter/codex.md" \
+require_text "$root/adapter/codex.md" \
   "decision surface for operator direction" \
   "Codex adapter carries the decision surface"
-require_text "$root/material/adapter/codex.md" \
+require_text "$root/adapter/codex.md" \
   "node-local work name" \
   "Codex adapter carries node-local work wording"
-require_text "$root/material/adapter/codex.md" \
+require_text "$root/adapter/codex.md" \
   "adopts or shelves the work according to the signed frame" \
   "Codex adapter describes adoption or shelving"
-require_text "$root/material/adapter/codex.md" \
+require_text "$root/adapter/codex.md" \
   "./signoff" \
   "Codex adapter names the root sign-off helper"
-require_text "$root/material/adapter/loop.sh" \
+require_text "$root/adapter/loop.sh" \
   'LOOP_HARNESS="${LOOP_HARNESS:-codex}"' \
   "loop defaults phase two to Codex"
-reject_text "$root/material/adapter/loop.sh" \
+reject_text "$root/adapter/loop.sh" \
   C'LAUDE_BIN' \
   "loop carries no retired binary setting"
-reject_text "$root/material/adapter/loop.sh" \
+reject_text "$root/adapter/loop.sh" \
   "LOOP_BUDGET_USD" \
   "loop carries no retired budget setting"
-reject_text "$root/material/adapter/loop.sh" \
+reject_text "$root/adapter/loop.sh" \
   run_clau'de_gate' \
   "loop carries no retired gate runner"
-require_text "$root/material/adapter/loop.sh" \
+require_text "$root/adapter/loop.sh" \
   "infer_signoff_work_name" \
   "loop can infer the single signable work node"
-require_text "$root/material/adapter/loop.sh" \
+require_text "$root/adapter/loop.sh" \
   "HYPERCORE_OPERATOR" \
   "loop can infer sign-off operator from the environment"
-require_text "$root/material/adapter/loop.sh" \
+require_text "$root/adapter/loop.sh" \
   "multiple frame-complete unsigned work nodes" \
   "loop blocks ambiguous work inference"
-require_text "$root/material/adapter/loop.sh" \
+require_text "$root/adapter/loop.sh" \
   "multiple current intent foot endorsements" \
   "loop blocks ambiguous operator inference"
 require_text "$root/signoff" \
-  'material/adapter/loop.sh' \
+  'adapter/loop.sh' \
   "root signoff helper dispatches to the loop"
 require_text "$root/signoff" \
   'signoff "$@"' \
@@ -413,20 +462,31 @@ require_text "$root/signoff" \
 [ -x "$root/signoff" ] \
   && ok "root signoff helper is executable" \
   || bad "root signoff helper is not executable ($root/signoff)"
-require_text "$root/material/adapter/loop.sh" \
+require_text "$root/adapter/loop.sh" \
   'frame/signoff.md' \
   "loop keys new work sign-off to the signoff artifact"
-reject_text "$root/material/adapter/loop.sh" \
+reject_text "$root/adapter/loop.sh" \
   "grep -Rsl '^signed-off-by:'" \
   "loop does not trust arbitrary frame text as sign-off"
 
-# --- the root node, then every child node nested anywhere beneath it ---
+echo "root - retired user-facing path examples"
+for file in "$root/README.md" "$root/hypercore.md" "$root/adapter/codex.md" \
+  "$root/adapter/gates/orient.md" "$root/adapter/gates/frame.md" \
+  "$root/adapter/gates/implement.md" "$root/adapter/gates/check.md" \
+  "$root/adapter/gates/archive.md" "$root/bin/home" "$root/home/README.md" \
+  "$root/signoff"; do
+  reject_text "$file" "material/hypercore.md" "$(basename "$file") does not point to material/hypercore.md"
+  reject_text "$file" "material/check.sh" "$(basename "$file") does not point to material/check.sh"
+  reject_text "$file" "material/adapter" "$(basename "$file") does not point to material/adapter"
+  reject_text "$file" "material/home" "$(basename "$file") does not point to material/home"
+  reject_text "$file" "material/bin/home" "$(basename "$file") does not point to material/bin/home"
+done
+
 setup_home_greenfield_self_test
 check_node "$root" "root"
 while IFS= read -r d; do
   node=$(dirname "$d")
-  [ "$node" = "$root" ] && continue            # the root is checked above
-  [ -d "$node/material" ] || continue          # a node has both trees
+  [ "$node" = "$root" ] && continue
   check_node "$node" "${node#"$root"/}"
 done < <(node_intent_dirs)
 cleanup_home_greenfield_self_test
@@ -435,7 +495,7 @@ HOME_GREENFIELD_CHECK_MOUNT=
 
 echo
 if [ $fail -eq 0 ]; then
-  echo "all structural statements hold — root and every child node."
+  echo "all structural statements hold - root and every current child node."
 else
   echo "drift: a structural check fell."
 fi

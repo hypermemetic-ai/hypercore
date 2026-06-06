@@ -1,1 +1,1 @@
-material/adapter/codex.md
+adapter/codex.md

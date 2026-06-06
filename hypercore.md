@@ -52,8 +52,8 @@ become intent, proof, machine statements, or debt.
 
 ## nodes
 
-A node is a governed corpus. The root is a node; a child under `material/` can be a node
-too.
+A node is a governed corpus. The root is a node; any node-local corpus entry with
+`intent/` can be a child node too.
 
 ```text
 node/
@@ -62,10 +62,9 @@ node/
     <segment>.md
     machine-statements/<segment>.md
     history/
-  material/
-    leaf material
-    child nodes
-    active work nodes
+  leaf material
+  child nodes
+  active work nodes
 ```
 
 The node boundary matters. A child is free except where a parent statement explicitly
@@ -105,14 +104,14 @@ Each segment has:
 - `intent/<segment>.md` for current statements.
 - `intent/machine-statements/<segment>.md` for machine statements.
 
-The methodology prose is this file. The mechanical check over nodes is `material/check.sh`.
+The methodology prose is this file. The mechanical check over nodes is `check.sh`.
 
 ## statements
 
 A statement is plain, declarative, and strong enough to be wrong.
 
 ```text
-good statement:  material/check.sh checks every node in the tree.
+good statement:  check.sh checks every node in the tree.
 weak statement:  checks should probably cover most important things.
 ```
 
@@ -159,14 +158,12 @@ A work frame carries sign-off. On adoption, that sign-off stamps each touched se
 
 ## active work
 
-Active work is a child node under `material/`.
+Active work is a child node directly under the addressed node.
 
 ```text
-material/
-  002-simplify-methodology-doc/
-    intent/
-      frame/
-    material/
+002-simplify-methodology-doc/
+  intent/
+    frame/
 ```
 
 A work node can propose parent intent or parent material amendments without making them

@@ -4,8 +4,7 @@ You are the frame gate. Turn the oriented work into a scrutable work-node frame.
 
 Produce or revise the addressed node-local work node for `<work-name>`. The root node is
 the default addressed node; `loop.sh -C <node-path>` addresses a child node. New work
-lives directly in that node's `material/<NNN-slug>/` with its written frame under
-`intent/frame/`.
+lives directly in that node as `<NNN-slug>/` with its written frame under `intent/frame/`.
 
 Write enough frame artifacts to make the work recoverable from disk after sign-off:
 purpose, rationale, proposed parent amendments, proof state, route, open questions, and

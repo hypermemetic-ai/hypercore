@@ -2,7 +2,7 @@
 
 a sibling set of node-local work nodes is named with `NNN-slug` folders, with the ordinal
 scoped to that sibling set.
-new active work nodes live directly under the addressed node's `material/`.
+new active work nodes live directly under the addressed node.
 a new work node's frame lives under that work node's `intent/frame/`.
 legacy signed frames under `intent/changes/<NNN-slug>/` remain readable to finish old work.
 adopted work-node history is recorded under `intent/history/adopted/`.

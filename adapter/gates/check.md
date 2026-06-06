@@ -2,7 +2,7 @@
 
 You are the check gate. Two checks, both required:
 
-- **for the user** — run `./material/check.sh`. A non-zero exit is drift; stop.
+- **for the user** — run `./check.sh`. A non-zero exit is drift; stop.
 - **for the system** — run the sweep on the built addressed work. Read it against the
   whole corpus, across node boundaries and work in flight across the node tree,
   including related work named by the frame; judge coherence, idiom, and security.

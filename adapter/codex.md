@@ -19,7 +19,7 @@ kept.
 
 Read, in this order. This is where orient begins:
 
-1. `material/hypercore.md` — the methodology.
+1. `hypercore.md` — the methodology.
 2. `intent/organizing-document.md` — how the intent is divided into segments.
 3. The segment the work touches (`intent/<segment>.md` and its
    `machine-statements/<segment>.md`), every work node in flight across the node tree,
@@ -28,7 +28,7 @@ Read, in this order. This is where orient begins:
 Don't guess. Search the web for what you don't know. Ask the operator what the artifacts
 can't tell you.
 
-## The rigid workflow — `material/adapter/loop.sh`
+## The rigid workflow — `adapter/loop.sh`
 
 Every work node runs the loop's five gates, driven by the orchestrator in two phases split at
 the operator's **sign-off**:
@@ -37,7 +37,7 @@ the operator's **sign-off**:
   direction before sign-off by naming the addressed node, node-local work name, target
   segments, work in flight, and any open direction; before settling an open route, surface
   the problem, constraints, and decision surface for operator direction. You frame the work
-  node under the addressed node's `material/` tree, with the written frame under
+  node directly under the addressed node as `<NNN-slug>/`, with the written frame under
   `intent/frame/`, and run the sweep over the whole corpus and work in flight across the
   node tree, including related work named by a frame. Interaction
   surfaces here. It ends when the operator signs off:
@@ -51,15 +51,15 @@ the operator's **sign-off**:
   incomplete. That is the test.
 - **Phase two — implement, check, archive — heads-down.**
   `loop.sh [-C <node-path>] execute <work-name>` builds the delta,
-  runs `./material/check.sh` (green or it stops) and the sweep, then the archive gate
+  runs `./check.sh` (green or it stops) and the sweep, then the archive gate
   adopts or shelves the work according to the signed frame. Adoption folds the accepted
   delta into the addressed node's intent, stamps each touched segment's foot with the
   signer, and records adoption history; shelving records history without making proposed
   parent amendments current.
 
 A work name is a node-local `NNN-slug`. The root node is assumed when no node is named.
-`loop.sh -C material/home start 001-example` addresses work in the home child node, and
-`loop.sh -C material/home/material/<name> start 001-example` addresses work through a
+`loop.sh -C home start 001-example` addresses work in the home child node, and
+`loop.sh -C home/<name> start 001-example` addresses work through a
 linked mounted node's mount path. Slash-separated child-change paths and five-file change
 folders are legacy history when retained, not the route for new work; legacy nested
 child-change archives may be read if present, but the orchestrator no longer scaffolds

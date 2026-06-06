@@ -8,9 +8,10 @@ This node holds its own corpus, divided into one segment to start:
   repository and child node, and how the recursive check reaches it.
 
 Each segment has an intent document at `intent/<segment>.md` and a machine-statements file
-at `intent/machine-statements/<segment>.md`. The `mounting` segment is leaf-materialized by
-`material/` -- the mount point each project link mounts into as a child node of this home
-at `material/<name>/`. The home holds zero mounted projects yet.
+at `intent/machine-statements/<segment>.md`. The `mounting` segment is leaf-materialized
+by direct entries under this home node; each project link mounts as a child node of this
+home at `<name>/`, reached from the root as `home/<name>`. The home holds zero mounted
+projects yet.
 
 One group, one segment: nothing is partitioned twice. A second segment is added the first
 time a real concern of the home's -- cross-project governance, say -- forces it, not before.

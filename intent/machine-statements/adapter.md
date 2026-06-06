@@ -1,23 +1,22 @@
 # adapter -- machine statements
 
-the current root harness adapter is materialized as `material/adapter/codex.md`.
+the current root harness adapter is materialized as `adapter/codex.md`.
 the Codex harness loads its adapter through a root `AGENTS.md` symlinked to
-`material/adapter/codex.md`; the root entry is the harness's mandated pointer, holding
-nothing, not where the adapter lives.
+`adapter/codex.md`; the root entry is the harness's mandated pointer, holding nothing, not
+where the adapter lives.
 a machine working in a nested node is bound by Codex including the root `AGENTS.md` in the
 project instruction chain from the project root to the current directory, so no node below
 the root carries its own adapter.
-the rigid workflow is materialized as `material/adapter/loop.sh`, realizing the two-phase
-shape over the Codex phase-two harness: `codex exec` opens a fresh thread at implement and
+the rigid workflow is materialized as `adapter/loop.sh`, realizing the two-phase shape
+over the Codex phase-two harness: `codex exec` opens a fresh thread at implement and
 `codex exec resume` resumes it across check and archive; the path carries no phase-one
 context.
-`material/adapter/loop.sh` accepts a node-local work name in the addressed node, not a
+`adapter/loop.sh` accepts a node-local work name in the addressed node, not a
 slash-separated child path, for new work.
 the root node is the default addressed node.
 `loop.sh -C <node-path> <gate> <work-name>` addresses work in a child node, including a
 linked mounted child when `<node-path>` is its mount path.
-`loop.sh start <work-name>` creates a work node directly under the addressed node's
-`material/`.
+`loop.sh start <work-name>` creates a work node directly under the addressed node.
 `loop.sh frame`, `signoff`, `execute`, and `status` resolve the addressed node-local work
 and act only on that addressed work.
 `loop.sh execute <work-name>` records only the addressed node-local work in that node's
@@ -37,11 +36,11 @@ tells the machine to stop at the decision surface and wait for sign-off or direc
 than filling the gap.
 the Codex adapter prose describes phase one as design-phase collaboration, while preserving
 phase two as a cleared, heads-down execution from the written frame.
-`material/check.sh` mechanically checks that the gate prompts and Codex adapter prose still
-carry the design-phase collaboration language.
-each gate's instructions are a file in `material/adapter/gates/`; the Codex path includes
-them in the `codex exec` gate prompt; the orchestrator owns gate order and preconditions
-and blocks a gate whose preconditions fail.
+`check.sh` mechanically checks that the gate prompts and Codex adapter prose still carry
+the design-phase collaboration language.
+each gate's instructions are held in a file in `adapter/gates/`; the Codex path includes them in
+the `codex exec` gate prompt; the orchestrator owns gate order and preconditions and
+blocks a gate whose preconditions fail.
 sign-off is a `signed-off-by` line in the work-node frame's `intent/frame/signoff.md`, or
 in legacy `endorsement.md` for old signed frames; the orchestrator seals phase two until
 sign-off is present, and the machine never writes it for itself.

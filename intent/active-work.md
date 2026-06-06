@@ -1,7 +1,7 @@
 # active-work
 
-active work is a child node with the same internal shape as any other node: `intent/`,
-`material/`, and whatever segments its organizing document names.
+active work is a child node with the same reserved tree as any other node: `intent/`, plus
+whatever node-local material its work needs beside that reserved tree.
 active work is bounded by the parent intent statements whose reach includes it.
 a work node may propose parent intent or parent material amendments without making those
 amendments current.
@@ -13,8 +13,8 @@ truth.
 a work node may be temporary, durable, adopted, shelved, abandoned, or indefinitely active.
 purpose, rationale, proof state, route, sign-off, and adoption claims are recoverable as
 intent or material within the work node; they are not universal required filenames.
-root-directed active work lives directly under root `material/` as a sibling to `home`,
-not under `home`.
+root-directed active work lives directly under the root as `<NNN-slug>/`, as a sibling to
+`home`, not under `home`.
 the root active-work contract spans root child work nodes and grants them the general
 ability to parent their own child work nodes unless their own contract narrows that
 freedom.
@@ -24,7 +24,7 @@ current work-node shape, and retained change-folder history is not required.
 ## machine
 a sibling set of node-local work nodes is named with `NNN-slug` folders, with the ordinal
 scoped to that sibling set.
-new active work nodes live directly under the addressed node's `material/`.
+new active work nodes live directly under the addressed node.
 a new work node's frame lives under that work node's `intent/frame/`.
 legacy signed frames under `intent/changes/<NNN-slug>/` remain readable to finish old work.
 adopted work-node history is recorded under `intent/history/adopted/`.

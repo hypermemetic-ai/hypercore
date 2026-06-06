@@ -5,7 +5,7 @@ but what you read now.
 
 Read, in order, and report what you read:
 
-1. `material/hypercore.md` — the methodology.
+1. `hypercore.md` — the methodology.
 2. `intent/organizing-document.md` — how the intent is divided into segments.
 3. The segment(s) this work touches: `intent/<segment>.md` and its
    `intent/machine-statements/<segment>.md`.

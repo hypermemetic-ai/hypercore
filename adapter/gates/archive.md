@@ -18,6 +18,12 @@ Do not move the work node yourself — the orchestrator records the addressed no
 work in node-local history after re-running `check.sh` green. Legacy nested child-change
 archives may remain as history, but new history movement is node-local.
 
+For `001-flatten-material-tree` only, after folding the accepted parent intent delta and
+before returning `ARCHIVE_DECISION: ADOPTED`, create the root marker
+`.hypercore-flatten-final-cleanup`. The old loop's temporary retired-path check
+compatibility command uses that marker to remove old-path compatibility before delegating
+to `./check.sh`.
+
 End your reply with exactly one archive decision line, on its own line, nothing after it:
 
     ARCHIVE_DECISION: ADOPTED

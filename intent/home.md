@@ -2,33 +2,31 @@
 
 home is the named child node that mounts the operator's project nodes and governs them
 within itself.
-home is a durable child node of the root at `material/home/`, with its own `intent/` and
-`material/`.
+home is a durable child node of the root at `home/`, with its own `intent/`.
 the root home contract binds only the named `home` child.
 the root active-work contract governs root child work generally; home is not the universal
 container for root-directed work.
-root-directed active work lives directly under root `material/` as a sibling to `home`.
-home's mount point is `material/home/material/`; each mounted project is reached there
-through a symbolic link to a distinct git repository outside the hypercore root.
-when a mount link target has both `intent/` and `material/`, the mount is a child-node
-entry point the recursive check reaches; broken links and links to non-nodes are dormant.
+root-directed active work lives directly under the root as a sibling to `home`.
+home's mount surface is `home/`; each mounted project is reached at `home/<name>` through
+a symbolic link to a distinct git repository outside the hypercore root.
+when a mount link target has `intent/`, the mount is a child-node entry point the
+recursive check reaches; broken links and links to non-nodes are dormant.
 an unmounted project is absent; hypercore does not fabricate placeholder child-node
 content.
 home may stay active indefinitely.
-`material/bin/home greenfield <name> <target-path>` creates a new external project
-repository with only its local node shape and links it under home; it refuses path-like
-names, existing mount paths, non-empty targets, and targets inside the hypercore root.
+`bin/home greenfield <name> <target-path>` creates a new external project repository with
+only its local node shape and links it under home; it refuses path-like names, existing
+mount paths, non-empty targets, and targets inside the hypercore root.
 
 ## machine
-the home child node is at `material/home/`, carrying its own `intent/` and `material/`
-trees; the recursive `check.sh` reaches it as a node.
-mounted projects live as symbolic links at `material/home/material/<name>` pointing to
-distinct git repositories outside the hypercore root.
-a linked mounted project is a child node when the link target has both `intent/` and
-`material/`; broken links and links to non-nodes do not materialize child-node content.
-`material/bin/home greenfield <name> <target-path>` creates the target's local node shape
-and mount link, with no copy of root `material/hypercore.md`, `material/check.sh`,
-`material/adapter/`, or `AGENTS.md`.
+the home child node is at `home/`, carrying its own `intent/`; the recursive `check.sh`
+reaches it as a node.
+mounted projects live as symbolic links at `home/<name>` pointing to distinct git
+repositories outside the hypercore root.
+a linked mounted project is a child node when the link target has `intent/`; broken links
+and links to non-nodes do not materialize child-node content.
+`bin/home greenfield <name> <target-path>` creates the target's local node shape and mount
+link, with no copy of root `hypercore.md`, `check.sh`, `adapter/`, `bin/`, or `AGENTS.md`.
 
 ---
 endorsed by qqp-dev

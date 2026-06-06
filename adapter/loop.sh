@@ -31,13 +31,12 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT="$(cd "$HERE/../.." && pwd)"
+ROOT="$(cd "$HERE/.." && pwd)"
 GATES="$HERE/gates"
 NODE="$ROOT"
 NODE_REL="."
 INTENT_TREE=intent
-MATERIAL_TREE=material
-WORKS="$NODE/$MATERIAL_TREE"
+WORKS="$NODE"
 LEGACY_CHANGES="$NODE/$INTENT_TREE/changes"
 LOOP_HARNESS="${LOOP_HARNESS:-codex}"
 CODEX_BIN="${CODEX_BIN:-codex}"
@@ -98,8 +97,6 @@ set_node() {
 
   [ -d "$ROOT/$node_path/$INTENT_TREE" ] \
     || die "node has no $INTENT_TREE/: $node_path"
-  [ -d "$ROOT/$node_path/$MATERIAL_TREE" ] \
-    || die "node has no $MATERIAL_TREE/: $node_path"
 
   NODE="$(cd "$ROOT/$node_path" && pwd)"
   case "$NODE" in
@@ -107,13 +104,13 @@ set_node() {
     *) die "node path escapes repository: $node_path" ;;
   esac
   NODE_REL="$(relpath "$NODE")"
-  WORKS="$NODE/$MATERIAL_TREE"
+  WORKS="$NODE"
   LEGACY_CHANGES="$NODE/$INTENT_TREE/changes"
 }
 
 is_work_node() {
   local d=${1%/}
-  [ -d "$d/$INTENT_TREE" ] && [ -d "$d/$MATERIAL_TREE" ]
+  [ -d "$d/$INTENT_TREE" ]
 }
 
 frame_dir_for() {
@@ -164,7 +161,6 @@ any_work_dir() {
 }
 
 new_work_collection() {
-  mkdir -p "$WORKS"
   ensure_work_history
   printf '%s' "$WORKS"
 }
@@ -280,7 +276,7 @@ infer_operator() {
   esac
 }
 
-check_green() { ( cd "$ROOT" && ./material/check.sh >/dev/null 2>&1 ); }
+check_green() { ( cd "$ROOT" && ./check.sh >/dev/null 2>&1 ); }
 
 archive_decision_from_output() {
   case "$GATE_OUTPUT" in
@@ -391,7 +387,7 @@ cmd_start() {
   [ -e "$d" ] && ! is_work_node "$d" \
     && die "work path exists but is not a node in node $NODE_REL: $work_name"
   if [ ! -d "$d" ]; then
-    mkdir -p "$frame" "$d/$MATERIAL_TREE"
+    mkdir -p "$frame"
     printf '# organizing document - %s\n\nThis work node keeps its design frame under intent/frame/.\n' "$address" > "$d/$INTENT_TREE/organizing-document.md"
     printf 'scaffolded %s\n' "$d"
   fi
@@ -482,7 +478,7 @@ cmd_execute() {
 
   printf '\n--- gate: check (mechanical) ---\n'
   if [ "$DRY_RUN" = 1 ]; then
-    printf '(dry-run) would run: ./material/check.sh\n'
+    printf '(dry-run) would run: ./check.sh\n'
   else
     check_green || die "check.sh red after implement — drift, stopping"
     printf 'check.sh green\n'
