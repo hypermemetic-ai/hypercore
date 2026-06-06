@@ -195,8 +195,8 @@ require_text "$root/material/hypercore.md" \
 if [ -f "$root/intent/collaboration.md" ] ||
    grep -Fq -- "- **collaboration**" "$root/intent/organizing-document.md"; then
   require_text "$root/intent/organizing-document.md" \
-    "the ten segments describing the rules themselves" \
-    "organizing document counts ten methodology segments"
+    "the nine segments describing the rules themselves" \
+    "organizing document counts nine methodology segments"
   require_text "$root/intent/organizing-document.md" \
     "- **collaboration**" \
     "organizing document names collaboration as a methodology segment"

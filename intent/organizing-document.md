@@ -2,7 +2,7 @@
 
 hypercore's intent is held in two groups of segments, one document each.
 
-The **methodology** -- the ten segments describing the rules themselves, leaf-materialized
+The **methodology** -- the nine segments describing the rules themselves, leaf-materialized
 by `material/hypercore.md` and `material/check.sh`, divided along one axis:
 
 - **foundations** -- the premise, the three properties, and what the intent is.
@@ -21,8 +21,6 @@ by `material/hypercore.md` and `material/check.sh`, divided along one axis:
   start of work, promising agreement and enforcing it as a rigid workflow. Materialized at
   the root by the methodology prose, the harness adapter (`AGENTS.md` for Codex), and the
   orchestrator under `material/adapter/`.
-- **hardening** -- how hypercore examines every segment, node boundary, adapter, and
-  materialization against real-world use before calling it hardened.
 
 The **governed work** -- durable child nodes and mounted work under this root:
 
