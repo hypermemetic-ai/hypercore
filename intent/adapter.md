@@ -32,24 +32,17 @@ the sweep reads the adapter against the intent, so a rule it has come to restate
 the intent has since absorbed, is caught as drift.
 
 ## machine
-each harness's adapter is materialized in `material/adapter/`, the router prose in
-`<harness>.md` -- `material/adapter/claude-code.md` for Claude Code and
-`material/adapter/codex.md` for Codex.
-the Claude Code harness loads its adapter through a root `CLAUDE.md` symlinked to
-`material/adapter/claude-code.md`; the root entry is the harness's mandated pointer,
-holding nothing, not where the adapter lives.
+the current root harness adapter is materialized as `material/adapter/codex.md`.
 the Codex harness loads its adapter through a root `AGENTS.md` symlinked to
 `material/adapter/codex.md`; the root entry is the harness's mandated pointer, holding
 nothing, not where the adapter lives.
-a machine working in a nested node is bound by Claude Code loading the root `CLAUDE.md`
-from the launch directory and its parents, and by Codex including the root `AGENTS.md` in
-the project instruction chain from the project root to the current directory, so no node
-below the root carries its own adapter.
+a machine working in a nested node is bound by Codex including the root `AGENTS.md` in the
+project instruction chain from the project root to the current directory, so no node below
+the root carries its own adapter.
 the rigid workflow is materialized as `material/adapter/loop.sh`, realizing the two-phase
-shape over the selected phase-two harness: Claude Code uses `claude -p` with a fresh
-session id opened by implement and resumed across check and archive; Codex uses
-`codex exec` to open a fresh thread and `codex exec resume` across check and archive;
-either path carries no phase-one context.
+shape over the Codex phase-two harness: `codex exec` opens a fresh thread at implement and
+`codex exec resume` resumes it across check and archive; the path carries no phase-one
+context.
 `material/adapter/loop.sh` accepts a node-local work name in the addressed node, not a
 slash-separated child path, for new work.
 the root node is the default addressed node.
@@ -73,14 +66,13 @@ the frame gate prompt requires a problem, constraints, and decision surface befo
 prescribing an open multi-task or multi-phase route; when operator direction is missing, it
 tells the machine to stop at the decision surface and wait for sign-off or direction rather
 than filling the gap.
-the Codex and Claude Code adapter prose describe phase one as design-phase collaboration,
-while preserving phase two as a cleared, heads-down execution from the written frame.
-`material/check.sh` mechanically checks that the gate prompts and harness adapter prose
-still carry the design-phase collaboration language.
-each gate's instructions are a file in `material/adapter/gates/`; the Claude Code path
-appends them to `claude -p` as a system prompt, and the Codex path includes them in the
-`codex exec` gate prompt; the orchestrator owns gate order and preconditions and blocks a
-gate whose preconditions fail.
+the Codex adapter prose describes phase one as design-phase collaboration, while preserving
+phase two as a cleared, heads-down execution from the written frame.
+`material/check.sh` mechanically checks that the gate prompts and Codex adapter prose still
+carry the design-phase collaboration language.
+each gate's instructions are a file in `material/adapter/gates/`; the Codex path includes
+them in the `codex exec` gate prompt; the orchestrator owns gate order and preconditions
+and blocks a gate whose preconditions fail.
 sign-off is a `signed-off-by` line in the work-node frame's `intent/frame/signoff.md`, or
 in legacy `endorsement.md` for old signed frames; the orchestrator seals phase two until
 sign-off is present, and the machine never writes it for itself.

@@ -28,9 +28,17 @@ require_text() {
 
 reject_text() {
   local file=$1 needle=$2 label=$3
+  [ -f "$file" ] || { ok "$label"; return; }
   grep -Fq -- "$needle" "$file" \
     && bad "$label ($file contains retired text: $needle)" \
     || ok "$label"
+}
+
+require_absent() {
+  local path=$1 label=$2
+  { [ ! -e "$path" ] && [ ! -L "$path" ]; } \
+    && ok "$label" \
+    || bad "$label ($path remains)"
 }
 
 LEGACY_FRAME_FILES=(delta.md why.md proof.md endorsement.md plan.md)
@@ -201,18 +209,22 @@ if [ -f "$root/intent/collaboration.md" ] ||
 fi
 
 echo "root — adapter design phase"
+retired_entry="$root"/C'LAUDE.md'
+retired_prose="$root/material/adapter"/clau'de-code.md'
+retired_local_state=.clau'de/'
 require_text "$root/AGENTS.md" \
   "material/hypercore.md" \
   "AGENTS.md routes Codex into the renamed material tree"
 require_text "$root/AGENTS.md" \
   "material/adapter/loop.sh" \
   "AGENTS.md routes Codex into the renamed loop"
-require_text "$root/CLAUDE.md" \
-  "material/hypercore.md" \
-  "CLAUDE.md routes Claude Code into the renamed material tree"
-require_text "$root/CLAUDE.md" \
-  "material/adapter/loop.sh" \
-  "CLAUDE.md routes Claude Code into the renamed loop"
+require_absent "$retired_entry" \
+  "retired root adapter entry point is absent"
+require_absent "$retired_prose" \
+  "retired adapter prose is absent"
+reject_text "$root/.gitignore" \
+  "$retired_local_state" \
+  "tracked ignore material does not hide retired local state"
 require_text "$root/material/adapter/gates/orient.md" \
   "open direction that needs operator input" \
   "orient gate names open direction for operator input"
@@ -249,18 +261,42 @@ require_text "$root/material/adapter/codex.md" \
 require_text "$root/material/adapter/codex.md" \
   "adopts or shelves the work according to the signed frame" \
   "Codex adapter describes adoption or shelving"
-require_text "$root/material/adapter/claude-code.md" \
-  "design-phase collaboration" \
-  "Claude Code adapter describes phase one as design-phase collaboration"
-require_text "$root/material/adapter/claude-code.md" \
-  "decision surface for operator direction" \
-  "Claude Code adapter carries the decision surface"
-require_text "$root/material/adapter/claude-code.md" \
-  "node-local work name" \
-  "Claude Code adapter carries node-local work wording"
-require_text "$root/material/adapter/claude-code.md" \
-  "adopts or shelves the work according to the signed" \
-  "Claude Code adapter describes adoption or shelving"
+require_text "$root/material/adapter/codex.md" \
+  "./signoff" \
+  "Codex adapter names the root sign-off helper"
+require_text "$root/material/adapter/loop.sh" \
+  'LOOP_HARNESS="${LOOP_HARNESS:-codex}"' \
+  "loop defaults phase two to Codex"
+reject_text "$root/material/adapter/loop.sh" \
+  C'LAUDE_BIN' \
+  "loop carries no retired binary setting"
+reject_text "$root/material/adapter/loop.sh" \
+  "LOOP_BUDGET_USD" \
+  "loop carries no retired budget setting"
+reject_text "$root/material/adapter/loop.sh" \
+  run_clau'de_gate' \
+  "loop carries no retired gate runner"
+require_text "$root/material/adapter/loop.sh" \
+  "infer_signoff_work_name" \
+  "loop can infer the single signable work node"
+require_text "$root/material/adapter/loop.sh" \
+  "HYPERCORE_OPERATOR" \
+  "loop can infer sign-off operator from the environment"
+require_text "$root/material/adapter/loop.sh" \
+  "multiple frame-complete unsigned work nodes" \
+  "loop blocks ambiguous work inference"
+require_text "$root/material/adapter/loop.sh" \
+  "multiple current intent foot endorsements" \
+  "loop blocks ambiguous operator inference"
+require_text "$root/signoff" \
+  'material/adapter/loop.sh' \
+  "root signoff helper dispatches to the loop"
+require_text "$root/signoff" \
+  'signoff "$@"' \
+  "root signoff helper preserves explicit arguments"
+[ -x "$root/signoff" ] \
+  && ok "root signoff helper is executable" \
+  || bad "root signoff helper is not executable ($root/signoff)"
 require_text "$root/material/adapter/loop.sh" \
   'frame/signoff.md' \
   "loop keys new work sign-off to the signoff artifact"

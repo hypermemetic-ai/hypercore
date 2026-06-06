@@ -41,14 +41,16 @@ the operator's **sign-off**:
   `intent/frame/`, and run the sweep over the whole corpus and work in flight across the
   node tree, including related work named by a frame. Interaction
   surfaces here. It ends when the operator signs off:
-  `loop.sh [-C <node-path>] signoff <work-name> <operator>` writes a `signed-off-by`
-  line. **You never sign off for them.**
+  from the root, `./signoff` signs the single frame-complete, unsigned active work node
+  when the operator identity is unambiguous; the explicit
+  `loop.sh [-C <node-path>] signoff <work-name> <operator>` form also writes a
+  `signed-off-by` line. **You never sign off for them.**
 - **The session clears at sign-off.** Phase two runs on a fresh, memoryless `codex exec`
   opened by implement and resumed across check and archive. It re-derives the work from
   the written frame alone. If the frame doesn't tell it something it needs, the frame was
   incomplete. That is the test.
 - **Phase two — implement, check, archive — heads-down.**
-  `LOOP_HARNESS=codex loop.sh [-C <node-path>] execute <work-name>` builds the delta,
+  `loop.sh [-C <node-path>] execute <work-name>` builds the delta,
   runs `./material/check.sh` (green or it stops) and the sweep, then the archive gate
   adopts or shelves the work according to the signed frame. Adoption folds the accepted
   delta into the addressed node's intent, stamps each touched segment's foot with the

@@ -19,8 +19,8 @@ by `material/hypercore.md` and `material/check.sh`, divided along one axis:
   amendments, and node boundaries.
 - **adapter** -- the binding between a harness and the loop: what the harness loads at the
   start of work, promising agreement and enforcing it as a rigid workflow. Materialized at
-  the root by the methodology prose, the harness adapters (`CLAUDE.md` for Claude Code and
-  `AGENTS.md` for Codex), and the orchestrator under `material/adapter/`.
+  the root by the methodology prose, the harness adapter (`AGENTS.md` for Codex), and the
+  orchestrator under `material/adapter/`.
 - **hardening** -- how hypercore examines every segment, node boundary, adapter, and
   materialization against real-world use before calling it hardened.
 

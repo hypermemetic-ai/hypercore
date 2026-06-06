@@ -17,13 +17,14 @@
 # Usage:
 #   loop.sh [-C <node-path>] start    <work-name>              scaffold the work node; print the orient gate
 #   loop.sh [-C <node-path>] frame    <work-name>              check the frame is written and ready for sign-off
-#   loop.sh [-C <node-path>] signoff  <work-name> <operator>   record the operator's sign-off (the human gate)
+#   loop.sh [-C <node-path>] signoff  [<work-name> [<operator>]]
+#                                                               record the operator's sign-off (the human gate)
 #   loop.sh [-C <node-path>] execute  <work-name> [--dry-run]  run phase two on a cleared session
 #   loop.sh [-C <node-path>] status   <work-name>              print the work node's current phase
 #
 # Env:
-#   LOOP_HARNESS=claude-code|codex (default: claude-code)
-#   CLAUDE_BIN (default: claude), LOOP_BUDGET_USD (optional Claude spend cap)
+#   LOOP_HARNESS=codex (default and only supported phase-two harness)
+#   HYPERCORE_OPERATOR (optional sign-off identity when <operator> is omitted)
 #   CODEX_BIN (default: codex), CODEX_APPROVAL (default: never)
 #   CODEX_WRITE_SANDBOX (default: workspace-write), CODEX_READ_SANDBOX (default: read-only)
 
@@ -38,8 +39,7 @@ INTENT_TREE=intent
 MATERIAL_TREE=material
 WORKS="$NODE/$MATERIAL_TREE"
 LEGACY_CHANGES="$NODE/$INTENT_TREE/changes"
-LOOP_HARNESS="${LOOP_HARNESS:-claude-code}"
-CLAUDE_BIN="${CLAUDE_BIN:-claude}"
+LOOP_HARNESS="${LOOP_HARNESS:-codex}"
 CODEX_BIN="${CODEX_BIN:-codex}"
 CODEX_APPROVAL="${CODEX_APPROVAL:-never}"
 CODEX_WRITE_SANDBOX="${CODEX_WRITE_SANDBOX:-workspace-write}"
@@ -50,11 +50,6 @@ GATE_OUTPUT=""   # the last gate's captured output, read by cmd_execute for the 
 PHASE_TWO_SESSION_ID=""
 
 die() { printf 'loop: %s\n' "$1" >&2; exit 1; }
-
-new_uuid() {
-  if command -v uuidgen >/dev/null 2>&1; then uuidgen
-  else cat /proc/sys/kernel/random/uuid; fi
-}
 
 ensure_work_history() {
   local d
@@ -236,6 +231,55 @@ signed_off_at() {
   fi
 }
 
+signable_work_candidates() {
+  local d name
+  for d in "$WORKS"/*/; do
+    [ -d "$d" ] || continue
+    name="$(basename "${d%/}")"
+    work_name_ok "$name" || continue
+    is_work_node "$d" || continue
+    frame_complete_at "$d" || continue
+    signed_off_at "$d" && continue
+    printf '%s\n' "$name"
+  done
+}
+
+infer_signoff_work_name() {
+  local candidates=() name
+  while IFS= read -r name; do candidates+=("$name"); done < <(signable_work_candidates)
+  case "${#candidates[@]}" in
+    1) printf '%s' "${candidates[0]}" ;;
+    0) die "cannot infer work name: no frame-complete unsigned work node in node $NODE_REL; pass <work-name>" ;;
+    *) die "cannot infer work name: multiple frame-complete unsigned work nodes in node $NODE_REL: ${candidates[*]}; pass <work-name>" ;;
+  esac
+}
+
+current_operator_candidates() {
+  local f
+  for f in "$NODE/$INTENT_TREE"/*.md; do
+    [ -f "$f" ] || continue
+    tail -n 3 "$f" | sed -n 's/^endorsed by[[:space:]]\{1,\}//p'
+  done | sort -u
+}
+
+infer_operator() {
+  local env_operator="${HYPERCORE_OPERATOR:-}" candidates=() who
+  if [ -n "$env_operator" ]; then
+    case "$env_operator" in
+      *$'\n'*|*$'\r'*) die "HYPERCORE_OPERATOR must be a single-line operator identity" ;;
+    esac
+    printf '%s' "$env_operator"
+    return
+  fi
+
+  while IFS= read -r who; do candidates+=("$who"); done < <(current_operator_candidates)
+  case "${#candidates[@]}" in
+    1) printf '%s' "${candidates[0]}" ;;
+    0) die "cannot infer operator: HYPERCORE_OPERATOR is unset and no current intent foot endorsement exists in node $NODE_REL; pass <operator>" ;;
+    *) die "cannot infer operator: HYPERCORE_OPERATOR is unset and multiple current intent foot endorsements exist in node $NODE_REL: ${candidates[*]}; pass <operator> or set HYPERCORE_OPERATOR" ;;
+  esac
+}
+
 check_green() { ( cd "$ROOT" && ./material/check.sh >/dev/null 2>&1 ); }
 
 archive_decision_from_output() {
@@ -278,34 +322,6 @@ codex_cmd_prefix() {
   [ -n "${CODEX_MODEL:-}" ] && CODEX_CMD+=(-m "$CODEX_MODEL")
   [ -n "${CODEX_PROFILE:-}" ] && CODEX_CMD+=(-p "$CODEX_PROFILE")
   return 0
-}
-
-run_claude_gate() {
-  local gate="$1" tools="$2" mode="$3" sid="$4" prompt="$5" sys="$6" sflag
-  case "$mode" in
-    start)  sflag=--session-id ;;
-    resume) sflag=--resume ;;
-    *) die "unknown gate mode: $mode" ;;
-  esac
-  local -a cmd=(
-    "$CLAUDE_BIN" -p
-    --output-format json
-    --permission-mode acceptEdits
-    --allowedTools "$tools"
-    --append-system-prompt "$sys"
-    "$sflag" "$sid"
-    --add-dir "$ROOT"
-  )
-  [ -n "${LOOP_BUDGET_USD:-}" ] && cmd+=(--max-budget-usd "$LOOP_BUDGET_USD")
-  # the prompt goes on stdin, not as a trailing positional: --add-dir is variadic and would
-  # otherwise swallow it as another directory, leaving claude -p with no prompt.
-
-  printf '\n--- gate: %s (cleared session %s) ---\n' "$gate" "$sid"
-  if [ "$DRY_RUN" = 1 ]; then printf '%q ' "${cmd[@]}"; printf '<<< stdin: %q\n' "$prompt"; return 0; fi
-  # capture the gate's output so cmd_execute can read its verdict, still print it for the
-  # operator, and still hard-stop on a non-zero gate exit exactly as before.
-  GATE_OUTPUT="$(printf '%s' "$prompt" | "${cmd[@]}")" || die "gate $gate failed (claude -p exited non-zero)"
-  printf '%s\n' "$GATE_OUTPUT"
 }
 
 run_codex_gate() {
@@ -354,9 +370,8 @@ run_gate() {
   sys="$(cat "$GATES/$gate.md")"
 
   case "$LOOP_HARNESS" in
-    claude-code|claude) run_claude_gate "$gate" "$tools" "$mode" "$sid" "$prompt" "$sys" ;;
-    codex)              run_codex_gate  "$gate" "$tools" "$mode" "$sid" "$prompt" "$sys" ;;
-    *) die "unknown LOOP_HARNESS: $LOOP_HARNESS" ;;
+    codex) run_codex_gate "$gate" "$tools" "$mode" "$sid" "$prompt" "$sys" ;;
+    *) die "unsupported LOOP_HARNESS: $LOOP_HARNESS (only codex is supported)" ;;
   esac
 }
 
@@ -401,6 +416,13 @@ cmd_frame() {
     printf ' execute %s\n' "$work_name"
   else
     printf 'frame complete and check.sh green. Awaiting the operator:\n'
+    printf '  '
+    if [ "$NODE_REL" = "." ]; then
+      printf './signoff'
+    else
+      printf 'loop.sh -C %s signoff' "$NODE_REL"
+    fi
+    printf '        # infer unambiguous work and operator\n'
     printf '  loop.sh'
     [ "$NODE_REL" = "." ] || printf ' -C %s' "$NODE_REL"
     printf ' signoff %s <operator>\n' "$work_name"
@@ -409,7 +431,9 @@ cmd_frame() {
 
 cmd_signoff() {
   local work_name="${1:-}" who="${2:-}" d frame
-  { [ -n "$work_name" ] && [ -n "$who" ]; } || die "usage: loop.sh [-C <node-path>] signoff <work-name> <operator>"
+  [ -z "${3:-}" ] || die "usage: loop.sh [-C <node-path>] signoff [<work-name> [<operator>]]"
+  [ -n "$work_name" ] || work_name="$(infer_signoff_work_name)"
+  [ -n "$who" ] || who="$(infer_operator)"
   validate_work_name "$work_name"
   d="$(active_work_dir "$work_name")" || die "work is not active in node $NODE_REL: $work_name"
   frame_complete_at "$d" || die "cannot sign off an incomplete frame"
@@ -443,19 +467,18 @@ cmd_execute() {
     source_desc="$frame_rel/ (the signed work-node frame)"
   fi
 
-  # the session clears once at sign-off: one fresh id/session, opened by implement, resumed after.
+  # the session clears once at sign-off: one fresh Codex thread, opened by implement,
+  # then resumed after.
   local sid
-  case "$LOOP_HARNESS" in
-    claude-code|claude) sid="$(new_uuid)" ;;
-    codex) sid="" ;;
-    *) die "unknown LOOP_HARNESS: $LOOP_HARNESS" ;;
-  esac
+  [ "$LOOP_HARNESS" = codex ] \
+    || die "unsupported LOOP_HARNESS: $LOOP_HARNESS (only codex is supported)"
+  sid=""
   printf '=== phase two: %s cleared session %s, re-deriving %s in node %s from its frame ===\n' \
     "$LOOP_HARNESS" "${sid:-new}" "$work_name" "$NODE_REL"
 
   run_gate implement "Read Edit Write Bash" start "$sid" \
     "Implement node-local work $work_name in addressed node $NODE_REL. Read only $source_desc and the intent it references; build the delta in code."
-  [ "$LOOP_HARNESS" = codex ] && sid="$PHASE_TWO_SESSION_ID"
+  sid="$PHASE_TWO_SESSION_ID"
 
   printf '\n--- gate: check (mechanical) ---\n'
   if [ "$DRY_RUN" = 1 ]; then
