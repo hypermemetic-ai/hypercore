@@ -7,6 +7,15 @@ when no node is named, the root node is assumed.
 corpus.
 `loop.sh frame`, `signoff`, `execute`, and `status` resolve the addressed node-local work and
 act only on that addressed work.
+`loop.sh execute <work-name>` exposes phase-two run state for the addressed work while it
+runs and after recent failure or completion, including the active gate, status, Codex
+thread id, latest message, event history, and run artifact paths.
+before launching the first phase-two Codex gate, `loop.sh execute <work-name>` checks that
+the Codex binary is present and that Codex home/session state is writable; a failed
+preflight records failed run state and stops before `codex exec`.
+`loop.sh status <work-name>` reports the addressed work's current phase and, when phase-two
+state exists, the current or recent run's gate, status, state path, event path, and latest
+message; `loop.sh status --json <work-name>` renders the same run state for tooling.
 from the root, `./signoff` invokes the root loop sign-off gate and preserves any explicit
 arguments it receives.
 `loop.sh signoff <work-name> <operator>` remains the explicit sign-off form.

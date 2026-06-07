@@ -36,6 +36,27 @@ require_absent() {
     || bad "$label ($path remains)"
 }
 
+require_symlink_target() {
+  local path=$1 expected=$2 label=$3 actual
+  if [ ! -L "$path" ]; then
+    bad "$label ($path is not a symlink)"
+    return
+  fi
+  actual="$(readlink "$path" 2>/dev/null || true)"
+  [ "$actual" = "$expected" ] \
+    && ok "$label" \
+    || bad "$label ($path points at $actual instead of $expected)"
+}
+
+reject_regular_file() {
+  local path=$1 label=$2
+  if [ -f "$path" ] && [ ! -L "$path" ]; then
+    bad "$label ($path is a regular file)"
+  else
+    ok "$label"
+  fi
+}
+
 LEGACY_FRAME_FILES=(delta.md why.md proof.md endorsement.md plan.md)
 shopt -s nullglob
 HOME_GREENFIELD_CHECK_TMP=
@@ -201,7 +222,7 @@ check_no_tracked_live_material_paths() {
 
 setup_home_greenfield_self_test() {
   local cli="$root/bin/home" tmp name target mount target_link nonempty_target
-  local inside_target repeated_target
+  local inside_target repeated_target resolve_result
 
   echo "root - home greenfield"
   [ -d "$root/home/intent" ] \
@@ -221,6 +242,21 @@ setup_home_greenfield_self_test() {
   require_text "$cli" \
     "home/<name>" \
     "home CLI explains the linked mount path"
+  require_text "$cli" \
+    "bin/home resolve [<path>]" \
+    "home CLI exposes mounted path resolution"
+  require_text "$cli" \
+    "root-managed direct-path entrypoint symlinks" \
+    "home CLI explains root-managed direct-path entrypoints"
+  require_text "$cli" \
+    "AGENTS.md points to the mounted-node Codex entrypoint" \
+    "home CLI explains the mounted Codex entrypoint link"
+  require_text "$cli" \
+    "signoff points to the home signoff helper" \
+    "home CLI explains the mounted signoff helper link"
+  reject_text "$cli" \
+    "Directly opening the external target path only sees the target's local node shape." \
+    "home CLI no longer says direct opens see only local shape"
 
   tmp="$(mktemp -d "${TMPDIR:-/tmp}/hypercore-home-check.XXXXXX")" \
     || { bad "greenfield self-test can create temporary space"; return; }
@@ -266,6 +302,22 @@ setup_home_greenfield_self_test() {
   [ -f "$target/intent/organizing-document.md" ] \
     && ok "greenfield target has a local organizing document" \
     || bad "greenfield target missing intent/organizing-document.md"
+  [ -e "$target/AGENTS.md" ] || [ -L "$target/AGENTS.md" ] \
+    && ok "greenfield target has a direct-path AGENTS.md entrypoint" \
+    || bad "greenfield target missing AGENTS.md"
+  [ -x "$target/signoff" ] \
+    && ok "greenfield target has an executable direct-path signoff helper" \
+    || bad "greenfield target missing executable signoff helper"
+  require_symlink_target "$target/AGENTS.md" \
+    "$root/adapter/codex-mounted.md" \
+    "greenfield AGENTS.md points at the root-managed mounted Codex entrypoint"
+  require_symlink_target "$target/signoff" \
+    "$root/bin/home-signoff" \
+    "greenfield signoff points at the root-managed home signoff helper"
+  reject_regular_file "$target/AGENTS.md" \
+    "greenfield AGENTS.md is not a generated regular file"
+  reject_regular_file "$target/signoff" \
+    "greenfield signoff is not a generated regular file"
   require_absent "$target/material" \
     "greenfield target has no material/ tree"
   [ -L "$mount" ] \
@@ -278,6 +330,30 @@ setup_home_greenfield_self_test() {
   node_intent_dirs | grep -Fxq "$mount/intent" \
     && ok "linked mounted project is discoverable as a child node" \
     || bad "linked mounted project is not discoverable as a child node"
+  if resolve_result="$("$cli" resolve "$target" 2>"$tmp/resolve-target.err")" &&
+     [ "$resolve_result" = "home/$name" ]; then
+    ok "home resolve maps a target root to its mounted node path"
+  else
+    bad "home resolve did not map target root to home/$name"
+  fi
+  if resolve_result="$("$cli" resolve "$target/intent" 2>"$tmp/resolve-inside.err")" &&
+     [ "$resolve_result" = "home/$name" ]; then
+    ok "home resolve maps a path inside the target to its mounted node path"
+  else
+    bad "home resolve did not map path inside target to home/$name"
+  fi
+  if resolve_result="$(cd "$target" && "$cli" resolve 2>"$tmp/resolve-cwd.err")" &&
+     [ "$resolve_result" = "home/$name" ]; then
+    ok "home resolve without a path uses the current working directory"
+  else
+    bad "home resolve without a path did not map the current working directory"
+  fi
+  "$cli" resolve "$tmp" >/dev/null 2>"$tmp/resolve-outside.err" \
+    && bad "home resolve rejects paths outside mounted nodes" \
+    || ok "home resolve rejects paths outside mounted nodes"
+  require_text "$tmp/resolve-outside.err" \
+    "not under a mounted node" \
+    "home resolve explains paths outside mounted nodes"
   [ ! -e "$target/hypercore.md" ] \
     && ok "greenfield does not copy root methodology prose" \
     || bad "greenfield copied hypercore.md"
@@ -290,9 +366,52 @@ setup_home_greenfield_self_test() {
   [ ! -e "$target/bin" ] \
     && ok "greenfield does not copy the root bin directory" \
     || bad "greenfield copied bin/"
-  [ ! -e "$target/AGENTS.md" ] \
-    && ok "greenfield does not copy the root adapter entry point" \
-    || bad "greenfield copied AGENTS.md"
+  [ "$(readlink "$target/AGENTS.md" 2>/dev/null || true)" != "$root/AGENTS.md" ] \
+    && ok "greenfield does not link the root AGENTS.md entry point" \
+    || bad "greenfield copied the root adapter entry point"
+  require_symlink_target "$target/signoff" \
+    "$root/bin/home-signoff" \
+    "greenfield uses the mounted signoff entry point instead of copying root signoff"
+}
+
+check_home_mounted_nodes() {
+  local mount label agents signoff
+
+  echo "root - home mounted nodes"
+  [ -d "$root/home" ] || return
+  for mount in "$root/home"/*; do
+    [ -L "$mount" ] || continue
+    [ -d "$mount/intent" ] || continue
+    label=${mount#"$root"/}
+    git -C "$mount" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+      && ok "$label target is a git repository" \
+      || bad "$label target is not a git repository"
+
+    agents="$mount/AGENTS.md"
+    signoff="$mount/signoff"
+    if [ -e "$agents" ] || [ -L "$agents" ]; then
+      require_symlink_target "$agents" \
+        "$root/adapter/codex-mounted.md" \
+        "$label AGENTS.md points at the root-managed mounted Codex entrypoint"
+      reject_regular_file "$agents" \
+        "$label AGENTS.md is not a generated regular file"
+    else
+      ok "$label has no direct-path AGENTS.md entrypoint"
+    fi
+
+    if [ -e "$signoff" ] || [ -L "$signoff" ]; then
+      require_symlink_target "$signoff" \
+        "$root/bin/home-signoff" \
+        "$label signoff points at the root-managed home signoff helper"
+      [ -x "$signoff" ] \
+        && ok "$label signoff entrypoint is executable" \
+        || bad "$label signoff entrypoint is not executable"
+      reject_regular_file "$signoff" \
+        "$label signoff is not a generated regular file"
+    else
+      ok "$label has no direct-path signoff entrypoint"
+    fi
+  done
 }
 
 check_node() {
@@ -358,8 +477,12 @@ echo "root - flat paths"
 check_no_tracked_live_material_paths
 [ -f "$root/adapter/codex.md" ] && ok "adapter/codex.md exists" \
   || bad "adapter/codex.md missing"
+[ -f "$root/adapter/codex-mounted.md" ] && ok "adapter/codex-mounted.md exists" \
+  || bad "adapter/codex-mounted.md missing"
 [ -x "$root/adapter/loop.sh" ] && ok "adapter/loop.sh exists and is executable" \
   || bad "adapter/loop.sh is missing or not executable"
+[ -x "$root/bin/home-signoff" ] && ok "bin/home-signoff exists and is executable" \
+  || bad "bin/home-signoff is missing or not executable"
 for gate in orient frame implement check archive; do
   [ -f "$root/adapter/gates/$gate.md" ] \
     && ok "adapter/gates/$gate.md exists" \
@@ -429,9 +552,99 @@ require_text "$root/adapter/codex.md" \
 require_text "$root/adapter/codex.md" \
   "./signoff" \
   "Codex adapter names the root sign-off helper"
+require_text "$root/adapter/codex-mounted.md" \
+  "root-managed hypercore adapter material" \
+  "mounted Codex entrypoint identifies root-managed adapter material"
+require_text "$root/adapter/codex-mounted.md" \
+  "Governing root: \`$root\`" \
+  "mounted Codex entrypoint names the governing root"
+require_text "$root/adapter/codex-mounted.md" \
+  "read the local target \`intent/\`" \
+  "mounted Codex entrypoint tells Codex to read local intent first"
+require_text "$root/adapter/codex-mounted.md" \
+  "$root/bin/home resolve" \
+  "mounted Codex entrypoint routes through home resolve"
+require_text "$root/adapter/codex-mounted.md" \
+  "$root/adapter/loop.sh -C <resolved-mount-path>" \
+  "mounted Codex entrypoint routes work through the resolved mount path"
+require_text "$root/adapter/codex-mounted.md" \
+  "$root/adapter/codex.md" \
+  "mounted Codex entrypoint points to the root adapter"
+require_text "$root/adapter/codex-mounted.md" \
+  "proof only when they exist" \
+  "mounted Codex entrypoint keeps local checks as proof only"
+require_text "$root/adapter/codex-mounted.md" \
+  "Stop rather than fabricate missing facts, dormant child nodes, or operator" \
+  "mounted Codex entrypoint rejects fabrication"
+require_text "$root/bin/home-signoff" \
+  '"$ROOT/bin/home" resolve' \
+  "mounted signoff helper resolves the caller mount path"
+require_text "$root/bin/home-signoff" \
+  'exec "$ROOT/adapter/loop.sh" -C "$mount_path" signoff "$@"' \
+  "mounted signoff helper dispatches sign-off to the root loop"
 require_text "$root/adapter/loop.sh" \
   'LOOP_HARNESS="${LOOP_HARNESS:-codex}"' \
   "loop defaults phase two to Codex"
+require_text "$root/adapter/loop.sh" \
+  'HYPERCORE_LOOP_STATE_DIR="${HYPERCORE_LOOP_STATE_DIR:-$ROOT/.hypercore/loop-runs}"' \
+  "loop defaults phase-two state under .hypercore/loop-runs"
+require_text "$root/adapter/loop.sh" \
+  'LOOP_RUN_EVENTS="$LOOP_RUN_DIR/events.jsonl"' \
+  "loop writes a run event JSONL file"
+require_text "$root/adapter/loop.sh" \
+  'LOOP_RUN_STATE="$LOOP_RUN_DIR/state.json"' \
+  "loop writes a current run state file"
+require_text "$root/adapter/loop.sh" \
+  'HYPERCORE_LOOP_STATE_DIR/current/work' \
+  "loop writes an addressed-work current state pointer"
+require_text "$root/adapter/loop.sh" \
+  'LOOP_CURRENT_ROOT_STATE="$HYPERCORE_LOOP_STATE_DIR/current/root.json"' \
+  "loop writes a root current state pointer"
+require_text "$root/adapter/loop.sh" \
+  'mkdir -p "$LOOP_RUN_GATE_DIR" "$(dirname "$LOOP_CURRENT_WORK_STATE")" "$(dirname "$LOOP_CURRENT_ROOT_STATE")"' \
+  "loop creates the phase-two state directories"
+require_text "$root/adapter/loop.sh" \
+  'phase_two_preflight()' \
+  "loop has a phase-two Codex preflight"
+require_text "$root/adapter/loop.sh" \
+  'command -v "$CODEX_BIN"' \
+  "loop preflight checks the Codex binary"
+require_text "$root/adapter/loop.sh" \
+  'CODEX_HOME' \
+  "loop preflight resolves Codex home"
+require_text "$root/adapter/loop.sh" \
+  'can_write_dir "$codex_home/sessions"' \
+  "loop preflight checks Codex session write permission"
+require_text "$root/adapter/loop.sh" \
+  'if ! phase_two_preflight "$work_name"; then' \
+  "loop stops directly on preflight failure"
+reject_text "$root/adapter/loop.sh" \
+  'phase_two_preflight "$work_name" || die' \
+  "loop preserves detailed preflight failure state"
+require_text "$root/adapter/loop.sh" \
+  'events-codex-$gate.jsonl' \
+  "loop stores the raw Codex JSON event stream per gate"
+require_text "$root/adapter/loop.sh" \
+  'while IFS= read -r line || [ -n "$line" ]; do' \
+  "loop streams Codex JSON events while the gate runs"
+require_text "$root/adapter/loop.sh" \
+  'record_codex_progress_line "$gate" "$line"' \
+  "loop prints progress from streamed Codex events"
+reject_text "$root/adapter/loop.sh" \
+  'events="$(printf' \
+  "loop no longer buffers the Codex JSON stream before progress"
+require_text "$root/adapter/loop.sh" \
+  'loop_event sweep check' \
+  "loop records the sweep verdict in run events"
+require_text "$root/adapter/loop.sh" \
+  'loop_event archive-decision archive' \
+  "loop records the archive decision in run events"
+require_text "$root/adapter/loop.sh" \
+  'print_phase_two_status' \
+  "loop status reports phase-two run state"
+require_text "$root/adapter/loop.sh" \
+  '"phase_two_run":' \
+  "loop status can render phase-two run state as JSON"
 reject_text "$root/adapter/loop.sh" \
   C'LAUDE_BIN' \
   "loop carries no retired binary setting"
@@ -471,10 +684,11 @@ reject_text "$root/adapter/loop.sh" \
 
 echo "root - retired user-facing path examples"
 for file in "$root/README.md" "$root/hypercore.md" "$root/adapter/codex.md" \
+  "$root/adapter/codex-mounted.md" \
   "$root/adapter/gates/orient.md" "$root/adapter/gates/frame.md" \
   "$root/adapter/gates/implement.md" "$root/adapter/gates/check.md" \
-  "$root/adapter/gates/archive.md" "$root/bin/home" "$root/home/README.md" \
-  "$root/signoff"; do
+  "$root/adapter/gates/archive.md" "$root/bin/home" "$root/bin/home-signoff" \
+  "$root/home/README.md" "$root/signoff"; do
   reject_text "$file" "material/hypercore.md" "$(basename "$file") does not point to material/hypercore.md"
   reject_text "$file" "material/check.sh" "$(basename "$file") does not point to material/check.sh"
   reject_text "$file" "material/adapter" "$(basename "$file") does not point to material/adapter"
@@ -483,6 +697,7 @@ for file in "$root/README.md" "$root/hypercore.md" "$root/adapter/codex.md" \
 done
 
 setup_home_greenfield_self_test
+check_home_mounted_nodes
 check_node "$root" "root"
 while IFS= read -r d; do
   node=$(dirname "$d")

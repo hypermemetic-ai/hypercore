@@ -10,8 +10,8 @@ This node holds its own corpus, divided into one segment to start:
 Each segment has an intent document at `intent/<segment>.md` and a machine-statements file
 at `intent/machine-statements/<segment>.md`. The `mounting` segment is leaf-materialized
 by direct entries under this home node; each project link mounts as a child node of this
-home at `<name>/`, reached from the root as `home/<name>`. The home holds zero mounted
-projects yet.
+home at `<name>/`, reached from the root as `home/<name>`. The home currently mounts
+`codex-cockpit`.
 
 One group, one segment: nothing is partitioned twice. A second segment is added the first
 time a real concern of the home's -- cross-project governance, say -- forces it, not before.

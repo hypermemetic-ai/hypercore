@@ -25,7 +25,7 @@ leaf-materialized by `hypercore.md` and `check.sh`, divided along one axis:
 The **governed work** -- durable child nodes and mounted work under this root:
 
 - **home** -- the named child node at `home/`, with its own `intent/`, that mounts linked
-  project nodes and governs them within itself. home holds zero mounted project nodes yet.
+  project nodes and governs them within itself. home currently mounts `codex-cockpit`.
 
 Each segment has an intent document at `intent/<segment>.md` and a machine-statements file
 at `intent/machine-statements/<segment>.md`. A child node is a directory or settled linked

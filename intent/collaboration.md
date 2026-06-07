@@ -10,7 +10,9 @@ collaboration treats feedback as material: operator corrections, machine-discove
 collaboration degrades gracefully: when written ground is insufficient, the machine records the blocker and decision surface and stops rather than fabricating content.
 
 ## machine
-_none settled yet._
+phase-two handoff state is written as common ground for the operator and later tooling:
+the addressed work's current or recent gate, status, Codex thread id, latest message,
+event history, and run artifact paths are recoverable from loop state files.
 
 ---
 endorsed by qqp-dev

@@ -24,8 +24,10 @@ read the intent first, and disciplines not yet written as statements; each is a 
 folded into the intent by later work and then dropped.
 an adapter is per harness; one node may be bound by more than one, each loaded by its own
 harness.
-the adapter is materialized only at the methodology root, with the prose it routes to, and
-not in any nested node.
+the adapter material is materialized only at the methodology root, with the prose it routes
+to, and not in any nested node; a mounted external project may carry a target-local entry
+point that links to root-managed adapter material and routes direct-path work back to the
+root adapter and loop.
 the adapter is not in the orient path; loading it is how orient begins, not part of the
 intent it routes to.
 the sweep reads the adapter against the intent, so a rule it has come to restate, or a debt
@@ -36,13 +38,23 @@ the current root harness adapter is materialized as `adapter/codex.md`.
 the Codex harness loads its adapter through a root `AGENTS.md` symlinked to
 `adapter/codex.md`; the root entry is the harness's mandated pointer, holding nothing, not
 where the adapter lives.
-a machine working in a nested node is bound by Codex including the root `AGENTS.md` in the
-project instruction chain from the project root to the current directory, so no node below
-the root carries its own adapter.
+a machine working in a nested node under the root is bound by Codex including the root
+`AGENTS.md` in the project instruction chain from the project root to the current
+directory, so no node below the root carries its own adapter material.
+a mounted external project may carry a target-local `AGENTS.md` entry point for
+direct-path openings; the entry point links to root-managed adapter material and routes
+back to the root adapter and loop instead of copying root adapter material into the
+mounted node.
 the rigid workflow is materialized as `adapter/loop.sh`, realizing the two-phase shape
 over the Codex phase-two harness: `codex exec` opens a fresh thread at implement and
 `codex exec resume` resumes it across check and archive; the path carries no phase-one
 context.
+the Codex loop records phase-two run state under `HYPERCORE_LOOP_STATE_DIR`, defaulting to
+`.hypercore/loop-runs`, with run-local state, event history, raw Codex gate streams, gate
+final outputs, and current pointers for the addressed work and root.
+the Codex loop streams inner `codex exec --json` events into the phase-two run state while
+printing concise progress, without changing the cleared-session contract: implement opens
+one fresh thread and check and archive resume it.
 `adapter/loop.sh` accepts a node-local work name in the addressed node, not a
 slash-separated child path, for new work.
 the root node is the default addressed node.

@@ -20,10 +20,11 @@
 #   loop.sh [-C <node-path>] signoff  [<work-name> [<operator>]]
 #                                                               record the operator's sign-off (the human gate)
 #   loop.sh [-C <node-path>] execute  <work-name> [--dry-run]  run phase two on a cleared session
-#   loop.sh [-C <node-path>] status   <work-name>              print the work node's current phase
+#   loop.sh [-C <node-path>] status   [--json] <work-name>     print the work node's current phase
 #
 # Env:
 #   LOOP_HARNESS=codex (default and only supported phase-two harness)
+#   HYPERCORE_LOOP_STATE_DIR (default: .hypercore/loop-runs under the root)
 #   HYPERCORE_OPERATOR (optional sign-off identity when <operator> is omitted)
 #   CODEX_BIN (default: codex), CODEX_APPROVAL (default: never)
 #   CODEX_WRITE_SANDBOX (default: workspace-write), CODEX_READ_SANDBOX (default: read-only)
@@ -39,6 +40,7 @@ INTENT_TREE=intent
 WORKS="$NODE"
 LEGACY_CHANGES="$NODE/$INTENT_TREE/changes"
 LOOP_HARNESS="${LOOP_HARNESS:-codex}"
+HYPERCORE_LOOP_STATE_DIR="${HYPERCORE_LOOP_STATE_DIR:-$ROOT/.hypercore/loop-runs}"
 CODEX_BIN="${CODEX_BIN:-codex}"
 CODEX_APPROVAL="${CODEX_APPROVAL:-never}"
 CODEX_WRITE_SANDBOX="${CODEX_WRITE_SANDBOX:-workspace-write}"
@@ -47,8 +49,217 @@ DRY_RUN="${DRY_RUN:-0}"
 LEGACY_FRAME_FILES=(delta.md why.md proof.md endorsement.md plan.md)
 GATE_OUTPUT=""   # the last gate's captured output, read by cmd_execute for the sweep verdict
 PHASE_TWO_SESSION_ID=""
+PHASE_TWO_RUN_ACTIVE=0
+LOOP_RUN_ID=""
+LOOP_RUN_DIR=""
+LOOP_RUN_STATE=""
+LOOP_RUN_EVENTS=""
+LOOP_RUN_GATE_DIR=""
+LOOP_RUN_STARTED_AT=""
+LOOP_CURRENT_WORK_STATE=""
+LOOP_CURRENT_ROOT_STATE=""
+LOOP_CURRENT_GATE=""
 
-die() { printf 'loop: %s\n' "$1" >&2; exit 1; }
+die() {
+  local msg=$1
+  if [ "${PHASE_TWO_RUN_ACTIVE:-0}" = 1 ] &&
+     [ -n "${LOOP_RUN_DIR:-}" ] &&
+     [ "${LOOP_STATE_DIE_ACTIVE:-0}" != 1 ]; then
+    LOOP_STATE_DIE_ACTIVE=1
+    loop_event failure "${LOOP_CURRENT_GATE:-unknown}" failed "$msg" || true
+    loop_state_write "${LOOP_CURRENT_GATE:-unknown}" failed "$msg" || true
+  fi
+  printf 'loop: %s\n' "$msg" >&2
+  exit 1
+}
+
+utc_stamp() {
+  date -u '+%Y-%m-%dT%H:%M:%SZ'
+}
+
+utc_stamp_id() {
+  date -u '+%Y%m%dT%H%M%SZ'
+}
+
+json_escape() {
+  local s=${1-}
+  s=${s//\\/\\\\}
+  s=${s//\"/\\\"}
+  s=${s//$'\n'/\\n}
+  s=${s//$'\r'/\\r}
+  s=${s//$'\t'/\\t}
+  printf '%s' "$s"
+}
+
+json_string() {
+  printf '"%s"' "$(json_escape "${1-}")"
+}
+
+short_message() {
+  local s=${1-}
+  if [ "${#s}" -gt 240 ]; then
+    printf '%.237s...' "$s"
+  else
+    printf '%s' "$s"
+  fi
+}
+
+phase_two_node_slug() {
+  local s=$1
+  [ "$s" = "." ] && s=root
+  printf '%s' "$s" | tr '/ ' '__' | tr -c '[:alnum:]._-' '_'
+}
+
+current_work_state_path() {
+  local work_name=$1 dir="$HYPERCORE_LOOP_STATE_DIR/current/work"
+  [ "$NODE_REL" = "." ] || dir="$dir/$NODE_REL"
+  printf '%s/%s.json' "$dir" "$work_name"
+}
+
+loop_execute_command() {
+  local work_name=$1
+  printf './adapter/loop.sh'
+  [ "$NODE_REL" = "." ] || printf ' -C %q' "$NODE_REL"
+  printf ' execute %q' "$work_name"
+}
+
+loop_state_write() {
+  local gate=$1 status=$2 message=${3-} updated tmp
+  [ -n "${LOOP_RUN_STATE:-}" ] || return 0
+  LOOP_CURRENT_GATE="$gate"
+  updated="$(utc_stamp)"
+  tmp="$LOOP_RUN_STATE.tmp"
+  {
+    printf '{\n'
+    printf '  "run_id": %s,\n' "$(json_string "$LOOP_RUN_ID")"
+    printf '  "node": %s,\n' "$(json_string "$NODE_REL")"
+    printf '  "work_name": %s,\n' "$(json_string "${LOOP_WORK_NAME:-}")"
+    printf '  "phase": "phase-two",\n'
+    printf '  "gate": %s,\n' "$(json_string "$gate")"
+    printf '  "status": %s,\n' "$(json_string "$status")"
+    printf '  "codex_thread_id": %s,\n' "$(json_string "$PHASE_TWO_SESSION_ID")"
+    printf '  "started_at": %s,\n' "$(json_string "$LOOP_RUN_STARTED_AT")"
+    printf '  "updated_at": %s,\n' "$(json_string "$updated")"
+    printf '  "message": %s,\n' "$(json_string "$(short_message "$message")")"
+    printf '  "paths": {\n'
+    printf '    "run_dir": %s,\n' "$(json_string "$LOOP_RUN_DIR")"
+    printf '    "state_json": %s,\n' "$(json_string "$LOOP_RUN_STATE")"
+    printf '    "events_jsonl": %s,\n' "$(json_string "$LOOP_RUN_EVENTS")"
+    printf '    "gate_outputs_dir": %s,\n' "$(json_string "$LOOP_RUN_GATE_DIR")"
+    printf '    "current_work_state": %s,\n' "$(json_string "$LOOP_CURRENT_WORK_STATE")"
+    printf '    "current_root_state": %s\n' "$(json_string "$LOOP_CURRENT_ROOT_STATE")"
+    printf '  }\n'
+    printf '}\n'
+  } > "$tmp"
+  mv "$tmp" "$LOOP_RUN_STATE"
+  cp "$LOOP_RUN_STATE" "$LOOP_CURRENT_WORK_STATE"
+  cp "$LOOP_RUN_STATE" "$LOOP_CURRENT_ROOT_STATE"
+}
+
+loop_event() {
+  local event=$1 gate=$2 status=$3 message=${4-} ts
+  [ -n "${LOOP_RUN_EVENTS:-}" ] || return 0
+  ts="$(utc_stamp)"
+  printf '{"ts":%s,"run_id":%s,"node":%s,"work_name":%s,"phase":"phase-two","gate":%s,"status":%s,"event":%s,"message":%s}\n' \
+    "$(json_string "$ts")" \
+    "$(json_string "$LOOP_RUN_ID")" \
+    "$(json_string "$NODE_REL")" \
+    "$(json_string "${LOOP_WORK_NAME:-}")" \
+    "$(json_string "$gate")" \
+    "$(json_string "$status")" \
+    "$(json_string "$event")" \
+    "$(json_string "$(short_message "$message")")" >> "$LOOP_RUN_EVENTS"
+}
+
+phase_two_run_init() {
+  local work_name=$1 node_slug
+  LOOP_WORK_NAME="$work_name"
+  LOOP_RUN_STARTED_AT="$(utc_stamp)"
+  node_slug="$(phase_two_node_slug "$NODE_REL")"
+  LOOP_RUN_ID="$(utc_stamp_id)-$node_slug-$work_name-pid$$"
+  LOOP_RUN_DIR="$HYPERCORE_LOOP_STATE_DIR/$LOOP_RUN_ID"
+  LOOP_RUN_STATE="$LOOP_RUN_DIR/state.json"
+  LOOP_RUN_EVENTS="$LOOP_RUN_DIR/events.jsonl"
+  LOOP_RUN_GATE_DIR="$LOOP_RUN_DIR/gates"
+  LOOP_CURRENT_WORK_STATE="$(current_work_state_path "$work_name")"
+  LOOP_CURRENT_ROOT_STATE="$HYPERCORE_LOOP_STATE_DIR/current/root.json"
+
+  mkdir -p "$LOOP_RUN_GATE_DIR" "$(dirname "$LOOP_CURRENT_WORK_STATE")" "$(dirname "$LOOP_CURRENT_ROOT_STATE")"
+  : > "$LOOP_RUN_EVENTS"
+  PHASE_TWO_RUN_ACTIVE=1
+  loop_state_write preflight running "phase-two run initialized"
+  loop_event preflight preflight running "phase-two run initialized"
+}
+
+can_write_dir() {
+  local dir=$1 probe
+  [ -d "$dir" ] || return 1
+  probe="$dir/.hypercore-loop-preflight-$$"
+  if ( : > "$probe" ) 2>/dev/null; then
+    rm -f "$probe"
+    return 0
+  fi
+  rm -f "$probe" 2>/dev/null || true
+  return 1
+}
+
+phase_two_preflight_fail() {
+  local reason=$1 work_name=$2 msg
+  msg="preflight failed before codex exec: $reason; rerun the outer loop with that permission, using: $(loop_execute_command "$work_name")"
+  loop_event preflight preflight failed "$msg"
+  loop_state_write preflight failed "$msg"
+  printf 'phase-two preflight failed: %s\n' "$reason" >&2
+  printf 'rerun with outer escalation: %s\n' "$(loop_execute_command "$work_name")" >&2
+  return 1
+}
+
+phase_two_preflight() {
+  local work_name=$1 codex_home codex_parent reason msg
+  LOOP_CURRENT_GATE=preflight
+  msg="checking Codex binary and writable Codex home/session state"
+  loop_event preflight preflight running "$msg"
+  loop_state_write preflight running "$msg"
+
+  if [ "$DRY_RUN" = 1 ]; then
+    msg="dry-run: would check Codex binary and Codex home/session write permission before launching codex exec"
+    loop_event preflight preflight skipped "$msg"
+    loop_state_write preflight skipped "$msg"
+    return 0
+  fi
+
+  command -v "$CODEX_BIN" >/dev/null 2>&1 \
+    || phase_two_preflight_fail "Codex binary '$CODEX_BIN' is not on PATH" "$work_name" \
+    || return 1
+
+  if [ -n "${CODEX_HOME:-}" ]; then
+    codex_home=$CODEX_HOME
+  else
+    [ -n "${HOME:-}" ] \
+      || phase_two_preflight_fail "HOME is unset and CODEX_HOME is not set, so Codex home cannot be resolved" "$work_name" \
+      || return 1
+    codex_home=$HOME/.codex
+  fi
+
+  if [ -d "$codex_home/sessions" ]; then
+    can_write_dir "$codex_home/sessions" \
+      || reason="missing write permission for Codex sessions directory $codex_home/sessions"
+  elif [ -d "$codex_home" ]; then
+    can_write_dir "$codex_home" \
+      || reason="missing write permission to create Codex sessions under $codex_home"
+  else
+    codex_parent="$(dirname "$codex_home")"
+    can_write_dir "$codex_parent" \
+      || reason="missing write permission to create Codex home $codex_home under $codex_parent"
+  fi
+
+  [ -z "${reason:-}" ] \
+    || phase_two_preflight_fail "$reason" "$work_name" \
+    || return 1
+
+  msg="preflight passed: Codex binary is present and $codex_home can hold session state"
+  loop_event preflight preflight passed "$msg"
+  loop_state_write preflight passed "$msg"
+}
 
 ensure_work_history() {
   local d
@@ -297,6 +508,65 @@ phase() {
   echo missing
 }
 
+json_file_string_value() {
+  local file=$1 key=$2
+  if command -v jq >/dev/null 2>&1; then
+    jq -r --arg key "$key" '.[$key] // empty | if type == "string" then . else empty end' "$file" 2>/dev/null
+  else
+    sed -nE 's/.*"'"$key"'"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/p' "$file" | sed -n '1p'
+  fi
+}
+
+json_file_path_value() {
+  local file=$1 key=$2
+  if command -v jq >/dev/null 2>&1; then
+    jq -r --arg key "$key" '.paths[$key] // empty | if type == "string" then . else empty end' "$file" 2>/dev/null
+  else
+    sed -nE 's/.*"'"$key"'"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/p' "$file" | sed -n '1p'
+  fi
+}
+
+phase_two_state_file_for() {
+  current_work_state_path "$1"
+}
+
+print_phase_two_status() {
+  local work_name=$1 state run_id gate status updated message events
+  state="$(phase_two_state_file_for "$work_name")"
+  [ -s "$state" ] || return 0
+  run_id="$(json_file_string_value "$state" run_id)"
+  gate="$(json_file_string_value "$state" gate)"
+  status="$(json_file_string_value "$state" status)"
+  updated="$(json_file_string_value "$state" updated_at)"
+  message="$(json_file_string_value "$state" message)"
+  events="$(json_file_path_value "$state" events_jsonl)"
+  printf 'phase-two run: run_id=%s gate=%s status=%s updated_at=%s state=%s events=%s message=%s\n' \
+    "$run_id" "$gate" "$status" "$updated" "$state" "$events" "$message"
+}
+
+print_status_json() {
+  local work_name=$1 ph frame_ok signed_ok state
+  ph="$(phase "$work_name")"
+  frame_ok=false
+  signed_ok=false
+  frame_complete "$work_name" && frame_ok=true
+  signed_off "$work_name" && signed_ok=true
+  state="$(phase_two_state_file_for "$work_name")"
+  printf '{'
+  printf '"work_name":%s,' "$(json_string "$work_name")"
+  printf '"node":%s,' "$(json_string "$NODE_REL")"
+  printf '"phase":%s,' "$(json_string "$ph")"
+  printf '"frame_complete":%s,' "$frame_ok"
+  printf '"signed_off":%s,' "$signed_ok"
+  printf '"phase_two_run":'
+  if [ -s "$state" ]; then
+    cat "$state"
+  else
+    printf 'null'
+  fi
+  printf '}\n'
+}
+
 codex_sandbox_for_tools() {
   case "$1" in
     *Edit*|*Write*) printf '%s' "$CODEX_WRITE_SANDBOX" ;;
@@ -312,6 +582,60 @@ codex_thread_id() {
   fi
 }
 
+codex_json_string_value() {
+  local line=$1 key=$2
+  if command -v jq >/dev/null 2>&1; then
+    printf '%s\n' "$line" | jq -r --arg key "$key" '.[$key] // empty | if type == "string" then . else empty end' 2>/dev/null
+  else
+    printf '%s\n' "$line" | sed -nE 's/.*"'"$key"'"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/p' | sed -n '1p'
+  fi
+}
+
+codex_progress_detail() {
+  local line=$1
+  if command -v jq >/dev/null 2>&1; then
+    printf '%s\n' "$line" | jq -r '
+      (.message? // .msg? // .text? // .command? // .name? // empty)
+      | if type == "string" then . else empty end
+    ' 2>/dev/null | sed -n '1p'
+  else
+    printf '%s\n' "$line" | sed -nE 's/.*"(message|msg|text|command|name)"[[:space:]]*:[[:space:]]*"([^"]*)".*/\2/p' | sed -n '1p'
+  fi
+}
+
+record_codex_progress_line() {
+  local gate=$1 line=$2 type detail thread_id msg
+  type="$(codex_json_string_value "$line" type)"
+  if [ -z "$type" ]; then
+    msg="codex output: $(short_message "$line")"
+    printf '[phase-two:%s] %s\n' "$gate" "$msg"
+    loop_event codex-output "$gate" running "$msg"
+    loop_state_write "$gate" running "$msg"
+    return
+  fi
+
+  case "$type" in
+    *delta*|*.delta|token.count) return ;;
+  esac
+
+  if [ "$type" = "thread.started" ]; then
+    thread_id="$(codex_json_string_value "$line" thread_id)"
+    msg="codex thread discovered"
+    [ -n "$thread_id" ] && msg="$msg: $thread_id"
+    printf '[phase-two:%s] %s\n' "$gate" "$msg"
+    loop_event codex-thread "$gate" running "$msg"
+    loop_state_write "$gate" running "$msg"
+    return
+  fi
+
+  detail="$(codex_progress_detail "$line")"
+  msg="$type"
+  [ -n "$detail" ] && msg="$msg: $detail"
+  printf '[phase-two:%s] %s\n' "$gate" "$(short_message "$msg")"
+  loop_event codex-event "$gate" running "$msg"
+  loop_state_write "$gate" running "$msg"
+}
+
 codex_cmd_prefix() {
   local sandbox="$1"
   CODEX_CMD=("$CODEX_BIN" -a "$CODEX_APPROVAL" -s "$sandbox" -C "$ROOT")
@@ -321,10 +645,13 @@ codex_cmd_prefix() {
 }
 
 run_codex_gate() {
-  local gate="$1" tools="$2" mode="$3" sid="$4" prompt="$5" sys="$6" sandbox final events combined
+  local gate="$1" tools="$2" mode="$3" sid="$4" prompt="$5" sys="$6" sandbox final combined
+  local codex_events gate_output cmd_status pipeline_status msg
   sandbox="$(codex_sandbox_for_tools "$tools")"
   final="$(mktemp "${TMPDIR:-/tmp}/hypercore-loop-codex-$gate-final.XXXXXX")"
   combined="$(printf '%s\n\n---\n\n%s' "$sys" "$prompt")"
+  codex_events="$LOOP_RUN_DIR/events-codex-$gate.jsonl"
+  gate_output="$LOOP_RUN_GATE_DIR/$gate.final.md"
   codex_cmd_prefix "$sandbox"
 
   case "$mode" in
@@ -336,24 +663,55 @@ run_codex_gate() {
     *) die "unknown gate mode: $mode" ;;
   esac
 
+  msg="starting $gate gate with Codex sandbox $sandbox"
+  loop_event gate-start "$gate" running "$msg"
+  loop_state_write "$gate" running "$msg"
+
   if [ "$DRY_RUN" = 1 ]; then
+    printf '{"type":"dry-run","gate":%s,"mode":%s}\n' "$(json_string "$gate")" "$(json_string "$mode")" > "$codex_events"
     printf '%q ' "${CODEX_CMD[@]}"; printf '<<< stdin: %q\n' "$combined"
-    [ "$mode" = start ] && PHASE_TWO_SESSION_ID=dry-run-codex-session
+    if [ "$mode" = start ]; then
+      PHASE_TWO_SESSION_ID=dry-run-codex-session
+      loop_event codex-thread "$gate" running "dry-run Codex thread: $PHASE_TWO_SESSION_ID"
+    fi
+    GATE_OUTPUT="(dry-run) $gate gate final output would be written by Codex."
+    printf '%s\n' "$GATE_OUTPUT" > "$gate_output"
+    loop_event gate-finish "$gate" skipped "dry-run stored $gate final message at $gate_output"
+    loop_state_write "$gate" skipped "dry-run stored $gate final message at $gate_output"
     rm -f "$final"
     return 0
   fi
 
-  events="$(printf '%s' "$combined" | "${CODEX_CMD[@]}")" \
-    || { rm -f "$final"; die "gate $gate failed (codex exec exited non-zero)"; }
+  : > "$codex_events"
+  set +e
+  printf '%s' "$combined" | "${CODEX_CMD[@]}" | while IFS= read -r line || [ -n "$line" ]; do
+    printf '%s\n' "$line" >> "$codex_events"
+    record_codex_progress_line "$gate" "$line"
+  done
+  pipeline_status=("${PIPESTATUS[@]}")
+  set -e
+  cmd_status=${pipeline_status[1]}
+  if [ "$cmd_status" -ne 0 ]; then
+    [ -s "$final" ] && cp "$final" "$gate_output"
+    msg="gate $gate failed: codex exec exited $cmd_status"
+    loop_event gate-failure "$gate" failed "$msg"
+    loop_state_write "$gate" failed "$msg"
+    rm -f "$final"
+    die "$msg"
+  fi
 
   if [ "$mode" = start ]; then
-    PHASE_TWO_SESSION_ID="$(printf '%s\n' "$events" | codex_thread_id)"
+    PHASE_TWO_SESSION_ID="$(codex_thread_id < "$codex_events")"
     [ -n "$PHASE_TWO_SESSION_ID" ] \
       || { rm -f "$final"; die "could not read codex thread id from gate $gate"; }
+    loop_state_write "$gate" running "codex thread discovered: $PHASE_TWO_SESSION_ID"
   fi
 
   GATE_OUTPUT="$(cat "$final")"
+  printf '%s\n' "$GATE_OUTPUT" > "$gate_output"
   rm -f "$final"
+  loop_event gate-finish "$gate" passed "stored $gate final message at $gate_output"
+  loop_state_write "$gate" passed "stored $gate final message at $gate_output"
   printf '%s\n' "$GATE_OUTPUT"
 }
 
@@ -471,16 +829,31 @@ cmd_execute() {
   sid=""
   printf '=== phase two: %s cleared session %s, re-deriving %s in node %s from its frame ===\n' \
     "$LOOP_HARNESS" "${sid:-new}" "$work_name" "$NODE_REL"
+  phase_two_run_init "$work_name"
+  if ! phase_two_preflight "$work_name"; then
+    PHASE_TWO_RUN_ACTIVE=0
+    exit 1
+  fi
 
   run_gate implement "Read Edit Write Bash" start "$sid" \
     "Implement node-local work $work_name in addressed node $NODE_REL. Read only $source_desc and the intent it references; build the delta in code."
   sid="$PHASE_TWO_SESSION_ID"
 
   printf '\n--- gate: check (mechanical) ---\n'
+  loop_event check check running "running ./check.sh"
+  loop_state_write check running "running ./check.sh"
   if [ "$DRY_RUN" = 1 ]; then
     printf '(dry-run) would run: ./check.sh\n'
+    loop_event check check skipped "dry-run skipped ./check.sh"
+    loop_state_write check skipped "dry-run skipped ./check.sh"
   else
-    check_green || die "check.sh red after implement — drift, stopping"
+    if check_green; then
+      loop_event check check passed "check.sh green after implement"
+      loop_state_write check passed "check.sh green after implement"
+    else
+      loop_event check check failed "check.sh red after implement — drift, stopping"
+      die "check.sh red after implement — drift, stopping"
+    fi
     printf 'check.sh green\n'
   fi
   run_gate check "Read Write Bash" resume "$sid" \
@@ -493,12 +866,20 @@ cmd_execute() {
   if [ "$DRY_RUN" != 1 ]; then
     case "$GATE_OUTPUT" in
       *"SWEEP_VERDICT: INCOHERENT"*)
+        loop_event sweep check failed "sweep verdict: incoherent"
+        loop_state_write check failed "sweep verdict: incoherent"
         die "sweep flagged the corpus incoherent — phase two stops here for the operator; $work_name stays in flight, not adopted" ;;
       *"SWEEP_VERDICT: COHERENT"*)
+        loop_event sweep check passed "sweep verdict: coherent"
+        loop_state_write check passed "sweep verdict: coherent"
         printf 'sweep verdict: coherent — proceeding to adoption\n' ;;
       *)
+        loop_event sweep check failed "no readable sweep verdict"
+        loop_state_write check failed "no readable sweep verdict"
         die "no readable sweep verdict — phase two stops here for the operator; could not confirm coherence, so $work_name stays in flight, not adopted" ;;
     esac
+  else
+    loop_event sweep check skipped "dry-run skipped sweep verdict enforcement"
   fi
 
   run_gate archive "Read Edit Write" resume "$sid" \
@@ -508,26 +889,50 @@ cmd_execute() {
     archive_collection="$(archive_collection_for_active_dir "$active_dir" adopted)"
     printf '(dry-run) would: check.sh green, then git mv %s %s/\n' \
       "$active_rel" "$(relpath "$archive_collection")"
+    loop_event archive archive skipped "dry-run would record $work_name in adopted history"
+    loop_state_write archive skipped "dry-run would record $work_name in adopted history"
   else
-    check_green || die "check.sh red after fold — stopping before archive"
+    loop_event check archive running "running ./check.sh after archive fold"
+    loop_state_write archive running "running ./check.sh after archive fold"
+    if check_green; then
+      loop_event check archive passed "check.sh green after archive fold"
+    else
+      loop_event check archive failed "check.sh red after fold — stopping before archive"
+      die "check.sh red after fold — stopping before archive"
+    fi
     if is_legacy_change_dir "$active_dir"; then
       archive_decision=adopted
     else
       archive_decision="$(archive_decision_from_output)"
     fi
+    loop_event archive-decision archive passed "archive decision: $archive_decision"
+    loop_state_write archive passed "archive decision: $archive_decision"
     archive_collection="$(archive_collection_for_active_dir "$active_dir" "$archive_decision")"
     archive_move "$active_dir" "$archive_collection"
     printf 'recorded %s in %s history for node %s\n' "$work_name" "$archive_decision" "$NODE_REL"
   fi
+  loop_event completion archive complete "phase two complete for $work_name"
+  loop_state_write archive complete "phase two complete for $work_name"
+  PHASE_TWO_RUN_ACTIVE=0
 }
 
 cmd_status() {
-  local work_name="${1:-}"
-  [ -n "$work_name" ] || die "usage: loop.sh [-C <node-path>] status <work-name>"
+  local json=0 work_name
+  if [ "${1:-}" = "--json" ]; then
+    json=1
+    shift
+  fi
+  work_name="${1:-}"
+  [ -n "$work_name" ] || die "usage: loop.sh [-C <node-path>] status [--json] <work-name>"
   validate_work_name "$work_name"
+  if [ "$json" = 1 ]; then
+    print_status_json "$work_name"
+    return
+  fi
   printf '%s in node %s: phase=%s frame_complete=%s signed_off=%s\n' "$work_name" "$NODE_REL" "$(phase "$work_name")" \
     "$(frame_complete "$work_name" && echo yes || echo no)" \
     "$(signed_off "$work_name" && echo yes || echo no)"
+  print_phase_two_status "$work_name"
 }
 
 main() {
