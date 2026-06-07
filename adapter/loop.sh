@@ -18,8 +18,10 @@
 # Usage:
 #   loop.sh [-C <node-path>] start    <work-name>              scaffold the work node; print the orient gate
 #   loop.sh [-C <node-path>] direct   [<work-name> [<operator>]]
+#                                                               select a neutral direction option
+#   loop.sh [-C <node-path>] direct   [<work-name> [<operator>]]
 #                                      --route|--constraint|--delegate <text-or->
-#                                                               record substantive operator direction
+#                                                               legacy/admin direction text form
 #   loop.sh [-C <node-path>] review   <work-name> [--add <role>]...
 #                                                               spawn/read the one-way review roster
 #   loop.sh [-C <node-path>] frame    <work-name>              check the frame is written and ready for sign-off
@@ -213,8 +215,10 @@ loop_state_write() {
     printf '}\n'
   } > "$tmp"
   mv "$tmp" "$LOOP_RUN_STATE"
-  cp "$LOOP_RUN_STATE" "$LOOP_CURRENT_WORK_STATE"
-  cp "$LOOP_RUN_STATE" "$LOOP_CURRENT_ROOT_STATE"
+  if [ "$DRY_RUN" != 1 ]; then
+    cp "$LOOP_RUN_STATE" "$LOOP_CURRENT_WORK_STATE"
+    cp "$LOOP_RUN_STATE" "$LOOP_CURRENT_ROOT_STATE"
+  fi
 }
 
 loop_event() {
@@ -248,7 +252,11 @@ phase_two_run_init() {
   LOOP_CURRENT_ROOT_STATE="$HYPERCORE_LOOP_STATE_DIR/current/root.json"
   active_dir="$(active_work_dir "$work_name")" || die "work is not active in node $NODE_REL: $work_name"
   PHASE_TWO_FRAME_DIR="$(frame_dir_for "$active_dir")"
-  PHASE_TWO_ACCEPTANCE_DIR="$PHASE_TWO_FRAME_DIR/phase-two"
+  if [ "$DRY_RUN" = 1 ]; then
+    PHASE_TWO_ACCEPTANCE_DIR="$LOOP_RUN_DIR/phase-two-dry-run"
+  else
+    PHASE_TWO_ACCEPTANCE_DIR="$PHASE_TWO_FRAME_DIR/phase-two"
+  fi
   PHASE_TWO_UNITS_DIR="$PHASE_TWO_ACCEPTANCE_DIR/units"
   PHASE_TWO_HANDOFF_DIR="$PHASE_TWO_ACCEPTANCE_DIR/handoffs"
   PHASE_TWO_DIFF_DIR="$PHASE_TWO_ACCEPTANCE_DIR/diffs"
@@ -369,6 +377,11 @@ validate_work_name() {
   [[ "$name" != */* ]] \
     || die "work name must be node-local: $name (use -C <node-path> to address another node)"
   work_name_ok "$name" || die "invalid work name: $name"
+}
+
+work_number_for_name() {
+  local name=$1
+  printf '%s' "${name%%-*}"
 }
 
 set_node() {
@@ -586,6 +599,113 @@ frame_section_has_content() {
   ' "$file"
 }
 
+frame_label_value_from_file() {
+  local file=$1 label=$2
+  [ -f "$file" ] || return 1
+  awk -v label="$label" '
+    function trim(s) {
+      sub(/^[[:space:]]+/, "", s)
+      sub(/[[:space:]]+$/, "", s)
+      return s
+    }
+    function clean(s) {
+      s = tolower(s)
+      gsub(/<!--[^>]*-->/, " ", s)
+      gsub(/[`*_]/, "", s)
+      gsub(/[[:space:]]+/, " ", s)
+      return trim(s)
+    }
+    function meaningful(s) {
+      s = clean(s)
+      if (s == "") return 0
+      if (s ~ /^(todo|tbd|fill me|fill this|fill in|to be filled|placeholder|xxx)([ .:-]|$)/) return 0
+      return 1
+    }
+    BEGIN {
+      target = clean(label) ":"
+      found = 0
+    }
+    /^[[:space:]]*```/ { fence = !fence; next }
+    fence { next }
+    {
+      line = $0
+      lowered = clean(line)
+      if (substr(lowered, 1, length(target)) == target) {
+        rest = substr(line, index(line, ":") + 1)
+        rest = trim(rest)
+        if (meaningful(rest)) {
+          found = 1
+          print rest
+          exit 0
+        }
+      }
+    }
+    END { exit(found ? 0 : 1) }
+  ' "$file"
+}
+
+frame_section_excerpt_from_file() {
+  local file=$1 heading=$2 limit=${3:-6}
+  [ -f "$file" ] || return 1
+  awk -v heading="$heading" -v limit="$limit" '
+    function trim(s) {
+      sub(/^[[:space:]]+/, "", s)
+      sub(/[[:space:]]+$/, "", s)
+      return s
+    }
+    function clean(s) {
+      s = tolower(s)
+      gsub(/<!--[^>]*-->/, " ", s)
+      gsub(/[`*_]/, "", s)
+      gsub(/[[:space:]]+/, " ", s)
+      return trim(s)
+    }
+    function meaningful(s) {
+      s = clean(s)
+      if (s == "") return 0
+      if (s ~ /^(todo|tbd|fill me|fill this|fill in|to be filled|placeholder|xxx)([ .:-]|$)/) return 0
+      return 1
+    }
+    function heading_level(s) {
+      match(s, /^#+/)
+      return RLENGTH
+    }
+    function heading_text(s) {
+      sub(/^[[:space:]]*#+[[:space:]]*/, "", s)
+      return clean(s)
+    }
+    function emit(s) {
+      s = trim(s)
+      if (!meaningful(s)) return
+      print s
+      count += 1
+      if (count >= limit) exit 0
+    }
+    BEGIN {
+      target = clean(heading)
+      in_section = 0
+      count = 0
+    }
+    /^[[:space:]]*```/ { fence = !fence; next }
+    fence { next }
+    /^[[:space:]]*#+[[:space:]]+/ {
+      level = heading_level($0)
+      h = heading_text($0)
+      if (in_section && level <= 2) {
+        exit(count > 0 ? 0 : 1)
+      }
+      if (level == 2 && h == target) {
+        in_section = 1
+        next
+      }
+      if (in_section) emit($0)
+      next
+    }
+    in_section { emit($0) }
+    END { exit(count > 0 ? 0 : 1) }
+  ' "$file"
+}
+
 frame_reversibility_value_from_file() {
   local file=$1
   [ -f "$file" ] || return 1
@@ -690,10 +810,543 @@ loop_cmd_prefix() {
 direction_command_hint() {
   local work_name=$1
   if [ "$NODE_REL" = "." ]; then
-    printf './direction %s <operator> --route <text-or->' "$work_name"
+    printf './direction %s [operator]' "$work_name"
   else
-    printf '%s direct %s <operator> --route <text-or->' "$(loop_cmd_prefix)" "$work_name"
+    printf '%s direct %s [operator]' "$(loop_cmd_prefix)" "$work_name"
   fi
+}
+
+direction_options_contract_errors_at() {
+  local d=$1 frame file
+  frame="$(frame_dir_for "$d")"
+  file="$frame/options.md"
+  if [ ! -f "$file" ]; then
+    printf 'missing direction options artifact: %s\n' "$(relpath "$file")"
+    return 1
+  fi
+  awk '
+    function trim(s) {
+      sub(/^[[:space:]]+/, "", s)
+      sub(/[[:space:]]+$/, "", s)
+      return s
+    }
+    function clean(s) {
+      s = tolower(trim(s))
+      gsub(/[`*_]/, "", s)
+      gsub(/[[:space:]]+/, " ", s)
+      return s
+    }
+    function meaningful(s) {
+      s = clean(s)
+      if (s == "") return 0
+      if (s ~ /^(todo|tbd|fill me|fill this|fill in|to be filled|placeholder|xxx)([ .:-]|$)/) return 0
+      return 1
+    }
+    function fail(msg) {
+      printf "malformed direction options artifact: %s\n", msg
+      failed = 1
+    }
+    function reset_option() {
+      id = ""
+      kind = ""
+      summary = ""
+      reversibility = ""
+      tradeoff = ""
+      current_field = ""
+    }
+    function append_field(line) {
+      line = trim(line)
+      if (line == "") return
+      if (current_field == "summary") summary = trim(summary " " line)
+      if (current_field == "tradeoff") tradeoff = trim(tradeoff " " line)
+    }
+    function supported_kind(value) {
+      value = clean(value)
+      return value == "selected-route" || value == "constraint" || value == "delegation"
+    }
+    function finish_option() {
+      if (!option_open) return
+      if (!meaningful(id)) fail("option " current_option " missing id:")
+      if (!meaningful(kind)) {
+        fail("option " current_option " missing kind:")
+      } else if (!supported_kind(kind)) {
+        fail("option " current_option " has unsupported kind:")
+      }
+      if (!meaningful(summary)) fail("option " current_option " missing summary:")
+      if (!meaningful(reversibility)) {
+        fail("option " current_option " missing reversibility:")
+      } else if (clean(reversibility) != "one-way" && clean(reversibility) != "two-way") {
+        fail("option " current_option " reversibility: must be one-way or two-way")
+      }
+      if (!meaningful(tradeoff)) fail("option " current_option " missing tradeoff:")
+      id_key = clean(id)
+      if (meaningful(id)) {
+        if (id_seen[id_key]) fail("option ids must be unique")
+        id_seen[id_key] = 1
+      }
+      summary_key = clean(summary)
+      if (meaningful(summary)) {
+        if (summary_seen[summary_key]) fail("option summaries must be materially distinct")
+        summary_seen[summary_key] = 1
+      }
+      option_open = 0
+    }
+    BEGIN {
+      failed = 0
+      expected = 1
+      option_count = 0
+      option_open = 0
+      in_rejection = 0
+      none_count = 0
+      abort_count = 0
+      reset_option()
+    }
+    /^[[:space:]]*```/ { fence = !fence; next }
+    fence { next }
+    {
+      line = $0
+      lowered = clean(line)
+      if (lowered ~ /^(recommended|recommendation|default|preferred|machine recommendation|machine-recommendation):/) {
+        fail("neutral options must not mark a recommendation, default, or preferred choice")
+      }
+    }
+    lowered ~ /^## option [0-9]+$/ {
+      finish_option()
+      heading = lowered
+      sub(/^## option /, "", heading)
+      number = heading + 0
+      if (number != expected) fail("option headings must be numbered contiguously from 1")
+      option_count += 1
+      expected += 1
+      current_option = number
+      option_open = 1
+      in_rejection = 0
+      reset_option()
+      next
+    }
+    lowered == "## rejection choices" {
+      finish_option()
+      in_rejection = 1
+      next
+    }
+    lowered ~ /^## / {
+      finish_option()
+      in_rejection = 0
+      next
+    }
+    option_open && lowered ~ /^(id|kind|summary|reversibility|tradeoff):/ {
+      label = lowered
+      sub(/:.*/, "", label)
+      value = line
+      sub(/^[[:space:]]*[^:]*:[[:space:]]*/, "", value)
+      value = trim(value)
+      if (label == "id") id = value
+      if (label == "kind") kind = value
+      if (label == "summary") summary = value
+      if (label == "reversibility") reversibility = value
+      if (label == "tradeoff") tradeoff = value
+      current_field = label
+      next
+    }
+    option_open && lowered ~ /^[[:alnum:]][[:alnum:]_-]*:/ {
+      current_field = ""
+      next
+    }
+    option_open && current_field != "" {
+      append_field(line)
+      next
+    }
+    in_rejection && lowered ~ /^none:/ {
+      value = line
+      sub(/^[[:space:]]*[^:]*:[[:space:]]*/, "", value)
+      if (meaningful(value)) {
+        none_count += 1
+      } else {
+        fail("none: rejection choice must be substantive")
+      }
+      next
+    }
+    in_rejection && lowered ~ /^abort:/ {
+      value = line
+      sub(/^[[:space:]]*[^:]*:[[:space:]]*/, "", value)
+      if (meaningful(value)) {
+        abort_count += 1
+      } else {
+        fail("abort: rejection choice must be substantive")
+      }
+      next
+    }
+    END {
+      finish_option()
+      if (option_count < 2) fail("at least two numbered options are required")
+      if (none_count != 1) fail("exactly one none: rejection choice is required")
+      if (abort_count != 1) fail("exactly one abort: rejection choice is required")
+      exit(failed ? 1 : 0)
+    }
+  ' "$file"
+}
+
+direction_options_table_at() {
+  local d=$1 frame file
+  frame="$(frame_dir_for "$d")"
+  file="$frame/options.md"
+  awk '
+    function trim(s) {
+      sub(/^[[:space:]]+/, "", s)
+      sub(/[[:space:]]+$/, "", s)
+      return s
+    }
+    function clean(s) {
+      s = tolower(trim(s))
+      gsub(/[`*_]/, "", s)
+      gsub(/[[:space:]]+/, " ", s)
+      return s
+    }
+    function meaningful(s) {
+      s = clean(s)
+      if (s == "") return 0
+      return 1
+    }
+    function reset_option() {
+      id = ""
+      kind = ""
+      summary = ""
+      reversibility = ""
+      tradeoff = ""
+      current_field = ""
+    }
+    function append_field(line) {
+      line = trim(line)
+      if (line == "") return
+      if (current_field == "summary") summary = trim(summary " " line)
+      if (current_field == "tradeoff") tradeoff = trim(tradeoff " " line)
+    }
+    function finish_option() {
+      if (!option_open) return
+      gsub(/\t/, " ", id)
+      gsub(/\t/, " ", kind)
+      gsub(/\t/, " ", summary)
+      gsub(/\t/, " ", reversibility)
+      gsub(/\t/, " ", tradeoff)
+      printf "%s\t%s\t%s\t%s\t%s\t%s\n", current_option, kind, summary, reversibility, tradeoff, id
+      option_open = 0
+    }
+    BEGIN { option_open = 0; reset_option() }
+    /^[[:space:]]*```/ { fence = !fence; next }
+    fence { next }
+    {
+      line = $0
+      lowered = clean(line)
+    }
+    lowered ~ /^## option [0-9]+$/ {
+      finish_option()
+      heading = lowered
+      sub(/^## option /, "", heading)
+      current_option = heading + 0
+      option_open = 1
+      reset_option()
+      next
+    }
+    lowered ~ /^## / {
+      finish_option()
+      next
+    }
+    option_open && lowered ~ /^(id|kind|summary|reversibility|tradeoff):/ {
+      label = lowered
+      sub(/:.*/, "", label)
+      value = line
+      sub(/^[[:space:]]*[^:]*:[[:space:]]*/, "", value)
+      value = trim(value)
+      if (label == "id") id = value
+      if (label == "kind") kind = value
+      if (label == "summary") summary = value
+      if (label == "reversibility") reversibility = value
+      if (label == "tradeoff") tradeoff = value
+      current_field = label
+      next
+    }
+    option_open && lowered ~ /^[[:alnum:]][[:alnum:]_-]*:/ {
+      current_field = ""
+      next
+    }
+    option_open && current_field != "" && meaningful(line) {
+      append_field(line)
+      next
+    }
+    END { finish_option() }
+  ' "$file"
+}
+
+direction_rejection_choice_text_at() {
+  local d=$1 choice=$2 frame file
+  frame="$(frame_dir_for "$d")"
+  file="$frame/options.md"
+  awk -v choice="$choice" '
+    function trim(s) {
+      sub(/^[[:space:]]+/, "", s)
+      sub(/[[:space:]]+$/, "", s)
+      return s
+    }
+    function clean(s) {
+      s = tolower(trim(s))
+      gsub(/[`*_]/, "", s)
+      gsub(/[[:space:]]+/, " ", s)
+      return s
+    }
+    /^[[:space:]]*```/ { fence = !fence; next }
+    fence { next }
+    {
+      line = $0
+      lowered = clean(line)
+    }
+    lowered == "## rejection choices" { in_rejection = 1; next }
+    lowered ~ /^## / { in_rejection = 0; next }
+    in_rejection && index(lowered, choice ":") == 1 {
+      value = line
+      sub(/^[[:space:]]*[^:]*:[[:space:]]*/, "", value)
+      print trim(value)
+      exit
+    }
+  ' "$file"
+}
+
+direction_selected_field_value_from_file() {
+  local file=$1
+  awk '
+    function trim(s) {
+      sub(/^[[:space:]]+/, "", s)
+      sub(/[[:space:]]+$/, "", s)
+      return s
+    }
+    /^[[:space:]]*```/ { fence = !fence; next }
+    fence { next }
+    {
+      line = $0
+      lowered = tolower(line)
+      gsub(/^[[:space:]]+/, "", lowered)
+      if (lowered ~ /^(selected-route|constraint|delegation):/) {
+        label = lowered
+        sub(/:.*/, "", label)
+        value = line
+        sub(/^[[:space:]]*[^:]*:[[:space:]]*/, "", value)
+        print label "\t" trim(value)
+        exit
+      }
+    }
+  ' "$file"
+}
+
+direction_selection_matches_options_at() {
+  local d=$1 selected_field=$2 selected_value=$3
+  local number kind summary reversibility tradeoff id
+  while IFS=$'\t' read -r number kind summary reversibility tradeoff id; do
+    if [ "$kind" = "$selected_field" ] && [ "$summary" = "$selected_value" ]; then
+      return 0
+    fi
+  done < <(direction_options_table_at "$d")
+  return 1
+}
+
+direction_options_prompt_at() {
+  local d=$1 work_name=$2 frame file number kind summary reversibility tradeoff id none_text abort_text
+  frame="$(frame_dir_for "$d")"
+  file="$frame/options.md"
+  none_text="$(direction_rejection_choice_text_at "$d" none)"
+  abort_text="$(direction_rejection_choice_text_at "$d" abort)"
+  {
+    printf 'operator gate: direction for %s\n' "$work_name"
+    printf 'Select one neutral option from %s.\n\n' "$(relpath "$file")"
+    while IFS=$'\t' read -r number kind summary reversibility tradeoff id; do
+      printf '%s. %s\n' "$number" "$summary"
+      printf '   kind: %s; reversibility: %s; id: %s\n' "$kind" "$reversibility" "$id"
+      printf '   tradeoff: %s\n' "$tradeoff"
+    done < <(direction_options_table_at "$d")
+    printf '\nn. none of these - %s\n' "$none_text"
+    printf 'q. abort - %s\n' "$abort_text"
+    printf 'Choice: '
+  }
+}
+
+direction_option_choice_from_tty() {
+  local d=$1 work_name=$2 errors prompt choice normalized number kind summary reversibility tradeoff id
+  if ! errors="$(direction_options_contract_errors_at "$d")"; then
+    die "$errors"
+  fi
+  prompt="$(direction_options_prompt_at "$d" "$work_name")"
+  OPERATOR_GATE_TOKEN=""
+  operator_gate_read_token "$prompt"
+  choice="$(meaningful_text "$OPERATOR_GATE_TOKEN" || true)"
+  normalized="$(printf '%s' "$choice" | tr '[:upper:]' '[:lower:]')"
+  case "$normalized" in
+    n|none)
+      die "direction not recorded: operator selected none-of-these; return to frame"
+      ;;
+    q|abort)
+      die "direction aborted by operator"
+      ;;
+    ""|*[!0-9]*)
+      die "invalid direction option: ${OPERATOR_GATE_TOKEN:-<empty>}"
+      ;;
+  esac
+  while IFS=$'\t' read -r number kind summary reversibility tradeoff id; do
+    if [ "$number" = "$choice" ]; then
+      DIRECTION_SELECTED_FIELD="$kind"
+      DIRECTION_SELECTED_VALUE="$summary"
+      DIRECTION_SELECTED_GATE="tty"
+      return 0
+    fi
+  done < <(direction_options_table_at "$d")
+  die "invalid direction option: $choice"
+}
+
+operator_gate_contract_errors_in_file() {
+  local file=$1 label=$2
+  [ -f "$file" ] || { printf 'malformed %s: missing operator-gate:\n' "$label"; return 1; }
+  awk -v label="$label" '
+    BEGIN {
+      count = 0
+      failed = 0
+      value = ""
+    }
+    /^operator-gate:/ {
+      count += 1
+      rest = $0
+      sub(/^operator-gate:[[:space:]]*/, "", rest)
+      sub(/[[:space:]]+$/, "", rest)
+      gate_value = rest
+      next
+    }
+    END {
+      if (count == 0) {
+        printf "malformed %s: missing operator-gate:\n", label
+        exit 1
+      }
+      if (count > 1) {
+        printf "malformed %s: exactly one operator-gate: line is required\n", label
+        failed = 1
+      }
+      if (count == 1) {
+        # B-ready gate token: a scheme, optionally <scheme>:<value> (e.g. a later
+        # hmac:<...>). The syntax stays open so a future keyed scheme parses without
+        # a format change, but only the tty liveness scheme is implemented here.
+        colon = index(gate_value, ":")
+        if (colon > 0) {
+          scheme = substr(gate_value, 1, colon - 1)
+          payload = substr(gate_value, colon + 1)
+        } else {
+          scheme = gate_value
+          payload = ""
+        }
+        if (scheme !~ /^[a-z][a-z0-9-]*$/ || (colon > 0 && payload == "")) {
+          printf "malformed %s: operator-gate: must be a gate token (tty or <scheme>:<value>)\n", label
+          failed = 1
+        } else if (scheme != "tty") {
+          printf "malformed %s: operator-gate: unsupported scheme %s; only tty is implemented in this route\n", label, scheme
+          failed = 1
+        } else if (payload != "") {
+          printf "malformed %s: operator-gate: tty takes no value\n", label
+          failed = 1
+        }
+      }
+      exit(failed ? 1 : 0)
+    }
+  ' "$file"
+}
+
+operator_gate_bootstrap_allowed_at() {
+  local d=$1 frame_file
+  # Narrow bootstrap for the signed work that introduces the gate. Its frame explicitly
+  # excludes a retroactive claim that its already-recorded operator artifacts used it.
+  [ "$NODE_REL" = "." ] || return 1
+  [ "$(basename "$d")" = "009-operator-acts" ] || return 1
+  frame_file="$(frame_dir_for "$d")/frame.md"
+  [ -f "$frame_file" ] || return 1
+  grep -Fq "this work's already" "$frame_file" \
+    && grep -Fq "recorded \`direction.md\` and later sign-off" "$frame_file" \
+    && grep -Fq "gate exists" "$frame_file"
+}
+
+operator_gate_open() {
+  if [ "${HYPERCORE_OPERATOR_GATE_TEST_NO_TTY:-0}" = 1 ]; then
+    die "operator gate requires /dev/tty; no controlling terminal is available"
+  fi
+  if ! exec {OPERATOR_GATE_FD}<>/dev/tty; then
+    OPERATOR_GATE_FD=""
+    die "operator gate requires /dev/tty; no controlling terminal is available"
+  fi
+}
+
+operator_gate_close() {
+  if [ -n "${OPERATOR_GATE_FD:-}" ]; then
+    exec {OPERATOR_GATE_FD}>&- || true
+    OPERATOR_GATE_FD=""
+  fi
+}
+
+operator_gate_read_token() {
+  local prompt=$1 token
+  operator_gate_open
+  printf '%s' "$prompt" >&"$OPERATOR_GATE_FD"
+  if ! IFS= read -r token <&"$OPERATOR_GATE_FD"; then
+    operator_gate_close
+    die "operator gate failed to read from /dev/tty"
+  fi
+  operator_gate_close
+  OPERATOR_GATE_TOKEN="$token"
+}
+
+operator_gate_confirm_work() {
+  local action=$1 work_name=$2 prompt
+  OPERATOR_GATE_TOKEN=""
+  prompt="operator gate: $action for $work_name
+Type $work_name to confirm: "
+  operator_gate_read_token "$prompt"
+  [ "$OPERATOR_GATE_TOKEN" = "$work_name" ] \
+    || die "operator gate confirmation failed: expected $work_name"
+  printf 'tty'
+}
+
+signoff_attestation_section_at() {
+  local d=$1 title=$2 heading=$3 limit=${4:-6} frame file
+  frame="$(frame_dir_for "$d")"
+  file="$frame/frame.md"
+  printf '%s:\n' "$title"
+  if ! frame_section_excerpt_from_file "$file" "$heading" "$limit" | sed 's/^/  /'; then
+    printf '  <missing from frame.md>\n'
+  fi
+}
+
+signoff_attestation_brief_at() {
+  local d=$1 work_name=$2 who=$3 frame file work_number target_segments reversibility
+  frame="$(frame_dir_for "$d")"
+  file="$frame/frame.md"
+  work_number="$(work_number_for_name "$work_name")"
+  target_segments="$(frame_label_value_from_file "$file" "Target segments" || printf '<missing from frame.md>')"
+  reversibility="$(frame_reversibility_value_from_file "$file" || printf '<missing from frame.md>')"
+  {
+    printf 'operator gate: sign-off for %s\n' "$work_name"
+    printf 'Operator: %s\n' "$who"
+    printf 'Frame: %s\n' "$(relpath "$file")"
+    printf 'Target segments: %s\n' "$target_segments"
+    printf 'Reversibility: %s\n\n' "$reversibility"
+    printf 'Attestation brief from frame.md:\n'
+    signoff_attestation_section_at "$d" "Route" "route" 8
+    signoff_attestation_section_at "$d" "Acceptance condition" "acceptance condition" 5
+    signoff_attestation_section_at "$d" "Observable acceptance" "observable acceptance" 5
+    signoff_attestation_section_at "$d" "Excluded interpretation" "excluded interpretation" 5
+    printf '\nType work number %s to confirm: ' "$work_number"
+  }
+}
+
+operator_gate_confirm_signoff() {
+  local d=$1 work_name=$2 who=$3 expected prompt
+  OPERATOR_GATE_TOKEN=""
+  expected="$(work_number_for_name "$work_name")"
+  prompt="$(signoff_attestation_brief_at "$d" "$work_name" "$who")"
+  operator_gate_read_token "$prompt"
+  [ "$OPERATOR_GATE_TOKEN" = "$expected" ] \
+    || die "operator gate confirmation failed: expected work number $expected"
+  printf 'tty'
 }
 
 review_command_hint() {
@@ -714,7 +1367,7 @@ direction_given_at() {
 }
 
 direction_contract_errors_at() {
-  local d=$1 frame file field count=0 failed=0
+  local d=$1 frame file field count=0 failed=0 errors selection selected_field="" selected_value=""
   frame="$(frame_dir_for "$d")"
   file="$frame/direction.md"
   if [ ! -f "$file" ]; then
@@ -731,6 +1384,10 @@ direction_contract_errors_at() {
     printf 'malformed direction artifact: missing direction-given-at:\n'
     failed=1
   fi
+  if ! operator_gate_bootstrap_allowed_at "$d" &&
+     ! operator_gate_contract_errors_in_file "$file" "direction artifact"; then
+    failed=1
+  fi
 
   for field in selected-route constraint delegation; do
     frame_label_has_content "$file" "$field" && count=$((count + 1))
@@ -741,6 +1398,46 @@ direction_contract_errors_at() {
   elif [ "$count" -gt 1 ]; then
     printf 'malformed direction artifact: only one of selected-route:, constraint:, or delegation: may be present\n'
     failed=1
+  else
+    selection="$(direction_selected_field_value_from_file "$file" || true)"
+    if [ -n "$selection" ]; then
+      IFS=$'\t' read -r selected_field selected_value <<< "$selection"
+    fi
+  fi
+  if ! operator_gate_bootstrap_allowed_at "$d"; then
+    if ! errors="$(direction_options_contract_errors_at "$d")"; then
+      printf '%s\n' "$errors"
+      failed=1
+    elif [ "$count" -eq 1 ] &&
+         ! direction_selection_matches_options_at "$d" "$selected_field" "$selected_value"; then
+      printf 'malformed direction artifact: selected direction must be copied from a numbered option in options.md\n'
+      failed=1
+    fi
+  fi
+  [ "$failed" = 0 ]
+}
+
+signoff_contract_errors_at() {
+  local d=$1 frame file failed=0
+  frame="$(frame_dir_for "$d")"
+  file="$frame/signoff.md"
+  if [ ! -f "$file" ]; then
+    printf 'missing sign-off artifact: %s\n' "$(relpath "$file")"
+    return 1
+  fi
+  frame_label_has_content "$file" "signed-off-by" \
+    || { printf 'malformed sign-off artifact: missing signed-off-by:\n'; failed=1; }
+  if ! operator_gate_bootstrap_allowed_at "$d"; then
+    if frame_label_has_content "$file" "signed-off-at"; then
+      sed -nE 's/^signed-off-at:[[:space:]]*[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z[[:space:]]*$/ok/p' "$file" | grep -qx ok \
+        || { printf 'malformed sign-off artifact: signed-off-at must be UTC YYYY-MM-DDTHH:MM:SSZ\n'; failed=1; }
+    else
+      printf 'malformed sign-off artifact: missing signed-off-at:\n'
+      failed=1
+    fi
+    if ! operator_gate_contract_errors_in_file "$file" "sign-off artifact"; then
+      failed=1
+    fi
   fi
   [ "$failed" = 0 ]
 }
@@ -905,7 +1602,7 @@ signed_off() {
 signed_off_at() {
   local d=$1 frame
   frame="$(frame_dir_for "$d")"
-  [ -f "$frame/signoff.md" ] && grep -q '^signed-off-by:' "$frame/signoff.md"
+  [ -f "$frame/signoff.md" ] && signoff_contract_errors_at "$d" >/dev/null
 }
 
 signable_work_candidates() {
@@ -1033,7 +1730,8 @@ write_current_diff_record() {
       printf '# worktree diff record\n\n'
       printf 'Recorded at: %s\n\n' "$(utc_stamp)"
       printf '## status\n\n'
-      git -C "$ROOT" status --short
+      printf 'Tracked changes only; untracked files are excluded from this unit diff record.\n\n'
+      git -C "$ROOT" status --short --untracked-files=no
       printf '\n## diff\n\n'
       git -C "$ROOT" diff --binary
     } > "$tmp"
@@ -1109,7 +1807,7 @@ acceptance_note_from_output() {
 }
 
 run_acceptance_reviewer() {
-  local reviewer_key=$1 prompt=$2 output status final tmpout tmperr fake_file
+  local reviewer_key=$1 prompt=$2 output status final tmpout tmperr fake_file timeout_seconds
   ACCEPTANCE_VERDICT=FLAG
   ACCEPTANCE_NOTES="missing acceptance reviewer output; counted as FLAG"
   ACCEPTANCE_OUTPUT=""
@@ -1141,6 +1839,13 @@ run_acceptance_reviewer() {
   command -v "$CODEX_BIN" >/dev/null 2>&1 \
     || die "acceptance review cannot spawn Codex reviewers: Codex binary '$CODEX_BIN' is not on PATH"
   validate_review_model
+  timeout_seconds="${HYPERCORE_ACCEPTANCE_TIMEOUT_SECONDS:-600}"
+  case "$timeout_seconds" in
+    ""|*[!0-9]*) die "HYPERCORE_ACCEPTANCE_TIMEOUT_SECONDS must be a positive integer" ;;
+    0) die "HYPERCORE_ACCEPTANCE_TIMEOUT_SECONDS must be greater than zero" ;;
+  esac
+  command -v timeout >/dev/null 2>&1 \
+    || die "acceptance review requires the timeout command so reviewer subprocesses cannot hang indefinitely"
   final="$(mktemp "${TMPDIR:-/tmp}/hypercore-acceptance-$reviewer_key-final.XXXXXX")"
   tmpout="$(mktemp "${TMPDIR:-/tmp}/hypercore-acceptance-$reviewer_key-out.XXXXXX")"
   tmperr="$(mktemp "${TMPDIR:-/tmp}/hypercore-acceptance-$reviewer_key-err.XXXXXX")"
@@ -1148,7 +1853,7 @@ run_acceptance_reviewer() {
   [ -n "${CODEX_REVIEW_MODEL:-}" ] && ACCEPTANCE_CMD+=(-m "$CODEX_REVIEW_MODEL")
   ACCEPTANCE_CMD+=(exec -o "$final" -)
   set +e
-  printf '%s' "$prompt" | "${ACCEPTANCE_CMD[@]}" >"$tmpout" 2>"$tmperr"
+  printf '%s' "$prompt" | timeout --kill-after=5s "$timeout_seconds" "${ACCEPTANCE_CMD[@]}" >"$tmpout" 2>"$tmperr"
   status=$?
   set -e
   if [ -s "$final" ]; then
@@ -1156,10 +1861,36 @@ run_acceptance_reviewer() {
   else
     output="$(cat "$tmpout" "$tmperr")"
   fi
+  if [ "$status" -eq 124 ] || [ "$status" -eq 137 ]; then
+    output="${output:-acceptance reviewer timed out after ${timeout_seconds}s}"
+  fi
   ACCEPTANCE_OUTPUT="$output"
   ACCEPTANCE_VERDICT="$(acceptance_verdict_from_output "$output" "$status")"
   ACCEPTANCE_NOTES="$(acceptance_note_from_output "$output" "$status")"
   rm -f "$final" "$tmpout" "$tmperr"
+}
+
+tier_two_lens_instruction() {
+  case "$1" in
+    whole-acceptance-conformance)
+      printf 'For the whole-acceptance-conformance lens, check the built worktree and phase-two artifacts against the signed acceptance condition, observable acceptance, excluded interpretation, and route.'
+      ;;
+    proof-integrity)
+      printf 'For the proof-integrity lens, check whether the recorded unit handoffs, diffs, mechanical checks, and acceptance artifacts support the proof claims without dry-run or stale evidence.'
+      ;;
+    independent-coherence)
+      printf 'For the independent-coherence lens, perform the semantic sweep judgement for one-way adoption; do not claim to solve semantic indexing.'
+      ;;
+    security-permissions)
+      printf 'For the security-permissions lens, check whether the implementation preserves the signed security and permission constraints, including read-only reviewer isolation and operator-gate limits.'
+      ;;
+    red-team)
+      printf 'For the red-team lens, look for bypasses, overclaims, stale artifacts, route mismatch, and ways the work could pass checks while failing the operator-signed acceptance.'
+      ;;
+    *)
+      die "unknown tier-two implementation-acceptance lens: $1"
+      ;;
+  esac
 }
 
 write_acceptance_artifact() {
@@ -1194,7 +1925,7 @@ acceptance_artifact_dry_run() {
 }
 
 run_tier_one_acceptance() {
-  local work_name=$1 unit_id=$2 proof=$3 frame_rel=$4 handoff_path=$5 diff_path=$6 verdict_path prompt reviewer_key
+  local work_name=$1 unit_id=$2 proof=$3 frame_rel=$4 handoff_path=$5 diff_path=$6 check_status=$7 verdict_path prompt reviewer_key
   reviewer_key="tier-one-$unit_id"
   verdict_path="$PHASE_TWO_TIER_ONE_DIR/$unit_id.md"
   prompt="Implementation-acceptance reviewer: tier one
@@ -1205,9 +1936,10 @@ Proof obligation: $proof
 Signed frame directory: $frame_rel
 Unit handoff: $(relpath "$handoff_path")
 Unit diff record: $(relpath "$diff_path")
+Mechanical check immediately before this reviewer: $check_status
 
 Read only the signed frame, the intent it references, the unit handoff, and the unit diff record.
-Check whether this unit is a proof-advancing delta toward the operator-signed acceptance.
+The unit diff record is a cumulative worktree snapshot after this unit, so it may include other already-built or planned unit changes. Check whether the handoff and proof-obligation-relevant diff content make this unit a proof-advancing delta toward the operator-signed acceptance; do not flag solely because unrelated cumulative diff hunks are present.
 Return exactly one line:
 PASS
 or
@@ -1231,11 +1963,12 @@ Treat uncertainty, missing evidence, or mismatch with the signed frame as FLAG."
 }
 
 run_tier_two_panel() {
-  local work_name=$1 frame_rel=$2 active_rel=$3 lens reviewer_key verdict_path prompt any_flag=0 verdict
+  local work_name=$1 frame_rel=$2 active_rel=$3 lens reviewer_key verdict_path prompt lens_instruction any_flag=0 verdict
   printf '\n--- acceptance: tier two one-way panel ---\n'
   for lens in "${TIER_TWO_PANEL_LENSES[@]}"; do
     reviewer_key="panel-$lens"
     verdict_path="$PHASE_TWO_PANEL_DIR/$lens.md"
+    lens_instruction="$(tier_two_lens_instruction "$lens")"
     prompt="Implementation-acceptance reviewer: tier two one-way panel
 Work: $work_name
 Node: $NODE_REL
@@ -1245,7 +1978,7 @@ Active work path: $active_rel
 Phase-two acceptance directory: $(relpath "$PHASE_TWO_ACCEPTANCE_DIR")
 
 Read only the signed frame, the intent it references, the built worktree state, and phase-two acceptance artifacts.
-For the independent-coherence lens, perform the semantic sweep judgement for one-way adoption; do not claim to solve semantic indexing.
+$lens_instruction
 Return exactly one line:
 PASS
 or
@@ -1277,18 +2010,28 @@ Treat uncertainty, missing evidence, unresolved tier-one flags, or mismatch with
   done
 }
 
-required_acceptance_clean_for_archive() {
-  local reversibility=$1 unit_id verdict_path verdict lens
+required_tier_one_evidence_clean() {
+  local stage=$1 unit_id verdict_path verdict
   shift
   for unit_id in "$@"; do
     verdict_path="$PHASE_TWO_TIER_ONE_DIR/$unit_id.md"
     verdict="$(acceptance_artifact_verdict "$verdict_path" || true)"
     [ "$verdict" = PASS ] \
-      || die "archive blocked by missing or non-PASS tier-one verdict for $unit_id"
+      || die "$stage blocked by missing or non-PASS tier-one verdict for $unit_id"
     if [ "$DRY_RUN" != 1 ] && acceptance_artifact_dry_run "$verdict_path"; then
-      die "archive blocked by dry-run tier-one verdict for $unit_id"
+      die "$stage blocked by dry-run tier-one verdict for $unit_id"
     fi
   done
+}
+
+required_tier_one_clean_for_panel() {
+  required_tier_one_evidence_clean "tier-two panel" "$@"
+}
+
+required_acceptance_clean_for_archive() {
+  local reversibility=$1 lens verdict_path verdict
+  shift
+  required_tier_one_evidence_clean "archive" "$@"
   if [ "$reversibility" = one-way ]; then
     for lens in "${TIER_TWO_PANEL_LENSES[@]}"; do
       verdict_path="$PHASE_TWO_PANEL_DIR/$lens.md"
@@ -1533,7 +2276,7 @@ run_gate() {
 }
 
 cmd_start() {
-  local work_name="${1:-}" collection d frame address template
+  local work_name="${1:-}" collection d frame address template options_template
   [ -n "$work_name" ] || die "usage: loop.sh [-C <node-path>] start <work-name>"
   validate_work_name "$work_name"
   collection="$(new_work_collection)"
@@ -1574,6 +2317,29 @@ cmd_start() {
       printf '## shelving claim\n\nTODO\n'
     } > "$template"
   fi
+  options_template="$frame/options.md"
+  if [ ! -e "$options_template" ]; then
+    {
+      printf '# options - %s\n\n' "$work_name"
+      printf 'Direction options are drafted by the machine for operator selection. The operator\n'
+      printf 'selects one route, rejects all options, or aborts without writing direction.\n\n'
+      printf '## option 1\n\n'
+      printf 'id: TODO\n'
+      printf 'kind: selected-route\n'
+      printf 'summary: TODO\n'
+      printf 'reversibility: TODO\n'
+      printf 'tradeoff: TODO\n\n'
+      printf '## option 2\n\n'
+      printf 'id: TODO\n'
+      printf 'kind: selected-route\n'
+      printf 'summary: TODO\n'
+      printf 'reversibility: TODO\n'
+      printf 'tradeoff: TODO\n\n'
+      printf '## rejection choices\n\n'
+      printf 'none: The operator may reject all options and send the work back to frame.\n'
+      printf 'abort: The operator may abort without writing direction.\n'
+    } > "$options_template"
+  fi
   printf '\n=== gate: orient ===\n\n'; cat "$GATES/orient.md"
 }
 
@@ -1611,7 +2377,7 @@ read_direction_text() {
 }
 
 cmd_direct() {
-  local positional=() form="" value_arg="" value="" work_name="" who="" d frame file tmp field
+  local positional=() form="" value_arg="" value="" work_name="" who="" d frame file tmp field gate
   while [ $# -gt 0 ]; do
     case "$1" in
       --route|--constraint|--delegate)
@@ -1630,7 +2396,6 @@ cmd_direct() {
         ;;
     esac
   done
-  [ -n "$form" ] || die "usage: loop.sh [-C <node-path>] direct [<work-name> [<operator>]] --route|--constraint|--delegate <text-or->"
   [ "${#positional[@]}" -le 2 ] || die "usage: loop.sh [-C <node-path>] direct [<work-name> [<operator>]] --route|--constraint|--delegate <text-or->"
   case "${#positional[@]}" in
     0) work_name="$(infer_direction_work_name)" ;;
@@ -1655,19 +2420,39 @@ cmd_direct() {
   fi
   frame_route_has_content_at "$d" \
     && die "cannot record direction after route content exists in $(relpath "$frame/frame.md"); clear the route and record operator direction before framing it"
-  value="$(read_direction_text "$value_arg" || true)"
-  [ -n "$value" ] || die "direction text is empty or placeholder"
-  case "$form" in
-    route) field=selected-route ;;
-    constraint) field=constraint ;;
-    delegate) field=delegation ;;
-    *) die "unknown direction form: $form" ;;
-  esac
+  # Explicit --route/--constraint/--delegate text is a legacy/admin form. It must not
+  # make a new frame signable when gated operator acts are required: a real operator
+  # choice is the numbered options.md selection through /dev/tty, not machine-supplied
+  # text the operator merely confirms. Only the narrow gate-introducing bootstrap work
+  # may still record direction without that selection.
+  if [ -n "$form" ] && ! operator_gate_bootstrap_allowed_at "$d"; then
+    die "explicit direction forms cannot record gated operator direction for new work; run $(direction_command_hint "$work_name") with no --route/--constraint/--delegate so the operator selects a numbered option through /dev/tty"
+  fi
+  if [ -z "$form" ]; then
+    DIRECTION_SELECTED_FIELD=""
+    DIRECTION_SELECTED_VALUE=""
+    DIRECTION_SELECTED_GATE=""
+    direction_option_choice_from_tty "$d" "$work_name"
+    field="$DIRECTION_SELECTED_FIELD"
+    value="$DIRECTION_SELECTED_VALUE"
+    gate="$DIRECTION_SELECTED_GATE"
+  else
+    value="$(read_direction_text "$value_arg" || true)"
+    [ -n "$value" ] || die "direction text is empty or placeholder"
+    case "$form" in
+      route) field=selected-route ;;
+      constraint) field=constraint ;;
+      delegate) field=delegation ;;
+      *) die "unknown direction form: $form" ;;
+    esac
+    gate="$(operator_gate_confirm_work "direction" "$work_name")"
+  fi
   tmp="$file.tmp.$$"
   {
     printf '# direction - %s\n\n' "$work_name"
     printf 'direction-by: %s\n' "$who"
     printf 'direction-given-at: %s\n' "$(utc_stamp)"
+    printf 'operator-gate: %s\n' "$gate"
     printf '%s: %s\n' "$field" "$value"
   } > "$tmp"
   mv "$tmp" "$file"
@@ -1877,7 +2662,7 @@ $errors"
 }
 
 cmd_signoff() {
-  local work_name="${1:-}" who="${2:-}" d frame errors
+  local work_name="${1:-}" who="${2:-}" d frame errors gate signed_at
   [ -z "${3:-}" ] || die "usage: loop.sh [-C <node-path>] signoff [<work-name> [<operator>]]"
   [ -n "$work_name" ] || work_name="$(infer_signoff_work_name)"
   [ -n "$who" ] || who="$(infer_operator)"
@@ -1888,10 +2673,17 @@ cmd_signoff() {
     die "cannot sign off: work-node frame is incomplete under $(relpath "$(frame_dir_for "$d")"):
 $errors"
   fi
-  check_green || die "check.sh is red — not signable"
-  signed_off_at "$d" && die "already signed off"
   frame="$(frame_dir_for "$d")"
-  printf '# signoff - %s\n\nsigned-off-by: %s\n' "$work_name" "$who" > "$frame/signoff.md"
+  if [ -f "$frame/signoff.md" ]; then
+    if signoff_contract_errors_at "$d" >/dev/null; then
+      die "already signed off"
+    fi
+    die "sign-off artifact already exists but is malformed at $(relpath "$frame/signoff.md"); fix or remove it before signing off"
+  fi
+  gate="$(operator_gate_confirm_signoff "$d" "$work_name" "$who")"
+  check_green || die "check.sh is red — not signable"
+  signed_at="$(utc_stamp)"
+  printf '# signoff - %s\n\nsigned-off-by: %s\nsigned-off-at: %s\noperator-gate: %s\n' "$work_name" "$who" "$signed_at" "$gate" > "$frame/signoff.md"
   printf 'signed off by %s. The session now clears; phase two re-derives from the frame:\n' "$who"
   printf '  loop.sh'
   [ "$NODE_REL" = "." ] || printf ' -C %s' "$NODE_REL"
@@ -1914,7 +2706,11 @@ cmd_execute() {
   active_rel="$(relpath "$active_dir")"
   frame_rel="$(relpath "$(frame_dir_for "$active_dir")")"
   frame_file="$(frame_dir_for "$active_dir")/frame.md"
-  signed_off_at "$active_dir" || die "not signed off — phase two is sealed until the operator signs off"
+  if ! signed_off_at "$active_dir"; then
+    errors="$(signoff_contract_errors_at "$active_dir" || true)"
+    die "not signed off — phase two is sealed until the operator signs off:
+$errors"
+  fi
   if ! frame_complete_at "$active_dir"; then
     errors="$(frame_contract_errors_at "$active_dir" || true)"
     die "signed frame is incomplete under $frame_rel:
@@ -1958,7 +2754,7 @@ Proof obligation: $proof
 
 Read only $source_desc, the intent it references, and the material needed to build this unit.
 Do not edit parent intent documents in implement; archive folds accepted intent amendments.
-Build only this proof-advancing unit. Leave ./check.sh green. End with a lean handoff naming the changed files, checks prepared, and any proof gap." \
+Build only this proof-advancing unit. Leave ./check.sh green. End with a lean handoff naming the changed files, checks prepared, and any real unit proof gap. Do not describe prior, future, or expected acceptance artifacts; the loop records acceptance evidence after tier-one review. Do not describe prior loop run state, unrelated untracked files, or cumulative diff noise unless they are a real proof gap for this unit." \
       implement
     gate_output_path="$LOOP_RUN_GATE_DIR/$gate_name.final.md"
     phase_two_write_handoff "$unit_id" "$proof" "$gate_output_path" "$handoff_path"
@@ -1985,7 +2781,7 @@ Build only this proof-advancing unit. Leave ./check.sh green. End with a lean ha
       fi
     fi
 
-    run_tier_one_acceptance "$work_name" "$unit_id" "$proof" "$frame_rel" "$handoff_path" "$diff_path"
+    run_tier_one_acceptance "$work_name" "$unit_id" "$proof" "$frame_rel" "$handoff_path" "$diff_path" "$status_msg"
     phase_two_write_unit_record "$unit_id" accepted "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "$status_msg; tier-one PASS"
   done
 
@@ -2009,6 +2805,7 @@ Build only this proof-advancing unit. Leave ./check.sh green. End with a lean ha
   fi
 
   if [ "$reversibility" = one-way ]; then
+    required_tier_one_clean_for_panel "${unit_ids[@]}"
     run_tier_two_panel "$work_name" "$frame_rel" "$active_rel"
   else
     printf 'two-way work: one-way tier-two panel skipped after tier-one acceptance\n'

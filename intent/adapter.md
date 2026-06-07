@@ -105,15 +105,26 @@ the Codex adapter prose describes phase one as design-phase collaboration with d
 and review artifacts, while preserving phase two as cleared, heads-down execution from the
 signed frame directory and lean phase-two handoff artifacts.
 `check.sh` mechanically checks that the gate prompts, Codex adapter prose, loop frame
-validation, start scaffolding, direction/review helpers, review and acceptance isolation
-settings, strict frame parsing, phase-two acceptance gating, and current-material absence
-of the retired compatibility route still carry the contract.
+validation, start scaffolding, direction/review helpers, operator-act gating through
+`/dev/tty` with B-ready `operator-gate:` markers and numbered-option direction, review and
+acceptance isolation settings, strict frame parsing, phase-two acceptance gating, the new
+operator-act contract in the `collaboration`, `loop`, and `adapter` segments, and
+current-material absence of the retired compatibility route still carry the contract.
 each gate's instructions are held in a file in `adapter/gates/`; the Codex path includes them in
 the `codex exec` gate prompt; the orchestrator owns gate order and preconditions and
 blocks a gate whose preconditions fail.
-sign-off is a `signed-off-by` line in the work-node frame's `intent/frame/signoff.md`; the
-orchestrator seals phase two until sign-off is present, and the machine never writes it for
-itself.
+sign-off for new work records `signed-off-by:`, `signed-off-at:`, and `operator-gate: tty`
+in the work-node frame's `intent/frame/signoff.md`; the orchestrator seals phase two until
+sign-off is present, and the machine never writes it for itself.
+the root `./direction` and `./signoff` helpers are terminal-gated operator-act helpers for
+new work: direction selects a numbered option from `intent/frame/options.md` through
+`/dev/tty`, and sign-off renders a frame-derived brief and reads the work number through
+`/dev/tty`, each writing `operator-gate: tty`; the explicit argument forms are admin forms
+that cannot record gated operator acts for new work.
+`operator-gate: tty` records that the legitimate helper path crossed the current harness's
+terminal-liveness check, which the default machine command path lacks; it does not prove
+network isolation, cryptographic non-repudiation, tamper-evidence, file integrity, or that
+an operator rather than a deliberately allocated terminal answered.
 at the check gate the orchestrator records tier-one implementation acceptance for each
 unit, records the one-way tier-two panel when required, and halts phase two before archive
 when required acceptance flags remain unresolved.

@@ -42,16 +42,22 @@ the operator's **sign-off**:
   direction before sign-off by naming the addressed node, node-local work name, target
   segments, work in flight, work classification, and any open direction. Before a route is
   written, you provide a teach-back, at least one alternative framing, information-gain
-  questions, and a reversibility classification; route, review, and direction stay
-  separate artifacts. One-way work requires `./review <work-name> [--add <role>]...`,
+  questions, and a reversibility classification; route, review, direction, and neutral
+  options stay separate artifacts. One-way work requires `./review <work-name> [--add <role>]...`,
   which mechanically seats the base roster `contract-checkability`, `soundness-fit`,
   `simplicity-fastness`, and `red-team`; optional complete-roster reviewers are advisory
-  additions only and cannot clear unresolved base or red-team flags. The operator then
-  records substantive direction with `./direction [<work-name> [<operator>]]
-  --route|--constraint|--delegate <text-or->`. Direction must contain `direction-by:`,
-  `direction-given-at:`, and exactly one selected route, constraint, or delegation. You
-  never write direction or sign-off for the operator, and the route is not framed before
-  direction exists. The written frame is lean recoverability: addressed node, node-local
+  additions only and cannot clear unresolved base or red-team flags. When direction needs
+  route selection, `intent/frame/options.md` carries neutral, materially distinct numbered
+  options plus reject/abort choices; the machine may draft those options, but it does not
+  choose one for the operator. The operator then records substantive direction with
+  `./direction [<work-name> [<operator>]]`. The helper opens `/dev/tty`, renders the
+  options, accepts a number, `n` for none-of-these, or `q` for abort, and writes
+  `direction.md` with `direction-by:`, `direction-given-at:`, `operator-gate: tty`, and
+  exactly one selected route, constraint, or delegation copied from the selected option.
+  The explicit text form is compatibility/admin surface only and still must cross the
+  operator gate to satisfy new-work validation. You never write direction or sign-off for
+  the operator, and the route is not framed before direction exists. The written frame is
+  lean recoverability: addressed node, node-local
   work name, target segments, work in flight, problem, constraints, decision surface or
   open direction, reversibility, route, acceptance condition, observable acceptance,
   excluded interpretation, proof state, sweep, and adoption or shelving claim. You frame
@@ -60,8 +66,15 @@ the operator's **sign-off**:
   corpus and work in flight across the node tree, including related work named by a frame.
   Interaction surfaces here. It ends when the operator signs off: from the root,
   `./signoff` signs the single frame-complete, unsigned active work node when the operator
-  identity is unambiguous; the explicit `loop.sh [-C <node-path>] signoff <work-name>
-  <operator>` form also writes a `signed-off-by` line. **You never sign off for them.**
+  identity is unambiguous. The sign-off helper renders a concise brief from `frame.md`
+  covering route, acceptance condition, observable acceptance, excluded interpretation,
+  reversibility, and target segments, then reads the work number from `/dev/tty` and
+  writes `signoff.md` with `signed-off-by:`, `signed-off-at:`, and `operator-gate: tty`.
+  The explicit `loop.sh [-C <node-path>] signoff <work-name> <operator>` form uses the
+  same terminal gate. `operator-gate: tty` means the legitimate helper path crossed the
+  current harness's terminal-liveness check, which the default machine command path fails;
+  it does not prove cryptographic non-repudiation, tamper-evidence, file integrity, or that
+  an operator rather than a deliberately allocated terminal answered. **You never sign off for them.**
 - **The session clears at sign-off.** Phase two runs through fresh, memoryless `codex
   exec` sessions. Each implementation unit starts from the signed frame directory, writes
   lean handoff state, and is followed by an independent read-only

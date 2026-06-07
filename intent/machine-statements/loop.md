@@ -20,21 +20,34 @@ path, event path, and latest message; `loop.sh status --json <work-name>` render
 run state for tooling.
 from the root, `./signoff` invokes the root loop sign-off gate and preserves any explicit
 arguments it receives.
-`loop.sh signoff <work-name> <operator>` remains the explicit sign-off form.
+`loop.sh signoff <work-name> <operator>` remains the explicit sign-off form, and for new
+work it renders a concise frame-derived attestation brief through `/dev/tty`, requires the
+work number as the confirming token, and writes `signed-off-by:`, `signed-off-at:`, and
+`operator-gate: tty`.
 `loop.sh signoff` infers the work name only when exactly one frame-complete unsigned work
 node exists in the addressed node; otherwise it blocks and asks for `<work-name>`.
 `loop.sh signoff` infers the operator from `HYPERCORE_OPERATOR` when set, otherwise from
 the addressed node's current intent foot endorsements when exactly one operator is present;
 otherwise it blocks and asks for `<operator>`.
 from the root, `./direction` invokes `loop.sh direct` and preserves explicit arguments.
-`loop.sh direct [<work-name> [<operator>]] --route|--constraint|--delegate <text-or->`
-records substantive operator direction in `intent/frame/direction.md`; `-` reads the
-direction text from stdin.
+`loop.sh direct [<work-name> [<operator>]]` with no direction form renders the neutral
+numbered options from `intent/frame/options.md` through `/dev/tty` and copies the operator's
+selected option verbatim into `intent/frame/direction.md`, accepting a bare number, `n` for
+none-of-these, or `q` for abort.
+the explicit `loop.sh direct ... --route|--constraint|--delegate <text-or->` form is an
+admin form that cannot record gated operator direction for new work; only the narrow
+gate-introducing bootstrap work may record direction without the numbered selection.
 `loop.sh direct` rejects empty or placeholder direction, multiple direction forms, an
 existing valid direction artifact, a malformed existing direction artifact, and direction
 after route content is already present.
-`direction.md` contains `direction-by:`, `direction-given-at:`, and exactly one
-non-placeholder `selected-route:`, `constraint:`, or `delegation:`.
+`intent/frame/options.md` records numbered options with `kind`, `summary`, `reversibility`,
+and `tradeoff`, plus `none` and `abort` rejection choices, and carries no recommendation
+marker.
+`direction.md` contains `direction-by:`, `direction-given-at:`, `operator-gate: tty`, and
+exactly one non-placeholder `selected-route:`, `constraint:`, or `delegation:` copied from a
+numbered option.
+`operator-gate:` is a B-ready gate token, either `tty` or a reserved `<scheme>:<value>` such
+as a later `hmac:<...>`, and only the `tty` liveness scheme is implemented.
 from the root, `./review` invokes `loop.sh review` and preserves explicit arguments.
 `loop.sh review <work-name> [--add <role>]...` seats the base review roster and any valid
 optional complete-roster roles, then writes `intent/frame/review.md`.
@@ -47,11 +60,13 @@ acceptance, excluded interpretation, proof state, sweep, and adoption or shelvin
 `reversibility:` is parsed as exactly `one-way` or `two-way`.
 `loop.sh start <work-name>` scaffolds `intent/frame/frame.md` with the lean fields.
 `loop.sh frame` and `loop.sh signoff` block new work whose frame is incomplete, whose
-direction is absent or malformed, whose direction appears retrospective, or whose one-way
-frame lacks a review artifact.
+direction is absent or malformed, whose direction appears retrospective, whose new-work
+direction or sign-off lacks the `operator-gate: tty` marker, or whose one-way frame lacks a
+review artifact.
 one-way review artifacts record base-role verdicts, unresolved flags, and disposition;
 optional reviewer verdicts cannot clear unresolved base-roster or red-team flags.
-new work sign-off is a `signed-off-by` line in the work node's `intent/frame/signoff.md`.
+new work sign-off records `signed-off-by:`, `signed-off-at:`, and `operator-gate: tty` in
+the work node's `intent/frame/signoff.md`.
 `loop.sh execute <work-name>` derives implementation units from the signed frame, starts a
 fresh Codex builder session for each unit, and records lean unit handoff, diff, and
 tier-one verdict artifacts under the work frame.

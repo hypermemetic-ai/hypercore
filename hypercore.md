@@ -50,13 +50,22 @@ operator direction, lean recoverability, then sign-off.
   `contract-checkability`, `soundness-fit`, `simplicity-fastness`, and `red-team`.
   Optional reviewers are additive and advisory only; they cannot clear unresolved base or
   red-team flags.
-- Direction and sign-off are the two anchored operator acts. Direction records a selected
-  route, constraint, or explicit delegation with `direction-by:`; the machine never writes
-  it for itself.
+- Direction and sign-off are the two anchored operator acts. On the legitimate helper
+  path, each act crosses an operator gate that reads the decisive token from `/dev/tty`
+  and records `operator-gate: tty`; this is terminal liveness for the helper path, which
+  the default machine command path lacks. It is not cryptographic non-repudiation,
+  tamper-evidence, file integrity, or proof an operator rather than a deliberately
+  allocated terminal answered.
+- Direction records a selected route, constraint, or explicit delegation with
+  `direction-by:` and `direction-given-at:`. When direction needs a route choice, the
+  machine drafts neutral, materially distinct options in `intent/frame/options.md`, and
+  the operator picks one; the machine never writes direction for itself.
 - The machine makes uncertainty, evidence, limits, and failure modes visible enough for
   the operator to rely on it, challenge it, redirect it, or stop it.
 - Sign-off attests informed expectation and understanding, and still requires a complete
   lean frame plus the required phase-one acts; it is not earned by bloated field scanning.
+  The helper renders a frame-derived brief and requires the work number before writing
+  `signed-off-by:`, `signed-off-at:`, and `operator-gate: tty`.
 - Phase-two acceptance is part of reliance calibration: before one-way adoption stamps the
   operator's endorsement, the built result is checked independently against what the
   operator signed.
@@ -211,11 +220,16 @@ orient -> frame -> implement -> check -> archive
   work gets a required implementation-acceptance panel before archive.
 - **archive**: adopt or shelve according to the signed frame.
 
-Direction and review are phase-one acts and artifacts, not extra gates. Two-way work skips
-review unless requested. One-way work requires the base review artifact before the route is
-signable. The session clears at sign-off, and phase two must be able to re-derive each
-unit and acceptance review from the signed frame directory plus lean handoff artifacts
-alone.
+Direction and review are phase-one acts and artifacts, not extra gates. New work that
+needs route selection carries `intent/frame/options.md`; `./direction` selects one
+numbered option through `/dev/tty`, writes `operator-gate: tty`, or lets the operator
+reject all options or abort without writing direction. Two-way work skips review unless
+requested. One-way work requires the base review artifact before the route is signable.
+Sign-off is the operator act between phases: `./signoff` renders a concise frame-derived
+attestation brief through `/dev/tty`, requires the work number as confirmation, and writes
+`signed-off-at:` plus `operator-gate: tty`. The session clears at sign-off, and phase two
+must be able to re-derive each unit and acceptance review from the signed frame directory
+plus lean handoff artifacts alone.
 
 ## sweep
 

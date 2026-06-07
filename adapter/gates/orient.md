@@ -31,12 +31,16 @@ State the work in one line. Then report:
   loop/adapter, intent-contract, ambiguous, or hard-to-reverse work defaulting to
   `one-way`;
 - any open direction that needs operator input before the frame settles a route.
+- when open direction requires route selection, the neutral, materially distinct option
+  surface the frame should materialize in `intent/frame/options.md`, without selecting an
+  option for the operator.
 
 Search the web for what you don't know; ask the operator what the artifacts can't tell
-you. Do not guess, do not write a route, do not write operator direction, and do not edit
-anything in this gate.
+you. Do not guess, do not write a route, do not select an option, do not write operator
+direction, and do not edit anything in this gate.
 
 Precondition to leave this gate: you can name the work classification, addressed node,
 node-local work name, target segments, work in flight, teach-back, alternative framing,
 information-gain questions, reversibility classification, and any open direction that
-needs an operator decision. The frame gate builds on this reading.
+needs an operator decision, including whether neutral `options.md` choices are needed.
+The frame gate builds on this reading.
