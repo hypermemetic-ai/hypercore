@@ -4,15 +4,21 @@ every work node that needs adoption or shelving goes through five gates: orient,
 implement, check, archive.
 governed work is not optional by perceived simplicity, file count, risk, or convenience
 when it changes governed material or needs adoption or shelving.
-orient and frame are the design phase: the operator and machine choose direction there
-before sign-off closes the frame.
-when a work node's direction is still open, especially multi-task or multi-phase work, the
-machine states the problem, the constraints, and the decision surface before settling the
-route; when operator direction is missing, the frame records the open decision and waits
-rather than prescribing the sequence.
-before sign-off, governed work frames carry a recoverable operator-deliberation record:
-problem/domain map, evidence standard, evidence basis, options and tradeoffs, operator expectation,
-rejection conditions, and unresolved discomfort or open judgement.
+orient and frame are the design phase: understanding, scrutiny, operator direction, route
+framing, and sign-off happen there before phase two begins.
+direction and review are phase-one acts or artifacts inside orient and frame, not new loop
+gates.
+when a work node's direction is still open, the machine states the problem, constraints,
+decision surface, reversibility, and information needed from the operator before settling
+the route.
+before a route is written, governed work has substantive operator direction recorded in
+`intent/frame/direction.md`.
+one-way work has `intent/frame/review.md` before route framing and sign-off; two-way work
+skips review unless the operator requests it.
+before sign-off, a new work frame carries lean recoverability fields: addressed node,
+node-local work name, target segments, work in flight, problem, constraints, decision
+surface or open direction, reversibility, route, acceptance condition, proof state, sweep,
+and adoption or shelving claim.
 implementation autonomy begins after sign-off: phase two builds from the signed frame, and
 stops only when the frame is incomplete, a check fails, or the sweep flags incoherence.
 orient: read the intent documents, the work in flight across the node tree, and the
@@ -21,9 +27,6 @@ artifacts cannot tell you; do not guess.
 frame: write enough of the addressed work node's intent and material to make the proposed
 work scrutable, including proposed parent amendments where the work needs them, and run the
 sweep over the whole corpus and work in flight across the node tree.
-before sign-off, a new work frame carries the minimum recoverable communication and
-compliance fields needed for a cleared phase-two session, including the fields needed for
-informed operator deliberation.
 implement: build in small units from the signed frame.
 check: prove each statement with a check on the material, and run the sweep for coherence,
 idiom, and security.
@@ -70,14 +73,31 @@ node exists in the addressed node; otherwise it blocks and asks for `<work-name>
 `loop.sh signoff` infers the operator from `HYPERCORE_OPERATOR` when set, otherwise from
 the addressed node's current intent foot endorsements when exactly one operator is present;
 otherwise it blocks and asks for `<operator>`.
-new work frame completeness is checked by scanning non-signoff markdown files under
-`intent/frame/` for recoverable fields: addressed node, node-local work name, target
-segments, work in flight, problem, constraints, decision surface or open direction, route,
-methodology adherence, operator decisions, authority, machine assumptions, evidence,
-uncertainty, open blockers, feedback capture, handoff state, proof state, sweep, and
-adoption or shelving claim.
-`loop.sh start <work-name>` scaffolds `intent/frame/frame.md` with those fields.
-`loop.sh frame` and `loop.sh signoff` block new work whose frame is incomplete.
+from the root, `./direction` invokes `loop.sh direct` and preserves explicit arguments.
+`loop.sh direct [<work-name> [<operator>]] --route|--constraint|--delegate <text-or->`
+records substantive operator direction in `intent/frame/direction.md`; `-` reads the
+direction text from stdin.
+`loop.sh direct` rejects empty or placeholder direction, multiple direction forms, an
+existing valid direction artifact, a malformed existing direction artifact, and direction
+after route content is already present.
+`direction.md` contains `direction-by:`, `direction-given-at:`, and exactly one
+non-placeholder `selected-route:`, `constraint:`, or `delegation:`.
+from the root, `./review` invokes `loop.sh review` and preserves explicit arguments.
+`loop.sh review <work-name> [--add <role>]...` seats the base review roster and any valid
+optional complete-roster roles, then writes `intent/frame/review.md`.
+new work frame completeness is checked from the canonical `intent/frame/frame.md` only;
+`direction.md`, `review.md`, and `signoff.md` do not satisfy ordinary frame fields.
+new work frame completeness requires these recoverable fields: addressed node,
+node-local work name, target segments, work in flight, problem, constraints, decision
+surface or open direction, reversibility, route, acceptance condition, proof state, sweep,
+and adoption or shelving claim.
+`reversibility:` is parsed as exactly `one-way` or `two-way`.
+`loop.sh start <work-name>` scaffolds `intent/frame/frame.md` with the lean fields.
+`loop.sh frame` and `loop.sh signoff` block new work whose frame is incomplete, whose
+direction is absent or malformed, whose direction appears retrospective, or whose one-way
+frame lacks a review artifact.
+one-way review artifacts record base-role verdicts, unresolved flags, and disposition;
+optional reviewer verdicts cannot clear unresolved base-roster or red-team flags.
 new work sign-off is a `signed-off-by` line in the work node's `intent/frame/signoff.md`.
 `loop.sh execute <work-name>` records the addressed work in node-local history after archive.
 

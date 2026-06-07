@@ -16,6 +16,11 @@
 #
 # Usage:
 #   loop.sh [-C <node-path>] start    <work-name>              scaffold the work node; print the orient gate
+#   loop.sh [-C <node-path>] direct   [<work-name> [<operator>]]
+#                                      --route|--constraint|--delegate <text-or->
+#                                                               record substantive operator direction
+#   loop.sh [-C <node-path>] review   <work-name> [--add <role>]...
+#                                                               spawn/read the one-way review roster
 #   loop.sh [-C <node-path>] frame    <work-name>              check the frame is written and ready for sign-off
 #   loop.sh [-C <node-path>] signoff  [<work-name> [<operator>]]
 #                                                               record the operator's sign-off (the human gate)
@@ -28,6 +33,7 @@
 #   HYPERCORE_OPERATOR (optional sign-off identity when <operator> is omitted)
 #   CODEX_BIN (default: codex), CODEX_APPROVAL (default: never)
 #   CODEX_WRITE_SANDBOX (default: workspace-write), CODEX_READ_SANDBOX (default: read-only)
+#   CODEX_REVIEW_MODEL (optional single-token model name for review subprocesses)
 
 set -euo pipefail
 
@@ -52,24 +58,27 @@ FRAME_REQUIRED_FIELDS=(
   "work in flight"
   "problem"
   "constraints"
+  "decision surface or open direction"
+  "reversibility"
   "route"
-  "problem/domain map"
-  "evidence standard"
-  "evidence basis"
-  "options and tradeoffs"
-  "operator expectation"
-  "rejection conditions"
-  "methodology adherence"
-  "operator decisions"
-  "authority"
-  "machine assumptions"
-  "evidence"
-  "uncertainty"
-  "open blockers"
-  "feedback capture"
-  "handoff state"
+  "acceptance condition"
   "proof state"
   "sweep"
+  "adoption or shelving claim"
+)
+BASE_REVIEW_ROLES=(
+  "contract-checkability"
+  "soundness-fit"
+  "simplicity-fastness"
+  "red-team"
+)
+OPTIONAL_REVIEW_ROLES=(
+  "implementation-maintainability"
+  "security-permissions"
+  "operator-ergonomics"
+  "migration-compatibility"
+  "domain-evidence"
+  "performance-cost"
 )
 GATE_OUTPUT=""   # the last gate's captured output, read by cmd_execute for the sweep verdict
 PHASE_TWO_SESSION_ID=""
@@ -415,14 +424,25 @@ archive_move() {
 
 frame_has_markdown_files() {
   local frame=$1
-  [ -n "$(find "$frame" -type f -name '*.md' ! -name signoff.md -print -quit 2>/dev/null)" ]
+  [ -f "$frame/frame.md" ]
 }
 
-frame_field_has_content() {
-  local frame=$1 label=$2
-  [ -d "$frame" ] || return 1
-  frame_has_markdown_files "$frame" || return 1
-  find "$frame" -type f -name '*.md' ! -name signoff.md -exec awk -v label="$label" '
+meaningful_text() {
+  local s=${1-}
+  s="$(printf '%s' "$s" | tr '\r\n\t' '   ' | sed -E 's/[[:space:]]+/ /g; s/^[[:space:]]+//; s/[[:space:]]+$//')"
+  [ -n "$s" ] || return 1
+  case "$(printf '%s' "$s" | tr '[:upper:]' '[:lower:]')" in
+    todo|todo\ *|tbd|tbd\ *|fill\ me|fill\ me\ *|fill\ this|fill\ this\ *|fill\ in|fill\ in\ *|to\ be\ filled|to\ be\ filled\ *|placeholder|placeholder\ *|xxx|xxx\ *)
+      return 1
+      ;;
+  esac
+  printf '%s' "$s"
+}
+
+frame_label_has_content() {
+  local file=$1 label=$2
+  [ -f "$file" ] || return 1
+  awk -v label="$label" '
     function trim(s) {
       sub(/^[[:space:]]+/, "", s)
       sub(/[[:space:]]+$/, "", s)
@@ -439,65 +459,346 @@ frame_field_has_content() {
       s = clean(s)
       if (s == "") return 0
       if (s ~ /^(todo|tbd|fill me|fill this|fill in|to be filled|placeholder|xxx)([ .:-]|$)/) return 0
-      if (s ~ /^[^:]+:[[:space:]]*(todo|tbd|fill me|fill this|fill in|to be filled|placeholder|xxx)([ .:-]|$)/) return 0
       return 1
+    }
+    BEGIN {
+      target = clean(label) ":"
+      found = 0
+    }
+    /^[[:space:]]*```/ { fence = !fence; next }
+    fence { next }
+    {
+      line = $0
+      lowered = clean(line)
+      if (substr(lowered, 1, length(target)) == target) {
+        rest = substr(line, index(line, ":") + 1)
+        if (meaningful(rest)) {
+          found = 1
+          exit 0
+        }
+      }
+    }
+    END { exit(found ? 0 : 1) }
+  ' "$file"
+}
+
+frame_section_has_content() {
+  local file=$1 heading=$2
+  [ -f "$file" ] || return 1
+  awk -v heading="$heading" '
+    function trim(s) {
+      sub(/^[[:space:]]+/, "", s)
+      sub(/[[:space:]]+$/, "", s)
+      return s
+    }
+    function clean(s) {
+      s = tolower(s)
+      gsub(/<!--[^>]*-->/, " ", s)
+      gsub(/[`*_]/, "", s)
+      gsub(/[[:space:]]+/, " ", s)
+      return trim(s)
+    }
+    function meaningful(s) {
+      s = clean(s)
+      if (s == "") return 0
+      if (s ~ /^(todo|tbd|fill me|fill this|fill in|to be filled|placeholder|xxx)([ .:-]|$)/) return 0
+      return 1
+    }
+    function heading_level(s) {
+      match(s, /^#+/)
+      return RLENGTH
     }
     function heading_text(s) {
       sub(/^[[:space:]]*#+[[:space:]]*/, "", s)
       return clean(s)
     }
     BEGIN {
-      target = clean(label)
+      target = clean(heading)
       in_section = 0
       found = 0
     }
-    /^[[:space:]]*```/ {
-      fence = !fence
-      next
-    }
+    /^[[:space:]]*```/ { fence = !fence; next }
     fence { next }
     /^[[:space:]]*#+[[:space:]]+/ {
+      level = heading_level($0)
       h = heading_text($0)
-      in_section = (h == target || index(h, target) > 0)
-      next
-    }
-    {
-      line = clean($0)
-      prefix = target ":"
-      if (substr(line, 1, length(prefix)) == prefix) {
-        rest = substr(line, length(prefix) + 1)
-        if (meaningful(rest)) {
-          found = 1
-          exit 0
-        }
+      if (in_section && level <= 2) {
+        exit(found ? 0 : 1)
+      }
+      if (level == 2 && h == target) {
+        in_section = 1
         next
       }
-      if (in_section && meaningful($0)) {
-        found = 1
+      next
+    }
+    in_section && meaningful($0) {
+      found = 1
+      exit 0
+    }
+    END { exit(found ? 0 : 1) }
+  ' "$file"
+}
+
+frame_reversibility_value_from_file() {
+  local file=$1
+  [ -f "$file" ] || return 1
+  awk '
+    function trim(s) {
+      sub(/^[[:space:]]+/, "", s)
+      sub(/[[:space:]]+$/, "", s)
+      return s
+    }
+    function clean(s) {
+      s = tolower(trim(s))
+      gsub(/[[:space:]]+/, " ", s)
+      return s
+    }
+    BEGIN { count = 0; value = "" }
+    /^[[:space:]]*```/ { fence = !fence; next }
+    fence { next }
+    {
+      line = $0
+      lowered = clean(line)
+      if (substr(lowered, 1, length("reversibility:")) == "reversibility:") {
+        rest = clean(substr(line, index(line, ":") + 1))
+        if (rest == "one-way" || rest == "two-way") {
+          count += 1
+          value = rest
+        } else if (rest != "" && rest !~ /^(todo|tbd|placeholder|xxx)$/) {
+          count += 100
+        }
+      }
+    }
+    END {
+      if (count == 1) {
+        print value
         exit 0
+      }
+      exit 1
+    }
+  ' "$file"
+}
+
+frame_reversibility_value_at() {
+  local d=$1 frame
+  frame="$(frame_dir_for "$d")"
+  frame_reversibility_value_from_file "$frame/frame.md"
+}
+
+frame_field_has_content() {
+  local frame=$1 label=$2 file="$frame/frame.md"
+  [ -f "$file" ] || return 1
+  case "$label" in
+    "addressed node") frame_label_has_content "$file" "Addressed node" ;;
+    "node-local work name") frame_label_has_content "$file" "Node-local work name" ;;
+    "target segments") frame_label_has_content "$file" "Target segments" ;;
+    "work in flight") frame_label_has_content "$file" "Work in flight" ;;
+    "problem") frame_section_has_content "$file" "problem" ;;
+    "constraints") frame_section_has_content "$file" "constraints" ;;
+    "decision surface or open direction")
+      frame_section_has_content "$file" "decision surface or open direction" ||
+        frame_label_has_content "$file" "Decision surface" ||
+        frame_label_has_content "$file" "Open direction"
+      ;;
+    "reversibility") frame_reversibility_value_from_file "$file" >/dev/null ;;
+    "route")
+      frame_section_has_content "$file" "route" ||
+        frame_label_has_content "$file" "Route"
+      ;;
+    "acceptance condition")
+      frame_section_has_content "$file" "acceptance condition" ||
+        frame_label_has_content "$file" "Acceptance condition"
+      ;;
+    "proof state") frame_section_has_content "$file" "proof state" ;;
+    "sweep") frame_section_has_content "$file" "sweep" ;;
+    "adoption or shelving claim")
+      frame_section_has_content "$file" "adoption claim" ||
+        frame_section_has_content "$file" "shelving claim" ||
+        frame_label_has_content "$file" "Adoption claim" ||
+        frame_label_has_content "$file" "Shelving claim"
+      ;;
+    *) return 1 ;;
+  esac
+}
+
+frame_route_has_content_at() {
+  local d=$1 frame
+  frame="$(frame_dir_for "$d")"
+  frame_field_has_content "$frame" route
+}
+
+loop_cmd_prefix() {
+  printf 'loop.sh'
+  [ "$NODE_REL" = "." ] || printf ' -C %s' "$NODE_REL"
+}
+
+direction_command_hint() {
+  local work_name=$1
+  if [ "$NODE_REL" = "." ]; then
+    printf './direction %s <operator> --route <text-or->' "$work_name"
+  else
+    printf '%s direct %s <operator> --route <text-or->' "$(loop_cmd_prefix)" "$work_name"
+  fi
+}
+
+review_command_hint() {
+  local work_name=$1
+  if [ "$NODE_REL" = "." ]; then
+    printf './review %s [--add <role>]...' "$work_name"
+  else
+    printf '%s review %s [--add <role>]...' "$(loop_cmd_prefix)" "$work_name"
+  fi
+}
+
+direction_given_at() {
+  local d=$1 frame file
+  frame="$(frame_dir_for "$d")"
+  file="$frame/direction.md"
+  [ -f "$file" ] || return 1
+  sed -nE 's/^direction-given-at:[[:space:]]*([^[:space:]].*)$/\1/p' "$file" | sed -n '1p'
+}
+
+direction_contract_errors_at() {
+  local d=$1 frame file field count=0 failed=0
+  frame="$(frame_dir_for "$d")"
+  file="$frame/direction.md"
+  if [ ! -f "$file" ]; then
+    printf 'missing direction artifact: %s; next: %s\n' "$(relpath "$file")" "$(direction_command_hint "$(basename "$d")")"
+    return 1
+  fi
+
+  frame_label_has_content "$file" "direction-by" \
+    || { printf 'malformed direction artifact: missing direction-by:\n'; failed=1; }
+  if frame_label_has_content "$file" "direction-given-at"; then
+    sed -nE 's/^direction-given-at:[[:space:]]*[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z[[:space:]]*$/ok/p' "$file" | grep -qx ok \
+      || { printf 'malformed direction artifact: direction-given-at must be UTC YYYY-MM-DDTHH:MM:SSZ\n'; failed=1; }
+  else
+    printf 'malformed direction artifact: missing direction-given-at:\n'
+    failed=1
+  fi
+
+  for field in selected-route constraint delegation; do
+    frame_label_has_content "$file" "$field" && count=$((count + 1))
+  done
+  if [ "$count" -eq 0 ]; then
+    printf 'malformed direction artifact: exactly one of selected-route:, constraint:, or delegation: must be substantive\n'
+    failed=1
+  elif [ "$count" -gt 1 ]; then
+    printf 'malformed direction artifact: only one of selected-route:, constraint:, or delegation: may be present\n'
+    failed=1
+  fi
+  [ "$failed" = 0 ]
+}
+
+direction_is_retrospective_at() {
+  local d=$1 frame file frame_file frame_mtime direction_mtime
+  frame="$(frame_dir_for "$d")"
+  file="$frame/direction.md"
+  frame_file="$frame/frame.md"
+  [ -f "$file" ] && [ -f "$frame_file" ] || return 1
+  frame_route_has_content_at "$d" || return 1
+  frame_mtime="$(stat -c %Y "$frame_file" 2>/dev/null || printf 0)"
+  direction_mtime="$(stat -c %Y "$file" 2>/dev/null || printf 0)"
+  [ "$direction_mtime" -gt "$frame_mtime" ]
+}
+
+review_role_verdict() {
+  local file=$1 role=$2
+  [ -f "$file" ] || return 1
+  awk -v role="$role" '
+    function clean(s) {
+      s = tolower(s)
+      gsub(/[`*_]/, "", s)
+      gsub(/[[:space:]]+/, " ", s)
+      sub(/^[[:space:]-]+/, "", s)
+      sub(/[[:space:]]+$/, "", s)
+      return s
+    }
+    BEGIN { found = 0; verdict = "" }
+    {
+      line = clean($0)
+      prefix = role ":"
+      if (substr(line, 1, length(prefix)) == prefix) {
+        rest = substr(line, length(prefix) + 1)
+        sub(/^[[:space:]]+/, "", rest)
+        if (rest ~ /^pass([[:space:]]|$)/) { verdict = "PASS"; found = 1; exit }
+        if (rest ~ /^flag([[:space:]]|$)/) { verdict = "FLAG"; found = 1; exit }
+      }
+    }
+    END {
+      if (found) {
+        print verdict
+        exit 0
+      }
+      exit 1
+    }
+  ' "$file"
+}
+
+review_disposition_ok() {
+  local file=$1
+  [ -f "$file" ] || return 1
+  awk '
+    function clean(s) {
+      s = tolower(s)
+      gsub(/[`*_]/, "", s)
+      gsub(/[[:space:]]+/, " ", s)
+      sub(/^[[:space:]]+/, "", s)
+      sub(/[[:space:]]+$/, "", s)
+      return s
+    }
+    BEGIN { found = 0 }
+    {
+      line = clean($0)
+      if (substr(line, 1, length("disposition:")) == "disposition:") {
+        rest = substr(line, length("disposition:") + 1)
+        sub(/^[[:space:]]+/, "", rest)
+        if (rest ~ /^(resolved|escalated)([[:space:]-]|$)/) {
+          found = 1
+          exit
+        }
       }
     }
     END { exit(found ? 0 : 1) }
-  ' {} +
+  ' "$file"
 }
 
-frame_any_field_has_content() {
-  local frame=$1 field
-  shift
-  for field in "$@"; do
-    frame_field_has_content "$frame" "$field" && return 0
+review_contract_errors_at() {
+  local d=$1 frame file role verdict failed=0 base_flag=0
+  frame="$(frame_dir_for "$d")"
+  file="$frame/review.md"
+  if [ ! -f "$file" ]; then
+    printf 'missing one-way review artifact: %s; next: %s\n' "$(relpath "$file")" "$(review_command_hint "$(basename "$d")")"
+    return 1
+  fi
+  frame_label_has_content "$file" "Overall" \
+    || { printf 'malformed review artifact: missing Overall: PASS or FLAG\n'; failed=1; }
+  for role in "${BASE_REVIEW_ROLES[@]}"; do
+    verdict="$(review_role_verdict "$file" "$role" || true)"
+    case "$verdict" in
+      PASS) ;;
+      FLAG) base_flag=1 ;;
+      *) printf 'malformed review artifact: missing base verdict for %s as PASS or FLAG\n' "$role"; failed=1 ;;
+    esac
   done
-  return 1
+  if [ "$base_flag" = 1 ] && ! review_disposition_ok "$file"; then
+    printf 'unresolved base-roster or red-team review flags require Disposition: resolved or Disposition: escalated; optional reviewers cannot clear them\n'
+    failed=1
+  elif ! frame_label_has_content "$file" "Disposition"; then
+    printf 'malformed review artifact: missing Disposition:\n'
+    failed=1
+  fi
+  [ "$failed" = 0 ]
 }
 
 frame_contract_errors_at() {
-  local d=$1 frame field failed=0
+  local d=$1 frame field failed=0 reversibility errors
   [ -d "$d" ] || { printf 'missing work directory\n'; return 1; }
   is_work_node "$d" || { printf 'active work must be a node with intent/\n'; return 1; }
   frame="$(frame_dir_for "$d")"
   [ -d "$frame" ] || { printf 'missing frame directory: %s\n' "$(relpath "$frame")"; return 1; }
   frame_has_markdown_files "$frame" \
-    || { printf 'missing non-signoff markdown frame file under %s\n' "$(relpath "$frame")"; return 1; }
+    || { printf 'missing canonical frame file: %s\n' "$(relpath "$frame/frame.md")"; return 1; }
 
   for field in "${FRAME_REQUIRED_FIELDS[@]}"; do
     if ! frame_field_has_content "$frame" "$field"; then
@@ -505,17 +806,25 @@ frame_contract_errors_at() {
       failed=1
     fi
   done
-  if ! frame_any_field_has_content "$frame" "decision surface" "open direction"; then
-    printf 'missing required frame field: decision surface or open direction\n'
+  if ! errors="$(direction_contract_errors_at "$d")"; then
+    printf '%s\n' "$errors"
     failed=1
   fi
-  if ! frame_any_field_has_content "$frame" "unresolved discomfort" "open judgement"; then
-    printf 'missing required frame field: unresolved discomfort or open judgement\n'
+  if frame_route_has_content_at "$d" && [ ! -f "$frame/direction.md" ]; then
+    printf 'route is populated before substantive direction; next: clear route content, then run %s before framing the route\n' "$(direction_command_hint "$(basename "$d")")"
     failed=1
   fi
-  if ! frame_any_field_has_content "$frame" "adoption claim" "shelving claim"; then
-    printf 'missing required frame field: adoption claim or shelving claim\n'
+  if direction_is_retrospective_at "$d"; then
+    printf 'direction appears retrospective: %s is newer than a populated %s; record operator direction before framing the route\n' \
+      "$(relpath "$frame/direction.md")" "$(relpath "$frame/frame.md")"
     failed=1
+  fi
+  reversibility="$(frame_reversibility_value_at "$d" || true)"
+  if [ "$reversibility" = "one-way" ]; then
+    if ! errors="$(review_contract_errors_at "$d")"; then
+      printf '%s\n' "$errors"
+      failed=1
+    fi
   fi
   [ "$failed" = 0 ]
 }
@@ -596,11 +905,16 @@ infer_operator() {
 check_green() { ( cd "$ROOT" && ./check.sh >/dev/null 2>&1 ); }
 
 archive_decision_from_output() {
-  case "$GATE_OUTPUT" in
-    *"ARCHIVE_DECISION: SHELVED"*) printf 'shelved' ;;
-    *"ARCHIVE_DECISION: ADOPTED"*) printf 'adopted' ;;
-    *) die "no readable archive decision — phase two stops before recording history" ;;
-  esac
+  local adopted shelved
+  adopted="$(printf '%s\n' "$GATE_OUTPUT" | grep -Ec '^ARCHIVE_DECISION:[[:space:]]*ADOPTED[[:space:]]*$' || true)"
+  shelved="$(printf '%s\n' "$GATE_OUTPUT" | grep -Ec '^ARCHIVE_DECISION:[[:space:]]*SHELVED[[:space:]]*$' || true)"
+  if [ "$adopted" -eq 1 ] && [ "$shelved" -eq 0 ]; then
+    printf 'adopted'
+  elif [ "$shelved" -eq 1 ] && [ "$adopted" -eq 0 ]; then
+    printf 'shelved'
+  else
+    die "archive decision must be exactly one line: ARCHIVE_DECISION: ADOPTED or ARCHIVE_DECISION: SHELVED"
+  fi
 }
 
 phase() {
@@ -866,27 +1180,9 @@ cmd_start() {
       printf '## problem\n\nTODO\n\n'
       printf '## constraints\n\nTODO\n\n'
       printf '## decision surface or open direction\n\nTODO\n\n'
+      printf 'Reversibility: TODO\n\n'
       printf '## route\n\nTODO\n\n'
-      printf '## operator deliberation\n\n'
-      printf '### problem/domain map\n\nTODO\n\n'
-      printf '### evidence standard\n\nTODO\n\n'
-      printf '### evidence basis\n\nTODO\n\n'
-      printf '### options and tradeoffs\n\nTODO\n\n'
-      printf '### operator expectation\n\nTODO\n\n'
-      printf '### rejection conditions\n\nTODO\n\n'
-      printf '### unresolved discomfort or open judgement\n\nTODO\n\n'
-      printf '## methodology adherence\n\n'
-      printf 'Work classification: TODO\n\n'
-      printf 'Loop waiver: TODO\n\n'
-      printf '## common ground\n\n'
-      printf '### operator decisions\n\nTODO\n\n'
-      printf '### authority\n\nTODO\n\n'
-      printf '### machine assumptions\n\nTODO\n\n'
-      printf '### evidence\n\nTODO\n\n'
-      printf '### uncertainty\n\nTODO\n\n'
-      printf '### open blockers\n\nTODO\n\n'
-      printf '### feedback capture\n\nTODO\n\n'
-      printf '### handoff state\n\nTODO\n\n'
+      printf '## acceptance condition\n\nTODO\n\n'
       printf '## proof state\n\nTODO\n\n'
       printf '## sweep\n\nTODO\n\n'
       printf '## adoption claim\n\nTODO\n\n'
@@ -894,6 +1190,275 @@ cmd_start() {
     } > "$template"
   fi
   printf '\n=== gate: orient ===\n\n'; cat "$GATES/orient.md"
+}
+
+direction_work_candidates() {
+  local d name
+  for d in "$WORKS"/*/; do
+    [ -d "$d" ] || continue
+    name="$(basename "${d%/}")"
+    work_name_ok "$name" || continue
+    is_work_node "$d" || continue
+    signed_off_at "$d" && continue
+    direction_contract_errors_at "$d" >/dev/null 2>&1 && continue
+    printf '%s\n' "$name"
+  done
+}
+
+infer_direction_work_name() {
+  local candidates=() name
+  while IFS= read -r name; do candidates+=("$name"); done < <(direction_work_candidates)
+  case "${#candidates[@]}" in
+    1) printf '%s' "${candidates[0]}" ;;
+    0) die "cannot infer work name: no unsigned active work node needing direction in node $NODE_REL; pass <work-name>" ;;
+    *) die "cannot infer work name: multiple unsigned active work nodes need direction in node $NODE_REL: ${candidates[*]}; pass <work-name>" ;;
+  esac
+}
+
+read_direction_text() {
+  local raw=$1 text
+  if [ "$raw" = "-" ]; then
+    raw="$(cat)"
+  fi
+  text="$(meaningful_text "$raw" || true)"
+  [ -n "$text" ] || return 1
+  printf '%s' "$text"
+}
+
+cmd_direct() {
+  local positional=() form="" value_arg="" value="" work_name="" who="" d frame file tmp field
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --route|--constraint|--delegate)
+        [ -z "$form" ] || die "usage: loop.sh [-C <node-path>] direct [<work-name> [<operator>]] --route|--constraint|--delegate <text-or->"
+        form="${1#--}"
+        shift
+        [ $# -gt 0 ] || die "direction $form requires <text-or->"
+        value_arg=$1
+        shift
+        ;;
+      --*) die "unknown direction option: $1" ;;
+      *)
+        [ -z "$form" ] || die "direction takes no positional arguments after the direction form"
+        positional+=("$1")
+        shift
+        ;;
+    esac
+  done
+  [ -n "$form" ] || die "usage: loop.sh [-C <node-path>] direct [<work-name> [<operator>]] --route|--constraint|--delegate <text-or->"
+  [ "${#positional[@]}" -le 2 ] || die "usage: loop.sh [-C <node-path>] direct [<work-name> [<operator>]] --route|--constraint|--delegate <text-or->"
+  case "${#positional[@]}" in
+    0) work_name="$(infer_direction_work_name)" ;;
+    1) work_name="${positional[0]}" ;;
+    2) work_name="${positional[0]}"; who="${positional[1]}" ;;
+  esac
+  [ -n "$who" ] || who="$(infer_operator)"
+  case "$who" in
+    *$'\n'*|*$'\r'*) die "operator identity must be a single line" ;;
+  esac
+  validate_work_name "$work_name"
+  d="$(active_work_dir "$work_name")" || die "work is not active in node $NODE_REL: $work_name"
+  signed_off_at "$d" && die "cannot record direction after sign-off"
+  frame="$(frame_dir_for "$d")"
+  [ -d "$frame" ] || die "missing frame directory: $(relpath "$frame")"
+  file="$frame/direction.md"
+  if [ -f "$file" ]; then
+    if direction_contract_errors_at "$d" >/dev/null; then
+      die "direction already recorded at $(relpath "$file")"
+    fi
+    die "direction artifact already exists but is malformed at $(relpath "$file"); fix or remove it before recording direction"
+  fi
+  frame_route_has_content_at "$d" \
+    && die "cannot record direction after route content exists in $(relpath "$frame/frame.md"); clear the route and record operator direction before framing it"
+  value="$(read_direction_text "$value_arg" || true)"
+  [ -n "$value" ] || die "direction text is empty or placeholder"
+  case "$form" in
+    route) field=selected-route ;;
+    constraint) field=constraint ;;
+    delegate) field=delegation ;;
+    *) die "unknown direction form: $form" ;;
+  esac
+  tmp="$file.tmp.$$"
+  {
+    printf '# direction - %s\n\n' "$work_name"
+    printf 'direction-by: %s\n' "$who"
+    printf 'direction-given-at: %s\n' "$(utc_stamp)"
+    printf '%s: %s\n' "$field" "$value"
+  } > "$tmp"
+  mv "$tmp" "$file"
+  printf 'recorded operator direction at %s\n' "$(relpath "$file")"
+}
+
+valid_optional_review_role() {
+  local role=$1 r
+  for r in "${OPTIONAL_REVIEW_ROLES[@]}"; do
+    [ "$role" = "$r" ] && return 0
+  done
+  return 1
+}
+
+validate_review_model() {
+  local model=${CODEX_REVIEW_MODEL:-}
+  [ -z "$model" ] && return 0
+  [[ "$model" =~ ^[A-Za-z0-9][A-Za-z0-9._:/+-]*$ ]] \
+    || die "CODEX_REVIEW_MODEL must be a single model token"
+}
+
+reviewer_verdict_from_output() {
+  local output=$1 status=$2
+  [ "$status" -eq 0 ] || { printf 'FLAG'; return; }
+  if printf '%s\n' "$output" | grep -Eq '^VERDICT:[[:space:]]*PASS[[:space:]]*$'; then
+    printf 'PASS'
+  elif printf '%s\n' "$output" | grep -Eq '^VERDICT:[[:space:]]*FLAG[[:space:]]*$'; then
+    printf 'FLAG'
+  else
+    printf 'FLAG'
+  fi
+}
+
+reviewer_note_from_output() {
+  local output=$1 status=$2 note
+  if [ "$status" -ne 0 ]; then
+    note="reviewer subprocess exited $status; counted as FLAG"
+  elif printf '%s\n' "$output" | grep -Eq '^VERDICT:[[:space:]]*(PASS|FLAG)[[:space:]]*$'; then
+    note="$(printf '%s\n' "$output" | sed -nE 's/^NOTE:[[:space:]]*(.*)$/\1/p' | sed -n '1p')"
+    [ -n "$note" ] || note="structured verdict returned"
+  else
+    note="missing or malformed PASS/FLAG verdict; counted as FLAG"
+  fi
+  short_message "$note"
+}
+
+run_reviewer_role() {
+  local role=$1 work_name=$2 frame_rel=$3 output status final tmpout tmperr prompt fake_file
+  REVIEWER_VERDICT=FLAG
+  REVIEWER_NOTES="missing reviewer output; counted as FLAG"
+
+  if [ -n "${HYPERCORE_REVIEW_FAKE_DIR:-}" ]; then
+    fake_file="$HYPERCORE_REVIEW_FAKE_DIR/$role"
+    if [ -f "$fake_file" ]; then
+      output="$(cat "$fake_file")"
+      status=0
+    else
+      output="missing fake reviewer output for $role"
+      status=1
+    fi
+    REVIEWER_VERDICT="$(reviewer_verdict_from_output "$output" "$status")"
+    REVIEWER_NOTES="$(reviewer_note_from_output "$output" "$status")"
+    return 0
+  fi
+
+  command -v "$CODEX_BIN" >/dev/null 2>&1 \
+    || die "review cannot spawn Codex reviewers: Codex binary '$CODEX_BIN' is not on PATH"
+  validate_review_model
+  final="$(mktemp "${TMPDIR:-/tmp}/hypercore-review-$role-final.XXXXXX")"
+  tmpout="$(mktemp "${TMPDIR:-/tmp}/hypercore-review-$role-out.XXXXXX")"
+  tmperr="$(mktemp "${TMPDIR:-/tmp}/hypercore-review-$role-err.XXXXXX")"
+  prompt="Review role: $role
+Work: $work_name
+Frame directory: $frame_rel
+
+Read only the signed work frame and the intent it references. Do not debate other reviewers.
+Return exactly one structured verdict line:
+VERDICT: PASS
+or
+VERDICT: FLAG
+
+Then optionally add one NOTE: line. Treat uncertainty as FLAG."
+  REVIEW_CMD=("$CODEX_BIN" -a never -s read-only -C "$ROOT")
+  [ -n "${CODEX_REVIEW_MODEL:-}" ] && REVIEW_CMD+=(-m "$CODEX_REVIEW_MODEL")
+  REVIEW_CMD+=(exec -o "$final" -)
+  set +e
+  printf '%s' "$prompt" | "${REVIEW_CMD[@]}" >"$tmpout" 2>"$tmperr"
+  status=$?
+  set -e
+  if [ -s "$final" ]; then
+    output="$(cat "$final")"
+  else
+    output="$(cat "$tmpout" "$tmperr")"
+  fi
+  REVIEWER_VERDICT="$(reviewer_verdict_from_output "$output" "$status")"
+  REVIEWER_NOTES="$(reviewer_note_from_output "$output" "$status")"
+  rm -f "$final" "$tmpout" "$tmperr"
+}
+
+cmd_review() {
+  local work_name="${1:-}" d frame frame_rel reversibility role add_role tmp overall disposition
+  local roles=() optional_roles=() any_flag=0 role_type
+  declare -A verdicts
+  declare -A notes
+  [ -n "$work_name" ] || die "usage: loop.sh [-C <node-path>] review <work-name> [--add <role>]..."
+  validate_work_name "$work_name"
+  shift
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --add)
+        shift
+        [ $# -gt 0 ] || die "review --add requires a role"
+        add_role=$1
+        valid_optional_review_role "$add_role" \
+          || die "invalid optional review role: $add_role"
+        optional_roles+=("$add_role")
+        shift
+        ;;
+      *) die "usage: loop.sh [-C <node-path>] review <work-name> [--add <role>]..." ;;
+    esac
+  done
+  d="$(active_work_dir "$work_name")" || die "work is not active in node $NODE_REL: $work_name"
+  frame="$(frame_dir_for "$d")"
+  [ -f "$frame/frame.md" ] || die "review requires canonical frame file: $(relpath "$frame/frame.md")"
+  reversibility="$(frame_reversibility_value_at "$d" || true)"
+  [ -n "$reversibility" ] || die 'review requires exact "Reversibility: one-way" or "Reversibility: two-way" in intent/frame/frame.md'
+  roles=("${BASE_REVIEW_ROLES[@]}" "${optional_roles[@]}")
+  frame_rel="$(relpath "$frame")"
+  for role in "${roles[@]}"; do
+    run_reviewer_role "$role" "$work_name" "$frame_rel"
+    verdicts["$role"]="$REVIEWER_VERDICT"
+    notes["$role"]="$REVIEWER_NOTES"
+    [ "$REVIEWER_VERDICT" = FLAG ] && any_flag=1
+  done
+  if [ "$any_flag" = 1 ]; then
+    overall=FLAG
+    disposition="escalated - FLAG verdicts must be answered in the frame; optional reviewers are advisory only and cannot clear base-roster or red-team flags"
+  else
+    overall=PASS
+    disposition="resolved - base roster returned PASS; optional reviewers remain advisory"
+  fi
+  tmp="$frame/review.md.tmp.$$"
+  {
+    printf '# review - %s\n\n' "$work_name"
+    printf 'Overall: %s\n' "$overall"
+    printf 'Isolation: reviewer subprocesses are invoked with literal approval never and literal sandbox read-only.\n'
+    printf 'Network isolation: not claimed by this adapter; the Codex CLI invocation is not represented as proof of network isolation.\n'
+    printf 'Disposition: %s\n\n' "$disposition"
+    printf '## base roster verdicts\n\n'
+    for role in "${BASE_REVIEW_ROLES[@]}"; do
+      printf -- '- %s: %s\n' "$role" "${verdicts[$role]}"
+    done
+    if [ "${#optional_roles[@]}" -gt 0 ]; then
+      printf '\n## advisory optional verdicts\n\n'
+      for role in "${optional_roles[@]}"; do
+        printf -- '- %s: %s\n' "$role" "${verdicts[$role]}"
+      done
+    fi
+    printf '\n## unresolved flags\n\n'
+    if [ "$any_flag" = 1 ]; then
+      for role in "${roles[@]}"; do
+        [ "${verdicts[$role]}" = FLAG ] || continue
+        role_type=base
+        valid_optional_review_role "$role" && role_type=advisory
+        printf -- '- %s (%s): %s\n' "$role" "$role_type" "${notes[$role]}"
+      done
+    else
+      printf 'None.\n'
+    fi
+    printf '\n## reviewer notes\n\n'
+    for role in "${roles[@]}"; do
+      printf '### %s\n\n%s\n\n' "$role" "${notes[$role]}"
+    done
+  } > "$tmp"
+  mv "$tmp" "$frame/review.md"
+  printf 'wrote review artifact at %s\n' "$(relpath "$frame/review.md")"
 }
 
 cmd_frame() {
@@ -927,13 +1492,17 @@ $errors"
 }
 
 cmd_signoff() {
-  local work_name="${1:-}" who="${2:-}" d frame
+  local work_name="${1:-}" who="${2:-}" d frame errors
   [ -z "${3:-}" ] || die "usage: loop.sh [-C <node-path>] signoff [<work-name> [<operator>]]"
   [ -n "$work_name" ] || work_name="$(infer_signoff_work_name)"
   [ -n "$who" ] || who="$(infer_operator)"
   validate_work_name "$work_name"
   d="$(active_work_dir "$work_name")" || die "work is not active in node $NODE_REL: $work_name"
-  frame_complete_at "$d" || die "cannot sign off an incomplete frame"
+  if ! frame_complete_at "$d"; then
+    errors="$(frame_contract_errors_at "$d" || true)"
+    die "cannot sign off: work-node frame is incomplete under $(relpath "$(frame_dir_for "$d")"):
+$errors"
+  fi
   check_green || die "check.sh is red — not signable"
   signed_off_at "$d" && die "already signed off"
   frame="$(frame_dir_for "$d")"
@@ -1040,6 +1609,15 @@ cmd_execute() {
     loop_state_write archive passed "archive decision: $archive_decision"
     archive_collection="$(archive_collection_for_active_dir "$active_dir" "$archive_decision")"
     archive_move "$active_dir" "$archive_collection"
+    loop_event check archive running "running ./check.sh after history move"
+    loop_state_write archive running "running ./check.sh after history move"
+    if check_green; then
+      loop_event check archive passed "check.sh green after history move"
+      loop_state_write archive passed "check.sh green after history move"
+    else
+      loop_event check archive failed "check.sh red after history move"
+      die "check.sh red after history move — history recording is not proved"
+    fi
     printf 'recorded %s in %s history for node %s\n' "$work_name" "$archive_decision" "$NODE_REL"
   fi
   loop_event completion archive complete "phase two complete for $work_name"
@@ -1048,7 +1626,7 @@ cmd_execute() {
 }
 
 cmd_status() {
-  local json=0 work_name
+  local json=0 work_name d errors
   if [ "${1:-}" = "--json" ]; then
     json=1
     shift
@@ -1063,6 +1641,19 @@ cmd_status() {
   printf '%s in node %s: phase=%s frame_complete=%s signed_off=%s\n' "$work_name" "$NODE_REL" "$(phase "$work_name")" \
     "$(frame_complete "$work_name" && echo yes || echo no)" \
     "$(signed_off "$work_name" && echo yes || echo no)"
+  if d="$(active_work_dir "$work_name")"; then
+    if ! frame_complete_at "$d"; then
+      errors="$(frame_contract_errors_at "$d" || true)"
+      printf 'frame blockers under %s:\n%s' "$(relpath "$(frame_dir_for "$d")")" "$errors"
+    elif ! signed_off_at "$d"; then
+      printf 'next: '
+      if [ "$NODE_REL" = "." ]; then
+        printf './signoff\n'
+      else
+        printf '%s signoff %s <operator>\n' "$(loop_cmd_prefix)" "$work_name"
+      fi
+    fi
+  fi
   print_phase_two_status "$work_name"
 }
 
@@ -1076,11 +1667,13 @@ main() {
   local sub="${1:-}"; shift || true
   case "$sub" in
     start)   cmd_start   "$@";;
+    direct)  cmd_direct  "$@";;
+    review)  cmd_review  "$@";;
     frame)   cmd_frame   "$@";;
     signoff) cmd_signoff "$@";;
     execute) cmd_execute "$@";;
     status)  cmd_status  "$@";;
-    *) die "usage: loop.sh [-C <node-path>] {start|frame|signoff|execute|status} <work-name> [...]";;
+    *) die "usage: loop.sh [-C <node-path>] {start|direct|review|frame|signoff|execute|status} <work-name> [...]";;
   esac
 }
 main "$@"

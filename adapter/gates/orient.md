@@ -24,16 +24,19 @@ State the work in one line. Then report:
 - the target segments;
 - the work in flight;
 - the work classification and why the loop is or is not required;
-- the durable common-ground state still needed before frame: operator decisions,
-  authority, machine assumptions, evidence, uncertainty, open blockers, proof state,
-  feedback capture, and handoff state;
+- a teach-back of the operator's request, before any route;
+- at least one alternative framing of the problem;
+- information-gain questions whose answers would change the frame;
+- reversibility classification as `one-way` or `two-way`, with methodology-level,
+  loop/adapter, intent-contract, ambiguous, or hard-to-reverse work defaulting to
+  `one-way`;
 - any open direction that needs operator input before the frame settles a route.
 
 Search the web for what you don't know; ask the operator what the artifacts can't tell
-you. Do not guess, do not settle an open route without operator direction, and do not edit
+you. Do not guess, do not write a route, do not write operator direction, and do not edit
 anything in this gate.
 
 Precondition to leave this gate: you can name the work classification, addressed node,
-node-local work name, target segments, and work in flight, and you have surfaced any open
-direction or missing common ground that needs an operator decision. The frame gate builds
-on this reading.
+node-local work name, target segments, work in flight, teach-back, alternative framing,
+information-gain questions, reversibility classification, and any open direction that
+needs an operator decision. The frame gate builds on this reading.

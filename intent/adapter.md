@@ -13,11 +13,19 @@ the rigid workflow restates no rule: the gates and their order are the loop, alr
 intent; the workflow operationalizes them, and where workflow and intent disagree, the
 intent wins.
 the rigid workflow is interactive through orient and frame as the design phase, and through
-sign-off as the human gate: before the machine settles open direction it surfaces the
-problem, constraints, decision surface, options and tradeoffs, evidence standard and
-basis, uncertainty, rejection conditions, and unresolved discomfort or open judgement for
-operator direction; after sign-off, implement, check, and archive run on a cleared session
-that re-derives the work from its written frame alone.
+sign-off as the human gate: before a route is written, the machine surfaces understanding,
+alternative framing, information-gain questions, reversibility, review where required, and
+a decision surface for substantive operator direction; after sign-off, implement, check,
+and archive run on a cleared session that re-derives the work from its signed frame
+directory alone.
+direction and review are phase-one acts or artifacts, not loop gates.
+the Codex review roster for one-way phase-one work has a base roster of
+`contract-checkability`, `soundness-fit`, `simplicity-fastness`, and `red-team`.
+the complete optional Codex review roster is `implementation-maintainability`,
+`security-permissions`, `operator-ergonomics`, `migration-compatibility`,
+`domain-evidence`, and `performance-cost`.
+optional reviewers are advisory additions and cannot override, outvote, average away, or
+dilute unresolved base-roster or red-team flags.
 the Codex adapter classifies the request surface before changing material: ordinary
 conversation and read-only inspection may proceed directly, while governed work starts or
 continues a work node.
@@ -75,22 +83,26 @@ nodes.
 the gate prompts use addressed-node and node-local work wording and point cleared sessions
 at the addressed work frame.
 the orient gate prompt requires the machine to classify the request surface, name the
-addressed node, node-local work name, target segments, work in flight, durable
-common-ground state, and any open direction that needs an operator decision before the
-frame settles a route.
+addressed node, node-local work name, target segments, work in flight, teach-back,
+alternative framing, information-gain questions, reversibility classification, and any
+open direction that needs an operator decision before the frame settles a route.
+the orient gate prompt tells the machine not to write a route or operator direction.
 the frame gate prompt requires addressed node, node-local work name, target segments, work
-in flight, problem, constraints, decision surface or open direction, route, methodology
-adherence, proof state, sweep, adoption or shelving claim, and written common ground before
-sign-off.
-the frame gate prompt requires a problem, constraints, and decision surface before
-prescribing an open multi-task or multi-phase route; when operator direction is missing, it
-tells the machine to stop at the decision surface and wait for sign-off or direction rather
-than filling the gap.
-the Codex adapter prose describes phase one as design-phase collaboration, while preserving
-phase two as a cleared, heads-down execution from the written frame.
+in flight, problem, constraints, decision surface or open direction, reversibility, route,
+acceptance condition, proof state, sweep, and adoption or shelving claim in
+`intent/frame/frame.md`.
+the frame gate prompt requires substantive `intent/frame/direction.md` before route
+framing and requires `intent/frame/review.md` for one-way work.
+the frame gate prompt tells the machine not to write operator direction, not to collect
+direction retrospectively, and not to let optional reviewer verdicts clear base-roster or
+red-team flags.
+the Codex adapter prose describes phase one as design-phase collaboration with direction
+and review artifacts, while preserving phase two as cleared, heads-down execution from the
+signed frame directory.
 `check.sh` mechanically checks that the gate prompts, Codex adapter prose, loop frame
-validation, start scaffolding, and current-material absence of the retired compatibility
-route still carry the contract.
+validation, start scaffolding, direction/review helpers, review isolation settings, strict
+frame parsing, and current-material absence of the retired compatibility route still carry
+the contract.
 each gate's instructions are held in a file in `adapter/gates/`; the Codex path includes them in
 the `codex exec` gate prompt; the orchestrator owns gate order and preconditions and
 blocks a gate whose preconditions fail.

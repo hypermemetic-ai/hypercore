@@ -40,28 +40,31 @@ the operator's **sign-off**:
 
 - **Phase one — orient, frame — design-phase collaboration.** You and the operator choose
   direction before sign-off by naming the addressed node, node-local work name, target
-  segments, work in flight, work classification, and any open direction; before settling
-  an open route, surface the problem, constraints, decision surface for operator
-  direction, options and tradeoffs, evidence standard and basis, uncertainty, rejection
-  conditions, and any
-  unresolved operator discomfort or open judgement. The written frame records common
-  ground and operator deliberation: operator decisions, authority, machine assumptions,
-  evidence, uncertainty, open blockers, proof state, feedback capture, handoff state,
-  problem/domain map, operator expectation, and rejection conditions. Evidence depth is problem-relative.
-  Use relevant trustworthy external evidence when it helps, and avoid superficial research when local facts
-  and reasoning are the better basis. You frame the work
-  node directly under the addressed node as `<NNN-slug>/`, with the written frame under
-  `intent/frame/`, and run the sweep over the whole corpus and work in flight across the
-  node tree, including related work named by a frame. Interaction
-  surfaces here. It ends when the operator signs off:
-  from the root, `./signoff` signs the single frame-complete, unsigned active work node
-  when the operator identity is unambiguous; the explicit
-  `loop.sh [-C <node-path>] signoff <work-name> <operator>` form also writes a
-  `signed-off-by` line. **You never sign off for them.**
+  segments, work in flight, work classification, and any open direction. Before a route is
+  written, you provide a teach-back, at least one alternative framing, information-gain
+  questions, and a reversibility classification; route, review, and direction stay
+  separate artifacts. One-way work requires `./review <work-name> [--add <role>]...`,
+  which mechanically seats the base roster `contract-checkability`, `soundness-fit`,
+  `simplicity-fastness`, and `red-team`; optional complete-roster reviewers are advisory
+  additions only and cannot clear unresolved base or red-team flags. The operator then
+  records substantive direction with `./direction [<work-name> [<operator>]]
+  --route|--constraint|--delegate <text-or->`. Direction must contain `direction-by:`,
+  `direction-given-at:`, and exactly one selected route, constraint, or delegation. You
+  never write direction or sign-off for the operator, and the route is not framed before
+  direction exists. The written frame is lean recoverability: addressed node, node-local
+  work name, target segments, work in flight, problem, constraints, decision surface or
+  open direction, reversibility, route, acceptance condition, proof state, sweep, and
+  adoption or shelving claim. You frame the work node directly under the addressed node as
+  `<NNN-slug>/`, with artifacts under `intent/frame/`, and run the sweep over the whole
+  corpus and work in flight across the node tree, including related work named by a frame.
+  Interaction surfaces here. It ends when the operator signs off: from the root,
+  `./signoff` signs the single frame-complete, unsigned active work node when the operator
+  identity is unambiguous; the explicit `loop.sh [-C <node-path>] signoff <work-name>
+  <operator>` form also writes a `signed-off-by` line. **You never sign off for them.**
 - **The session clears at sign-off.** Phase two runs on a fresh, memoryless `codex exec`
   opened by implement and resumed across check and archive. It re-derives the work from
-  the written frame alone. If the frame doesn't tell it something it needs, the frame was
-  incomplete. That is the test.
+  the signed frame directory alone. If the frame directory doesn't tell it something it
+  needs, the frame was incomplete. That is the test.
 - **Phase two — implement, check, archive — heads-down.**
   `loop.sh [-C <node-path>] execute <work-name>` builds the delta,
   runs `./check.sh` (green or it stops) and the sweep, then the archive gate

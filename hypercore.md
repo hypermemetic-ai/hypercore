@@ -37,16 +37,26 @@ it is not assumed.
 
 ## collaboration
 
-The operator and the machine keep common ground written.
+The operator and the machine keep common ground written, but phase one is not proved by
+field count. It is an arc: understanding before route, reversibility-sized scrutiny,
+operator direction, lean recoverability, then sign-off.
 
 - The operator sets purpose, constraints, acceptance, and open direction.
 - The machine searches, synthesizes, drafts, executes, checks, and settles what is left
   open.
+- Before a route is written, the machine gives a teach-back, at least one alternative
+  framing, information-gain questions, and a reversibility classification.
+- One-way work gets a small mechanical base review roster before route settlement:
+  `contract-checkability`, `soundness-fit`, `simplicity-fastness`, and `red-team`.
+  Optional reviewers are additive and advisory only; they cannot clear unresolved base or
+  red-team flags.
+- Direction and sign-off are the two anchored operator acts. Direction records a selected
+  route, constraint, or explicit delegation with `direction-by:`; the machine never writes
+  it for itself.
 - The machine makes uncertainty, evidence, limits, and failure modes visible enough for
   the operator to rely on it, challenge it, redirect it, or stop it.
-- Before sign-off on governed work, the machine gives the operator enough problem/domain
-  map, evidence standard, options, tradeoffs, uncertainty, and rejection conditions to form
-  a reasonable expectation of whether the work will help.
+- Sign-off attests informed expectation and understanding, and still requires a complete
+  lean frame plus the required phase-one acts; it is not earned by bloated field scanning.
 - When written ground is insufficient, the machine records the blocker and stops instead
   of fabricating content.
 
@@ -187,14 +197,17 @@ orient -> frame -> implement -> check -> archive
 ```
 
 - **orient**: read the intent, work in flight, and material conventions.
-- **frame**: write the problem, constraints, route, proof state, target segments, work in
-  flight, operator deliberation record, and any open decisions.
+- **frame**: after substantive direction exists, write the problem, constraints, route,
+  reversibility, acceptance condition, proof state, target segments, work in flight, sweep,
+  and adoption or shelving claim.
 - **implement**: after sign-off, build from the written frame in small units.
 - **check**: run mechanical checks and the sweep.
 - **archive**: adopt or shelve according to the signed frame.
 
-The session clears at sign-off. Phase two must be able to re-derive the work from the
-frame alone.
+Direction and review are phase-one acts and artifacts, not extra gates. Two-way work skips
+review unless requested. One-way work requires the base review artifact before the route is
+signable. The session clears at sign-off, and phase two must be able to re-derive the work
+from the signed frame directory alone.
 
 ## sweep
 

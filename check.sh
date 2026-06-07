@@ -169,7 +169,7 @@ check_no_tracked_live_material_paths() {
 }
 
 check_loop_frame_contract() {
-  local name tmp frame
+  local name tmp frame direction review fake_review status_out
 
   echo "root - loop frame contract"
   tmp="$(mktemp -d "${TMPDIR:-/tmp}/hypercore-loop-frame-check.XXXXXX")" \
@@ -188,34 +188,16 @@ check_loop_frame_contract() {
   [ -f "$frame" ] \
     && ok "loop start scaffolds intent/frame/frame.md" \
     || bad "loop start did not scaffold intent/frame/frame.md"
-  require_text "$frame" "## common ground" \
-    "frame template includes a common-ground section"
-  require_text "$frame" "### operator decisions" \
-    "frame template includes operator decisions"
-  require_text "$frame" "### machine assumptions" \
-    "frame template includes machine assumptions"
-  require_text "$frame" "### handoff state" \
-    "frame template includes handoff state"
-  require_text "$frame" "## operator deliberation" \
-    "frame template includes operator deliberation"
-  require_text "$frame" "### problem/domain map" \
-    "frame template includes the problem/domain map"
-  require_text "$frame" "### evidence standard" \
-    "frame template includes the evidence standard"
-  require_text "$frame" "### evidence basis" \
-    "frame template includes the evidence basis"
-  require_text "$frame" "### options and tradeoffs" \
-    "frame template includes options and tradeoffs"
-  require_text "$frame" "### operator expectation" \
-    "frame template includes the operator expectation"
-  require_text "$frame" "### rejection conditions" \
-    "frame template includes rejection conditions"
-  require_text "$frame" "### unresolved discomfort or open judgement" \
-    "frame template includes unresolved discomfort or open judgement"
-  require_text "$frame" "## methodology adherence" \
-    "frame template includes methodology adherence"
+  require_text "$frame" "Reversibility: TODO" \
+    "frame template includes exact reversibility slot"
+  require_text "$frame" "## acceptance condition" \
+    "frame template includes acceptance condition"
   require_text "$frame" "## adoption claim" \
     "frame template includes adoption claim"
+  reject_text "$frame" "## operator deliberation" \
+    "frame template no longer scaffolds operator deliberation pile"
+  reject_text "$frame" "## common ground" \
+    "frame template no longer scaffolds common-ground pile"
 
   if "$root/adapter/loop.sh" frame "$name" >"$tmp/frame.out" 2>"$tmp/frame.err"; then
     bad "loop frame rejects a placeholder-only frame"
@@ -224,6 +206,208 @@ check_loop_frame_contract() {
   fi
   require_text "$tmp/frame.err" "missing required frame field" \
     "loop frame explains missing required frame fields"
+
+  write_lean_frame() {
+    local route_text=$1 reversibility=${2:-two-way}
+    cat > "$frame" <<EOF
+# frame - self-test
+
+## work
+
+Addressed node: root
+
+Node-local work name: $name
+
+Target segments: loop
+
+Work in flight: none
+
+## problem
+
+Lean contract completeness self-test.
+
+## constraints
+
+Keep this frame intentionally narrow.
+
+## decision surface or open direction
+
+The operator direction surface is named.
+
+Reversibility: $reversibility
+
+## route
+
+$route_text
+
+## acceptance condition
+
+The loop reports frame_complete=yes for complete test cases.
+
+## proof state
+
+The proof state is recorded.
+
+## sweep
+
+The sweep is recorded.
+
+## adoption claim
+
+The adoption claim is recorded.
+EOF
+  }
+
+  write_direction() {
+    local field=$1 value=$2
+    cat > "$direction" <<EOF
+# direction - $name
+
+direction-by: qqp-dev
+direction-given-at: 2026-06-07T00:00:00Z
+$field: $value
+EOF
+  }
+
+  write_valid_review() {
+    cat > "$review" <<'EOF'
+# review - self-test
+
+Overall: PASS
+Isolation: reviewer subprocesses are invoked with literal approval never and literal sandbox read-only.
+Network isolation: not claimed by this adapter.
+Disposition: resolved - base roster returned PASS.
+
+## base roster verdicts
+
+- contract-checkability: PASS
+- soundness-fit: PASS
+- simplicity-fastness: PASS
+- red-team: PASS
+EOF
+  }
+
+  direction="$root/$name/intent/frame/direction.md"
+  review="$root/$name/intent/frame/review.md"
+
+  write_lean_frame "Route is written before direction." two-way
+  rm -f "$direction" "$review"
+  if "$root/adapter/loop.sh" frame "$name" >"$tmp/no-direction.out" 2>"$tmp/no-direction.err"; then
+    bad "loop frame rejects route content without direction"
+  else
+    ok "loop frame rejects route content without direction"
+  fi
+  require_text "$tmp/no-direction.err" "route is populated before substantive direction" \
+    "loop frame explains route-before-direction rejection"
+
+  write_lean_frame "TODO" two-way
+  if "$root/adapter/loop.sh" direct "$name" qqp-dev --route "" >"$tmp/empty-direction.out" 2>"$tmp/empty-direction.err"; then
+    bad "loop direct rejects empty direction"
+  else
+    ok "loop direct rejects empty direction"
+  fi
+  require_text "$tmp/empty-direction.err" "direction text is empty or placeholder" \
+    "loop direct explains empty direction"
+
+  write_lean_frame "Route is written before direction." two-way
+  if "$root/adapter/loop.sh" direct "$name" qqp-dev --route "operator route" >"$tmp/late-direction.out" 2>"$tmp/late-direction.err"; then
+    bad "loop direct refuses after route content"
+  else
+    ok "loop direct refuses after route content"
+  fi
+  require_text "$tmp/late-direction.err" "cannot record direction after route content exists" \
+    "loop direct explains retrospective direction refusal"
+
+  write_lean_frame "TODO" two-way
+  rm -f "$direction" "$review"
+  if "$root/adapter/loop.sh" direct "$name" qqp-dev --delegate "operator delegates route within constraints" >"$tmp/delegate.out" 2>"$tmp/delegate.err"; then
+    ok "loop direct records delegation direction"
+  else
+    bad "loop direct records delegation direction"
+  fi
+  require_text "$direction" "direction-by: qqp-dev" \
+    "direction artifact records direction-by"
+  require_text "$direction" "direction-given-at:" \
+    "direction artifact records direction-given-at"
+  require_text "$direction" "delegation: operator delegates route within constraints" \
+    "direction artifact records exactly one substantive delegation"
+  write_lean_frame "Two-way route after operator delegation." two-way
+  if status_out="$("$root/adapter/loop.sh" status "$name" 2>"$tmp/two-way-status.err")" &&
+     printf '%s\n' "$status_out" | grep -Fq "frame_complete=yes"; then
+    ok "two-way work with direction and no review is frame-complete"
+  else
+    bad "two-way work with direction and no review is frame-complete"
+  fi
+
+  write_lean_frame "One-way route after direction, but review is missing." one-way
+  rm -f "$review"
+  if "$root/adapter/loop.sh" frame "$name" >"$tmp/missing-review.out" 2>"$tmp/missing-review.err"; then
+    bad "one-way work with direction but no review is rejected"
+  else
+    ok "one-way work with direction but no review is rejected"
+  fi
+  require_text "$tmp/missing-review.err" "missing one-way review artifact" \
+    "loop frame explains missing one-way review"
+
+  write_valid_review
+  if status_out="$("$root/adapter/loop.sh" status "$name" 2>"$tmp/one-way-status.err")" &&
+     printf '%s\n' "$status_out" | grep -Fq "frame_complete=yes"; then
+    ok "one-way work with direction and review is frame-complete"
+  else
+    bad "one-way work with direction and review is frame-complete"
+  fi
+
+  write_lean_frame "TODO" two-way
+  write_direction "selected-route" "route text hidden outside frame.md"
+  cat > "$review" <<'EOF'
+# review - self-test
+
+## route
+
+This route text must not satisfy the frame route field.
+
+Overall: PASS
+Disposition: resolved - no flags.
+- contract-checkability: PASS
+- soundness-fit: PASS
+- simplicity-fastness: PASS
+- red-team: PASS
+EOF
+  cat > "$root/$name/intent/frame/signoff.md" <<'EOF'
+# signoff - self-test
+
+signed-off-by: qqp-dev
+
+## route
+
+This route text must not satisfy the frame route field either.
+EOF
+  if "$root/adapter/loop.sh" frame "$name" >"$tmp/excluded-artifacts.out" 2>"$tmp/excluded-artifacts.err"; then
+    bad "loop frame excludes direction/review/signoff from frame field parsing"
+  else
+    ok "loop frame excludes direction/review/signoff from frame field parsing"
+  fi
+  require_text "$tmp/excluded-artifacts.err" "missing required frame field: route" \
+    "loop frame reports missing route from canonical frame.md"
+  rm -f "$root/$name/intent/frame/signoff.md"
+
+  fake_review="$tmp/fake-review"
+  mkdir -p "$fake_review"
+  printf 'not a structured verdict\n' > "$fake_review/contract-checkability"
+  printf 'VERDICT: PASS\nNOTE: ok\n' > "$fake_review/soundness-fit"
+  printf 'VERDICT: PASS\nNOTE: ok\n' > "$fake_review/simplicity-fastness"
+  printf 'VERDICT: PASS\nNOTE: ok\n' > "$fake_review/red-team"
+  printf 'VERDICT: PASS\nNOTE: advisory ok\n' > "$fake_review/operator-ergonomics"
+  write_lean_frame "TODO" one-way
+  HYPERCORE_REVIEW_FAKE_DIR="$fake_review" "$root/adapter/loop.sh" review "$name" --add operator-ergonomics >"$tmp/review.out" 2>"$tmp/review.err" \
+    && ok "loop review uses deterministic fake reviewer output in self-test" \
+    || bad "loop review uses deterministic fake reviewer output in self-test"
+  require_text "$review" "- contract-checkability: FLAG" \
+    "malformed reviewer output counts as FLAG"
+  require_text "$review" "- operator-ergonomics: PASS" \
+    "optional reviewer verdict is recorded as advisory"
+  require_text "$review" "optional reviewers are advisory only and cannot clear base-roster or red-team flags" \
+    "optional reviewers cannot clear base flags"
 
   cat > "$frame" <<'EOF'
 # frame - self-test
@@ -250,49 +434,15 @@ Keep this frame intentionally missing the new deliberation record.
 
 The decision surface is already named.
 
+Reversibility: one-way
+
 ## route
 
-Exercise the old field set only.
+Exercise a manual review with uncleared base flags.
 
-## methodology adherence
+## acceptance condition
 
-Work classification: governed.
-
-Loop waiver: none.
-
-## common ground
-
-### operator decisions
-
-The operator decision is recorded.
-
-### authority
-
-The authority is recorded.
-
-### machine assumptions
-
-The assumptions are recorded.
-
-### evidence
-
-The evidence is recorded under the old contract.
-
-### uncertainty
-
-The uncertainty is recorded.
-
-### open blockers
-
-None.
-
-### feedback capture
-
-The feedback capture is recorded.
-
-### handoff state
-
-The handoff state is recorded.
+The contract rejects optional override.
 
 ## proof state
 
@@ -306,18 +456,31 @@ The sweep is recorded.
 
 The adoption claim is recorded.
 EOF
+  write_direction "selected-route" "operator chose route"
+  cat > "$review" <<'EOF'
+# review - self-test
 
-  if "$root/adapter/loop.sh" frame "$name" >"$tmp/old-frame.out" 2>"$tmp/old-frame.err"; then
-    bad "loop frame rejects a frame missing operator deliberation"
+Overall: FLAG
+Disposition: advisory optional pass only.
+
+## base roster verdicts
+
+- contract-checkability: FLAG
+- soundness-fit: PASS
+- simplicity-fastness: PASS
+- red-team: PASS
+
+## advisory optional verdicts
+
+- operator-ergonomics: PASS
+EOF
+  if "$root/adapter/loop.sh" frame "$name" >"$tmp/optional-override.out" 2>"$tmp/optional-override.err"; then
+    bad "loop frame rejects optional reviewer override of base flags"
   else
-    ok "loop frame rejects a frame missing operator deliberation"
+    ok "loop frame rejects optional reviewer override of base flags"
   fi
-  require_text "$tmp/old-frame.err" "missing required frame field: problem/domain map" \
-    "loop frame explains a missing problem/domain map"
-  require_text "$tmp/old-frame.err" "missing required frame field: evidence standard" \
-    "loop frame explains a missing evidence standard"
-  require_text "$tmp/old-frame.err" "missing required frame field: unresolved discomfort or open judgement" \
-    "loop frame explains missing unresolved discomfort or open judgement"
+  require_text "$tmp/optional-override.err" "optional reviewers cannot clear them" \
+    "loop frame explains optional reviewers cannot clear base flags"
 
   cleanup_loop_frame_self_test
   LOOP_FRAME_CHECK_WORK=
@@ -559,11 +722,14 @@ require_text "$root/hypercore.md" \
   "## collaboration" \
   "hypercore.md materializes collaboration"
 require_text "$root/hypercore.md" \
-  "reasonable expectation" \
-  "hypercore.md carries informed operator expectation"
+  "understanding before route" \
+  "hypercore.md carries understanding before route"
 require_text "$root/hypercore.md" \
-  "evidence standard" \
-  "hypercore.md carries the evidence standard"
+  "mechanical base review roster" \
+  "hypercore.md carries mechanical base review"
+require_text "$root/hypercore.md" \
+  "acceptance condition" \
+  "hypercore.md carries the lean acceptance condition"
 [ -x "$root/check.sh" ] \
   && ok "check.sh exists and is executable" \
   || bad "check.sh is missing or not executable"
@@ -647,86 +813,50 @@ require_text "$root/adapter/gates/orient.md" \
   "work in flight" \
   "orient gate names work in flight"
 require_text "$root/adapter/gates/orient.md" \
-  "durable common-ground state" \
-  "orient gate names durable common ground"
+  "teach-back" \
+  "orient gate requires teach-back"
+require_text "$root/adapter/gates/orient.md" \
+  "alternative framing" \
+  "orient gate requires an alternative framing"
+require_text "$root/adapter/gates/orient.md" \
+  "information-gain questions" \
+  "orient gate requires information-gain questions"
+require_text "$root/adapter/gates/orient.md" \
+  "reversibility classification" \
+  "orient gate requires reversibility classification"
+require_text "$root/adapter/gates/orient.md" \
+  "Do not guess, do not write a route" \
+  "orient gate forbids route writing"
 require_text "$root/adapter/gates/frame.md" \
-  "problem, constraints, and decision surface" \
+  "constraints, decision surface, reversibility" \
   "frame gate names the problem, constraints, and decision surface"
-require_text "$root/intent/collaboration.md" \
-  "operator deliberation" \
-  "collaboration intent requires operator deliberation"
-require_text "$root/intent/collaboration.md" \
-  "reasonable expectation" \
-  "collaboration intent carries informed operator expectation"
-require_text "$root/intent/collaboration.md" \
-  "evidence standard" \
-  "collaboration intent requires an evidence standard"
-require_text "$root/intent/collaboration.md" \
-  "superficial research" \
-  "collaboration intent rejects superficial research"
-require_text "$root/intent/loop.md" \
-  "operator-deliberation record" \
-  "loop intent requires the operator deliberation record"
-require_text "$root/intent/loop.md" \
-  "problem/domain map" \
-  "loop intent requires the problem/domain map"
-require_text "$root/intent/loop.md" \
-  "operator expectation" \
-  "loop intent requires operator expectation"
-require_text "$root/intent/loop.md" \
-  "unresolved discomfort or open judgement" \
-  "loop intent requires unresolved discomfort or open judgement"
-require_text "$root/intent/machine-statements/loop.md" \
-  "problem/domain map" \
-  "loop machine statements require the problem/domain map"
-require_text "$root/intent/machine-statements/loop.md" \
-  "unresolved discomfort or open judgement" \
-  "loop machine statements require unresolved discomfort or open judgement"
-require_text "$root/intent/adapter.md" \
-  "evidence standard" \
-  "adapter intent requires the evidence standard"
-require_text "$root/intent/adapter.md" \
-  "unresolved discomfort or open judgement" \
-  "adapter intent requires unresolved discomfort or open judgement"
-require_text "$root/intent/machine-statements/adapter.md" \
-  "pre-sign-off operator deliberation" \
-  "adapter machine statements require operator deliberation"
-require_text "$root/intent/machine-statements/adapter.md" \
-  "superficial research" \
-  "adapter machine statements reject superficial research"
-require_text "$root/intent/machine-statements/adapter.md" \
-  "current intent" \
-  "adapter machine statements say check.sh proves current intent"
 require_text "$root/adapter/gates/frame.md" \
-  "decisions, authority" \
-  "frame gate requires common-ground fields"
+  "direction.md" \
+  "frame gate requires direction artifact"
 require_text "$root/adapter/gates/frame.md" \
-  "pre-sign-off operator deliberation" \
-  "frame gate requires operator deliberation"
+  "direction-by:" \
+  "frame gate requires direction-by"
 require_text "$root/adapter/gates/frame.md" \
-  "problem/domain map" \
-  "frame gate requires the problem/domain map"
+  "selected-route:" \
+  "frame gate requires substantive selected route"
 require_text "$root/adapter/gates/frame.md" \
-  "evidence standard" \
-  "frame gate requires an evidence standard"
+  "review.md" \
+  "frame gate requires one-way review artifact"
 require_text "$root/adapter/gates/frame.md" \
-  "options and tradeoffs" \
-  "frame gate requires options and tradeoffs"
+  "Optional reviewers are additive" \
+  "frame gate prevents optional reviewer override"
 require_text "$root/adapter/gates/frame.md" \
-  "unresolved discomfort or open judgement" \
-  "frame gate requires unresolved discomfort or open judgement"
+  "wait for \`./direction\`" \
+  "frame gate waits for direction"
 require_text "$root/adapter/gates/frame.md" \
-  "do not cite superficial research" \
-  "frame gate rejects superficial research"
+  "one-way work" \
+  "frame gate names one-way review"
 require_text "$root/adapter/gates/frame.md" \
-  "methodology adherence" \
-  "frame gate requires methodology adherence"
+  "two-way" \
+  "frame gate names two-way reversibility"
 require_text "$root/adapter/gates/frame.md" \
-  "operator direction is missing" \
-  "frame gate handles missing operator direction"
-require_text "$root/adapter/gates/frame.md" \
-  "wait for operator direction" \
-  "frame gate waits rather than inventing a route"
+  "non-retrospective" \
+  "frame gate requires non-retrospective direction"
 require_text "$root/adapter/gates/check.md" \
   "./check.sh" \
   "check gate names the flat check command"
@@ -746,17 +876,38 @@ require_text "$root/adapter/codex.md" \
   "never waives the loop for governed work" \
   "Codex adapter rejects simplicity-based loop bypass"
 require_text "$root/adapter/codex.md" \
-  "decision surface for operator" \
+  "teach-back" \
+  "Codex adapter carries teach-back before route"
+require_text "$root/adapter/codex.md" \
+  "alternative framing" \
+  "Codex adapter carries alternative framing before route"
+require_text "$root/adapter/codex.md" \
+  "reversibility classification" \
+  "Codex adapter carries reversibility classification"
+require_text "$root/adapter/codex.md" \
+  "./review <work-name> [--add <role>]..." \
+  "Codex adapter names the root review helper"
+require_text "$root/adapter/codex.md" \
+  "contract-checkability" \
+  "Codex adapter names the base review roster"
+require_text "$root/adapter/codex.md" \
+  "optional complete-roster reviewers are advisory" \
+  "Codex adapter makes optional reviewers advisory"
+require_text "$root/adapter/codex.md" \
+  "./direction" \
+  "Codex adapter names the root direction helper"
+require_text "$root/adapter/codex.md" \
+  "never write direction" \
+  "Codex adapter blocks machine-authored direction"
+require_text "$root/adapter/codex.md" \
+  "acceptance condition" \
+  "Codex adapter carries acceptance condition"
+require_text "$root/adapter/codex.md" \
+  "signed frame directory" \
+  "Codex adapter keeps phase two tied to the signed frame directory"
+require_text "$root/adapter/codex.md" \
+  "decision surface" \
   "Codex adapter carries the decision surface"
-require_text "$root/adapter/codex.md" \
-  "operator deliberation" \
-  "Codex adapter carries operator deliberation"
-require_text "$root/adapter/codex.md" \
-  "Evidence depth is problem-relative" \
-  "Codex adapter scales evidence depth to the problem"
-require_text "$root/adapter/codex.md" \
-  "avoid superficial research" \
-  "Codex adapter rejects superficial research"
 require_text "$root/adapter/codex.md" \
   "node-local work name" \
   "Codex adapter carries node-local work wording"
@@ -827,38 +978,83 @@ require_text "$root/adapter/loop.sh" \
   'frame_contract_errors_at()' \
   "loop validates the frame field contract"
 require_text "$root/adapter/loop.sh" \
-  'frame_any_field_has_content "$frame" "decision surface" "open direction"' \
-  "loop allows decision surface or open direction"
+  '"decision surface or open direction"' \
+  "loop requires decision surface or open direction"
 require_text "$root/adapter/loop.sh" \
+  '"reversibility"' \
+  "loop requires reversibility"
+require_text "$root/adapter/loop.sh" \
+  '"acceptance condition"' \
+  "loop requires acceptance condition"
+require_text "$root/adapter/loop.sh" \
+  '"adoption or shelving claim"' \
+  "loop requires adoption or shelving claim"
+require_text "$root/adapter/loop.sh" \
+  'template="$frame/frame.md"' \
+  "loop start scaffolds canonical frame.md"
+require_text "$root/adapter/loop.sh" \
+  'frame_section_has_content "$file" "route"' \
+  "loop strictly parses route from canonical frame.md"
+require_text "$root/adapter/loop.sh" \
+  'frame_label_has_content "$file" "Acceptance condition"' \
+  "loop parses acceptance condition as a strict label"
+require_text "$root/adapter/loop.sh" \
+  'frame_reversibility_value_from_file' \
+  "loop parses exact reversibility tokens"
+require_text "$root/adapter/loop.sh" \
+  'direction_contract_errors_at()' \
+  "loop validates structured direction"
+require_text "$root/adapter/loop.sh" \
+  'cmd_direct()' \
+  "loop exposes direct command"
+require_text "$root/adapter/loop.sh" \
+  'direction text is empty or placeholder' \
+  "loop rejects empty direction"
+require_text "$root/adapter/loop.sh" \
+  'cannot record direction after route content exists' \
+  "loop rejects retrospective direction"
+require_text "$root/adapter/loop.sh" \
+  'cmd_review()' \
+  "loop exposes review command"
+require_text "$root/adapter/loop.sh" \
+  'BASE_REVIEW_ROLES=(' \
+  "loop declares the base review roster"
+require_text "$root/adapter/loop.sh" \
+  'OPTIONAL_REVIEW_ROLES=(' \
+  "loop declares complete optional review roster"
+require_text "$root/adapter/loop.sh" \
+  'REVIEW_CMD=("$CODEX_BIN" -a never -s read-only -C "$ROOT")' \
+  "reviewer subprocesses use literal approval never and read-only sandbox"
+require_text "$root/adapter/loop.sh" \
+  'validate_review_model' \
+  "loop validates CODEX_REVIEW_MODEL"
+require_text "$root/adapter/loop.sh" \
+  'malformed PASS/FLAG verdict; counted as FLAG' \
+  "malformed reviewer output counts as FLAG"
+require_text "$root/adapter/loop.sh" \
+  'optional reviewers cannot clear them' \
+  "loop reports optional reviewer non-override"
+require_text "$root/adapter/loop.sh" \
+  'archive decision must be exactly one line' \
+  "loop parses archive decision exactly and singularly"
+require_text "$root/adapter/loop.sh" \
+  'running ./check.sh after history move' \
+  "loop checks again after moving work history"
+reject_text "$root/adapter/loop.sh" \
   '"problem/domain map"' \
-  "loop requires the problem/domain map"
-require_text "$root/adapter/loop.sh" \
+  "loop no longer requires the problem/domain map"
+reject_text "$root/adapter/loop.sh" \
   '"evidence standard"' \
-  "loop requires the evidence standard"
-require_text "$root/adapter/loop.sh" \
-  '"evidence basis"' \
-  "loop requires the evidence basis"
-require_text "$root/adapter/loop.sh" \
-  '"options and tradeoffs"' \
-  "loop requires options and tradeoffs"
-require_text "$root/adapter/loop.sh" \
+  "loop no longer requires the evidence standard"
+reject_text "$root/adapter/loop.sh" \
   '"operator expectation"' \
-  "loop requires operator expectation"
-require_text "$root/adapter/loop.sh" \
-  '"rejection conditions"' \
-  "loop requires rejection conditions"
-require_text "$root/adapter/loop.sh" \
-  'frame_any_field_has_content "$frame" "unresolved discomfort" "open judgement"' \
-  "loop allows unresolved discomfort or open judgement"
-require_text "$root/adapter/loop.sh" \
-  'frame_any_field_has_content "$frame" "adoption claim" "shelving claim"' \
-  "loop allows adoption or shelving claim"
-require_text "$root/adapter/loop.sh" \
+  "loop no longer requires operator expectation"
+reject_text "$root/adapter/loop.sh" \
   '## common ground' \
-  "loop start scaffolds common ground"
-require_text "$root/adapter/loop.sh" \
-  '## methodology adherence' \
-  "loop start scaffolds methodology adherence"
+  "loop start no longer scaffolds common-ground pile"
+reject_text "$root/adapter/loop.sh" \
+  '## operator deliberation' \
+  "loop start no longer scaffolds operator-deliberation pile"
 require_text "$root/adapter/loop.sh" \
   'command -v "$CODEX_BIN"' \
   "loop preflight checks the Codex binary"
@@ -928,6 +1124,24 @@ require_text "$root/signoff" \
 [ -x "$root/signoff" ] \
   && ok "root signoff helper is executable" \
   || bad "root signoff helper is not executable ($root/signoff)"
+require_text "$root/direction" \
+  'adapter/loop.sh' \
+  "root direction helper dispatches to the loop"
+require_text "$root/direction" \
+  'direct "$@"' \
+  "root direction helper preserves explicit arguments"
+[ -x "$root/direction" ] \
+  && ok "root direction helper is executable" \
+  || bad "root direction helper is not executable ($root/direction)"
+require_text "$root/review" \
+  'adapter/loop.sh' \
+  "root review helper dispatches to the loop"
+require_text "$root/review" \
+  'review "$@"' \
+  "root review helper preserves explicit arguments"
+[ -x "$root/review" ] \
+  && ok "root review helper is executable" \
+  || bad "root review helper is not executable ($root/review)"
 require_text "$root/adapter/loop.sh" \
   'frame/signoff.md' \
   "loop keys new work sign-off to the signoff artifact"
@@ -967,7 +1181,7 @@ for file in "$root/README.md" "$root/hypercore.md" "$root/adapter/codex.md" \
   "$root/adapter/gates/orient.md" "$root/adapter/gates/frame.md" \
   "$root/adapter/gates/implement.md" "$root/adapter/gates/check.md" \
   "$root/adapter/gates/archive.md" "$root/bin/home" "$root/bin/home-signoff" \
-  "$root/home/README.md" "$root/signoff"; do
+  "$root/home/README.md" "$root/signoff" "$root/direction" "$root/review"; do
   reject_text "$file" "material/hypercore.md" "$(basename "$file") does not point to material/hypercore.md"
   reject_text "$file" "material/check.sh" "$(basename "$file") does not point to material/check.sh"
   reject_text "$file" "material/adapter" "$(basename "$file") does not point to material/adapter"
