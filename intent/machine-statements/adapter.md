@@ -42,6 +42,11 @@ the frame gate prompt requires addressed node, node-local work name, target segm
 in flight, problem, constraints, decision surface or open direction, route, methodology
 adherence, proof state, sweep, adoption or shelving claim, and written common ground before
 sign-off.
+the frame gate prompt requires pre-sign-off operator deliberation before settling a route:
+problem/domain map, evidence standard, evidence basis, options and tradeoffs, operator
+expectation, rejection conditions, and unresolved discomfort or open judgement.
+the frame gate prompt states that evidence depth is problem-relative and rejects
+superficial research when good literature is unavailable or irrelevant.
 the frame gate prompt requires a problem, constraints, and decision surface before
 prescribing an open multi-task or multi-phase route; when operator direction is missing, it
 tells the machine to stop at the decision surface and wait for sign-off or direction rather
@@ -49,8 +54,8 @@ than filling the gap.
 the Codex adapter prose describes phase one as design-phase collaboration, while preserving
 phase two as a cleared, heads-down execution from the written frame.
 `check.sh` mechanically checks that the gate prompts, Codex adapter prose, loop frame
-validation, start scaffolding, and current-material absence of the retired compatibility
-route still carry the contract.
+validation, start scaffolding, current intent, and current-material absence of the retired
+compatibility route still carry the contract.
 each gate's instructions are held in a file in `adapter/gates/`; the Codex path includes them in
 the `codex exec` gate prompt; the orchestrator owns gate order and preconditions and
 blocks a gate whose preconditions fail.

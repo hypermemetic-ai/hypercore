@@ -44,6 +44,9 @@ The operator and the machine keep common ground written.
   open.
 - The machine makes uncertainty, evidence, limits, and failure modes visible enough for
   the operator to rely on it, challenge it, redirect it, or stop it.
+- Before sign-off on governed work, the machine gives the operator enough problem/domain
+  map, evidence standard, options, tradeoffs, uncertainty, and rejection conditions to form
+  a reasonable expectation of whether the work will help.
 - When written ground is insufficient, the machine records the blocker and stops instead
   of fabricating content.
 
@@ -185,7 +188,7 @@ orient -> frame -> implement -> check -> archive
 
 - **orient**: read the intent, work in flight, and material conventions.
 - **frame**: write the problem, constraints, route, proof state, target segments, work in
-  flight, and any open decisions.
+  flight, operator deliberation record, and any open decisions.
 - **implement**: after sign-off, build from the written frame in small units.
 - **check**: run mechanical checks and the sweep.
 - **archive**: adopt or shelve according to the signed frame.

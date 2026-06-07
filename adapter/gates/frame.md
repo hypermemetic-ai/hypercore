@@ -16,6 +16,15 @@ capture, and handoff state. These fields may be expressed across the frame direc
 filename is not the contract. Leave sign-off to the loop; the operator signs off, never
 you.
 
+The frame must also recover pre-sign-off operator deliberation. Before settling a route,
+make enough of the problem domain visible for the operator to form a reasonable
+expectation of whether the work will help: problem/domain map, evidence standard,
+evidence basis, options and tradeoffs, operator expectation, rejection conditions, and
+unresolved discomfort or open judgement. The evidence standard is problem-relative: name
+why the chosen depth of local reasoning, external research, or both is sufficient. Use
+only relevant trustworthy evidence; do not cite superficial research where good
+literature is unavailable or irrelevant.
+
 The methodology adherence record names why the work is governed and states that
 simplicity, small file count, convenience, or perceived low risk is not being used to
 waive the loop.

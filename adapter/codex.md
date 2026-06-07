@@ -41,10 +41,15 @@ the operator's **sign-off**:
 - **Phase one — orient, frame — design-phase collaboration.** You and the operator choose
   direction before sign-off by naming the addressed node, node-local work name, target
   segments, work in flight, work classification, and any open direction; before settling
-  an open route, surface the problem, constraints, and decision surface for operator
-  direction. The written frame records common ground: operator decisions, authority,
-  machine assumptions, evidence, uncertainty, open blockers, proof state, feedback
-  capture, and handoff state. You frame the work
+  an open route, surface the problem, constraints, decision surface for operator
+  direction, options and tradeoffs, evidence standard and basis, uncertainty, rejection
+  conditions, and any
+  unresolved operator discomfort or open judgement. The written frame records common
+  ground and operator deliberation: operator decisions, authority, machine assumptions,
+  evidence, uncertainty, open blockers, proof state, feedback capture, handoff state,
+  problem/domain map, operator expectation, and rejection conditions. Evidence depth is problem-relative.
+  Use relevant trustworthy external evidence when it helps, and avoid superficial research when local facts
+  and reasoning are the better basis. You frame the work
   node directly under the addressed node as `<NNN-slug>/`, with the written frame under
   `intent/frame/`, and run the sweep over the whole corpus and work in flight across the
   node tree, including related work named by a frame. Interaction

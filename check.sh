@@ -196,6 +196,22 @@ check_loop_frame_contract() {
     "frame template includes machine assumptions"
   require_text "$frame" "### handoff state" \
     "frame template includes handoff state"
+  require_text "$frame" "## operator deliberation" \
+    "frame template includes operator deliberation"
+  require_text "$frame" "### problem/domain map" \
+    "frame template includes the problem/domain map"
+  require_text "$frame" "### evidence standard" \
+    "frame template includes the evidence standard"
+  require_text "$frame" "### evidence basis" \
+    "frame template includes the evidence basis"
+  require_text "$frame" "### options and tradeoffs" \
+    "frame template includes options and tradeoffs"
+  require_text "$frame" "### operator expectation" \
+    "frame template includes the operator expectation"
+  require_text "$frame" "### rejection conditions" \
+    "frame template includes rejection conditions"
+  require_text "$frame" "### unresolved discomfort or open judgement" \
+    "frame template includes unresolved discomfort or open judgement"
   require_text "$frame" "## methodology adherence" \
     "frame template includes methodology adherence"
   require_text "$frame" "## adoption claim" \
@@ -208,6 +224,100 @@ check_loop_frame_contract() {
   fi
   require_text "$tmp/frame.err" "missing required frame field" \
     "loop frame explains missing required frame fields"
+
+  cat > "$frame" <<'EOF'
+# frame - self-test
+
+## work
+
+Addressed node: root
+
+Node-local work name: self-test
+
+Target segments: loop
+
+Work in flight: none
+
+## problem
+
+Old contract completeness self-test.
+
+## constraints
+
+Keep this frame intentionally missing the new deliberation record.
+
+## decision surface or open direction
+
+The decision surface is already named.
+
+## route
+
+Exercise the old field set only.
+
+## methodology adherence
+
+Work classification: governed.
+
+Loop waiver: none.
+
+## common ground
+
+### operator decisions
+
+The operator decision is recorded.
+
+### authority
+
+The authority is recorded.
+
+### machine assumptions
+
+The assumptions are recorded.
+
+### evidence
+
+The evidence is recorded under the old contract.
+
+### uncertainty
+
+The uncertainty is recorded.
+
+### open blockers
+
+None.
+
+### feedback capture
+
+The feedback capture is recorded.
+
+### handoff state
+
+The handoff state is recorded.
+
+## proof state
+
+The proof state is recorded.
+
+## sweep
+
+The sweep is recorded.
+
+## adoption claim
+
+The adoption claim is recorded.
+EOF
+
+  if "$root/adapter/loop.sh" frame "$name" >"$tmp/old-frame.out" 2>"$tmp/old-frame.err"; then
+    bad "loop frame rejects a frame missing operator deliberation"
+  else
+    ok "loop frame rejects a frame missing operator deliberation"
+  fi
+  require_text "$tmp/old-frame.err" "missing required frame field: problem/domain map" \
+    "loop frame explains a missing problem/domain map"
+  require_text "$tmp/old-frame.err" "missing required frame field: evidence standard" \
+    "loop frame explains a missing evidence standard"
+  require_text "$tmp/old-frame.err" "missing required frame field: unresolved discomfort or open judgement" \
+    "loop frame explains missing unresolved discomfort or open judgement"
 
   cleanup_loop_frame_self_test
   LOOP_FRAME_CHECK_WORK=
@@ -448,6 +558,12 @@ echo "root - methodology"
 require_text "$root/hypercore.md" \
   "## collaboration" \
   "hypercore.md materializes collaboration"
+require_text "$root/hypercore.md" \
+  "reasonable expectation" \
+  "hypercore.md carries informed operator expectation"
+require_text "$root/hypercore.md" \
+  "evidence standard" \
+  "hypercore.md carries the evidence standard"
 [ -x "$root/check.sh" ] \
   && ok "check.sh exists and is executable" \
   || bad "check.sh is missing or not executable"
@@ -536,9 +652,72 @@ require_text "$root/adapter/gates/orient.md" \
 require_text "$root/adapter/gates/frame.md" \
   "problem, constraints, and decision surface" \
   "frame gate names the problem, constraints, and decision surface"
+require_text "$root/intent/collaboration.md" \
+  "operator deliberation" \
+  "collaboration intent requires operator deliberation"
+require_text "$root/intent/collaboration.md" \
+  "reasonable expectation" \
+  "collaboration intent carries informed operator expectation"
+require_text "$root/intent/collaboration.md" \
+  "evidence standard" \
+  "collaboration intent requires an evidence standard"
+require_text "$root/intent/collaboration.md" \
+  "superficial research" \
+  "collaboration intent rejects superficial research"
+require_text "$root/intent/loop.md" \
+  "operator-deliberation record" \
+  "loop intent requires the operator deliberation record"
+require_text "$root/intent/loop.md" \
+  "problem/domain map" \
+  "loop intent requires the problem/domain map"
+require_text "$root/intent/loop.md" \
+  "operator expectation" \
+  "loop intent requires operator expectation"
+require_text "$root/intent/loop.md" \
+  "unresolved discomfort or open judgement" \
+  "loop intent requires unresolved discomfort or open judgement"
+require_text "$root/intent/machine-statements/loop.md" \
+  "problem/domain map" \
+  "loop machine statements require the problem/domain map"
+require_text "$root/intent/machine-statements/loop.md" \
+  "unresolved discomfort or open judgement" \
+  "loop machine statements require unresolved discomfort or open judgement"
+require_text "$root/intent/adapter.md" \
+  "evidence standard" \
+  "adapter intent requires the evidence standard"
+require_text "$root/intent/adapter.md" \
+  "unresolved discomfort or open judgement" \
+  "adapter intent requires unresolved discomfort or open judgement"
+require_text "$root/intent/machine-statements/adapter.md" \
+  "pre-sign-off operator deliberation" \
+  "adapter machine statements require operator deliberation"
+require_text "$root/intent/machine-statements/adapter.md" \
+  "superficial research" \
+  "adapter machine statements reject superficial research"
+require_text "$root/intent/machine-statements/adapter.md" \
+  "current intent" \
+  "adapter machine statements say check.sh proves current intent"
 require_text "$root/adapter/gates/frame.md" \
   "decisions, authority" \
   "frame gate requires common-ground fields"
+require_text "$root/adapter/gates/frame.md" \
+  "pre-sign-off operator deliberation" \
+  "frame gate requires operator deliberation"
+require_text "$root/adapter/gates/frame.md" \
+  "problem/domain map" \
+  "frame gate requires the problem/domain map"
+require_text "$root/adapter/gates/frame.md" \
+  "evidence standard" \
+  "frame gate requires an evidence standard"
+require_text "$root/adapter/gates/frame.md" \
+  "options and tradeoffs" \
+  "frame gate requires options and tradeoffs"
+require_text "$root/adapter/gates/frame.md" \
+  "unresolved discomfort or open judgement" \
+  "frame gate requires unresolved discomfort or open judgement"
+require_text "$root/adapter/gates/frame.md" \
+  "do not cite superficial research" \
+  "frame gate rejects superficial research"
 require_text "$root/adapter/gates/frame.md" \
   "methodology adherence" \
   "frame gate requires methodology adherence"
@@ -569,6 +748,15 @@ require_text "$root/adapter/codex.md" \
 require_text "$root/adapter/codex.md" \
   "decision surface for operator" \
   "Codex adapter carries the decision surface"
+require_text "$root/adapter/codex.md" \
+  "operator deliberation" \
+  "Codex adapter carries operator deliberation"
+require_text "$root/adapter/codex.md" \
+  "Evidence depth is problem-relative" \
+  "Codex adapter scales evidence depth to the problem"
+require_text "$root/adapter/codex.md" \
+  "avoid superficial research" \
+  "Codex adapter rejects superficial research"
 require_text "$root/adapter/codex.md" \
   "node-local work name" \
   "Codex adapter carries node-local work wording"
@@ -641,6 +829,27 @@ require_text "$root/adapter/loop.sh" \
 require_text "$root/adapter/loop.sh" \
   'frame_any_field_has_content "$frame" "decision surface" "open direction"' \
   "loop allows decision surface or open direction"
+require_text "$root/adapter/loop.sh" \
+  '"problem/domain map"' \
+  "loop requires the problem/domain map"
+require_text "$root/adapter/loop.sh" \
+  '"evidence standard"' \
+  "loop requires the evidence standard"
+require_text "$root/adapter/loop.sh" \
+  '"evidence basis"' \
+  "loop requires the evidence basis"
+require_text "$root/adapter/loop.sh" \
+  '"options and tradeoffs"' \
+  "loop requires options and tradeoffs"
+require_text "$root/adapter/loop.sh" \
+  '"operator expectation"' \
+  "loop requires operator expectation"
+require_text "$root/adapter/loop.sh" \
+  '"rejection conditions"' \
+  "loop requires rejection conditions"
+require_text "$root/adapter/loop.sh" \
+  'frame_any_field_has_content "$frame" "unresolved discomfort" "open judgement"' \
+  "loop allows unresolved discomfort or open judgement"
 require_text "$root/adapter/loop.sh" \
   'frame_any_field_has_content "$frame" "adoption claim" "shelving claim"' \
   "loop allows adoption or shelving claim"

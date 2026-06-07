@@ -53,6 +53,12 @@ FRAME_REQUIRED_FIELDS=(
   "problem"
   "constraints"
   "route"
+  "problem/domain map"
+  "evidence standard"
+  "evidence basis"
+  "options and tradeoffs"
+  "operator expectation"
+  "rejection conditions"
   "methodology adherence"
   "operator decisions"
   "authority"
@@ -503,6 +509,10 @@ frame_contract_errors_at() {
     printf 'missing required frame field: decision surface or open direction\n'
     failed=1
   fi
+  if ! frame_any_field_has_content "$frame" "unresolved discomfort" "open judgement"; then
+    printf 'missing required frame field: unresolved discomfort or open judgement\n'
+    failed=1
+  fi
   if ! frame_any_field_has_content "$frame" "adoption claim" "shelving claim"; then
     printf 'missing required frame field: adoption claim or shelving claim\n'
     failed=1
@@ -857,6 +867,14 @@ cmd_start() {
       printf '## constraints\n\nTODO\n\n'
       printf '## decision surface or open direction\n\nTODO\n\n'
       printf '## route\n\nTODO\n\n'
+      printf '## operator deliberation\n\n'
+      printf '### problem/domain map\n\nTODO\n\n'
+      printf '### evidence standard\n\nTODO\n\n'
+      printf '### evidence basis\n\nTODO\n\n'
+      printf '### options and tradeoffs\n\nTODO\n\n'
+      printf '### operator expectation\n\nTODO\n\n'
+      printf '### rejection conditions\n\nTODO\n\n'
+      printf '### unresolved discomfort or open judgement\n\nTODO\n\n'
       printf '## methodology adherence\n\n'
       printf 'Work classification: TODO\n\n'
       printf 'Loop waiver: TODO\n\n'

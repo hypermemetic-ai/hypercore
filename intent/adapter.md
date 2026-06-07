@@ -14,9 +14,10 @@ intent; the workflow operationalizes them, and where workflow and intent disagre
 intent wins.
 the rigid workflow is interactive through orient and frame as the design phase, and through
 sign-off as the human gate: before the machine settles open direction it surfaces the
-problem, constraints, and decision surface for operator direction; after sign-off,
-implement, check, and archive run on a cleared session that re-derives the work from its
-written frame alone.
+problem, constraints, decision surface, options and tradeoffs, evidence standard and
+basis, uncertainty, rejection conditions, and unresolved discomfort or open judgement for
+operator direction; after sign-off, implement, check, and archive run on a cleared session
+that re-derives the work from its written frame alone.
 the Codex adapter classifies the request surface before changing material: ordinary
 conversation and read-only inspection may proceed directly, while governed work starts or
 continues a work node.

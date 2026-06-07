@@ -27,9 +27,11 @@ otherwise it blocks and asks for `<operator>`.
 new work frame completeness is checked by scanning non-signoff markdown files under
 `intent/frame/` for recoverable fields: addressed node, node-local work name, target
 segments, work in flight, problem, constraints, decision surface or open direction, route,
-methodology adherence, operator decisions, authority, machine assumptions, evidence,
-uncertainty, open blockers, feedback capture, handoff state, proof state, sweep, and
-adoption or shelving claim.
+problem/domain map, evidence standard, evidence basis, options and tradeoffs, operator
+expectation, rejection conditions, unresolved discomfort or open judgement, methodology
+adherence, operator decisions, authority, machine assumptions, evidence, uncertainty, open
+blockers, feedback capture, handoff state, proof state, sweep, and adoption or shelving
+claim.
 `loop.sh start <work-name>` scaffolds `intent/frame/frame.md` with those fields.
 `loop.sh frame` and `loop.sh signoff` block new work whose frame is incomplete.
 new work sign-off is a `signed-off-by` line in the work node's `intent/frame/signoff.md`.

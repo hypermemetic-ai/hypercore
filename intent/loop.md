@@ -10,6 +10,9 @@ when a work node's direction is still open, especially multi-task or multi-phase
 machine states the problem, the constraints, and the decision surface before settling the
 route; when operator direction is missing, the frame records the open decision and waits
 rather than prescribing the sequence.
+before sign-off, governed work frames carry a recoverable operator-deliberation record:
+problem/domain map, evidence standard, evidence basis, options and tradeoffs, operator expectation,
+rejection conditions, and unresolved discomfort or open judgement.
 implementation autonomy begins after sign-off: phase two builds from the signed frame, and
 stops only when the frame is incomplete, a check fails, or the sweep flags incoherence.
 orient: read the intent documents, the work in flight across the node tree, and the
@@ -19,7 +22,8 @@ frame: write enough of the addressed work node's intent and material to make the
 work scrutable, including proposed parent amendments where the work needs them, and run the
 sweep over the whole corpus and work in flight across the node tree.
 before sign-off, a new work frame carries the minimum recoverable communication and
-compliance fields needed for a cleared phase-two session.
+compliance fields needed for a cleared phase-two session, including the fields needed for
+informed operator deliberation.
 implement: build in small units from the signed frame.
 check: prove each statement with a check on the material, and run the sweep for coherence,
 idiom, and security.
