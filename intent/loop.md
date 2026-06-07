@@ -2,6 +2,8 @@
 
 every work node that needs adoption or shelving goes through five gates: orient, frame,
 implement, check, archive.
+governed work is not optional by perceived simplicity, file count, risk, or convenience
+when it changes governed material or needs adoption or shelving.
 orient and frame are the design phase: the operator and machine choose direction there
 before sign-off closes the frame.
 when a work node's direction is still open, especially multi-task or multi-phase work, the
@@ -16,6 +18,8 @@ artifacts cannot tell you; do not guess.
 frame: write enough of the addressed work node's intent and material to make the proposed
 work scrutable, including proposed parent amendments where the work needs them, and run the
 sweep over the whole corpus and work in flight across the node tree.
+before sign-off, a new work frame carries the minimum recoverable communication and
+compliance fields needed for a cleared phase-two session.
 implement: build in small units from the signed frame.
 check: prove each statement with a check on the material, and run the sweep for coherence,
 idiom, and security.
@@ -62,12 +66,16 @@ node exists in the addressed node; otherwise it blocks and asks for `<work-name>
 `loop.sh signoff` infers the operator from `HYPERCORE_OPERATOR` when set, otherwise from
 the addressed node's current intent foot endorsements when exactly one operator is present;
 otherwise it blocks and asks for `<operator>`.
+new work frame completeness is checked by scanning non-signoff markdown files under
+`intent/frame/` for recoverable fields: addressed node, node-local work name, target
+segments, work in flight, problem, constraints, decision surface or open direction, route,
+methodology adherence, operator decisions, authority, machine assumptions, evidence,
+uncertainty, open blockers, feedback capture, handoff state, proof state, sweep, and
+adoption or shelving claim.
+`loop.sh start <work-name>` scaffolds `intent/frame/frame.md` with those fields.
+`loop.sh frame` and `loop.sh signoff` block new work whose frame is incomplete.
 new work sign-off is a `signed-off-by` line in the work node's `intent/frame/signoff.md`.
-legacy signed frames under `intent/changes/<work-name>/` use their existing
-`endorsement.md` sign-off line.
 `loop.sh execute <work-name>` records the addressed work in node-local history after archive.
-legacy nested child-change archives may be read if present, but the orchestrator does not
-scaffold them for new work.
 
 ---
 endorsed by qqp-dev

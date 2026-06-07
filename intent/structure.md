@@ -21,15 +21,10 @@ between parent and child.
 `intent/` holds `machine-statements/`, current segment documents, and history collections.
 node-local material outside `intent/` holds leaf material, durable child nodes, and active
 work nodes.
-legacy change folders under `intent/changes/` may remain readable while old signed work is
-being finished; retained legacy change-folder archives are not required by the current
-structure, and new work does not depend on them.
 active work is a child node directly under the addressed node, not a special folder type
 under intent.
 adopted and shelved work-node history is recorded under `intent/history/adopted/` and
 `intent/history/shelved/`.
-archived legacy nested child-change collections may be read if present, but they are not
-the current structure and no new work builds on them.
 the intent documents hold only the current statements; history holds why each one is there;
 the material carries the checks that keep them true.
 

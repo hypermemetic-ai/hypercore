@@ -12,6 +12,8 @@ across the node tree, including related work named by a coordinating frame.
 the sweep reads a child work node against its parent intent, its proposed parent
 amendments, sibling work, machine statements, and every current node whose concepts it
 touches.
+the sweep reads a work frame's common-ground record as part of the corpus relation, not
+only as proposed parent amendments.
 the sweep distinguishes a child statement that must already satisfy the parent from a
 proposed parent amendment that is not parent truth until adoption.
 a contradiction between a child and the parent blocks unless the frame explicitly presents

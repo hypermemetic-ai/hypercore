@@ -17,6 +17,11 @@ sign-off as the human gate: before the machine settles open direction it surface
 problem, constraints, and decision surface for operator direction; after sign-off,
 implement, check, and archive run on a cleared session that re-derives the work from its
 written frame alone.
+the Codex adapter classifies the request surface before changing material: ordinary
+conversation and read-only inspection may proceed directly, while governed work starts or
+continues a work node.
+the Codex adapter rejects perceived simplicity, file count, convenience, and low risk as
+waivers for governed work.
 on request the adapter renders a statement of the intent intelligible in plain language
 without altering it.
 the adapter carries only what the intent cannot yet reach the harness with -- the order to
@@ -55,8 +60,7 @@ final outputs, and current pointers for the addressed work and root.
 the Codex loop streams inner `codex exec --json` events into the phase-two run state while
 printing concise progress, without changing the cleared-session contract: implement opens
 one fresh thread and check and archive resume it.
-`adapter/loop.sh` accepts a node-local work name in the addressed node, not a
-slash-separated child path, for new work.
+`adapter/loop.sh` accepts one node-local work name in the addressed node for new work.
 the root node is the default addressed node.
 `loop.sh -C <node-path> <gate> <work-name>` addresses work in a child node, including a
 linked mounted child when `<node-path>` is its mount path.
@@ -65,29 +69,33 @@ linked mounted child when `<node-path>` is its mount path.
 and act only on that addressed work.
 `loop.sh execute <work-name>` records only the addressed node-local work in that node's
 history.
-the orchestrator no longer creates or relies on child change collections inside work or
-legacy change folders.
-legacy nested child-change archives may be read if present, but they are not the structure
-for new work and are not required retained history.
+the orchestrator creates, signs, executes, and records only addressed node-local work
+nodes.
 the gate prompts use addressed-node and node-local work wording and point cleared sessions
 at the addressed work frame.
-the orient gate prompt requires the machine to name the addressed node, the node-local work
-name, the target segments, the work in flight, and any open direction that needs an
-operator decision before the frame settles a route.
+the orient gate prompt requires the machine to classify the request surface, name the
+addressed node, node-local work name, target segments, work in flight, durable
+common-ground state, and any open direction that needs an operator decision before the
+frame settles a route.
+the frame gate prompt requires addressed node, node-local work name, target segments, work
+in flight, problem, constraints, decision surface or open direction, route, methodology
+adherence, proof state, sweep, adoption or shelving claim, and written common ground before
+sign-off.
 the frame gate prompt requires a problem, constraints, and decision surface before
 prescribing an open multi-task or multi-phase route; when operator direction is missing, it
 tells the machine to stop at the decision surface and wait for sign-off or direction rather
 than filling the gap.
 the Codex adapter prose describes phase one as design-phase collaboration, while preserving
 phase two as a cleared, heads-down execution from the written frame.
-`check.sh` mechanically checks that the gate prompts and Codex adapter prose still carry
-the design-phase collaboration language.
+`check.sh` mechanically checks that the gate prompts, Codex adapter prose, loop frame
+validation, start scaffolding, and current-material absence of the retired compatibility
+route still carry the contract.
 each gate's instructions are held in a file in `adapter/gates/`; the Codex path includes them in
 the `codex exec` gate prompt; the orchestrator owns gate order and preconditions and
 blocks a gate whose preconditions fail.
-sign-off is a `signed-off-by` line in the work-node frame's `intent/frame/signoff.md`, or
-in legacy `endorsement.md` for old signed frames; the orchestrator seals phase two until
-sign-off is present, and the machine never writes it for itself.
+sign-off is a `signed-off-by` line in the work-node frame's `intent/frame/signoff.md`; the
+orchestrator seals phase two until sign-off is present, and the machine never writes it for
+itself.
 at the check gate the orchestrator reads the sweep's verdict, and when the sweep flags the
 corpus incoherent it halts phase two and surfaces the flag to the operator rather than
 proceeding to archive.

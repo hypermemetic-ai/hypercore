@@ -17,13 +17,18 @@ kept.
 
 ## Orient before you touch anything
 
+First classify the request surface. Ordinary conversation, explanation, and read-only
+inspection can proceed directly when they do not need adoption or shelving. Governed work
+starts or continues a work node before material changes; perceived simplicity, small file
+count, convenience, or low risk never waives the loop for governed work.
+
 Read, in this order. This is where orient begins:
 
 1. `hypercore.md` — the methodology.
 2. `intent/organizing-document.md` — how the intent is divided into segments.
 3. The segment the work touches (`intent/<segment>.md` and its
    `machine-statements/<segment>.md`), every work node in flight across the node tree,
-   and any legacy change records named by a frame.
+   and any related work named by a frame.
 
 Don't guess. Search the web for what you don't know. Ask the operator what the artifacts
 can't tell you.
@@ -35,8 +40,11 @@ the operator's **sign-off**:
 
 - **Phase one — orient, frame — design-phase collaboration.** You and the operator choose
   direction before sign-off by naming the addressed node, node-local work name, target
-  segments, work in flight, and any open direction; before settling an open route, surface
-  the problem, constraints, and decision surface for operator direction. You frame the work
+  segments, work in flight, work classification, and any open direction; before settling
+  an open route, surface the problem, constraints, and decision surface for operator
+  direction. The written frame records common ground: operator decisions, authority,
+  machine assumptions, evidence, uncertainty, open blockers, proof state, feedback
+  capture, and handoff state. You frame the work
   node directly under the addressed node as `<NNN-slug>/`, with the written frame under
   `intent/frame/`, and run the sweep over the whole corpus and work in flight across the
   node tree, including related work named by a frame. Interaction
@@ -60,10 +68,8 @@ the operator's **sign-off**:
 A work name is a node-local `NNN-slug`. The root node is assumed when no node is named.
 `loop.sh -C home start 001-example` addresses work in the home child node, and
 `loop.sh -C home/<name> start 001-example` addresses work through a
-linked mounted node's mount path. Slash-separated child-change paths and five-file change
-folders are legacy history when retained, not the route for new work; legacy nested
-child-change archives may be read if present, but the orchestrator no longer scaffolds
-them.
+linked mounted node's mount path. Current work is addressed by the node path plus one
+node-local work name, with the frame under that work node's `intent/frame/`.
 
 The gates and their order are the loop, already intent (`intent/loop.md`); the
 orchestrator only operationalizes them and blocks a gate whose preconditions fail.

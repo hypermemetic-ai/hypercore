@@ -24,9 +24,13 @@ node exists in the addressed node; otherwise it blocks and asks for `<work-name>
 `loop.sh signoff` infers the operator from `HYPERCORE_OPERATOR` when set, otherwise from
 the addressed node's current intent foot endorsements when exactly one operator is present;
 otherwise it blocks and asks for `<operator>`.
+new work frame completeness is checked by scanning non-signoff markdown files under
+`intent/frame/` for recoverable fields: addressed node, node-local work name, target
+segments, work in flight, problem, constraints, decision surface or open direction, route,
+methodology adherence, operator decisions, authority, machine assumptions, evidence,
+uncertainty, open blockers, feedback capture, handoff state, proof state, sweep, and
+adoption or shelving claim.
+`loop.sh start <work-name>` scaffolds `intent/frame/frame.md` with those fields.
+`loop.sh frame` and `loop.sh signoff` block new work whose frame is incomplete.
 new work sign-off is a `signed-off-by` line in the work node's `intent/frame/signoff.md`.
-legacy signed frames under `intent/changes/<work-name>/` use their existing
-`endorsement.md` sign-off line.
 `loop.sh execute <work-name>` records the addressed work in node-local history after archive.
-legacy nested child-change archives may be read if present, but the orchestrator does not
-scaffold them for new work.

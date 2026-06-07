@@ -57,73 +57,29 @@ reject_regular_file() {
   fi
 }
 
-LEGACY_FRAME_FILES=(delta.md why.md proof.md endorsement.md plan.md)
 shopt -s nullglob
 HOME_GREENFIELD_CHECK_TMP=
 HOME_GREENFIELD_CHECK_MOUNT=
+LOOP_FRAME_CHECK_WORK=
 
 cleanup_home_greenfield_self_test() {
   [ -n "${HOME_GREENFIELD_CHECK_MOUNT:-}" ] && rm -f "$HOME_GREENFIELD_CHECK_MOUNT"
   [ -n "${HOME_GREENFIELD_CHECK_TMP:-}" ] && rm -rf "$HOME_GREENFIELD_CHECK_TMP"
 }
-trap cleanup_home_greenfield_self_test EXIT
+
+cleanup_loop_frame_self_test() {
+  [ -n "${LOOP_FRAME_CHECK_WORK:-}" ] && rm -rf "$root/$LOOP_FRAME_CHECK_WORK"
+}
+
+cleanup_all() {
+  cleanup_home_greenfield_self_test
+  cleanup_loop_frame_self_test
+}
+trap cleanup_all EXIT
 
 work_name_ok() {
   local name=$1
   [ "$name" != archive ] && [[ "$name" =~ ^[0-9][0-9][0-9]-[[:alnum:]][[:alnum:]._-]*$ ]]
-}
-
-check_legacy_change_folder() {
-  local d=${1%/} label=$2 f
-  for f in "${LEGACY_FRAME_FILES[@]}"; do
-    [ -f "$d/$f" ] \
-      && ok "$label has $f" \
-      || bad "$label missing $f"
-  done
-
-  if [ -e "$d/changes" ]; then
-    [ -d "$d/changes" ] \
-      && check_legacy_changes_collection "$d/changes" "$label legacy child changes" \
-      || bad "$label has non-directory legacy child changes ($d/changes)"
-  fi
-}
-
-check_legacy_changes_collection() {
-  local changes=$1 label=$2 archive
-  local d name f
-  archive=$changes/archive
-
-  [ -d "$changes" ] \
-    && ok "$label directory remains readable" \
-    || { bad "$label directory missing ($changes)"; return; }
-  [ -d "$archive" ] \
-    && ok "$label archive directory remains readable" \
-    || bad "$label archive directory missing ($archive)"
-  [ -f "$archive/.gitkeep" ] \
-    && ok "$label archive directory is held by git" \
-    || bad "$label archive directory missing .gitkeep ($archive/.gitkeep)"
-
-  for f in "${LEGACY_FRAME_FILES[@]}"; do
-    [ ! -e "$archive/$f" ] \
-      || bad "$label/archive is reserved, not a legacy change record ($archive/$f exists)"
-  done
-
-  for d in "$changes"/*/; do
-    name=$(basename "${d%/}")
-    [ "$name" = archive ] && continue
-    work_name_ok "$name" \
-      && ok "$label/$name has a scoped NNN-slug name" \
-      || bad "$label/$name has malformed legacy change record name"
-    check_legacy_change_folder "$d" "$label/$name"
-  done
-
-  for d in "$archive"/*/; do
-    name=$(basename "${d%/}")
-    work_name_ok "$name" \
-      && ok "$label/archive/$name has a scoped NNN-slug name" \
-      || bad "$label/archive/$name has malformed legacy change record name"
-    check_legacy_change_folder "$d" "$label/archive/$name"
-  done
 }
 
 check_work_node_history_collection() {
@@ -148,19 +104,11 @@ check_work_node_history_collection() {
 }
 
 check_history() {
-  local node=$1 label=$2 legacy_changes historical_changes adopted shelved
-  legacy_changes=$node/intent/changes
-  historical_changes=$node/intent/history/change-folders
+  local node=$1 label=$2 adopted shelved
   adopted=$node/intent/history/adopted
   shelved=$node/intent/history/shelved
 
-  if [ -d "$legacy_changes" ]; then
-    check_legacy_changes_collection "$legacy_changes" "$label legacy change records"
-  fi
   if [ -d "$node/intent/history" ]; then
-    if [ -d "$historical_changes" ]; then
-      check_legacy_changes_collection "$historical_changes" "$label historical change records"
-    fi
     check_work_node_history_collection "$adopted" "$label adopted work-node history"
     check_work_node_history_collection "$shelved" "$label shelved work-node history"
   fi
@@ -218,6 +166,52 @@ check_no_tracked_live_material_paths() {
   else
     bad "tracked live material/ paths remain: $(printf '%s' "$paths" | tr '\n' ' ')"
   fi
+}
+
+check_loop_frame_contract() {
+  local name tmp frame
+
+  echo "root - loop frame contract"
+  tmp="$(mktemp -d "${TMPDIR:-/tmp}/hypercore-loop-frame-check.XXXXXX")" \
+    || { bad "loop frame self-test can create temporary space"; return; }
+  name="999-check-loop-frame-contract-$$"
+  LOOP_FRAME_CHECK_WORK="$name"
+  rm -rf "$root/$name"
+
+  if "$root/adapter/loop.sh" start "$name" >"$tmp/start.out" 2>"$tmp/start.err"; then
+    ok "loop start creates a temporary work node"
+  else
+    bad "loop start creates a temporary work node"
+  fi
+
+  frame="$root/$name/intent/frame/frame.md"
+  [ -f "$frame" ] \
+    && ok "loop start scaffolds intent/frame/frame.md" \
+    || bad "loop start did not scaffold intent/frame/frame.md"
+  require_text "$frame" "## common ground" \
+    "frame template includes a common-ground section"
+  require_text "$frame" "### operator decisions" \
+    "frame template includes operator decisions"
+  require_text "$frame" "### machine assumptions" \
+    "frame template includes machine assumptions"
+  require_text "$frame" "### handoff state" \
+    "frame template includes handoff state"
+  require_text "$frame" "## methodology adherence" \
+    "frame template includes methodology adherence"
+  require_text "$frame" "## adoption claim" \
+    "frame template includes adoption claim"
+
+  if "$root/adapter/loop.sh" frame "$name" >"$tmp/frame.out" 2>"$tmp/frame.err"; then
+    bad "loop frame rejects a placeholder-only frame"
+  else
+    ok "loop frame rejects a placeholder-only frame"
+  fi
+  require_text "$tmp/frame.err" "missing required frame field" \
+    "loop frame explains missing required frame fields"
+
+  cleanup_loop_frame_self_test
+  LOOP_FRAME_CHECK_WORK=
+  rm -rf "$tmp"
 }
 
 setup_home_greenfield_self_test() {
@@ -497,6 +491,11 @@ echo "root - adapter design phase"
 retired_entry="$root"/C'LAUDE.md'
 retired_prose="$root/adapter"/clau'de-code.md'
 retired_local_state=.clau'de/'
+retired_changes_path="intent/chan""ges"
+retired_change_history_path="intent/history/change-fo""lders"
+retired_child_change="child-chan""ge"
+retired_endorsement_file="endorsement"."md"
+retired_old_route_token="LEG""ACY"
 require_text "$root/AGENTS.md" \
   "hypercore.md" \
   "AGENTS.md routes Codex into the methodology prose"
@@ -510,6 +509,12 @@ require_absent "$retired_prose" \
 reject_text "$root/.gitignore" \
   "$retired_local_state" \
   "tracked ignore material does not hide retired local state"
+require_text "$root/adapter/gates/orient.md" \
+  "ordinary conversation/read-only inspection" \
+  "orient gate classifies the request surface"
+require_text "$root/adapter/gates/orient.md" \
+  "do not bypass the loop because the work appears small" \
+  "orient gate rejects simplicity-based loop bypass"
 require_text "$root/adapter/gates/orient.md" \
   "open direction that needs operator input" \
   "orient gate names open direction for operator input"
@@ -525,9 +530,18 @@ require_text "$root/adapter/gates/orient.md" \
 require_text "$root/adapter/gates/orient.md" \
   "work in flight" \
   "orient gate names work in flight"
+require_text "$root/adapter/gates/orient.md" \
+  "durable common-ground state" \
+  "orient gate names durable common ground"
 require_text "$root/adapter/gates/frame.md" \
   "problem, constraints, and decision surface" \
   "frame gate names the problem, constraints, and decision surface"
+require_text "$root/adapter/gates/frame.md" \
+  "decisions, authority" \
+  "frame gate requires common-ground fields"
+require_text "$root/adapter/gates/frame.md" \
+  "methodology adherence" \
+  "frame gate requires methodology adherence"
 require_text "$root/adapter/gates/frame.md" \
   "operator direction is missing" \
   "frame gate handles missing operator direction"
@@ -537,11 +551,23 @@ require_text "$root/adapter/gates/frame.md" \
 require_text "$root/adapter/gates/check.md" \
   "./check.sh" \
   "check gate names the flat check command"
+require_text "$root/adapter/gates/implement.md" \
+  "signed frame under \`intent/frame/\`" \
+  "implement gate reads current work-node frames"
+require_text "$root/adapter/gates/archive.md" \
+  "intent/frame/signoff.md" \
+  "archive gate signs current work-node frames"
 require_text "$root/adapter/codex.md" \
   "design-phase collaboration" \
   "Codex adapter describes phase one as design-phase collaboration"
 require_text "$root/adapter/codex.md" \
-  "decision surface for operator direction" \
+  "First classify the request surface" \
+  "Codex adapter classifies the request surface"
+require_text "$root/adapter/codex.md" \
+  "never waives the loop for governed work" \
+  "Codex adapter rejects simplicity-based loop bypass"
+require_text "$root/adapter/codex.md" \
+  "decision surface for operator" \
   "Codex adapter carries the decision surface"
 require_text "$root/adapter/codex.md" \
   "node-local work name" \
@@ -606,6 +632,24 @@ require_text "$root/adapter/loop.sh" \
 require_text "$root/adapter/loop.sh" \
   'phase_two_preflight()' \
   "loop has a phase-two Codex preflight"
+require_text "$root/adapter/loop.sh" \
+  'FRAME_REQUIRED_FIELDS=(' \
+  "loop declares required frame fields"
+require_text "$root/adapter/loop.sh" \
+  'frame_contract_errors_at()' \
+  "loop validates the frame field contract"
+require_text "$root/adapter/loop.sh" \
+  'frame_any_field_has_content "$frame" "decision surface" "open direction"' \
+  "loop allows decision surface or open direction"
+require_text "$root/adapter/loop.sh" \
+  'frame_any_field_has_content "$frame" "adoption claim" "shelving claim"' \
+  "loop allows adoption or shelving claim"
+require_text "$root/adapter/loop.sh" \
+  '## common ground' \
+  "loop start scaffolds common ground"
+require_text "$root/adapter/loop.sh" \
+  '## methodology adherence' \
+  "loop start scaffolds methodology adherence"
 require_text "$root/adapter/loop.sh" \
   'command -v "$CODEX_BIN"' \
   "loop preflight checks the Codex binary"
@@ -681,6 +725,32 @@ require_text "$root/adapter/loop.sh" \
 reject_text "$root/adapter/loop.sh" \
   "grep -Rsl '^signed-off-by:'" \
   "loop does not trust arbitrary frame text as sign-off"
+reject_text "$root/adapter/loop.sh" \
+  "$retired_changes_path" \
+  "loop carries no retired changes path"
+reject_text "$root/adapter/loop.sh" \
+  "$retired_change_history_path" \
+  "loop carries no retired change-history path"
+reject_text "$root/adapter/loop.sh" \
+  "$retired_endorsement_file" \
+  "loop carries no retired sign-off file"
+reject_text "$root/adapter/loop.sh" \
+  "$retired_old_route_token" \
+  "loop carries no retired compatibility constants"
+reject_text "$root/check.sh" \
+  "$retired_changes_path" \
+  "check.sh carries no retired changes path"
+reject_text "$root/check.sh" \
+  "$retired_change_history_path" \
+  "check.sh carries no retired change-history path"
+reject_text "$root/check.sh" \
+  "$retired_endorsement_file" \
+  "check.sh carries no retired sign-off file"
+reject_text "$root/check.sh" \
+  "$retired_old_route_token" \
+  "check.sh carries no retired compatibility constants"
+
+check_loop_frame_contract
 
 echo "root - retired user-facing path examples"
 for file in "$root/README.md" "$root/hypercore.md" "$root/adapter/codex.md" \
@@ -694,6 +764,10 @@ for file in "$root/README.md" "$root/hypercore.md" "$root/adapter/codex.md" \
   reject_text "$file" "material/adapter" "$(basename "$file") does not point to material/adapter"
   reject_text "$file" "material/home" "$(basename "$file") does not point to material/home"
   reject_text "$file" "material/bin/home" "$(basename "$file") does not point to material/bin/home"
+  reject_text "$file" "$retired_changes_path" "$(basename "$file") does not point to retired changes path"
+  reject_text "$file" "$retired_change_history_path" "$(basename "$file") does not point to retired change-history path"
+  reject_text "$file" "$retired_child_change" "$(basename "$file") does not name the retired nested route"
+  reject_text "$file" "$retired_endorsement_file" "$(basename "$file") does not name retired sign-off file"
 done
 
 setup_home_greenfield_self_test

@@ -7,11 +7,18 @@ the default addressed node; `loop.sh -C <node-path>` addresses a child node. New
 lives directly in that node as `<NNN-slug>/` with its written frame under `intent/frame/`.
 
 Write enough frame artifacts to make the work recoverable from disk after sign-off:
-purpose, rationale, proposed parent amendments, proof state, route, open questions, and
-adoption or shelving claims may be expressed as whatever intent or material files make
-the work scrutable. The old five-file frame shape remains readable for legacy
-`intent/changes/<slug>/` records, but new work nodes do not depend on universal
-change-specific filenames. Leave sign-off to the loop; the operator signs off, never you.
+the addressed node, node-local work name, target segments, work in flight, problem,
+constraints, decision surface or open direction, route, methodology adherence, proof
+state, sweep, and adoption or shelving claim must be recoverable from files under
+`intent/frame/`. The frame must also record common ground before sign-off: operator
+decisions, authority, machine assumptions, evidence, uncertainty, open blockers, feedback
+capture, and handoff state. These fields may be expressed across the frame directory; the
+filename is not the contract. Leave sign-off to the loop; the operator signs off, never
+you.
+
+The methodology adherence record names why the work is governed and states that
+simplicity, small file count, convenience, or perceived low risk is not being used to
+waive the loop.
 
 Before prescribing a route for open multi-task or multi-phase work, state the
 problem, constraints, and decision surface. If operator direction is missing, record the
@@ -24,6 +31,6 @@ likely clashes — a parent contract, a sibling, a machine statement already fil
 concurrent work node. When this frame names related work, read those deltas together
 wherever their nodes are. Surface clashes; do not paper over them.
 
-Precondition to leave this gate: a non-empty written frame exists under `intent/frame/`
-and the sweep has run. The next gate is the operator's sign-off — interaction surfaces
-here, and you do not cross it.
+Precondition to leave this gate: the written frame under `intent/frame/` satisfies the
+required recoverable fields and the sweep has run. The next gate is the operator's
+sign-off — interaction surfaces here, and you do not cross it.

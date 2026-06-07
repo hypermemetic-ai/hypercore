@@ -38,7 +38,6 @@ NODE="$ROOT"
 NODE_REL="."
 INTENT_TREE=intent
 WORKS="$NODE"
-LEGACY_CHANGES="$NODE/$INTENT_TREE/changes"
 LOOP_HARNESS="${LOOP_HARNESS:-codex}"
 HYPERCORE_LOOP_STATE_DIR="${HYPERCORE_LOOP_STATE_DIR:-$ROOT/.hypercore/loop-runs}"
 CODEX_BIN="${CODEX_BIN:-codex}"
@@ -46,7 +45,26 @@ CODEX_APPROVAL="${CODEX_APPROVAL:-never}"
 CODEX_WRITE_SANDBOX="${CODEX_WRITE_SANDBOX:-workspace-write}"
 CODEX_READ_SANDBOX="${CODEX_READ_SANDBOX:-read-only}"
 DRY_RUN="${DRY_RUN:-0}"
-LEGACY_FRAME_FILES=(delta.md why.md proof.md endorsement.md plan.md)
+FRAME_REQUIRED_FIELDS=(
+  "addressed node"
+  "node-local work name"
+  "target segments"
+  "work in flight"
+  "problem"
+  "constraints"
+  "route"
+  "methodology adherence"
+  "operator decisions"
+  "authority"
+  "machine assumptions"
+  "evidence"
+  "uncertainty"
+  "open blockers"
+  "feedback capture"
+  "handoff state"
+  "proof state"
+  "sweep"
+)
 GATE_OUTPUT=""   # the last gate's captured output, read by cmd_execute for the sweep verdict
 PHASE_TWO_SESSION_ID=""
 PHASE_TWO_RUN_ACTIVE=0
@@ -278,14 +296,6 @@ work_name_ok() {
   [ "$name" != archive ] && [[ "$name" =~ ^[0-9][0-9][0-9]-[[:alnum:]][[:alnum:]._-]*$ ]]
 }
 
-is_legacy_change_dir() {
-  local d=${1%/}
-  case "$d" in
-    "$LEGACY_CHANGES"/*) [ "$(basename "$d")" != archive ] ;;
-    *) return 1 ;;
-  esac
-}
-
 relpath() {
   local path=$1
   [ "$path" = "$ROOT" ] && { printf '.'; return; }
@@ -316,7 +326,6 @@ set_node() {
   esac
   NODE_REL="$(relpath "$NODE")"
   WORKS="$NODE"
-  LEGACY_CHANGES="$NODE/$INTENT_TREE/changes"
 }
 
 is_work_node() {
@@ -341,8 +350,6 @@ active_work_dir() {
     printf '%s' "$d"
     return 0
   fi
-  d=$LEGACY_CHANGES/$name
-  [ -d "$d" ] && printf '%s' "$d"
 }
 
 archived_work_dir() {
@@ -350,9 +357,7 @@ archived_work_dir() {
   validate_work_name "$name"
   for d in \
     "$NODE/$INTENT_TREE/history/adopted/$name" \
-    "$NODE/$INTENT_TREE/history/shelved/$name" \
-    "$NODE/$INTENT_TREE/history/change-folders/archive/$name" \
-    "$LEGACY_CHANGES/archive/$name"
+    "$NODE/$INTENT_TREE/history/shelved/$name"
   do
     [ -d "$d" ] && { printf '%s' "$d"; return 0; }
   done
@@ -379,9 +384,7 @@ new_work_collection() {
 archive_collection_for_active_dir() {
   local d=${1%/} decision=${2:-adopted} collection
   ensure_work_history
-  if is_legacy_change_dir "$d"; then
-    collection="$NODE/$INTENT_TREE/history/change-folders/archive"
-  elif [ "$decision" = shelved ]; then
+  if [ "$decision" = shelved ]; then
     collection="$NODE/$INTENT_TREE/history/shelved"
   else
     collection="$NODE/$INTENT_TREE/history/adopted"
@@ -404,16 +407,113 @@ archive_move() {
   fi
 }
 
-frame_complete_at() {
-  local d=$1 frame f
-  [ -d "$d" ] || return 1
-  frame="$(frame_dir_for "$d")"
-  if is_legacy_change_dir "$d"; then
-    for f in "${LEGACY_FRAME_FILES[@]}"; do [ -s "$frame/$f" ] || return 1; done
-    return 0
-  fi
+frame_has_markdown_files() {
+  local frame=$1
+  [ -n "$(find "$frame" -type f -name '*.md' ! -name signoff.md -print -quit 2>/dev/null)" ]
+}
+
+frame_field_has_content() {
+  local frame=$1 label=$2
   [ -d "$frame" ] || return 1
-  [ -n "$(find "$frame" -type f ! -name signoff.md -size +0c -print -quit 2>/dev/null)" ]
+  frame_has_markdown_files "$frame" || return 1
+  find "$frame" -type f -name '*.md' ! -name signoff.md -exec awk -v label="$label" '
+    function trim(s) {
+      sub(/^[[:space:]]+/, "", s)
+      sub(/[[:space:]]+$/, "", s)
+      return s
+    }
+    function clean(s) {
+      s = tolower(s)
+      gsub(/<!--[^>]*-->/, " ", s)
+      gsub(/[`*_]/, "", s)
+      gsub(/[[:space:]]+/, " ", s)
+      return trim(s)
+    }
+    function meaningful(s) {
+      s = clean(s)
+      if (s == "") return 0
+      if (s ~ /^(todo|tbd|fill me|fill this|fill in|to be filled|placeholder|xxx)([ .:-]|$)/) return 0
+      if (s ~ /^[^:]+:[[:space:]]*(todo|tbd|fill me|fill this|fill in|to be filled|placeholder|xxx)([ .:-]|$)/) return 0
+      return 1
+    }
+    function heading_text(s) {
+      sub(/^[[:space:]]*#+[[:space:]]*/, "", s)
+      return clean(s)
+    }
+    BEGIN {
+      target = clean(label)
+      in_section = 0
+      found = 0
+    }
+    /^[[:space:]]*```/ {
+      fence = !fence
+      next
+    }
+    fence { next }
+    /^[[:space:]]*#+[[:space:]]+/ {
+      h = heading_text($0)
+      in_section = (h == target || index(h, target) > 0)
+      next
+    }
+    {
+      line = clean($0)
+      prefix = target ":"
+      if (substr(line, 1, length(prefix)) == prefix) {
+        rest = substr(line, length(prefix) + 1)
+        if (meaningful(rest)) {
+          found = 1
+          exit 0
+        }
+        next
+      }
+      if (in_section && meaningful($0)) {
+        found = 1
+        exit 0
+      }
+    }
+    END { exit(found ? 0 : 1) }
+  ' {} +
+}
+
+frame_any_field_has_content() {
+  local frame=$1 field
+  shift
+  for field in "$@"; do
+    frame_field_has_content "$frame" "$field" && return 0
+  done
+  return 1
+}
+
+frame_contract_errors_at() {
+  local d=$1 frame field failed=0
+  [ -d "$d" ] || { printf 'missing work directory\n'; return 1; }
+  is_work_node "$d" || { printf 'active work must be a node with intent/\n'; return 1; }
+  frame="$(frame_dir_for "$d")"
+  [ -d "$frame" ] || { printf 'missing frame directory: %s\n' "$(relpath "$frame")"; return 1; }
+  frame_has_markdown_files "$frame" \
+    || { printf 'missing non-signoff markdown frame file under %s\n' "$(relpath "$frame")"; return 1; }
+
+  for field in "${FRAME_REQUIRED_FIELDS[@]}"; do
+    if ! frame_field_has_content "$frame" "$field"; then
+      printf 'missing required frame field: %s\n' "$field"
+      failed=1
+    fi
+  done
+  if ! frame_any_field_has_content "$frame" "decision surface" "open direction"; then
+    printf 'missing required frame field: decision surface or open direction\n'
+    failed=1
+  fi
+  if ! frame_any_field_has_content "$frame" "adoption claim" "shelving claim"; then
+    printf 'missing required frame field: adoption claim or shelving claim\n'
+    failed=1
+  fi
+  [ "$failed" = 0 ]
+}
+
+frame_complete_at() {
+  local d=$1
+  [ -d "$d" ] || return 1
+  frame_contract_errors_at "$d" >/dev/null
 }
 
 frame_complete() {
@@ -431,11 +531,7 @@ signed_off() {
 signed_off_at() {
   local d=$1 frame
   frame="$(frame_dir_for "$d")"
-  if is_legacy_change_dir "$d"; then
-    [ -f "$frame/endorsement.md" ] && grep -q '^signed-off-by:' "$frame/endorsement.md"
-  else
-    [ -f "$frame/signoff.md" ] && grep -q '^signed-off-by:' "$frame/signoff.md"
-  fi
+  [ -f "$frame/signoff.md" ] && grep -q '^signed-off-by:' "$frame/signoff.md"
 }
 
 signable_work_candidates() {
@@ -730,7 +826,7 @@ run_gate() {
 }
 
 cmd_start() {
-  local work_name="${1:-}" collection d frame address
+  local work_name="${1:-}" collection d frame address template
   [ -n "$work_name" ] || die "usage: loop.sh [-C <node-path>] start <work-name>"
   validate_work_name "$work_name"
   collection="$(new_work_collection)"
@@ -740,8 +836,6 @@ cmd_start() {
   [ "$NODE_REL" = "." ] || address="$NODE_REL:$work_name"
   archived_work_dir "$work_name" >/dev/null 2>&1 \
     && die "work already historical in node $NODE_REL: $work_name"
-  [ -d "$LEGACY_CHANGES/$work_name" ] \
-    && die "legacy change record already exists in node $NODE_REL: $work_name"
   [ -e "$d" ] && ! is_work_node "$d" \
     && die "work path exists but is not a node in node $NODE_REL: $work_name"
   if [ ! -d "$d" ]; then
@@ -749,19 +843,50 @@ cmd_start() {
     printf '# organizing document - %s\n\nThis work node keeps its design frame under intent/frame/.\n' "$address" > "$d/$INTENT_TREE/organizing-document.md"
     printf 'scaffolded %s\n' "$d"
   fi
+  mkdir -p "$frame"
+  template="$frame/frame.md"
+  if [ ! -e "$template" ]; then
+    {
+      printf '# frame - %s\n\n' "$work_name"
+      printf '## work\n\n'
+      printf 'Addressed node: TODO\n\n'
+      printf 'Node-local work name: %s\n\n' "$work_name"
+      printf 'Target segments: TODO\n\n'
+      printf 'Work in flight: TODO\n\n'
+      printf '## problem\n\nTODO\n\n'
+      printf '## constraints\n\nTODO\n\n'
+      printf '## decision surface or open direction\n\nTODO\n\n'
+      printf '## route\n\nTODO\n\n'
+      printf '## methodology adherence\n\n'
+      printf 'Work classification: TODO\n\n'
+      printf 'Loop waiver: TODO\n\n'
+      printf '## common ground\n\n'
+      printf '### operator decisions\n\nTODO\n\n'
+      printf '### authority\n\nTODO\n\n'
+      printf '### machine assumptions\n\nTODO\n\n'
+      printf '### evidence\n\nTODO\n\n'
+      printf '### uncertainty\n\nTODO\n\n'
+      printf '### open blockers\n\nTODO\n\n'
+      printf '### feedback capture\n\nTODO\n\n'
+      printf '### handoff state\n\nTODO\n\n'
+      printf '## proof state\n\nTODO\n\n'
+      printf '## sweep\n\nTODO\n\n'
+      printf '## adoption claim\n\nTODO\n\n'
+      printf '## shelving claim\n\nTODO\n'
+    } > "$template"
+  fi
   printf '\n=== gate: orient ===\n\n'; cat "$GATES/orient.md"
 }
 
 cmd_frame() {
-  local work_name="${1:-}" d
+  local work_name="${1:-}" d errors
   [ -n "$work_name" ] || die "usage: loop.sh [-C <node-path>] frame <work-name>"
   validate_work_name "$work_name"
   d="$(active_work_dir "$work_name")" || die "work is not active in node $NODE_REL: $work_name"
   if ! frame_complete_at "$d"; then
-    if is_legacy_change_dir "$d"; then
-      die "legacy frame incomplete — need non-empty: ${LEGACY_FRAME_FILES[*]}"
-    fi
-    die "work-node frame incomplete — write the frame under $(relpath "$(frame_dir_for "$d")")"
+    errors="$(frame_contract_errors_at "$d" || true)"
+    die "work-node frame incomplete under $(relpath "$(frame_dir_for "$d")"):
+$errors"
   fi
   check_green || die "check.sh is red — fix before sign-off"
   if signed_off_at "$d"; then
@@ -794,11 +919,7 @@ cmd_signoff() {
   check_green || die "check.sh is red — not signable"
   signed_off_at "$d" && die "already signed off"
   frame="$(frame_dir_for "$d")"
-  if is_legacy_change_dir "$d"; then
-    printf '\nsigned-off-by: %s\n' "$who" >> "$frame/endorsement.md"
-  else
-    printf '# signoff - %s\n\nsigned-off-by: %s\n' "$work_name" "$who" > "$frame/signoff.md"
-  fi
+  printf '# signoff - %s\n\nsigned-off-by: %s\n' "$work_name" "$who" > "$frame/signoff.md"
   printf 'signed off by %s. The session now clears; phase two re-derives from the frame:\n' "$who"
   printf '  loop.sh'
   [ "$NODE_REL" = "." ] || printf ' -C %s' "$NODE_REL"
@@ -815,11 +936,7 @@ cmd_execute() {
   active_rel="$(relpath "$active_dir")"
   frame_rel="$(relpath "$(frame_dir_for "$active_dir")")"
   signed_off_at "$active_dir" || die "not signed off — phase two is sealed until the operator signs off"
-  if is_legacy_change_dir "$active_dir"; then
-    source_desc="$frame_rel/ (legacy delta, plan, and proof)"
-  else
-    source_desc="$frame_rel/ (the signed work-node frame)"
-  fi
+  source_desc="$frame_rel/ (the signed work-node frame)"
 
   # the session clears once at sign-off: one fresh Codex thread, opened by implement,
   # then resumed after.
@@ -900,11 +1017,7 @@ cmd_execute() {
       loop_event check archive failed "check.sh red after fold — stopping before archive"
       die "check.sh red after fold — stopping before archive"
     fi
-    if is_legacy_change_dir "$active_dir"; then
-      archive_decision=adopted
-    else
-      archive_decision="$(archive_decision_from_output)"
-    fi
+    archive_decision="$(archive_decision_from_output)"
     loop_event archive-decision archive passed "archive decision: $archive_decision"
     loop_state_write archive passed "archive decision: $archive_decision"
     archive_collection="$(archive_collection_for_active_dir "$active_dir" "$archive_decision")"
