@@ -9,13 +9,15 @@ corpus.
 act only on that addressed work.
 `loop.sh execute <work-name>` exposes phase-two run state for the addressed work while it
 runs and after recent failure or completion, including the active gate, status, Codex
-thread id, latest message, event history, and run artifact paths.
+thread id, current unit, latest message, failure reason, event history, run artifact
+paths, and phase-two acceptance artifact paths.
 before launching the first phase-two Codex gate, `loop.sh execute <work-name>` checks that
 the Codex binary is present and that Codex home/session state is writable; a failed
 preflight records failed run state and stops before `codex exec`.
-`loop.sh status <work-name>` reports the addressed work's current phase and, when phase-two
-state exists, the current or recent run's gate, status, state path, event path, and latest
-message; `loop.sh status --json <work-name>` renders the same run state for tooling.
+`loop.sh status <work-name>` reports the addressed work's current phase and, for
+non-historical work with phase-two state, the current or recent run's gate, status, state
+path, event path, and latest message; `loop.sh status --json <work-name>` renders the same
+run state for tooling.
 from the root, `./signoff` invokes the root loop sign-off gate and preserves any explicit
 arguments it receives.
 `loop.sh signoff <work-name> <operator>` remains the explicit sign-off form.
@@ -40,8 +42,8 @@ new work frame completeness is checked from the canonical `intent/frame/frame.md
 `direction.md`, `review.md`, and `signoff.md` do not satisfy ordinary frame fields.
 new work frame completeness requires these recoverable fields: addressed node,
 node-local work name, target segments, work in flight, problem, constraints, decision
-surface or open direction, reversibility, route, acceptance condition, proof state, sweep,
-and adoption or shelving claim.
+surface or open direction, reversibility, route, acceptance condition, observable
+acceptance, excluded interpretation, proof state, sweep, and adoption or shelving claim.
 `reversibility:` is parsed as exactly `one-way` or `two-way`.
 `loop.sh start <work-name>` scaffolds `intent/frame/frame.md` with the lean fields.
 `loop.sh frame` and `loop.sh signoff` block new work whose frame is incomplete, whose
@@ -50,4 +52,12 @@ frame lacks a review artifact.
 one-way review artifacts record base-role verdicts, unresolved flags, and disposition;
 optional reviewer verdicts cannot clear unresolved base-roster or red-team flags.
 new work sign-off is a `signed-off-by` line in the work node's `intent/frame/signoff.md`.
+`loop.sh execute <work-name>` derives implementation units from the signed frame, starts a
+fresh Codex builder session for each unit, and records lean unit handoff, diff, and
+tier-one verdict artifacts under the work frame.
+`loop.sh execute <work-name>` runs implementation-acceptance reviewers with literal
+approval `never` and literal sandbox `read-only`.
+`loop.sh execute <work-name>` treats malformed implementation-acceptance output as
+`FLAG`, blocks unresolved required flags, and runs the one-way tier-two panel before
+archive.
 `loop.sh execute <work-name>` records the addressed work in node-local history after archive.

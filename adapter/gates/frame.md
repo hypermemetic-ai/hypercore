@@ -9,8 +9,11 @@ lives directly in that node as `<NNN-slug>/` with its written frame under `inten
 Write enough frame artifacts to make the work recoverable from disk after sign-off:
 the addressed node, node-local work name, target segments, work in flight, problem,
 constraints, decision surface or open direction, reversibility, route, acceptance
-condition, proof state, sweep, and adoption or shelving claim must be recoverable from
-`intent/frame/frame.md`. `Reversibility:` must be exactly `one-way` or `two-way`.
+condition, observable acceptance, excluded interpretation, proof state, sweep, and
+adoption or shelving claim must be recoverable from `intent/frame/frame.md`.
+`Observable acceptance` is the concrete command, state, check, or externally inspectable
+condition that phase-two acceptance can test. `Excluded interpretation` names what this
+work must not mean. `Reversibility:` must be exactly `one-way` or `two-way`.
 Leave sign-off to the loop; the operator signs off, never you.
 
 Before writing the route, require substantive operator direction in `intent/frame/direction.md`.

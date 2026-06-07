@@ -53,25 +53,31 @@ the operator's **sign-off**:
   never write direction or sign-off for the operator, and the route is not framed before
   direction exists. The written frame is lean recoverability: addressed node, node-local
   work name, target segments, work in flight, problem, constraints, decision surface or
-  open direction, reversibility, route, acceptance condition, proof state, sweep, and
-  adoption or shelving claim. You frame the work node directly under the addressed node as
+  open direction, reversibility, route, acceptance condition, observable acceptance,
+  excluded interpretation, proof state, sweep, and adoption or shelving claim. You frame
+  the work node directly under the addressed node as
   `<NNN-slug>/`, with artifacts under `intent/frame/`, and run the sweep over the whole
   corpus and work in flight across the node tree, including related work named by a frame.
   Interaction surfaces here. It ends when the operator signs off: from the root,
   `./signoff` signs the single frame-complete, unsigned active work node when the operator
   identity is unambiguous; the explicit `loop.sh [-C <node-path>] signoff <work-name>
   <operator>` form also writes a `signed-off-by` line. **You never sign off for them.**
-- **The session clears at sign-off.** Phase two runs on a fresh, memoryless `codex exec`
-  opened by implement and resumed across check and archive. It re-derives the work from
-  the signed frame directory alone. If the frame directory doesn't tell it something it
-  needs, the frame was incomplete. That is the test.
+- **The session clears at sign-off.** Phase two runs through fresh, memoryless `codex
+  exec` sessions. Each implementation unit starts from the signed frame directory, writes
+  lean handoff state, and is followed by an independent read-only
+  implementation-acceptance reviewer. If the frame directory doesn't tell a cleared
+  session something it needs, the frame was incomplete. That is the test.
 - **Phase two — implement, check, archive — heads-down.**
-  `loop.sh [-C <node-path>] execute <work-name>` builds the delta,
-  runs `./check.sh` (green or it stops) and the sweep, then the archive gate
-  adopts or shelves the work according to the signed frame. Adoption folds the accepted
-  delta into the addressed node's intent, stamps each touched segment's foot with the
-  signer, and records adoption history; shelving records history without making proposed
-  parent amendments current.
+  `loop.sh [-C <node-path>] execute <work-name>` builds the delta in green
+  proof-advancing units, records phase-two acceptance artifacts under the work frame,
+  blocks unresolved required `FLAG`s, and runs the one-way
+  implementation-acceptance panel before archive. The required one-way panel lenses are
+  `whole-acceptance-conformance`, `proof-integrity`, `independent-coherence`,
+  `security-permissions`, and `red-team`; two-way work pays tier one but skips this
+  panel. Archive adopts or shelves the work according to the signed frame. Adoption folds the
+  accepted delta into the addressed node's intent, stamps each touched segment's foot with
+  the signer, and records adoption history; shelving records history without making
+  proposed parent amendments current.
 
 A work name is a node-local `NNN-slug`. The root node is assumed when no node is named.
 `loop.sh -C home start 001-example` addresses work in the home child node, and

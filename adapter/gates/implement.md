@@ -11,8 +11,10 @@ If the frame does not tell you something you need, the frame was incomplete: sto
 surface the gap rather than invent. Do not fabricate content — an unmaterialized child
 node is a dormant slot, not a fake project.
 
-Materialize the delta in code, in small units, following the plan. Do **not** edit the
-intent documents — folding the delta into them is the archive gate, not this one.
+Materialize the delta in the requested proof-advancing unit. Keep the unit small enough
+that `./check.sh` can be green at the unit boundary. Write only lean handoff state needed
+by later cleared sessions and independent acceptance reviewers. Do **not** edit the intent
+documents — folding the delta into them is the archive gate, not this one.
 
-Precondition to leave this gate: the frame's implementation units are built and the
-work's checks are ready to run.
+Precondition to leave this gate: this unit is built, the work's checks are ready to run,
+and your final output names the unit's changed files, prepared checks, and any proof gap.

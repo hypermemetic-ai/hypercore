@@ -6,9 +6,10 @@
 #
 #   phase one — orient, frame — is interactive: the operator and the agent frame the
 #     work together, and the operator SIGNS OFF. The machine never signs off itself.
-#   phase two — implement, check, archive — runs on a CLEARED session: a fresh, memoryless
-#     phase-two harness re-derives the work from the written work-node frame alone. If a
-#     blank agent can build it from the frame, the frame was complete.
+#   phase two — implement, check, archive — runs through cleared, memoryless phase-two
+#     sessions that re-derive the work from the written work-node frame alone. Builders
+#     work in signed-frame implementation units; independent acceptance sessions check
+#     those units before archive can fold one-way work.
 #
 # The gates and their order are the loop, already intent; this script only operationalizes
 # them and blocks a gate whose preconditions fail. It states no rule of its own. Where this
@@ -33,7 +34,7 @@
 #   HYPERCORE_OPERATOR (optional sign-off identity when <operator> is omitted)
 #   CODEX_BIN (default: codex), CODEX_APPROVAL (default: never)
 #   CODEX_WRITE_SANDBOX (default: workspace-write), CODEX_READ_SANDBOX (default: read-only)
-#   CODEX_REVIEW_MODEL (optional single-token model name for review subprocesses)
+#   CODEX_REVIEW_MODEL (optional single-token model name for review/acceptance subprocesses)
 
 set -euo pipefail
 
@@ -62,6 +63,8 @@ FRAME_REQUIRED_FIELDS=(
   "reversibility"
   "route"
   "acceptance condition"
+  "observable acceptance"
+  "excluded interpretation"
   "proof state"
   "sweep"
   "adoption or shelving claim"
@@ -80,9 +83,25 @@ OPTIONAL_REVIEW_ROLES=(
   "domain-evidence"
   "performance-cost"
 )
-GATE_OUTPUT=""   # the last gate's captured output, read by cmd_execute for the sweep verdict
+TIER_TWO_PANEL_LENSES=(
+  "whole-acceptance-conformance"
+  "proof-integrity"
+  "independent-coherence"
+  "security-permissions"
+  "red-team"
+)
+GATE_OUTPUT=""   # the last gate's captured output, read by cmd_execute for archive decisions and handoffs
 PHASE_TWO_SESSION_ID=""
 PHASE_TWO_RUN_ACTIVE=0
+PHASE_TWO_FRAME_DIR=""
+PHASE_TWO_ACCEPTANCE_DIR=""
+PHASE_TWO_UNITS_DIR=""
+PHASE_TWO_HANDOFF_DIR=""
+PHASE_TWO_DIFF_DIR=""
+PHASE_TWO_TIER_ONE_DIR=""
+PHASE_TWO_PANEL_DIR=""
+LOOP_CURRENT_UNIT=""
+LOOP_FAILURE_REASON=""
 LOOP_RUN_ID=""
 LOOP_RUN_DIR=""
 LOOP_RUN_STATE=""
@@ -95,6 +114,7 @@ LOOP_CURRENT_GATE=""
 
 die() {
   local msg=$1
+  LOOP_FAILURE_REASON="$msg"
   if [ "${PHASE_TWO_RUN_ACTIVE:-0}" = 1 ] &&
      [ -n "${LOOP_RUN_DIR:-}" ] &&
      [ "${LOOP_STATE_DIE_ACTIVE:-0}" != 1 ]; then
@@ -170,17 +190,25 @@ loop_state_write() {
     printf '  "phase": "phase-two",\n'
     printf '  "gate": %s,\n' "$(json_string "$gate")"
     printf '  "status": %s,\n' "$(json_string "$status")"
+    printf '  "current_unit": %s,\n' "$(json_string "$LOOP_CURRENT_UNIT")"
     printf '  "codex_thread_id": %s,\n' "$(json_string "$PHASE_TWO_SESSION_ID")"
     printf '  "started_at": %s,\n' "$(json_string "$LOOP_RUN_STARTED_AT")"
     printf '  "updated_at": %s,\n' "$(json_string "$updated")"
     printf '  "message": %s,\n' "$(json_string "$(short_message "$message")")"
+    printf '  "failure_reason": %s,\n' "$(json_string "$LOOP_FAILURE_REASON")"
     printf '  "paths": {\n'
     printf '    "run_dir": %s,\n' "$(json_string "$LOOP_RUN_DIR")"
     printf '    "state_json": %s,\n' "$(json_string "$LOOP_RUN_STATE")"
     printf '    "events_jsonl": %s,\n' "$(json_string "$LOOP_RUN_EVENTS")"
     printf '    "gate_outputs_dir": %s,\n' "$(json_string "$LOOP_RUN_GATE_DIR")"
     printf '    "current_work_state": %s,\n' "$(json_string "$LOOP_CURRENT_WORK_STATE")"
-    printf '    "current_root_state": %s\n' "$(json_string "$LOOP_CURRENT_ROOT_STATE")"
+    printf '    "current_root_state": %s,\n' "$(json_string "$LOOP_CURRENT_ROOT_STATE")"
+    printf '    "phase_two_acceptance_dir": %s,\n' "$(json_string "$PHASE_TWO_ACCEPTANCE_DIR")"
+    printf '    "units_dir": %s,\n' "$(json_string "$PHASE_TWO_UNITS_DIR")"
+    printf '    "handoffs_dir": %s,\n' "$(json_string "$PHASE_TWO_HANDOFF_DIR")"
+    printf '    "diffs_dir": %s,\n' "$(json_string "$PHASE_TWO_DIFF_DIR")"
+    printf '    "tier_one_dir": %s,\n' "$(json_string "$PHASE_TWO_TIER_ONE_DIR")"
+    printf '    "tier_two_panel_dir": %s\n' "$(json_string "$PHASE_TWO_PANEL_DIR")"
     printf '  }\n'
     printf '}\n'
   } > "$tmp"
@@ -205,8 +233,10 @@ loop_event() {
 }
 
 phase_two_run_init() {
-  local work_name=$1 node_slug
+  local work_name=$1 node_slug active_dir
   LOOP_WORK_NAME="$work_name"
+  LOOP_CURRENT_UNIT=""
+  LOOP_FAILURE_REASON=""
   LOOP_RUN_STARTED_AT="$(utc_stamp)"
   node_slug="$(phase_two_node_slug "$NODE_REL")"
   LOOP_RUN_ID="$(utc_stamp_id)-$node_slug-$work_name-pid$$"
@@ -216,8 +246,24 @@ phase_two_run_init() {
   LOOP_RUN_GATE_DIR="$LOOP_RUN_DIR/gates"
   LOOP_CURRENT_WORK_STATE="$(current_work_state_path "$work_name")"
   LOOP_CURRENT_ROOT_STATE="$HYPERCORE_LOOP_STATE_DIR/current/root.json"
+  active_dir="$(active_work_dir "$work_name")" || die "work is not active in node $NODE_REL: $work_name"
+  PHASE_TWO_FRAME_DIR="$(frame_dir_for "$active_dir")"
+  PHASE_TWO_ACCEPTANCE_DIR="$PHASE_TWO_FRAME_DIR/phase-two"
+  PHASE_TWO_UNITS_DIR="$PHASE_TWO_ACCEPTANCE_DIR/units"
+  PHASE_TWO_HANDOFF_DIR="$PHASE_TWO_ACCEPTANCE_DIR/handoffs"
+  PHASE_TWO_DIFF_DIR="$PHASE_TWO_ACCEPTANCE_DIR/diffs"
+  PHASE_TWO_TIER_ONE_DIR="$PHASE_TWO_ACCEPTANCE_DIR/tier-one"
+  PHASE_TWO_PANEL_DIR="$PHASE_TWO_ACCEPTANCE_DIR/tier-two-panel"
 
-  mkdir -p "$LOOP_RUN_GATE_DIR" "$(dirname "$LOOP_CURRENT_WORK_STATE")" "$(dirname "$LOOP_CURRENT_ROOT_STATE")"
+  mkdir -p \
+    "$LOOP_RUN_GATE_DIR" \
+    "$(dirname "$LOOP_CURRENT_WORK_STATE")" \
+    "$(dirname "$LOOP_CURRENT_ROOT_STATE")" \
+    "$PHASE_TWO_UNITS_DIR" \
+    "$PHASE_TWO_HANDOFF_DIR" \
+    "$PHASE_TWO_DIFF_DIR" \
+    "$PHASE_TWO_TIER_ONE_DIR" \
+    "$PHASE_TWO_PANEL_DIR"
   : > "$LOOP_RUN_EVENTS"
   PHASE_TWO_RUN_ACTIVE=1
   loop_state_write preflight running "phase-two run initialized"
@@ -365,6 +411,7 @@ active_work_dir() {
     printf '%s' "$d"
     return 0
   fi
+  return 1
 }
 
 archived_work_dir() {
@@ -608,6 +655,14 @@ frame_field_has_content() {
     "acceptance condition")
       frame_section_has_content "$file" "acceptance condition" ||
         frame_label_has_content "$file" "Acceptance condition"
+      ;;
+    "observable acceptance")
+      frame_section_has_content "$file" "observable acceptance" ||
+        frame_label_has_content "$file" "Observable acceptance"
+      ;;
+    "excluded interpretation")
+      frame_section_has_content "$file" "excluded interpretation" ||
+        frame_label_has_content "$file" "Excluded interpretation"
       ;;
     "proof state") frame_section_has_content "$file" "proof state" ;;
     "sweep") frame_section_has_content "$file" "sweep" ;;
@@ -917,6 +972,336 @@ archive_decision_from_output() {
   fi
 }
 
+phase_two_units_from_frame_file() {
+  local file=$1
+  [ -f "$file" ] || return 1
+  awk '
+    function trim(s) {
+      sub(/^[[:space:]]+/, "", s)
+      sub(/[[:space:]]+$/, "", s)
+      return s
+    }
+    function emit() {
+      if (current != "") {
+        count += 1
+        printf "unit-%03d\t%s\n", count, trim(current)
+        current = ""
+      }
+    }
+    BEGIN {
+      in_units = 0
+      current = ""
+      count = 0
+    }
+    /^[[:space:]]*##[[:space:]]+/ && in_units {
+      emit()
+      exit
+    }
+    tolower($0) ~ /^[[:space:]]*implementation units for phase two:[[:space:]]*$/ {
+      in_units = 1
+      next
+    }
+    in_units {
+      line = $0
+      if (line ~ /^[[:space:]]*[0-9]+[.)][[:space:]]+/) {
+        emit()
+        sub(/^[[:space:]]*[0-9]+[.)][[:space:]]+/, "", line)
+        current = trim(line)
+        next
+      }
+      if (current != "" && line !~ /^[[:space:]]*$/) {
+        current = current " " trim(line)
+      }
+    }
+    END {
+      if (in_units) {
+        emit()
+      }
+      if (count == 0) {
+        exit 1
+      }
+    }
+  ' "$file"
+}
+
+write_current_diff_record() {
+  local path=$1 tmp
+  tmp="$path.tmp.$$"
+  if command -v git >/dev/null 2>&1 &&
+     git -C "$ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    {
+      printf '# worktree diff record\n\n'
+      printf 'Recorded at: %s\n\n' "$(utc_stamp)"
+      printf '## status\n\n'
+      git -C "$ROOT" status --short
+      printf '\n## diff\n\n'
+      git -C "$ROOT" diff --binary
+    } > "$tmp"
+  else
+    {
+      printf '# worktree diff record\n\n'
+      printf 'Recorded at: %s\n\n' "$(utc_stamp)"
+      printf 'git diff unavailable; repository state could not be captured.\n'
+    } > "$tmp"
+  fi
+  mv "$tmp" "$path"
+}
+
+phase_two_write_handoff() {
+  local unit_id=$1 proof=$2 output_path=$3 handoff_path=$4 tmp
+  tmp="$handoff_path.tmp.$$"
+  {
+    printf '# handoff - %s\n\n' "$unit_id"
+    printf 'unit: %s\n\n' "$unit_id"
+    printf 'proof obligation: %s\n\n' "$proof"
+    printf 'builder-output-path: %s\n\n' "$output_path"
+    printf '## builder final output\n\n'
+    printf '%s\n' "$GATE_OUTPUT"
+  } > "$tmp"
+  mv "$tmp" "$handoff_path"
+}
+
+phase_two_write_unit_record() {
+  local unit_id=$1 status=$2 proof=$3 handoff_path=$4 diff_path=$5 tier_one_path=$6 message=${7-} tmp path
+  path="$PHASE_TWO_UNITS_DIR/$unit_id.md"
+  tmp="$path.tmp.$$"
+  {
+    printf '# phase-two unit - %s\n\n' "$unit_id"
+    printf 'unit: %s\n' "$unit_id"
+    printf 'status: %s\n' "$status"
+    printf 'updated-at: %s\n' "$(utc_stamp)"
+    printf 'proof-obligation: %s\n' "$proof"
+    printf 'handoff-path: %s\n' "$(relpath "$handoff_path")"
+    printf 'diff-path: %s\n' "$(relpath "$diff_path")"
+    printf 'tier-one-verdict-path: %s\n' "$(relpath "$tier_one_path")"
+    [ -n "$message" ] && printf 'message: %s\n' "$(short_message "$message")"
+  } > "$tmp"
+  mv "$tmp" "$path"
+}
+
+acceptance_verdict_from_output() {
+  local output=$1 status=$2 nonempty_lines verdict_lines pass_lines flag_lines
+  [ "$status" -eq 0 ] || { printf 'FLAG'; return; }
+  nonempty_lines="$(printf '%s\n' "$output" | sed '/^[[:space:]]*$/d' | wc -l | tr -d ' ')"
+  verdict_lines="$(printf '%s\n' "$output" | sed '/^[[:space:]]*$/d' | grep -Ec '^[[:space:]]*(PASS|FLAG)[[:space:]]*$' || true)"
+  pass_lines="$(printf '%s\n' "$output" | sed '/^[[:space:]]*$/d' | grep -Ec '^[[:space:]]*PASS[[:space:]]*$' || true)"
+  flag_lines="$(printf '%s\n' "$output" | sed '/^[[:space:]]*$/d' | grep -Ec '^[[:space:]]*FLAG[[:space:]]*$' || true)"
+  if [ "$nonempty_lines" -eq 1 ] && [ "$verdict_lines" -eq 1 ] && [ "$pass_lines" -eq 1 ] && [ "$flag_lines" -eq 0 ]; then
+    printf 'PASS'
+  elif [ "$nonempty_lines" -eq 1 ] && [ "$verdict_lines" -eq 1 ] && [ "$flag_lines" -eq 1 ] && [ "$pass_lines" -eq 0 ]; then
+    printf 'FLAG'
+  else
+    printf 'FLAG'
+  fi
+}
+
+acceptance_note_from_output() {
+  local output=$1 status=$2
+  if [ "$status" -ne 0 ]; then
+    short_message "acceptance reviewer subprocess exited $status; counted as FLAG"
+  elif [ "$(acceptance_verdict_from_output "$output" "$status")" = PASS ]; then
+    short_message "structured acceptance verdict returned PASS"
+  elif printf '%s\n' "$output" | sed '/^[[:space:]]*$/d' | grep -Eq '^[[:space:]]*FLAG[[:space:]]*$'; then
+    short_message "structured acceptance verdict returned FLAG"
+  else
+    short_message "missing or malformed PASS/FLAG verdict; counted as FLAG"
+  fi
+}
+
+run_acceptance_reviewer() {
+  local reviewer_key=$1 prompt=$2 output status final tmpout tmperr fake_file
+  ACCEPTANCE_VERDICT=FLAG
+  ACCEPTANCE_NOTES="missing acceptance reviewer output; counted as FLAG"
+  ACCEPTANCE_OUTPUT=""
+
+  if [ -n "${HYPERCORE_ACCEPTANCE_FAKE_DIR:-}" ]; then
+    fake_file="$HYPERCORE_ACCEPTANCE_FAKE_DIR/$reviewer_key"
+    if [ -f "$fake_file" ]; then
+      output="$(cat "$fake_file")"
+      status=0
+    else
+      output="missing fake acceptance reviewer output for $reviewer_key"
+      status=1
+    fi
+    ACCEPTANCE_OUTPUT="$output"
+    ACCEPTANCE_VERDICT="$(acceptance_verdict_from_output "$output" "$status")"
+    ACCEPTANCE_NOTES="$(acceptance_note_from_output "$output" "$status")"
+    return 0
+  fi
+
+  if [ "$DRY_RUN" = 1 ]; then
+    output=PASS
+    status=0
+    ACCEPTANCE_OUTPUT="$output"
+    ACCEPTANCE_VERDICT="$(acceptance_verdict_from_output "$output" "$status")"
+    ACCEPTANCE_NOTES="$(acceptance_note_from_output "$output" "$status")"
+    return 0
+  fi
+
+  command -v "$CODEX_BIN" >/dev/null 2>&1 \
+    || die "acceptance review cannot spawn Codex reviewers: Codex binary '$CODEX_BIN' is not on PATH"
+  validate_review_model
+  final="$(mktemp "${TMPDIR:-/tmp}/hypercore-acceptance-$reviewer_key-final.XXXXXX")"
+  tmpout="$(mktemp "${TMPDIR:-/tmp}/hypercore-acceptance-$reviewer_key-out.XXXXXX")"
+  tmperr="$(mktemp "${TMPDIR:-/tmp}/hypercore-acceptance-$reviewer_key-err.XXXXXX")"
+  ACCEPTANCE_CMD=("$CODEX_BIN" -a never -s read-only -C "$ROOT")
+  [ -n "${CODEX_REVIEW_MODEL:-}" ] && ACCEPTANCE_CMD+=(-m "$CODEX_REVIEW_MODEL")
+  ACCEPTANCE_CMD+=(exec -o "$final" -)
+  set +e
+  printf '%s' "$prompt" | "${ACCEPTANCE_CMD[@]}" >"$tmpout" 2>"$tmperr"
+  status=$?
+  set -e
+  if [ -s "$final" ]; then
+    output="$(cat "$final")"
+  else
+    output="$(cat "$tmpout" "$tmperr")"
+  fi
+  ACCEPTANCE_OUTPUT="$output"
+  ACCEPTANCE_VERDICT="$(acceptance_verdict_from_output "$output" "$status")"
+  ACCEPTANCE_NOTES="$(acceptance_note_from_output "$output" "$status")"
+  rm -f "$final" "$tmpout" "$tmperr"
+}
+
+write_acceptance_artifact() {
+  local path=$1 title=$2 reviewer_key=$3 verdict=$4 notes=$5 prompt=$6 output=$7 tmp
+  tmp="$path.tmp.$$"
+  {
+    printf '# %s\n\n' "$title"
+    printf 'reviewer: %s\n' "$reviewer_key"
+    printf 'Verdict: %s\n' "$verdict"
+    printf 'dry-run: %s\n' "$([ "$DRY_RUN" = 1 ] && printf yes || printf no)"
+    printf 'Isolation: acceptance reviewer subprocesses are invoked with literal approval never and literal sandbox read-only.\n'
+    printf 'Network isolation: not claimed by this adapter; the Codex CLI invocation is not represented as proof of network isolation.\n'
+    printf 'Notes: %s\n\n' "$notes"
+    printf '## prompt\n\n'
+    printf '%s\n\n' "$prompt"
+    printf '## raw output\n\n'
+    printf '%s\n' "$output"
+  } > "$tmp"
+  mv "$tmp" "$path"
+}
+
+acceptance_artifact_verdict() {
+  local file=$1
+  [ -f "$file" ] || return 1
+  sed -nE 's/^Verdict:[[:space:]]*(PASS|FLAG)[[:space:]]*$/\1/p' "$file" | sed -n '1p'
+}
+
+acceptance_artifact_dry_run() {
+  local file=$1
+  [ -f "$file" ] || return 1
+  grep -Eq '^dry-run:[[:space:]]*yes[[:space:]]*$' "$file"
+}
+
+run_tier_one_acceptance() {
+  local work_name=$1 unit_id=$2 proof=$3 frame_rel=$4 handoff_path=$5 diff_path=$6 verdict_path prompt reviewer_key
+  reviewer_key="tier-one-$unit_id"
+  verdict_path="$PHASE_TWO_TIER_ONE_DIR/$unit_id.md"
+  prompt="Implementation-acceptance reviewer: tier one
+Work: $work_name
+Node: $NODE_REL
+Unit: $unit_id
+Proof obligation: $proof
+Signed frame directory: $frame_rel
+Unit handoff: $(relpath "$handoff_path")
+Unit diff record: $(relpath "$diff_path")
+
+Read only the signed frame, the intent it references, the unit handoff, and the unit diff record.
+Check whether this unit is a proof-advancing delta toward the operator-signed acceptance.
+Return exactly one line:
+PASS
+or
+FLAG
+
+Treat uncertainty, missing evidence, or mismatch with the signed frame as FLAG."
+  printf '\n--- acceptance: tier one %s ---\n' "$unit_id"
+  LOOP_CURRENT_GATE=check
+  loop_event acceptance check running "tier-one implementation acceptance for $unit_id"
+  loop_state_write check running "tier-one implementation acceptance for $unit_id"
+  run_acceptance_reviewer "$reviewer_key" "$prompt"
+  write_acceptance_artifact "$verdict_path" "tier-one implementation acceptance - $unit_id" \
+    "$reviewer_key" "$ACCEPTANCE_VERDICT" "$ACCEPTANCE_NOTES" "$prompt" "$ACCEPTANCE_OUTPUT"
+  loop_event acceptance check "$([ "$ACCEPTANCE_VERDICT" = PASS ] && printf passed || printf failed)" \
+    "tier-one $unit_id verdict: $ACCEPTANCE_VERDICT"
+  loop_state_write check "$([ "$ACCEPTANCE_VERDICT" = PASS ] && printf passed || printf failed)" \
+    "tier-one $unit_id verdict: $ACCEPTANCE_VERDICT"
+  printf 'tier-one %s verdict: %s (%s)\n' "$unit_id" "$ACCEPTANCE_VERDICT" "$(relpath "$verdict_path")"
+  [ "$ACCEPTANCE_VERDICT" = PASS ] \
+    || die "tier-one implementation-acceptance FLAG for $unit_id — phase two stops before archive; $work_name stays in flight for the operator"
+}
+
+run_tier_two_panel() {
+  local work_name=$1 frame_rel=$2 active_rel=$3 lens reviewer_key verdict_path prompt any_flag=0 verdict
+  printf '\n--- acceptance: tier two one-way panel ---\n'
+  for lens in "${TIER_TWO_PANEL_LENSES[@]}"; do
+    reviewer_key="panel-$lens"
+    verdict_path="$PHASE_TWO_PANEL_DIR/$lens.md"
+    prompt="Implementation-acceptance reviewer: tier two one-way panel
+Work: $work_name
+Node: $NODE_REL
+Lens: $lens
+Signed frame directory: $frame_rel
+Active work path: $active_rel
+Phase-two acceptance directory: $(relpath "$PHASE_TWO_ACCEPTANCE_DIR")
+
+Read only the signed frame, the intent it references, the built worktree state, and phase-two acceptance artifacts.
+For the independent-coherence lens, perform the semantic sweep judgement for one-way adoption; do not claim to solve semantic indexing.
+Return exactly one line:
+PASS
+or
+FLAG
+
+Treat uncertainty, missing evidence, unresolved tier-one flags, or mismatch with the signed frame as FLAG."
+    LOOP_CURRENT_GATE=check
+    loop_event acceptance check running "tier-two implementation acceptance lens $lens"
+    loop_state_write check running "tier-two implementation acceptance lens $lens"
+    run_acceptance_reviewer "$reviewer_key" "$prompt"
+    write_acceptance_artifact "$verdict_path" "tier-two implementation acceptance - $lens" \
+      "$reviewer_key" "$ACCEPTANCE_VERDICT" "$ACCEPTANCE_NOTES" "$prompt" "$ACCEPTANCE_OUTPUT"
+    loop_event acceptance check "$([ "$ACCEPTANCE_VERDICT" = PASS ] && printf passed || printf failed)" \
+      "tier-two $lens verdict: $ACCEPTANCE_VERDICT"
+    loop_state_write check "$([ "$ACCEPTANCE_VERDICT" = PASS ] && printf passed || printf failed)" \
+      "tier-two $lens verdict: $ACCEPTANCE_VERDICT"
+    printf 'tier-two %s verdict: %s (%s)\n' "$lens" "$ACCEPTANCE_VERDICT" "$(relpath "$verdict_path")"
+    [ "$ACCEPTANCE_VERDICT" = PASS ] || any_flag=1
+  done
+  if [ "$any_flag" = 1 ]; then
+    die "tier-two implementation-acceptance panel FLAG — one-way archive is blocked; $work_name stays in flight for the operator"
+  fi
+
+  for lens in "${TIER_TWO_PANEL_LENSES[@]}"; do
+    verdict_path="$PHASE_TWO_PANEL_DIR/$lens.md"
+    verdict="$(acceptance_artifact_verdict "$verdict_path" || true)"
+    [ "$verdict" = PASS ] \
+      || die "one-way archive blocked by missing or non-PASS tier-two verdict for $lens"
+  done
+}
+
+required_acceptance_clean_for_archive() {
+  local reversibility=$1 unit_id verdict_path verdict lens
+  shift
+  for unit_id in "$@"; do
+    verdict_path="$PHASE_TWO_TIER_ONE_DIR/$unit_id.md"
+    verdict="$(acceptance_artifact_verdict "$verdict_path" || true)"
+    [ "$verdict" = PASS ] \
+      || die "archive blocked by missing or non-PASS tier-one verdict for $unit_id"
+    if [ "$DRY_RUN" != 1 ] && acceptance_artifact_dry_run "$verdict_path"; then
+      die "archive blocked by dry-run tier-one verdict for $unit_id"
+    fi
+  done
+  if [ "$reversibility" = one-way ]; then
+    for lens in "${TIER_TWO_PANEL_LENSES[@]}"; do
+      verdict_path="$PHASE_TWO_PANEL_DIR/$lens.md"
+      verdict="$(acceptance_artifact_verdict "$verdict_path" || true)"
+      [ "$verdict" = PASS ] \
+        || die "one-way archive blocked by missing or non-PASS tier-two verdict for $lens"
+      if [ "$DRY_RUN" != 1 ] && acceptance_artifact_dry_run "$verdict_path"; then
+        die "one-way archive blocked by dry-run tier-two verdict for $lens"
+      fi
+    done
+  fi
+}
+
 phase() {
   local d
   d="$(archived_work_dir "$1")" && { echo "done"; return; }
@@ -951,17 +1336,20 @@ phase_two_state_file_for() {
 }
 
 print_phase_two_status() {
-  local work_name=$1 state run_id gate status updated message events
+  local work_name=$1 state run_id gate status updated message events unit failure acceptance
   state="$(phase_two_state_file_for "$work_name")"
   [ -s "$state" ] || return 0
   run_id="$(json_file_string_value "$state" run_id)"
   gate="$(json_file_string_value "$state" gate)"
   status="$(json_file_string_value "$state" status)"
+  unit="$(json_file_string_value "$state" current_unit)"
   updated="$(json_file_string_value "$state" updated_at)"
   message="$(json_file_string_value "$state" message)"
+  failure="$(json_file_string_value "$state" failure_reason)"
   events="$(json_file_path_value "$state" events_jsonl)"
-  printf 'phase-two run: run_id=%s gate=%s status=%s updated_at=%s state=%s events=%s message=%s\n' \
-    "$run_id" "$gate" "$status" "$updated" "$state" "$events" "$message"
+  acceptance="$(json_file_path_value "$state" phase_two_acceptance_dir)"
+  printf 'phase-two run: run_id=%s gate=%s unit=%s status=%s updated_at=%s state=%s events=%s acceptance=%s failure=%s message=%s\n' \
+    "$run_id" "$gate" "$unit" "$status" "$updated" "$state" "$events" "$acceptance" "$failure" "$message"
 }
 
 print_status_json() {
@@ -979,7 +1367,7 @@ print_status_json() {
   printf '"frame_complete":%s,' "$frame_ok"
   printf '"signed_off":%s,' "$signed_ok"
   printf '"phase_two_run":'
-  if [ -s "$state" ]; then
+  if [ "$ph" != done ] && [ -s "$state" ]; then
     cat "$state"
   else
     printf 'null'
@@ -1076,10 +1464,6 @@ run_codex_gate() {
 
   case "$mode" in
     start)  CODEX_CMD+=(exec --json -o "$final" -) ;;
-    resume)
-      [ -n "$sid" ] || die "cannot resume codex gate $gate without a session id"
-      CODEX_CMD+=(exec resume --json -o "$final" "$sid" -)
-      ;;
     *) die "unknown gate mode: $mode" ;;
   esac
 
@@ -1135,13 +1519,12 @@ run_codex_gate() {
   printf '%s\n' "$GATE_OUTPUT"
 }
 
-# a single phase-two gate, run on the one cleared session.
-# args: <gate-name> <allowed-tools> <mode> <session-id> <prompt>
-# mode is start for the first gate (opens the cleared session) and resume for the rest
-# (continues it), so phase two clears once, then works.
+# a single fresh phase-two Codex session.
+# args: <gate-name> <allowed-tools> <mode> <session-id> <prompt> [instruction-gate]
+# mode is start; every phase-two builder, acceptance reviewer, and archive actor is fresh.
 run_gate() {
-  local gate="$1" tools="$2" mode="$3" sid="$4" prompt="$5" sys
-  sys="$(cat "$GATES/$gate.md")"
+  local gate="$1" tools="$2" mode="$3" sid="$4" prompt="$5" instruction_gate="${6:-$1}" sys
+  sys="$(cat "$GATES/$instruction_gate.md")"
 
   case "$LOOP_HARNESS" in
     codex) run_codex_gate "$gate" "$tools" "$mode" "$sid" "$prompt" "$sys" ;;
@@ -1183,6 +1566,8 @@ cmd_start() {
       printf 'Reversibility: TODO\n\n'
       printf '## route\n\nTODO\n\n'
       printf '## acceptance condition\n\nTODO\n\n'
+      printf '## observable acceptance\n\nTODO\n\n'
+      printf '## excluded interpretation\n\nTODO\n\n'
       printf '## proof state\n\nTODO\n\n'
       printf '## sweep\n\nTODO\n\n'
       printf '## adoption claim\n\nTODO\n\n'
@@ -1514,80 +1899,127 @@ $errors"
 }
 
 cmd_execute() {
-  local work_name="${1:-}" active_dir active_rel frame_rel source_desc archive_collection archive_decision
+  local work_name="${1:-}" active_dir active_rel frame_rel frame_file source_desc archive_collection archive_decision
+  local reversibility errors units_text unit_entry unit_id proof gate_name handoff_path diff_path tier_one_path
+  local gate_output_path status_msg units=() unit_ids=()
   [ -n "$work_name" ] || die "usage: loop.sh [-C <node-path>] execute <work-name> [--dry-run]"
   validate_work_name "$work_name"
   shift
-  [ "${1:-}" = "--dry-run" ] && DRY_RUN=1
+  if [ "${1:-}" = "--dry-run" ]; then
+    DRY_RUN=1
+    shift
+  fi
+  [ $# -eq 0 ] || die "usage: loop.sh [-C <node-path>] execute <work-name> [--dry-run]"
   active_dir="$(active_work_dir "$work_name")" || die "work is not active in node $NODE_REL: $work_name"
   active_rel="$(relpath "$active_dir")"
   frame_rel="$(relpath "$(frame_dir_for "$active_dir")")"
+  frame_file="$(frame_dir_for "$active_dir")/frame.md"
   signed_off_at "$active_dir" || die "not signed off — phase two is sealed until the operator signs off"
+  if ! frame_complete_at "$active_dir"; then
+    errors="$(frame_contract_errors_at "$active_dir" || true)"
+    die "signed frame is incomplete under $frame_rel:
+$errors"
+  fi
+  reversibility="$(frame_reversibility_value_at "$active_dir")"
+  units_text="$(phase_two_units_from_frame_file "$frame_file" || true)"
+  [ -n "$units_text" ] \
+    || die "signed frame does not name implementation units for phase two; cannot re-derive unit boundaries without inventing"
+  mapfile -t units <<< "$units_text"
   source_desc="$frame_rel/ (the signed work-node frame)"
 
-  # the session clears once at sign-off: one fresh Codex thread, opened by implement,
-  # then resumed after.
-  local sid
   [ "$LOOP_HARNESS" = codex ] \
     || die "unsupported LOOP_HARNESS: $LOOP_HARNESS (only codex is supported)"
-  sid=""
-  printf '=== phase two: %s cleared session %s, re-deriving %s in node %s from its frame ===\n' \
-    "$LOOP_HARNESS" "${sid:-new}" "$work_name" "$NODE_REL"
+  printf '=== phase two: %s cleared per-unit sessions, re-deriving %s in node %s from its frame ===\n' \
+    "$LOOP_HARNESS" "$work_name" "$NODE_REL"
   phase_two_run_init "$work_name"
   if ! phase_two_preflight "$work_name"; then
     PHASE_TWO_RUN_ACTIVE=0
     exit 1
   fi
 
-  run_gate implement "Read Edit Write Bash" start "$sid" \
-    "Implement node-local work $work_name in addressed node $NODE_REL. Read only $source_desc and the intent it references; build the delta in code."
-  sid="$PHASE_TWO_SESSION_ID"
+  for unit_entry in "${units[@]}"; do
+    unit_id="${unit_entry%%$'\t'*}"
+    proof="${unit_entry#*$'\t'}"
+    [ -n "$unit_id" ] && [ "$unit_id" != "$proof" ] \
+      || die "malformed implementation unit record parsed from signed frame"
+    unit_ids+=("$unit_id")
+    LOOP_CURRENT_UNIT="$unit_id"
+    gate_name="implement-$unit_id"
+    handoff_path="$PHASE_TWO_HANDOFF_DIR/$unit_id.md"
+    diff_path="$PHASE_TWO_DIFF_DIR/$unit_id.diff"
+    tier_one_path="$PHASE_TWO_TIER_ONE_DIR/$unit_id.md"
+    phase_two_write_unit_record "$unit_id" running "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "builder session starting"
 
-  printf '\n--- gate: check (mechanical) ---\n'
-  loop_event check check running "running ./check.sh"
-  loop_state_write check running "running ./check.sh"
+    printf '\n--- gate: implement %s ---\n' "$unit_id"
+    PHASE_TWO_SESSION_ID=""
+    run_gate "$gate_name" "Read Edit Write Bash" start "" \
+      "Implement phase-two unit $unit_id for node-local work $work_name in addressed node $NODE_REL.
+Proof obligation: $proof
+
+Read only $source_desc, the intent it references, and the material needed to build this unit.
+Do not edit parent intent documents in implement; archive folds accepted intent amendments.
+Build only this proof-advancing unit. Leave ./check.sh green. End with a lean handoff naming the changed files, checks prepared, and any proof gap." \
+      implement
+    gate_output_path="$LOOP_RUN_GATE_DIR/$gate_name.final.md"
+    phase_two_write_handoff "$unit_id" "$proof" "$gate_output_path" "$handoff_path"
+    write_current_diff_record "$diff_path"
+
+    printf '\n--- gate: check (mechanical after %s) ---\n' "$unit_id"
+    loop_event check check running "running ./check.sh after $unit_id"
+    loop_state_write check running "running ./check.sh after $unit_id"
+    if [ "$DRY_RUN" = 1 ]; then
+      printf '(dry-run) would run: ./check.sh after %s\n' "$unit_id"
+      loop_event check check skipped "dry-run skipped ./check.sh after $unit_id"
+      loop_state_write check skipped "dry-run skipped ./check.sh after $unit_id"
+      status_msg="dry-run mechanical check skipped"
+    else
+      if check_green; then
+        printf 'check.sh green after %s\n' "$unit_id"
+        loop_event check check passed "check.sh green after $unit_id"
+        loop_state_write check passed "check.sh green after $unit_id"
+        status_msg="check.sh green"
+      else
+        phase_two_write_unit_record "$unit_id" failed "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "check.sh red"
+        loop_event check check failed "check.sh red after $unit_id — drift, stopping"
+        die "check.sh red after $unit_id — drift, stopping before acceptance"
+      fi
+    fi
+
+    run_tier_one_acceptance "$work_name" "$unit_id" "$proof" "$frame_rel" "$handoff_path" "$diff_path"
+    phase_two_write_unit_record "$unit_id" accepted "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "$status_msg; tier-one PASS"
+  done
+
+  LOOP_CURRENT_UNIT=""
+  printf '\n--- gate: check (pre-archive acceptance) ---\n'
+  loop_event check check running "running ./check.sh before archive acceptance"
+  loop_state_write check running "running ./check.sh before archive acceptance"
   if [ "$DRY_RUN" = 1 ]; then
-    printf '(dry-run) would run: ./check.sh\n'
-    loop_event check check skipped "dry-run skipped ./check.sh"
-    loop_state_write check skipped "dry-run skipped ./check.sh"
+    printf '(dry-run) would run: ./check.sh before archive acceptance\n'
+    loop_event check check skipped "dry-run skipped ./check.sh before archive acceptance"
+    loop_state_write check skipped "dry-run skipped ./check.sh before archive acceptance"
   else
     if check_green; then
-      loop_event check check passed "check.sh green after implement"
-      loop_state_write check passed "check.sh green after implement"
+      printf 'check.sh green before archive acceptance\n'
+      loop_event check check passed "check.sh green before archive acceptance"
+      loop_state_write check passed "check.sh green before archive acceptance"
     else
-      loop_event check check failed "check.sh red after implement — drift, stopping"
-      die "check.sh red after implement — drift, stopping"
+      loop_event check check failed "check.sh red before archive acceptance"
+      die "check.sh red before archive acceptance — drift, stopping"
     fi
-    printf 'check.sh green\n'
   fi
-  run_gate check "Read Write Bash" resume "$sid" \
-    "Run the sweep on the built node-local work $work_name in addressed node $NODE_REL at $active_rel against the whole corpus and work in flight across the node tree, including related work named by the frame; return coherent (bool) and notes."
 
-  # honor the sweep's flag: read the check gate's verdict sentinel and, when it flags the
-  # corpus incoherent — or when no verdict can be read — halt phase two and hand the flag to
-  # the operator rather than folding the delta. The sweep flags; the operator (with the proof)
-  # settles; no archive decision rests on the sweep itself. Skipped under --dry-run (no output).
-  if [ "$DRY_RUN" != 1 ]; then
-    case "$GATE_OUTPUT" in
-      *"SWEEP_VERDICT: INCOHERENT"*)
-        loop_event sweep check failed "sweep verdict: incoherent"
-        loop_state_write check failed "sweep verdict: incoherent"
-        die "sweep flagged the corpus incoherent — phase two stops here for the operator; $work_name stays in flight, not adopted" ;;
-      *"SWEEP_VERDICT: COHERENT"*)
-        loop_event sweep check passed "sweep verdict: coherent"
-        loop_state_write check passed "sweep verdict: coherent"
-        printf 'sweep verdict: coherent — proceeding to adoption\n' ;;
-      *)
-        loop_event sweep check failed "no readable sweep verdict"
-        loop_state_write check failed "no readable sweep verdict"
-        die "no readable sweep verdict — phase two stops here for the operator; could not confirm coherence, so $work_name stays in flight, not adopted" ;;
-    esac
+  if [ "$reversibility" = one-way ]; then
+    run_tier_two_panel "$work_name" "$frame_rel" "$active_rel"
   else
-    loop_event sweep check skipped "dry-run skipped sweep verdict enforcement"
+    printf 'two-way work: one-way tier-two panel skipped after tier-one acceptance\n'
+    loop_event acceptance check skipped "two-way work skips one-way tier-two panel"
+    loop_state_write check skipped "two-way work skips one-way tier-two panel"
   fi
+  required_acceptance_clean_for_archive "$reversibility" "${unit_ids[@]}"
 
-  run_gate archive "Read Edit Write" resume "$sid" \
-    "Adopt or shelve node-local work $work_name in addressed node $NODE_REL from $active_rel according to its signed frame. If adopting, fold its accepted delta into that node's intent documents and stamp each touched segment's foot with the signed-off-by operator. End with ARCHIVE_DECISION: ADOPTED or ARCHIVE_DECISION: SHELVED."
+  PHASE_TWO_SESSION_ID=""
+  run_gate archive "Read Edit Write" start "" \
+    "Adopt or shelve node-local work $work_name in addressed node $NODE_REL from $active_rel according to its signed frame and the clean phase-two acceptance artifacts under $(relpath "$PHASE_TWO_ACCEPTANCE_DIR"). If adopting, fold its accepted delta into that node's intent documents and stamp each touched segment's foot with the signed-off-by operator. End with ARCHIVE_DECISION: ADOPTED or ARCHIVE_DECISION: SHELVED."
   printf '\n--- gate: adoption history (move) ---\n'
   if [ "$DRY_RUN" = 1 ]; then
     archive_collection="$(archive_collection_for_active_dir "$active_dir" adopted)"
@@ -1626,7 +2058,7 @@ cmd_execute() {
 }
 
 cmd_status() {
-  local json=0 work_name d errors
+  local json=0 work_name d errors ph
   if [ "${1:-}" = "--json" ]; then
     json=1
     shift
@@ -1638,9 +2070,11 @@ cmd_status() {
     print_status_json "$work_name"
     return
   fi
-  printf '%s in node %s: phase=%s frame_complete=%s signed_off=%s\n' "$work_name" "$NODE_REL" "$(phase "$work_name")" \
+  ph="$(phase "$work_name")"
+  printf '%s in node %s: phase=%s frame_complete=%s signed_off=%s\n' "$work_name" "$NODE_REL" "$ph" \
     "$(frame_complete "$work_name" && echo yes || echo no)" \
     "$(signed_off "$work_name" && echo yes || echo no)"
+  [ "$ph" = done ] && return
   if d="$(active_work_dir "$work_name")"; then
     if ! frame_complete_at "$d"; then
       errors="$(frame_contract_errors_at "$d" || true)"

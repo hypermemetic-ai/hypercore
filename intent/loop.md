@@ -17,23 +17,47 @@ one-way work has `intent/frame/review.md` before route framing and sign-off; two
 skips review unless the operator requests it.
 before sign-off, a new work frame carries lean recoverability fields: addressed node,
 node-local work name, target segments, work in flight, problem, constraints, decision
-surface or open direction, reversibility, route, acceptance condition, proof state, sweep,
-and adoption or shelving claim.
-implementation autonomy begins after sign-off: phase two builds from the signed frame, and
-stops only when the frame is incomplete, a check fails, or the sweep flags incoherence.
+surface or open direction, reversibility, route, acceptance condition, observable
+acceptance, excluded interpretation, proof state, sweep, and adoption or shelving claim.
+`observable acceptance` names the concrete command, state, check, or externally inspectable
+condition that phase-two acceptance can test.
+`excluded interpretation` names what the work must not mean.
+implementation autonomy begins after sign-off: phase two builds from the signed frame in
+green proof-advancing units, and stops when the frame is incomplete, a check fails, or
+required implementation acceptance returns `FLAG`.
 orient: read the intent documents, the work in flight across the node tree, and the
 material's conventions; search the web for what you do not know; ask the operator what the
 artifacts cannot tell you; do not guess.
 frame: write enough of the addressed work node's intent and material to make the proposed
 work scrutable, including proposed parent amendments where the work needs them, and run the
 sweep over the whole corpus and work in flight across the node tree.
-implement: build in small units from the signed frame.
-check: prove each statement with a check on the material, and run the sweep for coherence,
-idiom, and security.
+implement: build in proof-advancing units from the signed frame.
+an implementation unit is the smallest proof-advancing delta that leaves `./check.sh`
+green; units are vertical slices, so statements, material, and checks land together when
+the work requires all three.
+check: prove each statement with checks on the material, and run the phase-two acceptance
+scrutiny required by the signed frame and reversibility.
+`./check.sh` is green at every phase-two unit boundary and before any acceptance verdict
+or archive fold is trusted.
+after each implementation unit, a fresh independent read-only implementation-acceptance
+reviewer reads the signed frame, unit proof obligation, unit diff, and lean unit handoff,
+then returns exactly `PASS` or `FLAG`.
+for one-way work, a required tier-two implementation-acceptance panel runs before archive;
+two-way work does not run that panel unless later intent explicitly requires it.
+the one-way tier-two panel lenses are `whole-acceptance-conformance`, `proof-integrity`,
+`independent-coherence`, `security-permissions`, and `red-team`.
+the `independent-coherence` lens carries the semantic sweep judgement for one-way archive;
+this does not solve the deeper semantic-indexing problem.
+missing, malformed, nonzero, or non-`PASS`/`FLAG` acceptance reviewer output counts as
+`FLAG`.
+unresolved required tier-one or tier-two `FLAG`s halt phase two before archive; the active
+work node remains in flight for the operator.
 the checks re-run for every statement, not only the ones a work node touched.
 drift is a check that falls without work meaning to break it, and it surfaces wherever it
 happens.
 archive: adopt or shelve the work according to the signed frame.
+one-way archive cannot fold or stamp until required implementation-acceptance artifacts
+are present and clean.
 adoption folds accepted child statements and material into the parent, stamps each touched
 segment's foot with this operator, and records the work node as adopted history.
 shelving records the work node as shelved history without changing parent truth.
@@ -62,9 +86,10 @@ thread id, latest message, event history, and run artifact paths.
 before launching the first phase-two Codex gate, `loop.sh execute <work-name>` checks that
 the Codex binary is present and that Codex home/session state is writable; a failed
 preflight records failed run state and stops before `codex exec`.
-`loop.sh status <work-name>` reports the addressed work's current phase and, when phase-two
-state exists, the current or recent run's gate, status, state path, event path, and latest
-message; `loop.sh status --json <work-name>` renders the same run state for tooling.
+`loop.sh status <work-name>` reports the addressed work's current phase and, for
+non-historical work with phase-two state, the current or recent run's gate, status, state
+path, event path, and latest message; `loop.sh status --json <work-name>` renders the same
+run state for tooling.
 from the root, `./signoff` invokes the root loop sign-off gate and preserves any explicit
 arguments it receives.
 `loop.sh signoff <work-name> <operator>` remains the explicit sign-off form.
@@ -89,8 +114,8 @@ new work frame completeness is checked from the canonical `intent/frame/frame.md
 `direction.md`, `review.md`, and `signoff.md` do not satisfy ordinary frame fields.
 new work frame completeness requires these recoverable fields: addressed node,
 node-local work name, target segments, work in flight, problem, constraints, decision
-surface or open direction, reversibility, route, acceptance condition, proof state, sweep,
-and adoption or shelving claim.
+surface or open direction, reversibility, route, acceptance condition, observable
+acceptance, excluded interpretation, proof state, sweep, and adoption or shelving claim.
 `reversibility:` is parsed as exactly `one-way` or `two-way`.
 `loop.sh start <work-name>` scaffolds `intent/frame/frame.md` with the lean fields.
 `loop.sh frame` and `loop.sh signoff` block new work whose frame is incomplete, whose
@@ -99,6 +124,14 @@ frame lacks a review artifact.
 one-way review artifacts record base-role verdicts, unresolved flags, and disposition;
 optional reviewer verdicts cannot clear unresolved base-roster or red-team flags.
 new work sign-off is a `signed-off-by` line in the work node's `intent/frame/signoff.md`.
+`loop.sh execute <work-name>` derives implementation units from the signed frame, starts a
+fresh Codex builder session for each unit, and records lean unit handoff, diff, and
+tier-one verdict artifacts under the work frame.
+`loop.sh execute <work-name>` runs implementation-acceptance reviewers with literal
+approval `never` and literal sandbox `read-only`.
+`loop.sh execute <work-name>` treats malformed implementation-acceptance output as
+`FLAG`, blocks unresolved required flags, and runs the one-way tier-two panel before
+archive.
 `loop.sh execute <work-name>` records the addressed work in node-local history after archive.
 
 ---

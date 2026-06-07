@@ -169,7 +169,7 @@ check_no_tracked_live_material_paths() {
 }
 
 check_loop_frame_contract() {
-  local name tmp frame direction review fake_review status_out
+  local name tmp frame direction review fake_review fake_acceptance status_out route_with_one_unit
 
   echo "root - loop frame contract"
   tmp="$(mktemp -d "${TMPDIR:-/tmp}/hypercore-loop-frame-check.XXXXXX")" \
@@ -192,6 +192,10 @@ check_loop_frame_contract() {
     "frame template includes exact reversibility slot"
   require_text "$frame" "## acceptance condition" \
     "frame template includes acceptance condition"
+  require_text "$frame" "## observable acceptance" \
+    "frame template includes observable acceptance"
+  require_text "$frame" "## excluded interpretation" \
+    "frame template includes excluded interpretation"
   require_text "$frame" "## adoption claim" \
     "frame template includes adoption claim"
   reject_text "$frame" "## operator deliberation" \
@@ -244,6 +248,14 @@ $route_text
 
 The loop reports frame_complete=yes for complete test cases.
 
+## observable acceptance
+
+Run loop status for this self-test work.
+
+## excluded interpretation
+
+This self-test does not adopt parent intent.
+
 ## proof state
 
 The proof state is recorded.
@@ -284,6 +296,14 @@ Disposition: resolved - base roster returned PASS.
 - soundness-fit: PASS
 - simplicity-fastness: PASS
 - red-team: PASS
+EOF
+  }
+
+  write_signoff() {
+    cat > "$root/$name/intent/frame/signoff.md" <<EOF
+# signoff - $name
+
+signed-off-by: qqp-dev
 EOF
   }
 
@@ -338,6 +358,34 @@ EOF
   else
     bad "two-way work with direction and no review is frame-complete"
   fi
+
+  write_lean_frame "Two-way route with observable acceptance removed." two-way
+  awk '
+    /^## observable acceptance/ { skip = 1; next }
+    /^## excluded interpretation/ { skip = 0 }
+    !skip { print }
+  ' "$frame" > "$frame.tmp" && mv "$frame.tmp" "$frame"
+  if "$root/adapter/loop.sh" frame "$name" >"$tmp/missing-observable.out" 2>"$tmp/missing-observable.err"; then
+    bad "loop frame rejects missing observable acceptance"
+  else
+    ok "loop frame rejects missing observable acceptance"
+  fi
+  require_text "$tmp/missing-observable.err" "missing required frame field: observable acceptance" \
+    "loop frame explains missing observable acceptance"
+
+  write_lean_frame "Two-way route with excluded interpretation removed." two-way
+  awk '
+    /^## excluded interpretation/ { skip = 1; next }
+    /^## proof state/ { skip = 0 }
+    !skip { print }
+  ' "$frame" > "$frame.tmp" && mv "$frame.tmp" "$frame"
+  if "$root/adapter/loop.sh" frame "$name" >"$tmp/missing-excluded.out" 2>"$tmp/missing-excluded.err"; then
+    bad "loop frame rejects missing excluded interpretation"
+  else
+    ok "loop frame rejects missing excluded interpretation"
+  fi
+  require_text "$tmp/missing-excluded.err" "missing required frame field: excluded interpretation" \
+    "loop frame explains missing excluded interpretation"
 
   write_lean_frame "One-way route after direction, but review is missing." one-way
   rm -f "$review"
@@ -444,6 +492,14 @@ Exercise a manual review with uncleared base flags.
 
 The contract rejects optional override.
 
+## observable acceptance
+
+Run loop frame for this self-test work.
+
+## excluded interpretation
+
+Optional advisory reviewers cannot clear base flags.
+
 ## proof state
 
 The proof state is recorded.
@@ -481,6 +537,67 @@ EOF
   fi
   require_text "$tmp/optional-override.err" "optional reviewers cannot clear them" \
     "loop frame explains optional reviewers cannot clear base flags"
+
+  route_with_one_unit="Exercise phase-two acceptance in dry-run.
+
+Implementation units for phase two:
+
+1. Acceptance dry-run unit: prove tier-one and panel behavior."
+
+  fake_acceptance="$tmp/fake-acceptance"
+  rm -rf "$fake_acceptance" "$root/$name/intent/frame/phase-two"
+  mkdir -p "$fake_acceptance"
+  printf 'not a structured verdict\n' > "$fake_acceptance/tier-one-unit-001"
+  write_lean_frame "$route_with_one_unit" two-way
+  write_signoff
+  if HYPERCORE_LOOP_STATE_DIR="$tmp/loop-runs" HYPERCORE_ACCEPTANCE_FAKE_DIR="$fake_acceptance" "$root/adapter/loop.sh" execute "$name" --dry-run >"$tmp/tier-one-flag.out" 2>"$tmp/tier-one-flag.err"; then
+    bad "loop execute blocks malformed tier-one acceptance output"
+  else
+    ok "loop execute blocks malformed tier-one acceptance output"
+  fi
+  require_text "$tmp/tier-one-flag.err" "tier-one implementation-acceptance FLAG" \
+    "loop execute explains tier-one required flag blocking"
+  require_text "$root/$name/intent/frame/phase-two/tier-one/unit-001.md" "Verdict: FLAG" \
+    "tier-one malformed output is recorded as FLAG"
+
+  rm -rf "$fake_acceptance" "$root/$name/intent/frame/phase-two"
+  mkdir -p "$fake_acceptance"
+  printf 'PASS\n' > "$fake_acceptance/tier-one-unit-001"
+  write_lean_frame "$route_with_one_unit" two-way
+  write_signoff
+  if HYPERCORE_LOOP_STATE_DIR="$tmp/loop-runs" HYPERCORE_ACCEPTANCE_FAKE_DIR="$fake_acceptance" "$root/adapter/loop.sh" execute "$name" --dry-run >"$tmp/two-way-execute.out" 2>"$tmp/two-way-execute.err"; then
+    ok "two-way execute dry-run pays tier one and completes without one-way panel"
+  else
+    bad "two-way execute dry-run pays tier one and completes without one-way panel"
+  fi
+  require_text "$tmp/two-way-execute.out" "tier-one unit-001 verdict: PASS" \
+    "two-way execute dry-run runs tier-one acceptance"
+  require_text "$tmp/two-way-execute.out" "two-way work: one-way tier-two panel skipped" \
+    "two-way execute dry-run skips the one-way panel"
+  [ ! -e "$root/$name/intent/frame/phase-two/tier-two-panel/whole-acceptance-conformance.md" ] \
+    && ok "two-way execute dry-run writes no one-way panel verdicts" \
+    || bad "two-way execute dry-run wrote one-way panel verdicts"
+
+  rm -rf "$fake_acceptance" "$root/$name/intent/frame/phase-two"
+  mkdir -p "$fake_acceptance"
+  printf 'PASS\n' > "$fake_acceptance/tier-one-unit-001"
+  printf 'PASS\n' > "$fake_acceptance/panel-whole-acceptance-conformance"
+  printf 'PASS\n' > "$fake_acceptance/panel-proof-integrity"
+  printf 'not a structured verdict\n' > "$fake_acceptance/panel-independent-coherence"
+  printf 'PASS\n' > "$fake_acceptance/panel-security-permissions"
+  printf 'PASS\n' > "$fake_acceptance/panel-red-team"
+  write_lean_frame "$route_with_one_unit" one-way
+  write_valid_review
+  write_signoff
+  if HYPERCORE_LOOP_STATE_DIR="$tmp/loop-runs" HYPERCORE_ACCEPTANCE_FAKE_DIR="$fake_acceptance" "$root/adapter/loop.sh" execute "$name" --dry-run >"$tmp/panel-flag.out" 2>"$tmp/panel-flag.err"; then
+    bad "one-way execute dry-run blocks tier-two panel flags"
+  else
+    ok "one-way execute dry-run blocks tier-two panel flags"
+  fi
+  require_text "$tmp/panel-flag.err" "tier-two implementation-acceptance panel FLAG" \
+    "loop execute explains one-way panel flag blocking"
+  require_text "$root/$name/intent/frame/phase-two/tier-two-panel/independent-coherence.md" "Verdict: FLAG" \
+    "malformed independent-coherence output is recorded as FLAG"
 
   cleanup_loop_frame_self_test
   LOOP_FRAME_CHECK_WORK=
@@ -831,6 +948,12 @@ require_text "$root/adapter/gates/frame.md" \
   "constraints, decision surface, reversibility" \
   "frame gate names the problem, constraints, and decision surface"
 require_text "$root/adapter/gates/frame.md" \
+  "observable acceptance" \
+  "frame gate requires observable acceptance"
+require_text "$root/adapter/gates/frame.md" \
+  "Excluded interpretation" \
+  "frame gate requires excluded interpretation"
+require_text "$root/adapter/gates/frame.md" \
   "direction.md" \
   "frame gate requires direction artifact"
 require_text "$root/adapter/gates/frame.md" \
@@ -860,12 +983,24 @@ require_text "$root/adapter/gates/frame.md" \
 require_text "$root/adapter/gates/check.md" \
   "./check.sh" \
   "check gate names the flat check command"
+require_text "$root/adapter/gates/check.md" \
+  "tier-one implementation-acceptance" \
+  "check gate names tier-one implementation acceptance"
+require_text "$root/adapter/gates/check.md" \
+  "independent-coherence" \
+  "check gate assigns one-way coherence to the panel"
 require_text "$root/adapter/gates/implement.md" \
   "signed frame under \`intent/frame/\`" \
   "implement gate reads current work-node frames"
+require_text "$root/adapter/gates/implement.md" \
+  "lean handoff state" \
+  "implement gate requires lean unit handoff state"
 require_text "$root/adapter/gates/archive.md" \
   "intent/frame/signoff.md" \
   "archive gate signs current work-node frames"
+require_text "$root/adapter/gates/archive.md" \
+  "tier-two implementation-acceptance" \
+  "archive gate blocks one-way work without clean panel artifacts"
 require_text "$root/adapter/codex.md" \
   "design-phase collaboration" \
   "Codex adapter describes phase one as design-phase collaboration"
@@ -903,8 +1038,20 @@ require_text "$root/adapter/codex.md" \
   "acceptance condition" \
   "Codex adapter carries acceptance condition"
 require_text "$root/adapter/codex.md" \
+  "observable acceptance" \
+  "Codex adapter carries observable acceptance"
+require_text "$root/adapter/codex.md" \
+  "excluded interpretation" \
+  "Codex adapter carries excluded interpretation"
+require_text "$root/adapter/codex.md" \
   "signed frame directory" \
   "Codex adapter keeps phase two tied to the signed frame directory"
+require_text "$root/adapter/codex.md" \
+  "implementation-acceptance panel" \
+  "Codex adapter carries one-way implementation acceptance"
+reject_text "$root/adapter/codex.md" \
+  "resumed across check and archive" \
+  "Codex adapter no longer describes one resumed phase-two thread"
 require_text "$root/adapter/codex.md" \
   "decision surface" \
   "Codex adapter carries the decision surface"
@@ -966,7 +1113,10 @@ require_text "$root/adapter/loop.sh" \
   'LOOP_CURRENT_ROOT_STATE="$HYPERCORE_LOOP_STATE_DIR/current/root.json"' \
   "loop writes a root current state pointer"
 require_text "$root/adapter/loop.sh" \
-  'mkdir -p "$LOOP_RUN_GATE_DIR" "$(dirname "$LOOP_CURRENT_WORK_STATE")" "$(dirname "$LOOP_CURRENT_ROOT_STATE")"' \
+  'PHASE_TWO_ACCEPTANCE_DIR="$PHASE_TWO_FRAME_DIR/phase-two"' \
+  "loop records phase-two acceptance state under the work frame"
+require_text "$root/adapter/loop.sh" \
+  '"$PHASE_TWO_TIER_ONE_DIR"' \
   "loop creates the phase-two state directories"
 require_text "$root/adapter/loop.sh" \
   'phase_two_preflight()' \
@@ -987,6 +1137,12 @@ require_text "$root/adapter/loop.sh" \
   '"acceptance condition"' \
   "loop requires acceptance condition"
 require_text "$root/adapter/loop.sh" \
+  '"observable acceptance"' \
+  "loop requires observable acceptance"
+require_text "$root/adapter/loop.sh" \
+  '"excluded interpretation"' \
+  "loop requires excluded interpretation"
+require_text "$root/adapter/loop.sh" \
   '"adoption or shelving claim"' \
   "loop requires adoption or shelving claim"
 require_text "$root/adapter/loop.sh" \
@@ -998,6 +1154,12 @@ require_text "$root/adapter/loop.sh" \
 require_text "$root/adapter/loop.sh" \
   'frame_label_has_content "$file" "Acceptance condition"' \
   "loop parses acceptance condition as a strict label"
+require_text "$root/adapter/loop.sh" \
+  'frame_section_has_content "$file" "observable acceptance"' \
+  "loop parses observable acceptance from canonical frame.md"
+require_text "$root/adapter/loop.sh" \
+  'frame_section_has_content "$file" "excluded interpretation"' \
+  "loop parses excluded interpretation from canonical frame.md"
 require_text "$root/adapter/loop.sh" \
   'frame_reversibility_value_from_file' \
   "loop parses exact reversibility tokens"
@@ -1026,11 +1188,41 @@ require_text "$root/adapter/loop.sh" \
   'REVIEW_CMD=("$CODEX_BIN" -a never -s read-only -C "$ROOT")' \
   "reviewer subprocesses use literal approval never and read-only sandbox"
 require_text "$root/adapter/loop.sh" \
+  'ACCEPTANCE_CMD=("$CODEX_BIN" -a never -s read-only -C "$ROOT")' \
+  "acceptance reviewer subprocesses use literal approval never and read-only sandbox"
+require_text "$root/adapter/loop.sh" \
   'validate_review_model' \
   "loop validates CODEX_REVIEW_MODEL"
 require_text "$root/adapter/loop.sh" \
   'malformed PASS/FLAG verdict; counted as FLAG' \
   "malformed reviewer output counts as FLAG"
+require_text "$root/adapter/loop.sh" \
+  'acceptance_verdict_from_output()' \
+  "loop parses implementation acceptance verdicts exactly"
+require_text "$root/adapter/loop.sh" \
+  'missing or malformed PASS/FLAG verdict; counted as FLAG' \
+  "malformed acceptance output counts as FLAG"
+require_text "$root/adapter/loop.sh" \
+  'phase_two_units_from_frame_file()' \
+  "loop derives implementation units from the signed frame"
+require_text "$root/adapter/loop.sh" \
+  'run_tier_one_acceptance()' \
+  "loop runs tier-one implementation acceptance"
+require_text "$root/adapter/loop.sh" \
+  'run_tier_two_panel()' \
+  "loop runs the one-way tier-two implementation acceptance panel"
+require_text "$root/adapter/loop.sh" \
+  '"whole-acceptance-conformance"' \
+  "loop declares the required one-way panel lenses"
+require_text "$root/adapter/loop.sh" \
+  'required_acceptance_clean_for_archive' \
+  "loop gates archive on clean required acceptance artifacts"
+require_text "$root/adapter/loop.sh" \
+  'archive blocked by dry-run tier-one verdict' \
+  "loop refuses dry-run tier-one artifacts for real archive"
+require_text "$root/adapter/loop.sh" \
+  'two-way work skips one-way tier-two panel' \
+  "loop keeps two-way work out of the one-way panel"
 require_text "$root/adapter/loop.sh" \
   'optional reviewers cannot clear them' \
   "loop reports optional reviewer non-override"
@@ -1083,11 +1275,14 @@ reject_text "$root/adapter/loop.sh" \
   'events="$(printf' \
   "loop no longer buffers the Codex JSON stream before progress"
 require_text "$root/adapter/loop.sh" \
-  'loop_event sweep check' \
-  "loop records the sweep verdict in run events"
+  'loop_event acceptance check' \
+  "loop records acceptance verdicts in run events"
 require_text "$root/adapter/loop.sh" \
   'loop_event archive-decision archive' \
   "loop records the archive decision in run events"
+reject_text "$root/adapter/loop.sh" \
+  'exec resume --json' \
+  "loop no longer resumes one builder thread through phase-two judgement"
 require_text "$root/adapter/loop.sh" \
   'print_phase_two_status' \
   "loop status reports phase-two run state"

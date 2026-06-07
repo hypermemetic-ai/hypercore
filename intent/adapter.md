@@ -16,11 +16,16 @@ the rigid workflow is interactive through orient and frame as the design phase, 
 sign-off as the human gate: before a route is written, the machine surfaces understanding,
 alternative framing, information-gain questions, reversibility, review where required, and
 a decision surface for substantive operator direction; after sign-off, implement, check,
-and archive run on a cleared session that re-derives the work from its signed frame
-directory alone.
+and archive run through cleared sessions that re-derive each unit and acceptance review
+from the signed frame directory and lean phase-two handoff artifacts alone.
 direction and review are phase-one acts or artifacts, not loop gates.
 the Codex review roster for one-way phase-one work has a base roster of
 `contract-checkability`, `soundness-fit`, `simplicity-fastness`, and `red-team`.
+the Codex implementation-acceptance reviewer for each phase-two unit is independent and
+read-only.
+the Codex tier-two implementation-acceptance panel for one-way work has required lenses
+`whole-acceptance-conformance`, `proof-integrity`, `independent-coherence`,
+`security-permissions`, and `red-team`.
 the complete optional Codex review roster is `implementation-maintainability`,
 `security-permissions`, `operator-ergonomics`, `migration-compatibility`,
 `domain-evidence`, and `performance-cost`.
@@ -60,15 +65,15 @@ direct-path openings; the entry point links to root-managed adapter material and
 back to the root adapter and loop instead of copying root adapter material into the
 mounted node.
 the rigid workflow is materialized as `adapter/loop.sh`, realizing the two-phase shape
-over the Codex phase-two harness: `codex exec` opens a fresh thread at implement and
-`codex exec resume` resumes it across check and archive; the path carries no phase-one
-context.
+over the Codex phase-two harness: each implementation unit opens a fresh `codex exec`
+builder session from the signed frame, and acceptance reviewers and the archive actor are
+fresh sessions rather than resumes of the builder.
 the Codex loop records phase-two run state under `HYPERCORE_LOOP_STATE_DIR`, defaulting to
 `.hypercore/loop-runs`, with run-local state, event history, raw Codex gate streams, gate
-final outputs, and current pointers for the addressed work and root.
+final outputs, acceptance artifact paths, and current pointers for the addressed work and
+root.
 the Codex loop streams inner `codex exec --json` events into the phase-two run state while
-printing concise progress, without changing the cleared-session contract: implement opens
-one fresh thread and check and archive resume it.
+printing concise progress, without changing the cleared-session contract.
 `adapter/loop.sh` accepts one node-local work name in the addressed node for new work.
 the root node is the default addressed node.
 `loop.sh -C <node-path> <gate> <work-name>` addresses work in a child node, including a
@@ -89,8 +94,8 @@ open direction that needs an operator decision before the frame settles a route.
 the orient gate prompt tells the machine not to write a route or operator direction.
 the frame gate prompt requires addressed node, node-local work name, target segments, work
 in flight, problem, constraints, decision surface or open direction, reversibility, route,
-acceptance condition, proof state, sweep, and adoption or shelving claim in
-`intent/frame/frame.md`.
+acceptance condition, observable acceptance, excluded interpretation, proof state, sweep,
+and adoption or shelving claim in `intent/frame/frame.md`.
 the frame gate prompt requires substantive `intent/frame/direction.md` before route
 framing and requires `intent/frame/review.md` for one-way work.
 the frame gate prompt tells the machine not to write operator direction, not to collect
@@ -98,20 +103,20 @@ direction retrospectively, and not to let optional reviewer verdicts clear base-
 red-team flags.
 the Codex adapter prose describes phase one as design-phase collaboration with direction
 and review artifacts, while preserving phase two as cleared, heads-down execution from the
-signed frame directory.
+signed frame directory and lean phase-two handoff artifacts.
 `check.sh` mechanically checks that the gate prompts, Codex adapter prose, loop frame
-validation, start scaffolding, direction/review helpers, review isolation settings, strict
-frame parsing, and current-material absence of the retired compatibility route still carry
-the contract.
+validation, start scaffolding, direction/review helpers, review and acceptance isolation
+settings, strict frame parsing, phase-two acceptance gating, and current-material absence
+of the retired compatibility route still carry the contract.
 each gate's instructions are held in a file in `adapter/gates/`; the Codex path includes them in
 the `codex exec` gate prompt; the orchestrator owns gate order and preconditions and
 blocks a gate whose preconditions fail.
 sign-off is a `signed-off-by` line in the work-node frame's `intent/frame/signoff.md`; the
 orchestrator seals phase two until sign-off is present, and the machine never writes it for
 itself.
-at the check gate the orchestrator reads the sweep's verdict, and when the sweep flags the
-corpus incoherent it halts phase two and surfaces the flag to the operator rather than
-proceeding to archive.
+at the check gate the orchestrator records tier-one implementation acceptance for each
+unit, records the one-way tier-two panel when required, and halts phase two before archive
+when required acceptance flags remain unresolved.
 
 ---
 endorsed by qqp-dev

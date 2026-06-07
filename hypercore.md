@@ -57,6 +57,11 @@ operator direction, lean recoverability, then sign-off.
   the operator to rely on it, challenge it, redirect it, or stop it.
 - Sign-off attests informed expectation and understanding, and still requires a complete
   lean frame plus the required phase-one acts; it is not earned by bloated field scanning.
+- Phase-two acceptance is part of reliance calibration: before one-way adoption stamps the
+  operator's endorsement, the built result is checked independently against what the
+  operator signed.
+- Unresolved implementation-acceptance flags block archive and surface to the operator
+  rather than being self-cleared, averaged away, or treated as warnings.
 - When written ground is insufficient, the machine records the blocker and stops instead
   of fabricating content.
 
@@ -198,16 +203,19 @@ orient -> frame -> implement -> check -> archive
 
 - **orient**: read the intent, work in flight, and material conventions.
 - **frame**: after substantive direction exists, write the problem, constraints, route,
-  reversibility, acceptance condition, proof state, target segments, work in flight, sweep,
-  and adoption or shelving claim.
-- **implement**: after sign-off, build from the written frame in small units.
-- **check**: run mechanical checks and the sweep.
+  reversibility, acceptance condition, observable acceptance, excluded interpretation,
+  proof state, target segments, work in flight, sweep, and adoption or shelving claim.
+- **implement**: after sign-off, build from the written frame in green proof-advancing
+  units.
+- **check**: run mechanical checks and independent implementation acceptance; one-way
+  work gets a required implementation-acceptance panel before archive.
 - **archive**: adopt or shelve according to the signed frame.
 
 Direction and review are phase-one acts and artifacts, not extra gates. Two-way work skips
 review unless requested. One-way work requires the base review artifact before the route is
-signable. The session clears at sign-off, and phase two must be able to re-derive the work
-from the signed frame directory alone.
+signable. The session clears at sign-off, and phase two must be able to re-derive each
+unit and acceptance review from the signed frame directory plus lean handoff artifacts
+alone.
 
 ## sweep
 
