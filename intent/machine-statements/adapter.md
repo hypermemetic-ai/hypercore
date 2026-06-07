@@ -21,6 +21,10 @@ final outputs, acceptance artifact paths, and current pointers for the addressed
 root.
 the Codex loop streams inner `codex exec --json` events into the phase-two run state while
 printing concise progress, without changing the cleared-session contract.
+the Codex loop materializes separate builder and reviewer routing, structured acceptance
+artifacts with source markers and fake-source rejection, the per-unit fast-builder retry
+then strong-builder escalation ladder, a resumable per-unit execute cache, the concurrent
+one-way tier-two panel, and phase-one review subprocess crash diagnostics.
 `adapter/loop.sh` accepts one node-local work name in the addressed node for new work.
 the root node is the default addressed node.
 `loop.sh -C <node-path> <gate> <work-name>` addresses work in a child node, including a
@@ -54,9 +58,12 @@ signed frame directory and lean phase-two handoff artifacts.
 `check.sh` mechanically checks that the gate prompts, Codex adapter prose, loop frame
 validation, start scaffolding, direction/review helpers, operator-act gating through
 `/dev/tty` with B-ready `operator-gate:` markers and numbered-option direction, review and
-acceptance isolation settings, strict frame parsing, phase-two acceptance gating, the new
-operator-act contract in the `collaboration`, `loop`, and `adapter` segments, and
-current-material absence of the retired compatibility route still carry the contract.
+acceptance isolation settings, strict frame parsing, phase-two acceptance gating, structured
+acceptance legibility, acceptance source markers and fake-source rejection, separate
+builder/reviewer routing with bounded retry and strong escalation, resumable execute
+caching, the concurrent tier-two panel, the new operator-act and phase-two performance
+contract in the `collaboration`, `loop`, and `adapter` segments, and current-material
+absence of the retired compatibility route still carry the contract.
 each gate's instructions are held in a file in `adapter/gates/`; the Codex path includes them in
 the `codex exec` gate prompt; the orchestrator owns gate order and preconditions and
 blocks a gate whose preconditions fail.
@@ -73,5 +80,5 @@ terminal-liveness check, which the default machine command path lacks; it does n
 network isolation, cryptographic non-repudiation, tamper-evidence, file integrity, or that
 an operator rather than a deliberately allocated terminal answered.
 at the check gate the orchestrator records tier-one implementation acceptance for each
-unit, records the one-way tier-two panel when required, and halts phase two before archive
-when required acceptance flags remain unresolved.
+unit, records the concurrent one-way tier-two panel when required, and halts phase two
+before archive when required acceptance flags remain unresolved.

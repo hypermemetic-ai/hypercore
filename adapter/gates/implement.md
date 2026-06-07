@@ -16,5 +16,9 @@ that `./check.sh` can be green at the unit boundary. Write only lean handoff sta
 by later cleared sessions and independent acceptance reviewers. Do **not** edit the intent
 documents — folding the delta into them is the archive gate, not this one.
 
+Execute may resume through signed-frame-derived cache state that reuses already accepted
+units. Treat that as orchestrator state only: build and report the requested unit, and do
+not speculate about acceptance artifacts that the check gate records.
+
 Precondition to leave this gate: this unit is built, the work's checks are ready to run,
 and your final output names the unit's changed files, prepared checks, and any proof gap.

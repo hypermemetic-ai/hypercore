@@ -70,9 +70,19 @@ the work node's `intent/frame/signoff.md`.
 `loop.sh execute <work-name>` derives implementation units from the signed frame, starts a
 fresh Codex builder session for each unit, and records lean unit handoff, diff, and
 tier-one verdict artifacts under the work frame.
+`loop.sh execute <work-name>` routes builders through `CODEX_BUILDER_MODEL`, defaulting to
+the strong model until the two-step plan/build work lands, separately from the strong review
+route; it gives each unit a three-attempt fast-builder budget, escalates an exhausted unit
+to `CODEX_STRONG_BUILDER_MODEL`, and stops for the operator when the strong builder fails.
 `loop.sh execute <work-name>` runs implementation-acceptance reviewers with literal
 approval `never` and literal sandbox `read-only`.
-`loop.sh execute <work-name>` treats malformed implementation-acceptance output as
-`FLAG`, blocks unresolved required flags, and runs the one-way tier-two panel before
-archive.
+`loop.sh execute <work-name>` writes structured acceptance artifacts with a verdict,
+rationale, evidence, and a `source:` marker, refuses `HYPERCORE_ACCEPTANCE_FAKE_DIR` outside
+dry-run, and lets real archive accept only `source: real-reviewer` required acceptance.
+`loop.sh execute <work-name>` caches per-unit build and tier-one evidence under a
+signed-frame-derived key, skips unchanged accepted units on rerun, and rebuilds cache misses
+while invalidating downstream evidence.
+`loop.sh execute <work-name>` treats malformed, evidence-free, or unsupported-source
+implementation-acceptance output as `FLAG`, blocks unresolved required flags, and runs the
+concurrent one-way tier-two panel before archive.
 `loop.sh execute <work-name>` records the addressed work in node-local history after archive.

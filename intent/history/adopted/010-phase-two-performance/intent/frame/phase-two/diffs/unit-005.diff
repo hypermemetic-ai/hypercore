@@ -1,0 +1,2283 @@
+# worktree diff record
+
+Recorded at: 2026-06-07T21:56:08Z
+
+## status
+
+Tracked changes only; untracked files are excluded from this unit diff record.
+
+ M adapter/codex.md
+ M adapter/gates/archive.md
+ M adapter/gates/check.md
+ M adapter/gates/implement.md
+ M adapter/loop.sh
+ M check.sh
+ M hypercore.md
+
+## diff
+
+diff --git a/adapter/codex.md b/adapter/codex.md
+index 23d0c52..f71f4cd 100644
+--- a/adapter/codex.md
++++ b/adapter/codex.md
+@@ -82,15 +82,18 @@ the operator's **sign-off**:
+   session something it needs, the frame was incomplete. That is the test.
+ - **Phase two — implement, check, archive — heads-down.**
+   `loop.sh [-C <node-path>] execute <work-name>` builds the delta in green
+-  proof-advancing units, records phase-two acceptance artifacts under the work frame,
+-  blocks unresolved required `FLAG`s, and runs the one-way
+-  implementation-acceptance panel before archive. The required one-way panel lenses are
++  proof-advancing units, records structured phase-two acceptance artifacts under the work
++  frame, reuses unchanged accepted units through signed-frame-derived cache state, blocks
++  unresolved required `FLAG`s, and runs the required one-way implementation-acceptance panel,
++  starting the required one-way tier-two lenses concurrently before archive. The required
++  one-way panel lenses are
+   `whole-acceptance-conformance`, `proof-integrity`, `independent-coherence`,
+   `security-permissions`, and `red-team`; two-way work pays tier one but skips this
+-  panel. Archive adopts or shelves the work according to the signed frame. Adoption folds the
+-  accepted delta into the addressed node's intent, stamps each touched segment's foot with
+-  the signer, and records adoption history; shelving records history without making
+-  proposed parent amendments current.
++  panel. Archive adopts or shelves the work according to the signed frame only after every
++  required acceptance artifact is clean and real-source. Adoption folds the accepted delta
++  into the addressed node's intent, stamps each touched segment's foot with the signer,
++  and records adoption history; shelving records history without making proposed parent
++  amendments current.
+ 
+ A work name is a node-local `NNN-slug`. The root node is assumed when no node is named.
+ `loop.sh -C home start 001-example` addresses work in the home child node, and
+diff --git a/adapter/gates/archive.md b/adapter/gates/archive.md
+index 042cfff..2f90bc5 100644
+--- a/adapter/gates/archive.md
++++ b/adapter/gates/archive.md
+@@ -16,8 +16,9 @@ Stamp the foot of each touched segment with the operator who signed off — the
+ invent an endorser; only the signed-off operator stamps a foot.
+ 
+ For one-way work, do not fold or stamp unless the tier-two implementation-acceptance
+-panel is present and clean. Do not self-clear, average away, or downgrade required
+-`FLAG`s.
++panel is present, clean, and real-source. Do not use dry-run or fake/self-test
++acceptance artifacts for real adoption. Do not self-clear, average away, or downgrade
++required `FLAG`s.
+ 
+ Do not move the work node yourself — the orchestrator records the addressed node-local
+ work in node-local history after re-running `check.sh` green.
+diff --git a/adapter/gates/check.md b/adapter/gates/check.md
+index 575844f..38c54af 100644
+--- a/adapter/gates/check.md
++++ b/adapter/gates/check.md
+@@ -7,7 +7,8 @@ You are the check gate. The orchestrator owns the mechanical floor and acceptanc
+ - run one independent read-only tier-one implementation-acceptance reviewer for each
+   completed unit;
+ - for one-way work, run the required tier-two implementation-acceptance panel before the
+-  archive gate;
++  archive gate, starting all required lenses concurrently after all tier-one artifacts
++  are clean;
+ - block unresolved required `FLAG`s instead of treating them as warnings, votes, or
+   self-clearable feedback.
+ 
+@@ -20,5 +21,10 @@ The `independent-coherence` lens carries the one-way semantic sweep judgement fo
+ archive decision; do not claim that it solves the deeper semantic-indexing problem.
+ Two-way work pays tier one but skips the one-way panel unless later intent requires it.
+ 
+-Each required reviewer returns exactly `PASS` or `FLAG`. Missing, malformed, nonzero, or
+-non-`PASS`/`FLAG` output is `FLAG`.
++Each required reviewer returns structured output with exactly one `VERDICT: PASS` or
++`VERDICT: FLAG` line, plus non-empty `RATIONALE:` and `EVIDENCE:` fields. Missing,
++malformed, nonzero, unsupported-source, non-`PASS`/`FLAG`, or evidence-free output is
++`FLAG`.
++
++The panel artifacts have deterministic lens paths, and archive remains gated on every
++required tier-one and tier-two artifact being `PASS`, complete, and real-source.
+diff --git a/adapter/gates/implement.md b/adapter/gates/implement.md
+index a8ed9e9..c682cb8 100644
+--- a/adapter/gates/implement.md
++++ b/adapter/gates/implement.md
+@@ -16,5 +16,9 @@ that `./check.sh` can be green at the unit boundary. Write only lean handoff sta
+ by later cleared sessions and independent acceptance reviewers. Do **not** edit the intent
+ documents — folding the delta into them is the archive gate, not this one.
+ 
++Execute may resume through signed-frame-derived cache state that reuses already accepted
++units. Treat that as orchestrator state only: build and report the requested unit, and do
++not speculate about acceptance artifacts that the check gate records.
++
+ Precondition to leave this gate: this unit is built, the work's checks are ready to run,
+ and your final output names the unit's changed files, prepared checks, and any proof gap.
+diff --git a/adapter/loop.sh b/adapter/loop.sh
+index f33befa..89adc05 100755
+--- a/adapter/loop.sh
++++ b/adapter/loop.sh
+@@ -36,7 +36,11 @@
+ #   HYPERCORE_OPERATOR (optional sign-off identity when <operator> is omitted)
+ #   CODEX_BIN (default: codex), CODEX_APPROVAL (default: never)
+ #   CODEX_WRITE_SANDBOX (default: workspace-write), CODEX_READ_SANDBOX (default: read-only)
+-#   CODEX_REVIEW_MODEL (optional single-token model name for review/acceptance subprocesses)
++#   CODEX_BUILDER_MODEL (default: gpt-5.3-codex-spark), CODEX_BUILDER_EFFORT (default: xhigh)
++#   CODEX_STRONG_BUILDER_MODEL (optional strong-builder escalation model)
++#   CODEX_STRONG_BUILDER_EFFORT (default: CODEX_REVIEW_EFFORT or xhigh)
++#   CODEX_REVIEW_MODEL (optional strong review/acceptance model), CODEX_REVIEW_EFFORT (default: xhigh)
++#   HYPERCORE_PHASE_TWO_DRY_RUN_ACCEPTANCE_DIR (optional stable dry-run acceptance/cache dir for self-tests)
+ 
+ set -euo pipefail
+ 
+@@ -102,6 +106,7 @@ PHASE_TWO_HANDOFF_DIR=""
+ PHASE_TWO_DIFF_DIR=""
+ PHASE_TWO_TIER_ONE_DIR=""
+ PHASE_TWO_PANEL_DIR=""
++PHASE_TWO_CACHE_DIR=""
+ LOOP_CURRENT_UNIT=""
+ LOOP_FAILURE_REASON=""
+ LOOP_RUN_ID=""
+@@ -113,6 +118,9 @@ LOOP_RUN_STARTED_AT=""
+ LOOP_CURRENT_WORK_STATE=""
+ LOOP_CURRENT_ROOT_STATE=""
+ LOOP_CURRENT_GATE=""
++UNIT_ATTEMPT_REASON=""
++UNIT_CHECK_STATUS_MSG=""
++UNIT_ACCEPTED_STATUS_MSG=""
+ 
+ die() {
+   local msg=$1
+@@ -210,7 +218,8 @@ loop_state_write() {
+     printf '    "handoffs_dir": %s,\n' "$(json_string "$PHASE_TWO_HANDOFF_DIR")"
+     printf '    "diffs_dir": %s,\n' "$(json_string "$PHASE_TWO_DIFF_DIR")"
+     printf '    "tier_one_dir": %s,\n' "$(json_string "$PHASE_TWO_TIER_ONE_DIR")"
+-    printf '    "tier_two_panel_dir": %s\n' "$(json_string "$PHASE_TWO_PANEL_DIR")"
++    printf '    "tier_two_panel_dir": %s,\n' "$(json_string "$PHASE_TWO_PANEL_DIR")"
++    printf '    "cache_dir": %s\n' "$(json_string "$PHASE_TWO_CACHE_DIR")"
+     printf '  }\n'
+     printf '}\n'
+   } > "$tmp"
+@@ -252,7 +261,9 @@ phase_two_run_init() {
+   LOOP_CURRENT_ROOT_STATE="$HYPERCORE_LOOP_STATE_DIR/current/root.json"
+   active_dir="$(active_work_dir "$work_name")" || die "work is not active in node $NODE_REL: $work_name"
+   PHASE_TWO_FRAME_DIR="$(frame_dir_for "$active_dir")"
+-  if [ "$DRY_RUN" = 1 ]; then
++  if [ "$DRY_RUN" = 1 ] && [ -n "${HYPERCORE_PHASE_TWO_DRY_RUN_ACCEPTANCE_DIR:-}" ]; then
++    PHASE_TWO_ACCEPTANCE_DIR="$HYPERCORE_PHASE_TWO_DRY_RUN_ACCEPTANCE_DIR"
++  elif [ "$DRY_RUN" = 1 ]; then
+     PHASE_TWO_ACCEPTANCE_DIR="$LOOP_RUN_DIR/phase-two-dry-run"
+   else
+     PHASE_TWO_ACCEPTANCE_DIR="$PHASE_TWO_FRAME_DIR/phase-two"
+@@ -262,6 +273,7 @@ phase_two_run_init() {
+   PHASE_TWO_DIFF_DIR="$PHASE_TWO_ACCEPTANCE_DIR/diffs"
+   PHASE_TWO_TIER_ONE_DIR="$PHASE_TWO_ACCEPTANCE_DIR/tier-one"
+   PHASE_TWO_PANEL_DIR="$PHASE_TWO_ACCEPTANCE_DIR/tier-two-panel"
++  PHASE_TWO_CACHE_DIR="$PHASE_TWO_ACCEPTANCE_DIR/cache"
+ 
+   mkdir -p \
+     "$LOOP_RUN_GATE_DIR" \
+@@ -271,7 +283,8 @@ phase_two_run_init() {
+     "$PHASE_TWO_HANDOFF_DIR" \
+     "$PHASE_TWO_DIFF_DIR" \
+     "$PHASE_TWO_TIER_ONE_DIR" \
+-    "$PHASE_TWO_PANEL_DIR"
++    "$PHASE_TWO_PANEL_DIR" \
++    "$PHASE_TWO_CACHE_DIR"
+   : > "$LOOP_RUN_EVENTS"
+   PHASE_TWO_RUN_ACTIVE=1
+   loop_state_write preflight running "phase-two run initialized"
+@@ -1745,6 +1758,226 @@ write_current_diff_record() {
+   mv "$tmp" "$path"
+ }
+ 
++phase_two_hash_stdin() {
++  if command -v sha256sum >/dev/null 2>&1; then
++    sha256sum | awk '{ print $1 }'
++  elif command -v shasum >/dev/null 2>&1; then
++    shasum -a 256 | awk '{ print $1 }'
++  else
++    cksum | awk '{ print $1 "-" $2 }'
++  fi
++}
++
++phase_two_hash_text() {
++  printf '%s' "$1" | phase_two_hash_stdin
++}
++
++phase_two_file_digest() {
++  local file=$1
++  [ -f "$file" ] || return 1
++  phase_two_hash_stdin < "$file"
++}
++
++phase_two_frame_digest() {
++  local frame_dir=${1:-$PHASE_TWO_FRAME_DIR} file
++  [ -d "$frame_dir" ] || return 1
++  {
++    find "$frame_dir" -type f ! -path "$frame_dir/phase-two/*" -print \
++      | LC_ALL=C sort \
++      | while IFS= read -r file; do
++          printf 'path:%s\n' "$(relpath "$file")"
++          printf 'digest:%s\n' "$(phase_two_file_digest "$file")"
++        done
++  } | phase_two_hash_stdin
++}
++
++phase_two_loop_version_digest() {
++  phase_two_file_digest "$HERE/loop.sh"
++}
++
++phase_two_initial_prior_state_key() {
++  local work_name=$1
++  phase_two_hash_text "phase-two-prior-state:v1
++node:$NODE_REL
++work:$work_name
++root"
++}
++
++phase_two_cache_path() {
++  local unit_id=$1
++  printf '%s/%s.key' "$PHASE_TWO_CACHE_DIR" "$unit_id"
++}
++
++phase_two_unit_base_cache_key() {
++  local unit_id=$1 proof=$2 prior_state_key=$3 frame_key loop_key proof_key
++  frame_key="$(phase_two_frame_digest)"
++  loop_key="$(phase_two_loop_version_digest)"
++  proof_key="$(phase_two_hash_text "$proof")"
++  phase_two_hash_text "phase-two-unit-base-cache:v1
++node:$NODE_REL
++work:${LOOP_WORK_NAME:-}
++unit:$unit_id
++frame:$frame_key
++proof:$proof_key
++prior-state:$prior_state_key
++loop-version:$loop_key"
++}
++
++phase_two_tier_one_check_evidence() {
++  local file=$1
++  [ -f "$file" ] || return 1
++  sed -nE 's/^Mechanical check immediately before this reviewer:[[:space:]]*(.*)$/\1/p' "$file" | sed -n '1p'
++}
++
++phase_two_check_evidence_reusable() {
++  local evidence=$1 lowered
++  lowered="$(printf '%s' "$evidence" | tr '[:upper:]' '[:lower:]')"
++  case "$lowered" in
++    *green*) return 0 ;;
++    *) return 1 ;;
++  esac
++}
++
++phase_two_acceptance_artifact_cache_clean() {
++  local file=$1 source
++  acceptance_artifact_field_meaningful "$file" Rationale || return 1
++  acceptance_artifact_field_meaningful "$file" Evidence || return 1
++  acceptance_artifact_field_meaningful "$file" source-proof || return 1
++  if [ "$DRY_RUN" != 1 ]; then
++    source="$(acceptance_artifact_source "$file" || true)"
++    [ "$source" = real-reviewer ] || return 1
++    acceptance_artifact_dry_run "$file" && return 1
++  fi
++}
++
++phase_two_unit_evidence_cache_key() {
++  local unit_id=$1 base_key=$2 handoff_path=$3 diff_path=$4 tier_one_path=$5
++  local handoff_key diff_key tier_one_key verdict check_evidence
++  [ -f "$handoff_path" ] || return 1
++  [ -f "$diff_path" ] || return 1
++  [ -f "$tier_one_path" ] || return 1
++  verdict="$(acceptance_artifact_verdict "$tier_one_path" || true)"
++  [ "$verdict" = PASS ] || return 1
++  phase_two_acceptance_artifact_cache_clean "$tier_one_path" || return 1
++  check_evidence="$(phase_two_tier_one_check_evidence "$tier_one_path")"
++  meaningful_text "$check_evidence" >/dev/null || return 1
++  handoff_key="$(phase_two_file_digest "$handoff_path")"
++  diff_key="$(phase_two_file_digest "$diff_path")"
++  tier_one_key="$(phase_two_file_digest "$tier_one_path")"
++  phase_two_hash_text "phase-two-unit-evidence-cache:v1
++unit:$unit_id
++base:$base_key
++handoff-path:$(relpath "$handoff_path")
++handoff:$handoff_key
++diff-path:$(relpath "$diff_path")
++diff:$diff_key
++tier-one-path:$(relpath "$tier_one_path")
++tier-one:$tier_one_key
++check-evidence:$check_evidence
++tier-one-verdict:PASS"
++}
++
++phase_two_cache_record_value() {
++  local file=$1 field=$2
++  [ -f "$file" ] || return 1
++  sed -nE "s/^$field:[[:space:]]*(.*)$/\1/p" "$file" | sed -n '1p'
++}
++
++phase_two_cache_record_key() {
++  local unit_id=$1
++  phase_two_cache_record_value "$(phase_two_cache_path "$unit_id")" cache-key
++}
++
++phase_two_unit_record_status() {
++  local unit_id=$1 file="$PHASE_TWO_UNITS_DIR/$unit_id.md"
++  [ -f "$file" ] || return 1
++  sed -nE 's/^status:[[:space:]]*([^[:space:]]+).*$/\1/p' "$file" | sed -n '1p'
++}
++
++phase_two_write_cache_record() {
++  local unit_id=$1 base_key=$2 prior_state_key=$3 handoff_path=$4 diff_path=$5 tier_one_path=$6
++  local cache_path tmp cache_key check_evidence reusable
++  cache_path="$(phase_two_cache_path "$unit_id")"
++  cache_key="$(phase_two_unit_evidence_cache_key "$unit_id" "$base_key" "$handoff_path" "$diff_path" "$tier_one_path")" \
++    || die "accepted $unit_id is missing cacheable handoff, diff, check, or tier-one PASS evidence"
++  check_evidence="$(phase_two_tier_one_check_evidence "$tier_one_path")"
++  if phase_two_check_evidence_reusable "$check_evidence"; then
++    reusable=yes
++  else
++    reusable=no
++  fi
++  tmp="$cache_path.tmp.$$"
++  {
++    printf '# phase-two execute cache - %s\n\n' "$unit_id"
++    printf 'unit: %s\n' "$unit_id"
++    printf 'status: accepted\n'
++    printf 'updated-at: %s\n' "$(utc_stamp)"
++    printf 'cache-key: %s\n' "$cache_key"
++    printf 'base-key: %s\n' "$base_key"
++    printf 'prior-state-key: %s\n' "$prior_state_key"
++    printf 'loop-version-key: %s\n' "$(phase_two_loop_version_digest)"
++    printf 'frame-key: %s\n' "$(phase_two_frame_digest)"
++    printf 'handoff-key: %s\n' "$(phase_two_file_digest "$handoff_path")"
++    printf 'diff-key: %s\n' "$(phase_two_file_digest "$diff_path")"
++    printf 'tier-one-key: %s\n' "$(phase_two_file_digest "$tier_one_path")"
++    printf 'tier-one-verdict: PASS\n'
++    printf 'check-evidence: %s\n' "$check_evidence"
++    printf 'cache-reusable: %s\n' "$reusable"
++  } > "$tmp"
++  mv "$tmp" "$cache_path"
++  printf '%s' "$cache_key"
++}
++
++phase_two_unit_cache_hit() {
++  local unit_id=$1 base_key=$2 handoff_path=$3 diff_path=$4 tier_one_path=$5
++  local cache_path record_status recorded_base recorded_key reusable recomputed_key
++  PHASE_TWO_CACHE_HIT_KEY=""
++  PHASE_TWO_CACHE_MISS_REASON=""
++  cache_path="$(phase_two_cache_path "$unit_id")"
++  record_status="$(phase_two_unit_record_status "$unit_id" || true)"
++  if [ "$record_status" != accepted ]; then
++    PHASE_TWO_CACHE_MISS_REASON="unit record is not accepted"
++    return 1
++  fi
++  if [ ! -f "$cache_path" ]; then
++    PHASE_TWO_CACHE_MISS_REASON="cache record missing"
++    return 1
++  fi
++  reusable="$(phase_two_cache_record_value "$cache_path" cache-reusable || true)"
++  if [ "$reusable" != yes ]; then
++    PHASE_TWO_CACHE_MISS_REASON="cache record lacks green check evidence"
++    return 1
++  fi
++  recorded_base="$(phase_two_cache_record_value "$cache_path" base-key || true)"
++  if [ "$recorded_base" != "$base_key" ]; then
++    PHASE_TWO_CACHE_MISS_REASON="signed frame, unit proof, prior state, or loop version changed"
++    return 1
++  fi
++  recorded_key="$(phase_two_cache_record_value "$cache_path" cache-key || true)"
++  recomputed_key="$(phase_two_unit_evidence_cache_key "$unit_id" "$base_key" "$handoff_path" "$diff_path" "$tier_one_path" || true)"
++  if [ -z "$recomputed_key" ]; then
++    PHASE_TWO_CACHE_MISS_REASON="accepted evidence is missing, non-PASS, non-real, or incomplete"
++    return 1
++  fi
++  if [ "$recorded_key" != "$recomputed_key" ]; then
++    PHASE_TWO_CACHE_MISS_REASON="handoff, diff, check evidence, or tier-one PASS changed"
++    return 1
++  fi
++  PHASE_TWO_CACHE_HIT_KEY="$recomputed_key"
++  return 0
++}
++
++phase_two_invalidate_unit_cache() {
++  local unit_id=$1 reason=$2 handoff_path=$3 diff_path=$4 tier_one_path=$5 cache_path
++  cache_path="$(phase_two_cache_path "$unit_id")"
++  if [ -f "$handoff_path" ] || [ -f "$diff_path" ] || [ -f "$tier_one_path" ] || [ -f "$cache_path" ]; then
++    printf 'invalidating cached evidence for %s: %s\n' "$unit_id" "$reason"
++    loop_event cache check running "invalidating cached evidence for $unit_id: $reason"
++    loop_state_write check running "invalidating cached evidence for $unit_id: $reason"
++  fi
++  rm -f "$handoff_path" "$diff_path" "$tier_one_path" "$cache_path"
++}
++
+ phase_two_write_handoff() {
+   local unit_id=$1 proof=$2 output_path=$3 handoff_path=$4 tmp
+   tmp="$handoff_path.tmp.$$"
+@@ -1760,8 +1993,9 @@ phase_two_write_handoff() {
+ }
+ 
+ phase_two_write_unit_record() {
+-  local unit_id=$1 status=$2 proof=$3 handoff_path=$4 diff_path=$5 tier_one_path=$6 message=${7-} tmp path
++  local unit_id=$1 status=$2 proof=$3 handoff_path=$4 diff_path=$5 tier_one_path=$6 message=${7-} tmp path cache_path
+   path="$PHASE_TWO_UNITS_DIR/$unit_id.md"
++  cache_path="$(phase_two_cache_path "$unit_id")"
+   tmp="$path.tmp.$$"
+   {
+     printf '# phase-two unit - %s\n\n' "$unit_id"
+@@ -1772,48 +2006,160 @@ phase_two_write_unit_record() {
+     printf 'handoff-path: %s\n' "$(relpath "$handoff_path")"
+     printf 'diff-path: %s\n' "$(relpath "$diff_path")"
+     printf 'tier-one-verdict-path: %s\n' "$(relpath "$tier_one_path")"
++    printf 'cache-key-path: %s\n' "$(relpath "$cache_path")"
+     [ -n "$message" ] && printf 'message: %s\n' "$(short_message "$message")"
+   } > "$tmp"
+   mv "$tmp" "$path"
+ }
+ 
++acceptance_output_field_count() {
++  local output=$1 field=$2
++  printf '%s\n' "$output" | awk -v field="$field" '
++    BEGIN { target = toupper(field) ":"; count = 0 }
++    {
++      line = $0
++      sub(/^[[:space:]]+/, "", line)
++      upper = toupper(line)
++      if (index(upper, target) == 1) count++
++    }
++    END { print count + 0 }
++  '
++}
++
++acceptance_output_first_field_value() {
++  local output=$1 field=$2
++  printf '%s\n' "$output" | awk -v field="$field" '
++    BEGIN { target = toupper(field) ":" }
++    {
++      line = $0
++      sub(/^[[:space:]]+/, "", line)
++      upper = toupper(line)
++      if (index(upper, target) == 1) {
++        sub(/^[^:]*:[[:space:]]*/, "", line)
++        sub(/[[:space:]]+$/, "", line)
++        print line
++        exit
++      }
++    }
++  '
++}
++
++acceptance_output_verdict_value() {
++  local output=$1
++  printf '%s\n' "$output" | awk '
++    {
++      line = $0
++      sub(/^[[:space:]]+/, "", line)
++      upper = toupper(line)
++      if (index(upper, "VERDICT:") == 1) {
++        sub(/^[^:]*:[[:space:]]*/, "", line)
++        sub(/[[:space:]]+$/, "", line)
++        value = toupper(line)
++        if (value == "PASS" || value == "FLAG") print value
++        exit
++      }
++    }
++  '
++}
++
++acceptance_output_has_required_fields() {
++  local output=$1 verdict_count rationale_count evidence_count verdict rationale evidence
++  verdict_count="$(acceptance_output_field_count "$output" VERDICT)"
++  rationale_count="$(acceptance_output_field_count "$output" RATIONALE)"
++  evidence_count="$(acceptance_output_field_count "$output" EVIDENCE)"
++  verdict="$(acceptance_output_verdict_value "$output")"
++  rationale="$(acceptance_output_first_field_value "$output" RATIONALE)"
++  evidence="$(acceptance_output_first_field_value "$output" EVIDENCE)"
++  [ "$verdict_count" -eq 1 ] || return 1
++  [ "$verdict" = PASS ] || [ "$verdict" = FLAG ] || return 1
++  [ "$rationale_count" -ge 1 ] || return 1
++  [ "$evidence_count" -ge 1 ] || return 1
++  meaningful_text "$rationale" >/dev/null || return 1
++  meaningful_text "$evidence" >/dev/null || return 1
++}
++
+ acceptance_verdict_from_output() {
+-  local output=$1 status=$2 nonempty_lines verdict_lines pass_lines flag_lines
++  local output=$1 status=$2
+   [ "$status" -eq 0 ] || { printf 'FLAG'; return; }
+-  nonempty_lines="$(printf '%s\n' "$output" | sed '/^[[:space:]]*$/d' | wc -l | tr -d ' ')"
+-  verdict_lines="$(printf '%s\n' "$output" | sed '/^[[:space:]]*$/d' | grep -Ec '^[[:space:]]*(PASS|FLAG)[[:space:]]*$' || true)"
+-  pass_lines="$(printf '%s\n' "$output" | sed '/^[[:space:]]*$/d' | grep -Ec '^[[:space:]]*PASS[[:space:]]*$' || true)"
+-  flag_lines="$(printf '%s\n' "$output" | sed '/^[[:space:]]*$/d' | grep -Ec '^[[:space:]]*FLAG[[:space:]]*$' || true)"
+-  if [ "$nonempty_lines" -eq 1 ] && [ "$verdict_lines" -eq 1 ] && [ "$pass_lines" -eq 1 ] && [ "$flag_lines" -eq 0 ]; then
+-    printf 'PASS'
+-  elif [ "$nonempty_lines" -eq 1 ] && [ "$verdict_lines" -eq 1 ] && [ "$flag_lines" -eq 1 ] && [ "$pass_lines" -eq 0 ]; then
+-    printf 'FLAG'
++  if acceptance_output_has_required_fields "$output"; then
++    acceptance_output_verdict_value "$output"
+   else
+     printf 'FLAG'
+   fi
+ }
+ 
+ acceptance_note_from_output() {
+-  local output=$1 status=$2
++  local output=$1 status=$2 verdict_count rationale_count evidence_count verdict rationale evidence
+   if [ "$status" -ne 0 ]; then
+     short_message "acceptance reviewer subprocess exited $status; counted as FLAG"
+-  elif [ "$(acceptance_verdict_from_output "$output" "$status")" = PASS ]; then
+-    short_message "structured acceptance verdict returned PASS"
+-  elif printf '%s\n' "$output" | sed '/^[[:space:]]*$/d' | grep -Eq '^[[:space:]]*FLAG[[:space:]]*$'; then
+-    short_message "structured acceptance verdict returned FLAG"
++    return
++  fi
++  verdict_count="$(acceptance_output_field_count "$output" VERDICT)"
++  rationale_count="$(acceptance_output_field_count "$output" RATIONALE)"
++  evidence_count="$(acceptance_output_field_count "$output" EVIDENCE)"
++  verdict="$(acceptance_output_verdict_value "$output")"
++  rationale="$(acceptance_output_first_field_value "$output" RATIONALE)"
++  evidence="$(acceptance_output_first_field_value "$output" EVIDENCE)"
++  if [ "$verdict_count" -ne 1 ] || { [ "$verdict" != PASS ] && [ "$verdict" != FLAG ]; }; then
++    short_message "missing or malformed VERDICT field; counted as FLAG"
++  elif [ "$rationale_count" -lt 1 ] || ! meaningful_text "$rationale" >/dev/null; then
++    short_message "missing or empty RATIONALE field; counted as FLAG"
++  elif [ "$evidence_count" -lt 1 ] || ! meaningful_text "$evidence" >/dev/null; then
++    short_message "missing or empty EVIDENCE field; counted as FLAG"
++  elif [ "$verdict" = PASS ]; then
++    short_message "structured acceptance verdict PASS with rationale and evidence"
+   else
+-    short_message "missing or malformed PASS/FLAG verdict; counted as FLAG"
++    short_message "structured acceptance verdict FLAG with rationale and evidence"
+   fi
+ }
+ 
++acceptance_source_proof() {
++  case "$1" in
++    real-reviewer)
++      printf 'real reviewer subprocess completed through codex exec with literal approval never and literal sandbox read-only'
++      ;;
++    dry-run/self-test)
++      printf 'dry-run self-test output generated by loop; rejected by real archive'
++      ;;
++    fake/self-test)
++      printf 'fake acceptance loaded from HYPERCORE_ACCEPTANCE_FAKE_DIR in dry-run; rejected by real archive'
++      ;;
++    *)
++      printf 'unsupported acceptance source'
++      ;;
++  esac
++}
++
++acceptance_finalize_result() {
++  local output=$1 status=$2 source=$3
++  ACCEPTANCE_OUTPUT="$output"
++  ACCEPTANCE_SOURCE="$source"
++  ACCEPTANCE_VERDICT="$(acceptance_verdict_from_output "$output" "$status")"
++  ACCEPTANCE_NOTES="$(acceptance_note_from_output "$output" "$status")"
++  ACCEPTANCE_RATIONALE="$(acceptance_output_first_field_value "$output" RATIONALE)"
++  ACCEPTANCE_EVIDENCE="$(acceptance_output_first_field_value "$output" EVIDENCE)"
++}
++
+ run_acceptance_reviewer() {
+   local reviewer_key=$1 prompt=$2 output status final tmpout tmperr fake_file timeout_seconds
+   ACCEPTANCE_VERDICT=FLAG
+   ACCEPTANCE_NOTES="missing acceptance reviewer output; counted as FLAG"
+   ACCEPTANCE_OUTPUT=""
++  ACCEPTANCE_SOURCE=""
++  ACCEPTANCE_RATIONALE=""
++  ACCEPTANCE_EVIDENCE=""
+ 
+   if [ -n "${HYPERCORE_ACCEPTANCE_FAKE_DIR:-}" ]; then
++    [ "$DRY_RUN" = 1 ] \
++      || die "real execute refuses HYPERCORE_ACCEPTANCE_FAKE_DIR; fake acceptance is dry-run/self-test only"
+     fake_file="$HYPERCORE_ACCEPTANCE_FAKE_DIR/$reviewer_key"
++    if [ ! -f "$fake_file" ]; then
++      case "$reviewer_key" in
++        tier-one-unit-[0-9][0-9][0-9]-*)
++          fake_file="$HYPERCORE_ACCEPTANCE_FAKE_DIR/$(printf '%s' "$reviewer_key" | sed -E 's/-(fast|strong)-[0-9]+$//')"
++          ;;
++      esac
++    fi
+     if [ -f "$fake_file" ]; then
+       output="$(cat "$fake_file")"
+       status=0
+@@ -1821,24 +2167,21 @@ run_acceptance_reviewer() {
+       output="missing fake acceptance reviewer output for $reviewer_key"
+       status=1
+     fi
+-    ACCEPTANCE_OUTPUT="$output"
+-    ACCEPTANCE_VERDICT="$(acceptance_verdict_from_output "$output" "$status")"
+-    ACCEPTANCE_NOTES="$(acceptance_note_from_output "$output" "$status")"
++    acceptance_finalize_result "$output" "$status" "fake/self-test"
+     return 0
+   fi
+ 
+   if [ "$DRY_RUN" = 1 ]; then
+-    output=PASS
++    output="VERDICT: PASS
++RATIONALE: dry-run self-test default acceptance.
++EVIDENCE: dry-run mode skipped the real reviewer, and the artifact source marker prevents real archive use."
+     status=0
+-    ACCEPTANCE_OUTPUT="$output"
+-    ACCEPTANCE_VERDICT="$(acceptance_verdict_from_output "$output" "$status")"
+-    ACCEPTANCE_NOTES="$(acceptance_note_from_output "$output" "$status")"
++    acceptance_finalize_result "$output" "$status" "dry-run/self-test"
+     return 0
+   fi
+ 
+   command -v "$CODEX_BIN" >/dev/null 2>&1 \
+     || die "acceptance review cannot spawn Codex reviewers: Codex binary '$CODEX_BIN' is not on PATH"
+-  validate_review_model
+   timeout_seconds="${HYPERCORE_ACCEPTANCE_TIMEOUT_SECONDS:-600}"
+   case "$timeout_seconds" in
+     ""|*[!0-9]*) die "HYPERCORE_ACCEPTANCE_TIMEOUT_SECONDS must be a positive integer" ;;
+@@ -1849,8 +2192,9 @@ run_acceptance_reviewer() {
+   final="$(mktemp "${TMPDIR:-/tmp}/hypercore-acceptance-$reviewer_key-final.XXXXXX")"
+   tmpout="$(mktemp "${TMPDIR:-/tmp}/hypercore-acceptance-$reviewer_key-out.XXXXXX")"
+   tmperr="$(mktemp "${TMPDIR:-/tmp}/hypercore-acceptance-$reviewer_key-err.XXXXXX")"
+-  ACCEPTANCE_CMD=("$CODEX_BIN" -a never -s read-only -C "$ROOT")
+-  [ -n "${CODEX_REVIEW_MODEL:-}" ] && ACCEPTANCE_CMD+=(-m "$CODEX_REVIEW_MODEL")
++  CODEX_CMD=("$CODEX_BIN" -a never -s read-only -C "$ROOT")
++  codex_add_review_route_args
++  ACCEPTANCE_CMD=("${CODEX_CMD[@]}")
+   ACCEPTANCE_CMD+=(exec -o "$final" -)
+   set +e
+   printf '%s' "$prompt" | timeout --kill-after=5s "$timeout_seconds" "${ACCEPTANCE_CMD[@]}" >"$tmpout" 2>"$tmperr"
+@@ -1864,9 +2208,7 @@ run_acceptance_reviewer() {
+   if [ "$status" -eq 124 ] || [ "$status" -eq 137 ]; then
+     output="${output:-acceptance reviewer timed out after ${timeout_seconds}s}"
+   fi
+-  ACCEPTANCE_OUTPUT="$output"
+-  ACCEPTANCE_VERDICT="$(acceptance_verdict_from_output "$output" "$status")"
+-  ACCEPTANCE_NOTES="$(acceptance_note_from_output "$output" "$status")"
++  acceptance_finalize_result "$output" "$status" "real-reviewer"
+   rm -f "$final" "$tmpout" "$tmperr"
+ }
+ 
+@@ -1876,7 +2218,7 @@ tier_two_lens_instruction() {
+       printf 'For the whole-acceptance-conformance lens, check the built worktree and phase-two artifacts against the signed acceptance condition, observable acceptance, excluded interpretation, and route.'
+       ;;
+     proof-integrity)
+-      printf 'For the proof-integrity lens, check whether the recorded unit handoffs, diffs, mechanical checks, and acceptance artifacts support the proof claims without dry-run or stale evidence.'
++      printf 'For the proof-integrity lens, check whether the recorded unit handoffs, diffs, mechanical checks, and acceptance artifacts support the proof claims with real-source proof and without dry-run, fake, or stale evidence.'
+       ;;
+     independent-coherence)
+       printf 'For the independent-coherence lens, perform the semantic sweep judgement for one-way adoption; do not claim to solve semantic indexing.'
+@@ -1894,12 +2236,16 @@ tier_two_lens_instruction() {
+ }
+ 
+ write_acceptance_artifact() {
+-  local path=$1 title=$2 reviewer_key=$3 verdict=$4 notes=$5 prompt=$6 output=$7 tmp
++  local path=$1 title=$2 reviewer_key=$3 verdict=$4 source=$5 rationale=$6 evidence=$7 notes=$8 prompt=$9 output=${10} tmp
+   tmp="$path.tmp.$$"
+   {
+     printf '# %s\n\n' "$title"
+     printf 'reviewer: %s\n' "$reviewer_key"
+     printf 'Verdict: %s\n' "$verdict"
++    printf 'source: %s\n' "$source"
++    printf 'source-proof: %s\n' "$(acceptance_source_proof "$source")"
++    printf 'Rationale: %s\n' "$rationale"
++    printf 'Evidence: %s\n' "$evidence"
+     printf 'dry-run: %s\n' "$([ "$DRY_RUN" = 1 ] && printf yes || printf no)"
+     printf 'Isolation: acceptance reviewer subprocesses are invoked with literal approval never and literal sandbox read-only.\n'
+     printf 'Network isolation: not claimed by this adapter; the Codex CLI invocation is not represented as proof of network isolation.\n'
+@@ -1924,9 +2270,42 @@ acceptance_artifact_dry_run() {
+   grep -Eq '^dry-run:[[:space:]]*yes[[:space:]]*$' "$file"
+ }
+ 
++acceptance_artifact_source() {
++  local file=$1
++  [ -f "$file" ] || return 1
++  sed -nE 's/^source:[[:space:]]*(real-reviewer|dry-run\/self-test|fake\/self-test)[[:space:]]*$/\1/p' "$file" | sed -n '1p'
++}
++
++acceptance_artifact_field_meaningful() {
++  local file=$1 label=$2 value
++  [ -f "$file" ] || return 1
++  value="$(sed -nE "s/^$label:[[:space:]]*(.*)$/\1/p" "$file" | sed -n '1p')"
++  meaningful_text "$value" >/dev/null
++}
++
++required_acceptance_artifact_fields_clean() {
++  local stage=$1 artifact_desc=$2 file=$3 source
++  acceptance_artifact_field_meaningful "$file" Rationale \
++    || die "$stage blocked by $artifact_desc without rationale"
++  acceptance_artifact_field_meaningful "$file" Evidence \
++    || die "$stage blocked by $artifact_desc without evidence"
++  acceptance_artifact_field_meaningful "$file" source-proof \
++    || die "$stage blocked by $artifact_desc without source proof"
++  if [ "$DRY_RUN" != 1 ]; then
++    source="$(acceptance_artifact_source "$file" || true)"
++    [ "$source" = real-reviewer ] \
++      || die "$stage blocked by non-real $artifact_desc acceptance source: ${source:-missing}"
++    if acceptance_artifact_dry_run "$file"; then
++      die "$stage blocked by dry-run $artifact_desc"
++    fi
++  fi
++}
++
+ run_tier_one_acceptance() {
+-  local work_name=$1 unit_id=$2 proof=$3 frame_rel=$4 handoff_path=$5 diff_path=$6 check_status=$7 verdict_path prompt reviewer_key
++  local work_name=$1 unit_id=$2 proof=$3 frame_rel=$4 handoff_path=$5 diff_path=$6 check_status=$7 attempt_key="${8:-}"
++  local verdict_path prompt reviewer_key
+   reviewer_key="tier-one-$unit_id"
++  [ -n "$attempt_key" ] && reviewer_key="$reviewer_key-$attempt_key"
+   verdict_path="$PHASE_TWO_TIER_ONE_DIR/$unit_id.md"
+   prompt="Implementation-acceptance reviewer: tier one
+ Work: $work_name
+@@ -1940,10 +2319,12 @@ Mechanical check immediately before this reviewer: $check_status
+ 
+ Read only the signed frame, the intent it references, the unit handoff, and the unit diff record.
+ The unit diff record is a cumulative worktree snapshot after this unit, so it may include other already-built or planned unit changes. Check whether the handoff and proof-obligation-relevant diff content make this unit a proof-advancing delta toward the operator-signed acceptance; do not flag solely because unrelated cumulative diff hunks are present.
+-Return exactly one line:
+-PASS
+-or
+-FLAG
++Return exactly these required fields, with exactly one VERDICT line:
++VERDICT: PASS
++RATIONALE: the frame-anchored reason for the verdict
++EVIDENCE: concrete artifact paths, command results, or missing evidence that supports the verdict
++
++Use VERDICT: FLAG instead of VERDICT: PASS when the evidence is missing, stale, uncertain, or mismatched.
+ 
+ Treat uncertainty, missing evidence, or mismatch with the signed frame as FLAG."
+   printf '\n--- acceptance: tier one %s ---\n' "$unit_id"
+@@ -1952,24 +2333,32 @@ Treat uncertainty, missing evidence, or mismatch with the signed frame as FLAG."
+   loop_state_write check running "tier-one implementation acceptance for $unit_id"
+   run_acceptance_reviewer "$reviewer_key" "$prompt"
+   write_acceptance_artifact "$verdict_path" "tier-one implementation acceptance - $unit_id" \
+-    "$reviewer_key" "$ACCEPTANCE_VERDICT" "$ACCEPTANCE_NOTES" "$prompt" "$ACCEPTANCE_OUTPUT"
++    "$reviewer_key" "$ACCEPTANCE_VERDICT" "$ACCEPTANCE_SOURCE" "$ACCEPTANCE_RATIONALE" "$ACCEPTANCE_EVIDENCE" "$ACCEPTANCE_NOTES" "$prompt" "$ACCEPTANCE_OUTPUT"
+   loop_event acceptance check "$([ "$ACCEPTANCE_VERDICT" = PASS ] && printf passed || printf failed)" \
+-    "tier-one $unit_id verdict: $ACCEPTANCE_VERDICT"
++    "tier-one $unit_id verdict: $ACCEPTANCE_VERDICT - $ACCEPTANCE_NOTES"
+   loop_state_write check "$([ "$ACCEPTANCE_VERDICT" = PASS ] && printf passed || printf failed)" \
+-    "tier-one $unit_id verdict: $ACCEPTANCE_VERDICT"
+-  printf 'tier-one %s verdict: %s (%s)\n' "$unit_id" "$ACCEPTANCE_VERDICT" "$(relpath "$verdict_path")"
+-  [ "$ACCEPTANCE_VERDICT" = PASS ] \
+-    || die "tier-one implementation-acceptance FLAG for $unit_id — phase two stops before archive; $work_name stays in flight for the operator"
++    "tier-one $unit_id verdict: $ACCEPTANCE_VERDICT - $ACCEPTANCE_NOTES"
++  printf 'tier-one %s verdict: %s (%s; %s)\n' "$unit_id" "$ACCEPTANCE_VERDICT" "$(relpath "$verdict_path")" "$ACCEPTANCE_NOTES"
++  if [ "$ACCEPTANCE_VERDICT" = PASS ]; then
++    return 0
++  fi
++  UNIT_ATTEMPT_REASON="tier-one implementation-acceptance FLAG for $unit_id"
++  return 1
+ }
+ 
+-run_tier_two_panel() {
+-  local work_name=$1 frame_rel=$2 active_rel=$3 lens reviewer_key verdict_path prompt lens_instruction any_flag=0 verdict
+-  printf '\n--- acceptance: tier two one-way panel ---\n'
+-  for lens in "${TIER_TWO_PANEL_LENSES[@]}"; do
+-    reviewer_key="panel-$lens"
+-    verdict_path="$PHASE_TWO_PANEL_DIR/$lens.md"
+-    lens_instruction="$(tier_two_lens_instruction "$lens")"
+-    prompt="Implementation-acceptance reviewer: tier two one-way panel
++acceptance_artifact_notes() {
++  local file=$1
++  [ -f "$file" ] || return 1
++  sed -nE 's/^Notes:[[:space:]]*(.*)$/\1/p' "$file" | sed -n '1p'
++}
++
++run_tier_two_lens_acceptance() {
++  local work_name=$1 frame_rel=$2 active_rel=$3 lens=$4
++  local reviewer_key verdict_path prompt lens_instruction
++  reviewer_key="panel-$lens"
++  verdict_path="$PHASE_TWO_PANEL_DIR/$lens.md"
++  lens_instruction="$(tier_two_lens_instruction "$lens")"
++  prompt="Implementation-acceptance reviewer: tier two one-way panel
+ Work: $work_name
+ Node: $NODE_REL
+ Lens: $lens
+@@ -1979,24 +2368,61 @@ Phase-two acceptance directory: $(relpath "$PHASE_TWO_ACCEPTANCE_DIR")
+ 
+ Read only the signed frame, the intent it references, the built worktree state, and phase-two acceptance artifacts.
+ $lens_instruction
+-Return exactly one line:
+-PASS
+-or
+-FLAG
++Return exactly these required fields, with exactly one VERDICT line:
++VERDICT: PASS
++RATIONALE: the frame-anchored reason for the verdict
++EVIDENCE: concrete artifact paths, command results, or missing evidence that supports the verdict
++
++Use VERDICT: FLAG instead of VERDICT: PASS when the evidence is missing, stale, uncertain, unresolved, or mismatched.
+ 
+ Treat uncertainty, missing evidence, unresolved tier-one flags, or mismatch with the signed frame as FLAG."
+-    LOOP_CURRENT_GATE=check
+-    loop_event acceptance check running "tier-two implementation acceptance lens $lens"
+-    loop_state_write check running "tier-two implementation acceptance lens $lens"
+-    run_acceptance_reviewer "$reviewer_key" "$prompt"
+-    write_acceptance_artifact "$verdict_path" "tier-two implementation acceptance - $lens" \
+-      "$reviewer_key" "$ACCEPTANCE_VERDICT" "$ACCEPTANCE_NOTES" "$prompt" "$ACCEPTANCE_OUTPUT"
+-    loop_event acceptance check "$([ "$ACCEPTANCE_VERDICT" = PASS ] && printf passed || printf failed)" \
+-      "tier-two $lens verdict: $ACCEPTANCE_VERDICT"
+-    loop_state_write check "$([ "$ACCEPTANCE_VERDICT" = PASS ] && printf passed || printf failed)" \
+-      "tier-two $lens verdict: $ACCEPTANCE_VERDICT"
+-    printf 'tier-two %s verdict: %s (%s)\n' "$lens" "$ACCEPTANCE_VERDICT" "$(relpath "$verdict_path")"
+-    [ "$ACCEPTANCE_VERDICT" = PASS ] || any_flag=1
++  PHASE_TWO_RUN_ACTIVE=0
++  run_acceptance_reviewer "$reviewer_key" "$prompt"
++  write_acceptance_artifact "$verdict_path" "tier-two implementation acceptance - $lens" \
++    "$reviewer_key" "$ACCEPTANCE_VERDICT" "$ACCEPTANCE_SOURCE" "$ACCEPTANCE_RATIONALE" "$ACCEPTANCE_EVIDENCE" "$ACCEPTANCE_NOTES" "$prompt" "$ACCEPTANCE_OUTPUT"
++}
++
++run_tier_two_panel() {
++  local work_name=$1 frame_rel=$2 active_rel=$3 lens reviewer_key verdict_path prompt any_flag=0 verdict
++  local pid wait_status notes
++  declare -A panel_pids
++  printf '\n--- acceptance: tier two one-way panel ---\n'
++  LOOP_CURRENT_GATE=check
++  printf 'tier-two panel starting %s concurrent lenses\n' "${#TIER_TWO_PANEL_LENSES[@]}"
++  loop_event acceptance check running "tier-two panel starting ${#TIER_TWO_PANEL_LENSES[@]} concurrent lenses"
++  loop_state_write check running "tier-two panel starting ${#TIER_TWO_PANEL_LENSES[@]} concurrent lenses"
++  for lens in "${TIER_TWO_PANEL_LENSES[@]}"; do
++    reviewer_key="panel-$lens"
++    verdict_path="$PHASE_TWO_PANEL_DIR/$lens.md"
++    rm -f "$verdict_path"
++    printf 'tier-two %s started concurrently (%s)\n' "$lens" "$(relpath "$verdict_path")"
++    loop_event acceptance check running "tier-two implementation acceptance lens $lens started concurrently"
++    run_tier_two_lens_acceptance "$work_name" "$frame_rel" "$active_rel" "$lens" &
++    panel_pids["$lens"]=$!
++  done
++
++  for lens in "${TIER_TWO_PANEL_LENSES[@]}"; do
++    reviewer_key="panel-$lens"
++    verdict_path="$PHASE_TWO_PANEL_DIR/$lens.md"
++    pid="${panel_pids[$lens]}"
++    wait_status=0
++    wait "$pid" || wait_status=$?
++    if [ "$wait_status" -ne 0 ]; then
++      prompt="tier-two lens $lens failed before writing a reviewer artifact"
++      write_acceptance_artifact "$verdict_path" "tier-two implementation acceptance - $lens" \
++        "$reviewer_key" FLAG "unsupported" "" "" \
++        "tier-two lens subprocess exited $wait_status; counted as FLAG" "$prompt" ""
++    fi
++    verdict="$(acceptance_artifact_verdict "$verdict_path" || true)"
++    notes="$(acceptance_artifact_notes "$verdict_path" || true)"
++    [ -n "$notes" ] || notes="missing acceptance artifact notes; counted as FLAG"
++    [ "$verdict" = PASS ] || verdict=FLAG
++    loop_event acceptance check "$([ "$verdict" = PASS ] && printf passed || printf failed)" \
++      "tier-two $lens verdict: $verdict - $notes"
++    loop_state_write check "$([ "$verdict" = PASS ] && printf passed || printf failed)" \
++      "tier-two $lens verdict: $verdict - $notes"
++    printf 'tier-two %s verdict: %s (%s; %s)\n' "$lens" "$verdict" "$(relpath "$verdict_path")" "$notes"
++    [ "$verdict" = PASS ] || any_flag=1
+   done
+   if [ "$any_flag" = 1 ]; then
+     die "tier-two implementation-acceptance panel FLAG — one-way archive is blocked; $work_name stays in flight for the operator"
+@@ -2008,6 +2434,8 @@ Treat uncertainty, missing evidence, unresolved tier-one flags, or mismatch with
+     [ "$verdict" = PASS ] \
+       || die "one-way archive blocked by missing or non-PASS tier-two verdict for $lens"
+   done
++  loop_event acceptance check passed "tier-two panel all lenses clean"
++  loop_state_write check passed "tier-two panel all lenses clean"
+ }
+ 
+ required_tier_one_evidence_clean() {
+@@ -2018,9 +2446,7 @@ required_tier_one_evidence_clean() {
+     verdict="$(acceptance_artifact_verdict "$verdict_path" || true)"
+     [ "$verdict" = PASS ] \
+       || die "$stage blocked by missing or non-PASS tier-one verdict for $unit_id"
+-    if [ "$DRY_RUN" != 1 ] && acceptance_artifact_dry_run "$verdict_path"; then
+-      die "$stage blocked by dry-run tier-one verdict for $unit_id"
+-    fi
++    required_acceptance_artifact_fields_clean "$stage" "tier-one verdict for $unit_id" "$verdict_path"
+   done
+ }
+ 
+@@ -2038,11 +2464,10 @@ required_acceptance_clean_for_archive() {
+       verdict="$(acceptance_artifact_verdict "$verdict_path" || true)"
+       [ "$verdict" = PASS ] \
+         || die "one-way archive blocked by missing or non-PASS tier-two verdict for $lens"
+-      if [ "$DRY_RUN" != 1 ] && acceptance_artifact_dry_run "$verdict_path"; then
+-        die "one-way archive blocked by dry-run tier-two verdict for $lens"
+-      fi
++      required_acceptance_artifact_fields_clean "one-way archive" "tier-two verdict for $lens" "$verdict_path"
+     done
+   fi
++  return 0
+ }
+ 
+ phase() {
+@@ -2079,7 +2504,7 @@ phase_two_state_file_for() {
+ }
+ 
+ print_phase_two_status() {
+-  local work_name=$1 state run_id gate status updated message events unit failure acceptance
++  local work_name=$1 state run_id gate status updated message events unit failure acceptance tier_one panel cache
+   state="$(phase_two_state_file_for "$work_name")"
+   [ -s "$state" ] || return 0
+   run_id="$(json_file_string_value "$state" run_id)"
+@@ -2091,8 +2516,11 @@ print_phase_two_status() {
+   failure="$(json_file_string_value "$state" failure_reason)"
+   events="$(json_file_path_value "$state" events_jsonl)"
+   acceptance="$(json_file_path_value "$state" phase_two_acceptance_dir)"
+-  printf 'phase-two run: run_id=%s gate=%s unit=%s status=%s updated_at=%s state=%s events=%s acceptance=%s failure=%s message=%s\n' \
+-    "$run_id" "$gate" "$unit" "$status" "$updated" "$state" "$events" "$acceptance" "$failure" "$message"
++  tier_one="$(json_file_path_value "$state" tier_one_dir)"
++  panel="$(json_file_path_value "$state" tier_two_panel_dir)"
++  cache="$(json_file_path_value "$state" cache_dir)"
++  printf 'phase-two run: run_id=%s gate=%s unit=%s status=%s updated_at=%s state=%s events=%s acceptance=%s tier_one=%s tier_two_panel=%s cache=%s failure=%s message=%s\n' \
++    "$run_id" "$gate" "$unit" "$status" "$updated" "$state" "$events" "$acceptance" "$tier_one" "$panel" "$cache" "$failure" "$message"
+ }
+ 
+ print_status_json() {
+@@ -2187,23 +2615,79 @@ record_codex_progress_line() {
+   loop_state_write "$gate" running "$msg"
+ }
+ 
++codex_model_token_ok() {
++  local value=$1
++  [[ "$value" =~ ^[A-Za-z0-9][A-Za-z0-9._:/+-]*$ ]]
++}
++
++codex_effort_token_ok() {
++  local value=$1
++  [[ "$value" =~ ^[A-Za-z0-9][A-Za-z0-9._+-]*$ ]]
++}
++
++validate_codex_model_var() {
++  local var=$1 value=$2
++  [ -z "$value" ] && return 0
++  codex_model_token_ok "$value" || die "$var must be a single model token"
++}
++
++validate_codex_effort_var() {
++  local var=$1 value=$2
++  [ -z "$value" ] && return 0
++  codex_effort_token_ok "$value" || die "$var must be a single effort token"
++}
++
++codex_add_model_and_effort_args() {
++  local model=$1 effort=$2 model_var=$3 effort_var=$4
++  validate_codex_model_var "$model_var" "$model"
++  validate_codex_effort_var "$effort_var" "$effort"
++  [ -n "$model" ] && CODEX_CMD+=(-m "$model")
++  [ -n "$effort" ] && CODEX_CMD+=(-c "model_reasoning_effort=\"$effort\"")
++  return 0
++}
++
++codex_route_model_and_effort() {
++  local route=$1 model="" effort=""
++  case "$route" in
++    builder-fast)
++      model="${CODEX_BUILDER_MODEL:-gpt-5.3-codex-spark}"
++      effort="${CODEX_BUILDER_EFFORT:-xhigh}"
++      codex_add_model_and_effort_args "$model" "$effort" CODEX_BUILDER_MODEL CODEX_BUILDER_EFFORT
++      ;;
++    builder-strong)
++      model="${CODEX_STRONG_BUILDER_MODEL:-${CODEX_REVIEW_MODEL:-${CODEX_MODEL:-}}}"
++      effort="${CODEX_STRONG_BUILDER_EFFORT:-${CODEX_REVIEW_EFFORT:-xhigh}}"
++      codex_add_model_and_effort_args "$model" "$effort" CODEX_STRONG_BUILDER_MODEL CODEX_STRONG_BUILDER_EFFORT
++      ;;
++    default)
++      model="${CODEX_MODEL:-}"
++      effort="${CODEX_EFFORT:-}"
++      codex_add_model_and_effort_args "$model" "$effort" CODEX_MODEL CODEX_EFFORT
++      ;;
++    *)
++      die "unknown Codex route: $route"
++      ;;
++  esac
++}
++
+ codex_cmd_prefix() {
+-  local sandbox="$1"
++  local sandbox="$1" route="${2:-default}"
+   CODEX_CMD=("$CODEX_BIN" -a "$CODEX_APPROVAL" -s "$sandbox" -C "$ROOT")
+-  [ -n "${CODEX_MODEL:-}" ] && CODEX_CMD+=(-m "$CODEX_MODEL")
++  codex_route_model_and_effort "$route"
+   [ -n "${CODEX_PROFILE:-}" ] && CODEX_CMD+=(-p "$CODEX_PROFILE")
+   return 0
+ }
+ 
+ run_codex_gate() {
+-  local gate="$1" tools="$2" mode="$3" sid="$4" prompt="$5" sys="$6" sandbox final combined
+-  local codex_events gate_output cmd_status pipeline_status msg
++  local gate="$1" tools="$2" mode="$3" sid="$4" prompt="$5" sys="$6" route="${7:-default}" allow_failure="${8:-0}"
++  local sandbox final combined codex_events gate_output cmd_status pipeline_status msg
++  local fake_file fake_status_file fake_status_line
+   sandbox="$(codex_sandbox_for_tools "$tools")"
+   final="$(mktemp "${TMPDIR:-/tmp}/hypercore-loop-codex-$gate-final.XXXXXX")"
+   combined="$(printf '%s\n\n---\n\n%s' "$sys" "$prompt")"
+   codex_events="$LOOP_RUN_DIR/events-codex-$gate.jsonl"
+   gate_output="$LOOP_RUN_GATE_DIR/$gate.final.md"
+-  codex_cmd_prefix "$sandbox"
++  codex_cmd_prefix "$sandbox" "$route"
+ 
+   case "$mode" in
+     start)  CODEX_CMD+=(exec --json -o "$final" -) ;;
+@@ -2214,6 +2698,45 @@ run_codex_gate() {
+   loop_event gate-start "$gate" running "$msg"
+   loop_state_write "$gate" running "$msg"
+ 
++  if [ -n "${HYPERCORE_BUILDER_FAKE_DIR:-}" ] && [[ "$route" == builder-* ]]; then
++    [ "$DRY_RUN" = 1 ] \
++      || die "real execute refuses HYPERCORE_BUILDER_FAKE_DIR; fake builders are dry-run/self-test only"
++    fake_file="$HYPERCORE_BUILDER_FAKE_DIR/$gate"
++    fake_status_file="$fake_file.status"
++    if [ -f "$fake_file" ]; then
++      GATE_OUTPUT="$(cat "$fake_file")"
++    else
++      GATE_OUTPUT="fake builder output for $gate"
++    fi
++    cmd_status=0
++    if [ -f "$fake_status_file" ]; then
++      fake_status_line="$(sed -n '1p' "$fake_status_file")"
++      case "$fake_status_line" in
++        ""|*[!0-9]*) die "fake builder status for $gate must be a non-negative integer" ;;
++        *) cmd_status=$fake_status_line ;;
++      esac
++    fi
++    printf '{"type":"fake-builder","gate":%s,"route":%s,"status":%s}\n' \
++      "$(json_string "$gate")" "$(json_string "$route")" "$cmd_status" > "$codex_events"
++    printf '%q ' "${CODEX_CMD[@]}"; printf '<<< stdin: %q\n' "$combined"
++    printf '%s\n' "$GATE_OUTPUT" > "$gate_output"
++    PHASE_TWO_SESSION_ID="fake-builder-$gate"
++    loop_event codex-thread "$gate" running "fake builder session: $PHASE_TWO_SESSION_ID"
++    if [ "$cmd_status" -ne 0 ]; then
++      msg="gate $gate failed: fake builder exited $cmd_status"
++      loop_event gate-failure "$gate" failed "$msg"
++      loop_state_write "$gate" failed "$msg"
++      rm -f "$final"
++      [ "$allow_failure" = 1 ] && return "$cmd_status"
++      die "$msg"
++    fi
++    loop_event gate-finish "$gate" passed "fake builder stored $gate final message at $gate_output"
++    loop_state_write "$gate" passed "fake builder stored $gate final message at $gate_output"
++    rm -f "$final"
++    printf '%s\n' "$GATE_OUTPUT"
++    return 0
++  fi
++
+   if [ "$DRY_RUN" = 1 ]; then
+     printf '{"type":"dry-run","gate":%s,"mode":%s}\n' "$(json_string "$gate")" "$(json_string "$mode")" > "$codex_events"
+     printf '%q ' "${CODEX_CMD[@]}"; printf '<<< stdin: %q\n' "$combined"
+@@ -2240,10 +2763,17 @@ run_codex_gate() {
+   cmd_status=${pipeline_status[1]}
+   if [ "$cmd_status" -ne 0 ]; then
+     [ -s "$final" ] && cp "$final" "$gate_output"
++    if [ -s "$final" ]; then
++      GATE_OUTPUT="$(cat "$final")"
++    else
++      GATE_OUTPUT="codex exec exited $cmd_status"
++      printf '%s\n' "$GATE_OUTPUT" > "$gate_output"
++    fi
+     msg="gate $gate failed: codex exec exited $cmd_status"
+     loop_event gate-failure "$gate" failed "$msg"
+     loop_state_write "$gate" failed "$msg"
+     rm -f "$final"
++    [ "$allow_failure" = 1 ] && return "$cmd_status"
+     die "$msg"
+   fi
+ 
+@@ -2266,11 +2796,11 @@ run_codex_gate() {
+ # args: <gate-name> <allowed-tools> <mode> <session-id> <prompt> [instruction-gate]
+ # mode is start; every phase-two builder, acceptance reviewer, and archive actor is fresh.
+ run_gate() {
+-  local gate="$1" tools="$2" mode="$3" sid="$4" prompt="$5" instruction_gate="${6:-$1}" sys
++  local gate="$1" tools="$2" mode="$3" sid="$4" prompt="$5" instruction_gate="${6:-$1}" route="${7:-default}" allow_failure="${8:-0}" sys
+   sys="$(cat "$GATES/$instruction_gate.md")"
+ 
+   case "$LOOP_HARNESS" in
+-    codex) run_codex_gate "$gate" "$tools" "$mode" "$sid" "$prompt" "$sys" ;;
++    codex) run_codex_gate "$gate" "$tools" "$mode" "$sid" "$prompt" "$sys" "$route" "$allow_failure" ;;
+     *) die "unsupported LOOP_HARNESS: $LOOP_HARNESS (only codex is supported)" ;;
+   esac
+ }
+@@ -2469,9 +2999,18 @@ valid_optional_review_role() {
+ 
+ validate_review_model() {
+   local model=${CODEX_REVIEW_MODEL:-}
+-  [ -z "$model" ] && return 0
+-  [[ "$model" =~ ^[A-Za-z0-9][A-Za-z0-9._:/+-]*$ ]] \
+-    || die "CODEX_REVIEW_MODEL must be a single model token"
++  local effort=${CODEX_REVIEW_EFFORT:-xhigh}
++  validate_codex_model_var CODEX_REVIEW_MODEL "$model"
++  validate_codex_effort_var CODEX_REVIEW_EFFORT "$effort"
++}
++
++codex_add_review_route_args() {
++  local model=${CODEX_REVIEW_MODEL:-}
++  local effort=${CODEX_REVIEW_EFFORT:-xhigh}
++  validate_review_model
++  [ -n "$model" ] && CODEX_CMD+=(-m "$model")
++  [ -n "$effort" ] && CODEX_CMD+=(-c "model_reasoning_effort=\"$effort\"")
++  return 0
+ }
+ 
+ reviewer_verdict_from_output() {
+@@ -2487,9 +3026,11 @@ reviewer_verdict_from_output() {
+ }
+ 
+ reviewer_note_from_output() {
+-  local output=$1 status=$2 note
++  local output=$1 status=$2 note diag
+   if [ "$status" -ne 0 ]; then
+     note="reviewer subprocess exited $status; counted as FLAG"
++    diag="$(printf '%s\n' "$output" | sed -n '/[^[:space:]]/{s/^[[:space:]]*//;p;q;}')"
++    [ -n "$diag" ] && note="$note; diagnostic: $diag"
+   elif printf '%s\n' "$output" | grep -Eq '^VERDICT:[[:space:]]*(PASS|FLAG)[[:space:]]*$'; then
+     note="$(printf '%s\n' "$output" | sed -nE 's/^NOTE:[[:space:]]*(.*)$/\1/p' | sed -n '1p')"
+     [ -n "$note" ] || note="structured verdict returned"
+@@ -2499,13 +3040,32 @@ reviewer_note_from_output() {
+   short_message "$note"
+ }
+ 
++write_indented_diagnostic_block() {
++  local title=$1 content=$2
++  printf '#### %s\n\n' "$title"
++  if [ -n "$content" ]; then
++    printf '%s\n' "$content" | sed 's/^/    /'
++  else
++    printf '    (none)\n'
++  fi
++  printf '\n'
++}
++
+ run_reviewer_role() {
+-  local role=$1 work_name=$2 frame_rel=$3 output status final tmpout tmperr prompt fake_file
++  local role=$1 work_name=$2 frame_rel=$3 output status final tmpout tmperr prompt fake_file fake_status_file status_line
++  local stdout_output stderr_output final_output output_source
+   REVIEWER_VERDICT=FLAG
+   REVIEWER_NOTES="missing reviewer output; counted as FLAG"
++  REVIEWER_STATUS=1
++  REVIEWER_OUTPUT=""
++  REVIEWER_STDOUT=""
++  REVIEWER_STDERR=""
++  REVIEWER_FINAL_OUTPUT=""
++  REVIEWER_OUTPUT_SOURCE=none
+ 
+   if [ -n "${HYPERCORE_REVIEW_FAKE_DIR:-}" ]; then
+     fake_file="$HYPERCORE_REVIEW_FAKE_DIR/$role"
++    fake_status_file="$fake_file.status"
+     if [ -f "$fake_file" ]; then
+       output="$(cat "$fake_file")"
+       status=0
+@@ -2513,6 +3073,17 @@ run_reviewer_role() {
+       output="missing fake reviewer output for $role"
+       status=1
+     fi
++    if [ -f "$fake_status_file" ]; then
++      status_line="$(sed -n '1p' "$fake_status_file")"
++      case "$status_line" in
++        ""|*[!0-9]*) die "fake reviewer status for $role must be a non-negative integer" ;;
++        *) status=$status_line ;;
++      esac
++    fi
++    REVIEWER_STATUS="$status"
++    REVIEWER_OUTPUT="$output"
++    REVIEWER_FINAL_OUTPUT="$output"
++    REVIEWER_OUTPUT_SOURCE=fake-output
+     REVIEWER_VERDICT="$(reviewer_verdict_from_output "$output" "$status")"
+     REVIEWER_NOTES="$(reviewer_note_from_output "$output" "$status")"
+     return 0
+@@ -2520,7 +3091,6 @@ run_reviewer_role() {
+ 
+   command -v "$CODEX_BIN" >/dev/null 2>&1 \
+     || die "review cannot spawn Codex reviewers: Codex binary '$CODEX_BIN' is not on PATH"
+-  validate_review_model
+   final="$(mktemp "${TMPDIR:-/tmp}/hypercore-review-$role-final.XXXXXX")"
+   tmpout="$(mktemp "${TMPDIR:-/tmp}/hypercore-review-$role-out.XXXXXX")"
+   tmperr="$(mktemp "${TMPDIR:-/tmp}/hypercore-review-$role-err.XXXXXX")"
+@@ -2535,18 +3105,37 @@ or
+ VERDICT: FLAG
+ 
+ Then optionally add one NOTE: line. Treat uncertainty as FLAG."
+-  REVIEW_CMD=("$CODEX_BIN" -a never -s read-only -C "$ROOT")
+-  [ -n "${CODEX_REVIEW_MODEL:-}" ] && REVIEW_CMD+=(-m "$CODEX_REVIEW_MODEL")
++  CODEX_CMD=("$CODEX_BIN" -a never -s read-only -C "$ROOT")
++  codex_add_review_route_args
++  REVIEW_CMD=("${CODEX_CMD[@]}")
+   REVIEW_CMD+=(exec -o "$final" -)
+   set +e
+   printf '%s' "$prompt" | "${REVIEW_CMD[@]}" >"$tmpout" 2>"$tmperr"
+   status=$?
+   set -e
++  stdout_output="$(cat "$tmpout")"
++  stderr_output="$(cat "$tmperr")"
++  final_output=""
+   if [ -s "$final" ]; then
+-    output="$(cat "$final")"
++    final_output="$(cat "$final")"
++    output="$final_output"
++    output_source=final-output
++  elif [ -n "$stdout_output" ] && [ -n "$stderr_output" ]; then
++    output="$(printf '%s\n%s' "$stdout_output" "$stderr_output")"
++    output_source=stdout-stderr
++  elif [ -n "$stdout_output" ]; then
++    output="$stdout_output"
++    output_source=stdout
+   else
+-    output="$(cat "$tmpout" "$tmperr")"
+-  fi
++    output="$stderr_output"
++    output_source=stderr
++  fi
++  REVIEWER_STATUS="$status"
++  REVIEWER_OUTPUT="$output"
++  REVIEWER_STDOUT="$stdout_output"
++  REVIEWER_STDERR="$stderr_output"
++  REVIEWER_FINAL_OUTPUT="$final_output"
++  REVIEWER_OUTPUT_SOURCE="$output_source"
+   REVIEWER_VERDICT="$(reviewer_verdict_from_output "$output" "$status")"
+   REVIEWER_NOTES="$(reviewer_note_from_output "$output" "$status")"
+   rm -f "$final" "$tmpout" "$tmperr"
+@@ -2554,9 +3143,15 @@ Then optionally add one NOTE: line. Treat uncertainty as FLAG."
+ 
+ cmd_review() {
+   local work_name="${1:-}" d frame frame_rel reversibility role add_role tmp overall disposition
+-  local roles=() optional_roles=() any_flag=0 role_type
++  local roles=() optional_roles=() required_flag=0 advisory_flag=0 role_type
+   declare -A verdicts
+   declare -A notes
++  declare -A statuses
++  declare -A outputs
++  declare -A stdout_outputs
++  declare -A stderr_outputs
++  declare -A final_outputs
++  declare -A output_sources
+   [ -n "$work_name" ] || die "usage: loop.sh [-C <node-path>] review <work-name> [--add <role>]..."
+   validate_work_name "$work_name"
+   shift
+@@ -2585,9 +3180,21 @@ cmd_review() {
+     run_reviewer_role "$role" "$work_name" "$frame_rel"
+     verdicts["$role"]="$REVIEWER_VERDICT"
+     notes["$role"]="$REVIEWER_NOTES"
+-    [ "$REVIEWER_VERDICT" = FLAG ] && any_flag=1
++    statuses["$role"]="$REVIEWER_STATUS"
++    outputs["$role"]="$REVIEWER_OUTPUT"
++    stdout_outputs["$role"]="$REVIEWER_STDOUT"
++    stderr_outputs["$role"]="$REVIEWER_STDERR"
++    final_outputs["$role"]="$REVIEWER_FINAL_OUTPUT"
++    output_sources["$role"]="$REVIEWER_OUTPUT_SOURCE"
++    if [ "$REVIEWER_VERDICT" = FLAG ]; then
++      if valid_optional_review_role "$role"; then
++        advisory_flag=1
++      else
++        required_flag=1
++      fi
++    fi
+   done
+-  if [ "$any_flag" = 1 ]; then
++  if [ "$required_flag" = 1 ]; then
+     overall=FLAG
+     disposition="escalated - FLAG verdicts must be answered in the frame; optional reviewers are advisory only and cannot clear base-roster or red-team flags"
+   else
+@@ -2612,20 +3219,42 @@ cmd_review() {
+       done
+     fi
+     printf '\n## unresolved flags\n\n'
+-    if [ "$any_flag" = 1 ]; then
++    if [ "$required_flag" = 1 ]; then
+       for role in "${roles[@]}"; do
+         [ "${verdicts[$role]}" = FLAG ] || continue
+         role_type=base
+         valid_optional_review_role "$role" && role_type=advisory
++        [ "$role_type" = base ] || continue
+         printf -- '- %s (%s): %s\n' "$role" "$role_type" "${notes[$role]}"
+       done
+     else
+       printf 'None.\n'
+     fi
++    if [ "${#optional_roles[@]}" -gt 0 ]; then
++      printf '\n## advisory optional flags\n\n'
++      if [ "$advisory_flag" = 1 ]; then
++        for role in "${optional_roles[@]}"; do
++          [ "${verdicts[$role]}" = FLAG ] || continue
++          printf -- '- %s (advisory): %s\n' "$role" "${notes[$role]}"
++        done
++      else
++        printf 'None.\n'
++      fi
++    fi
+     printf '\n## reviewer notes\n\n'
+     for role in "${roles[@]}"; do
+       printf '### %s\n\n%s\n\n' "$role" "${notes[$role]}"
+     done
++    printf '## reviewer diagnostics\n\n'
++    for role in "${roles[@]}"; do
++      printf '### %s\n\n' "$role"
++      printf 'status: %s\n' "${statuses[$role]}"
++      printf 'selected-output-source: %s\n\n' "${output_sources[$role]}"
++      write_indented_diagnostic_block "selected output" "${outputs[$role]}"
++      write_indented_diagnostic_block "final output" "${final_outputs[$role]}"
++      write_indented_diagnostic_block "stdout" "${stdout_outputs[$role]}"
++      write_indented_diagnostic_block "stderr" "${stderr_outputs[$role]}"
++    done
+   } > "$tmp"
+   mv "$tmp" "$frame/review.md"
+   printf 'wrote review artifact at %s\n' "$(relpath "$frame/review.md")"
+@@ -2690,10 +3319,109 @@ $errors"
+   printf ' execute %s\n' "$work_name"
+ }
+ 
++fake_check_status_for_attempt() {
++  local key=$1 status_file status_line
++  [ -n "${HYPERCORE_CHECK_FAKE_DIR:-}" ] || return 0
++  [ "$DRY_RUN" = 1 ] \
++    || die "real execute refuses HYPERCORE_CHECK_FAKE_DIR; fake checks are dry-run/self-test only"
++  status_file="$HYPERCORE_CHECK_FAKE_DIR/$key.status"
++  [ -f "$status_file" ] || return 0
++  status_line="$(sed -n '1p' "$status_file")"
++  case "$status_line" in
++    ""|*[!0-9]*) die "fake check status for $key must be a non-negative integer" ;;
++  esac
++  return "$status_line"
++}
++
++run_unit_mechanical_check() {
++  local unit_id=$1 attempt_key=$2 status_msg
++  UNIT_CHECK_STATUS_MSG=""
++  printf '\n--- gate: check (mechanical after %s, %s) ---\n' "$unit_id" "$attempt_key"
++  loop_event check check running "running ./check.sh after $unit_id ($attempt_key)"
++  loop_state_write check running "running ./check.sh after $unit_id ($attempt_key)"
++  if [ "$DRY_RUN" = 1 ]; then
++    if [ -n "${HYPERCORE_CHECK_FAKE_DIR:-}" ]; then
++      if fake_check_status_for_attempt "$unit_id-$attempt_key"; then
++        printf '(dry-run fake) check.sh green after %s (%s)\n' "$unit_id" "$attempt_key"
++        loop_event check check passed "dry-run fake check.sh green after $unit_id ($attempt_key)"
++        loop_state_write check passed "dry-run fake check.sh green after $unit_id ($attempt_key)"
++        status_msg="dry-run fake mechanical check green"
++      else
++        UNIT_ATTEMPT_REASON="check.sh red after $unit_id ($attempt_key)"
++        phase_two_write_unit_record "$unit_id" failed "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "$UNIT_ATTEMPT_REASON"
++        loop_event check check failed "dry-run fake check.sh red after $unit_id ($attempt_key)"
++        loop_state_write check failed "dry-run fake check.sh red after $unit_id ($attempt_key)"
++        return 1
++      fi
++    else
++      printf '(dry-run) would run: ./check.sh after %s (%s)\n' "$unit_id" "$attempt_key"
++      loop_event check check skipped "dry-run skipped ./check.sh after $unit_id ($attempt_key)"
++      loop_state_write check skipped "dry-run skipped ./check.sh after $unit_id ($attempt_key)"
++      status_msg="dry-run mechanical check skipped"
++    fi
++  elif check_green; then
++    printf 'check.sh green after %s (%s)\n' "$unit_id" "$attempt_key"
++    loop_event check check passed "check.sh green after $unit_id ($attempt_key)"
++    loop_state_write check passed "check.sh green after $unit_id ($attempt_key)"
++    status_msg="check.sh green"
++  else
++    UNIT_ATTEMPT_REASON="check.sh red after $unit_id ($attempt_key)"
++    phase_two_write_unit_record "$unit_id" failed "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "$UNIT_ATTEMPT_REASON"
++    loop_event check check failed "$UNIT_ATTEMPT_REASON"
++    loop_state_write check failed "$UNIT_ATTEMPT_REASON"
++    return 1
++  fi
++  UNIT_CHECK_STATUS_MSG="$status_msg"
++  return 0
++}
++
++run_unit_build_attempt() {
++  local work_name=$1 unit_id=$2 proof=$3 source_desc=$4 attempt_kind=$5 attempt_number=$6
++  local handoff_path=$7 diff_path=$8 tier_one_path=$9
++  local attempt_key gate_name gate_output_path route status_msg
++  UNIT_ATTEMPT_REASON=""
++  UNIT_ACCEPTED_STATUS_MSG=""
++  attempt_key="$attempt_kind-$attempt_number"
++  gate_name="implement-$unit_id-$attempt_key"
++  route="builder-$attempt_kind"
++  phase_two_write_unit_record "$unit_id" running "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "$attempt_key builder session starting"
++
++  printf '\n--- gate: implement %s (%s builder attempt %s) ---\n' "$unit_id" "$attempt_kind" "$attempt_number"
++  PHASE_TWO_SESSION_ID=""
++  if ! run_gate "$gate_name" "Read Edit Write Bash" start "" \
++    "Implement phase-two unit $unit_id for node-local work $work_name in addressed node $NODE_REL.
++Proof obligation: $proof
++
++Read only $source_desc, the intent it references, and the material needed to build this unit.
++Do not edit parent intent documents in implement; archive folds accepted intent amendments.
++Build only this proof-advancing unit. Leave ./check.sh green. End with a lean handoff naming the changed files, checks prepared, and any real unit proof gap. Do not describe prior, future, or expected acceptance artifacts; the loop records acceptance evidence after tier-one review. Do not describe prior loop run state, unrelated untracked files, or cumulative diff noise unless they are a real proof gap for this unit." \
++    implement "$route" 1; then
++    UNIT_ATTEMPT_REASON="$attempt_kind builder subprocess failed for $unit_id on attempt $attempt_number"
++    phase_two_write_unit_record "$unit_id" failed "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "$UNIT_ATTEMPT_REASON"
++    return 1
++  fi
++
++  gate_output_path="$LOOP_RUN_GATE_DIR/$gate_name.final.md"
++  phase_two_write_handoff "$unit_id" "$proof" "$gate_output_path" "$handoff_path"
++  write_current_diff_record "$diff_path"
++
++  if ! run_unit_mechanical_check "$unit_id" "$attempt_key"; then
++    return 1
++  fi
++  status_msg="$UNIT_CHECK_STATUS_MSG"
++
++  if run_tier_one_acceptance "$work_name" "$unit_id" "$proof" "$frame_rel" "$handoff_path" "$diff_path" "$status_msg" "$attempt_key"; then
++    UNIT_ACCEPTED_STATUS_MSG="$status_msg; tier-one PASS; $attempt_kind builder attempt $attempt_number"
++    return 0
++  fi
++  return 1
++}
++
+ cmd_execute() {
+   local work_name="${1:-}" active_dir active_rel frame_rel frame_file source_desc archive_collection archive_decision
+   local reversibility errors units_text unit_entry unit_id proof gate_name handoff_path diff_path tier_one_path
+-  local gate_output_path status_msg units=() unit_ids=()
++  local gate_output_path status_msg fast_attempt unit_accepted units=() unit_ids=()
++  local prior_state_key base_cache_key old_cache_key new_cache_key downstream_invalidated=0
+   [ -n "$work_name" ] || die "usage: loop.sh [-C <node-path>] execute <work-name> [--dry-run]"
+   validate_work_name "$work_name"
+   shift
+@@ -2722,6 +3450,15 @@ $errors"
+     || die "signed frame does not name implementation units for phase two; cannot re-derive unit boundaries without inventing"
+   mapfile -t units <<< "$units_text"
+   source_desc="$frame_rel/ (the signed work-node frame)"
++  if [ "$DRY_RUN" != 1 ] && [ -n "${HYPERCORE_ACCEPTANCE_FAKE_DIR:-}" ]; then
++    die "real execute refuses HYPERCORE_ACCEPTANCE_FAKE_DIR; fake acceptance is dry-run/self-test only"
++  fi
++  if [ "$DRY_RUN" != 1 ] && [ -n "${HYPERCORE_BUILDER_FAKE_DIR:-}" ]; then
++    die "real execute refuses HYPERCORE_BUILDER_FAKE_DIR; fake builders are dry-run/self-test only"
++  fi
++  if [ "$DRY_RUN" != 1 ] && [ -n "${HYPERCORE_CHECK_FAKE_DIR:-}" ]; then
++    die "real execute refuses HYPERCORE_CHECK_FAKE_DIR; fake checks are dry-run/self-test only"
++  fi
+ 
+   [ "$LOOP_HARNESS" = codex ] \
+     || die "unsupported LOOP_HARNESS: $LOOP_HARNESS (only codex is supported)"
+@@ -2733,6 +3470,7 @@ $errors"
+     exit 1
+   fi
+ 
++  prior_state_key="$(phase_two_initial_prior_state_key "$work_name")"
+   for unit_entry in "${units[@]}"; do
+     unit_id="${unit_entry%%$'\t'*}"
+     proof="${unit_entry#*$'\t'}"
+@@ -2744,45 +3482,61 @@ $errors"
+     handoff_path="$PHASE_TWO_HANDOFF_DIR/$unit_id.md"
+     diff_path="$PHASE_TWO_DIFF_DIR/$unit_id.diff"
+     tier_one_path="$PHASE_TWO_TIER_ONE_DIR/$unit_id.md"
++    base_cache_key="$(phase_two_unit_base_cache_key "$unit_id" "$proof" "$prior_state_key")"
++    old_cache_key="$(phase_two_cache_record_key "$unit_id" || true)"
++
++    if [ "$downstream_invalidated" = 1 ]; then
++      phase_two_invalidate_unit_cache "$unit_id" "upstream accepted state changed" "$handoff_path" "$diff_path" "$tier_one_path"
++    elif phase_two_unit_cache_hit "$unit_id" "$base_cache_key" "$handoff_path" "$diff_path" "$tier_one_path"; then
++      status_msg="resumable cache hit; reused unchanged handoff, diff, green check evidence, and tier-one PASS"
++      printf 'cache hit: skipping %s (%s)\n' "$unit_id" "$PHASE_TWO_CACHE_HIT_KEY"
++      loop_event cache check skipped "cache hit: skipping $unit_id"
++      loop_state_write check skipped "cache hit: skipping $unit_id"
++      phase_two_write_unit_record "$unit_id" accepted "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "$status_msg"
++      prior_state_key="$PHASE_TWO_CACHE_HIT_KEY"
++      continue
++    else
++      printf 'cache miss for %s: %s\n' "$unit_id" "$(short_message "$PHASE_TWO_CACHE_MISS_REASON")"
++      loop_event cache check running "cache miss for $unit_id: $PHASE_TWO_CACHE_MISS_REASON"
++      loop_state_write check running "cache miss for $unit_id: $PHASE_TWO_CACHE_MISS_REASON"
++    fi
+     phase_two_write_unit_record "$unit_id" running "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "builder session starting"
+ 
+-    printf '\n--- gate: implement %s ---\n' "$unit_id"
+-    PHASE_TWO_SESSION_ID=""
+-    run_gate "$gate_name" "Read Edit Write Bash" start "" \
+-      "Implement phase-two unit $unit_id for node-local work $work_name in addressed node $NODE_REL.
+-Proof obligation: $proof
++    unit_accepted=0
++    for fast_attempt in 1 2 3; do
++      if run_unit_build_attempt "$work_name" "$unit_id" "$proof" "$source_desc" fast "$fast_attempt" "$handoff_path" "$diff_path" "$tier_one_path"; then
++        unit_accepted=1
++        status_msg="$UNIT_ACCEPTED_STATUS_MSG"
++        printf 'fast builder attempt %s for %s accepted\n' "$fast_attempt" "$unit_id"
++        break
++      fi
++      printf 'fast builder attempt %s for %s failed: %s\n' "$fast_attempt" "$unit_id" "$(short_message "$UNIT_ATTEMPT_REASON")"
++      loop_event builder check failed "fast builder attempt $fast_attempt for $unit_id failed: $UNIT_ATTEMPT_REASON"
++      loop_state_write check failed "fast builder attempt $fast_attempt for $unit_id failed: $UNIT_ATTEMPT_REASON"
++    done
+ 
+-Read only $source_desc, the intent it references, and the material needed to build this unit.
+-Do not edit parent intent documents in implement; archive folds accepted intent amendments.
+-Build only this proof-advancing unit. Leave ./check.sh green. End with a lean handoff naming the changed files, checks prepared, and any real unit proof gap. Do not describe prior, future, or expected acceptance artifacts; the loop records acceptance evidence after tier-one review. Do not describe prior loop run state, unrelated untracked files, or cumulative diff noise unless they are a real proof gap for this unit." \
+-      implement
+-    gate_output_path="$LOOP_RUN_GATE_DIR/$gate_name.final.md"
+-    phase_two_write_handoff "$unit_id" "$proof" "$gate_output_path" "$handoff_path"
+-    write_current_diff_record "$diff_path"
+-
+-    printf '\n--- gate: check (mechanical after %s) ---\n' "$unit_id"
+-    loop_event check check running "running ./check.sh after $unit_id"
+-    loop_state_write check running "running ./check.sh after $unit_id"
+-    if [ "$DRY_RUN" = 1 ]; then
+-      printf '(dry-run) would run: ./check.sh after %s\n' "$unit_id"
+-      loop_event check check skipped "dry-run skipped ./check.sh after $unit_id"
+-      loop_state_write check skipped "dry-run skipped ./check.sh after $unit_id"
+-      status_msg="dry-run mechanical check skipped"
+-    else
+-      if check_green; then
+-        printf 'check.sh green after %s\n' "$unit_id"
+-        loop_event check check passed "check.sh green after $unit_id"
+-        loop_state_write check passed "check.sh green after $unit_id"
+-        status_msg="check.sh green"
++    if [ "$unit_accepted" != 1 ]; then
++      printf 'escalating %s to strong builder after 3 failed fast attempts\n' "$unit_id"
++      loop_event builder check running "escalating $unit_id to strong builder after 3 failed fast attempts"
++      loop_state_write check running "escalating $unit_id to strong builder after 3 failed fast attempts"
++      if run_unit_build_attempt "$work_name" "$unit_id" "$proof" "$source_desc" strong 1 "$handoff_path" "$diff_path" "$tier_one_path"; then
++        unit_accepted=1
++        status_msg="$UNIT_ACCEPTED_STATUS_MSG"
++        printf 'strong builder attempt 1 for %s accepted\n' "$unit_id"
+       else
+-        phase_two_write_unit_record "$unit_id" failed "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "check.sh red"
+-        loop_event check check failed "check.sh red after $unit_id — drift, stopping"
+-        die "check.sh red after $unit_id — drift, stopping before acceptance"
++        phase_two_write_unit_record "$unit_id" failed "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "$UNIT_ATTEMPT_REASON"
++        die "strong-builder attempt failed for $unit_id; phase two stops for the operator and $work_name stays in flight: $UNIT_ATTEMPT_REASON"
+       fi
+     fi
+ 
+-    run_tier_one_acceptance "$work_name" "$unit_id" "$proof" "$frame_rel" "$handoff_path" "$diff_path" "$status_msg"
+-    phase_two_write_unit_record "$unit_id" accepted "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "$status_msg; tier-one PASS"
++    new_cache_key="$(phase_two_write_cache_record "$unit_id" "$base_cache_key" "$prior_state_key" "$handoff_path" "$diff_path" "$tier_one_path")"
++    if [ -n "$old_cache_key" ] && [ "$old_cache_key" != "$new_cache_key" ]; then
++      downstream_invalidated=1
++    else
++      downstream_invalidated=0
++    fi
++    prior_state_key="$new_cache_key"
++    phase_two_write_unit_record "$unit_id" accepted "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "$status_msg; tier-one PASS; cache-key $new_cache_key"
+   done
+ 
+   LOOP_CURRENT_UNIT=""
+diff --git a/check.sh b/check.sh
+index 61a632c..19b07ae 100755
+--- a/check.sh
++++ b/check.sh
+@@ -180,7 +180,9 @@ check_no_tracked_live_material_paths() {
+ }
+ 
+ check_loop_frame_contract() {
+-  local name tmp frame options direction review fake_review fake_acceptance status_out route_with_one_unit route_with_two_units panel_events
++  local name tmp frame options direction review fake_review fake_acceptance fake_builder fake_check retry_handoff status_out route_with_one_unit route_with_two_units panel_events
++  local panel_start_line panel_first_result_line
++  local resume_cache resume_out_first resume_out_second resume_out_third resume_unit_001_cache resume_unit_002_cache
+ 
+   echo "root - loop frame contract"
+   tmp="$(mktemp -d "${TMPDIR:-/tmp}/hypercore-loop-frame-check.XXXXXX")" \
+@@ -470,6 +472,57 @@ EOF
+     find "$tmp/loop-runs" -path "*/phase-two-dry-run/$rel" -type f -print | sort | tail -1
+   }
+ 
++  panel_lens_instruction_marker() {
++    case "$1" in
++      whole-acceptance-conformance) printf 'For the whole-acceptance-conformance lens' ;;
++      proof-integrity) printf 'For the proof-integrity lens' ;;
++      independent-coherence) printf 'For the independent-coherence lens' ;;
++      security-permissions) printf 'For the security-permissions lens' ;;
++      red-team) printf 'For the red-team lens' ;;
++      *) printf 'unknown lens marker' ;;
++    esac
++  }
++
++  require_panel_lens_prompt() {
++    local rel=$1 lens=$2 artifact other marker expected
++    artifact="$(dry_run_artifact "$rel")"
++    if [ -z "$artifact" ]; then
++      bad "tier-two $lens prompt artifact is present"
++      return
++    fi
++    require_text "$artifact" "Lens: $lens" \
++      "tier-two $lens artifact names its own lens"
++    expected="$(panel_lens_instruction_marker "$lens")"
++    require_text "$artifact" "$expected" \
++      "tier-two $lens prompt is lens-specific"
++    for other in whole-acceptance-conformance proof-integrity independent-coherence security-permissions red-team; do
++      [ "$other" = "$lens" ] && continue
++      marker="$(panel_lens_instruction_marker "$other")"
++      reject_text "$artifact" "$marker" \
++        "tier-two $lens prompt does not carry stale $other instruction"
++    done
++  }
++
++  write_acceptance_output() {
++    local path=$1 verdict=$2 rationale=$3 evidence=$4
++    {
++      printf 'VERDICT: %s\n' "$verdict"
++      printf 'RATIONALE: %s\n' "$rationale"
++      printf 'EVIDENCE: %s\n' "$evidence"
++    } > "$path"
++  }
++
++  write_builder_output() {
++    local path=$1 status=$2 message=$3
++    printf '%s\n' "$message" > "$path"
++    printf '%s\n' "$status" > "$path.status"
++  }
++
++  write_fake_status() {
++    local path=$1 status=$2
++    printf '%s\n' "$status" > "$path.status"
++  }
++
+   run_with_operator_tty() {
+     local token=$1 command
+     shift
+@@ -847,7 +900,8 @@ EOF
+   printf 'not a structured verdict\n' > "$fake_review/contract-checkability"
+   printf 'VERDICT: PASS\nNOTE: ok\n' > "$fake_review/soundness-fit"
+   printf 'VERDICT: PASS\nNOTE: ok\n' > "$fake_review/simplicity-fastness"
+-  printf 'VERDICT: PASS\nNOTE: ok\n' > "$fake_review/red-team"
++  printf 'fixture crash stderr from codex exec\npartial stdout before failure\n' > "$fake_review/red-team"
++  printf '1\n' > "$fake_review/red-team.status"
+   printf 'VERDICT: PASS\nNOTE: advisory ok\n' > "$fake_review/operator-ergonomics"
+   write_lean_frame "TODO" one-way
+   HYPERCORE_REVIEW_FAKE_DIR="$fake_review" "$root/adapter/loop.sh" review "$name" --add operator-ergonomics >"$tmp/review.out" 2>"$tmp/review.err" \
+@@ -859,6 +913,36 @@ EOF
+     "optional reviewer verdict is recorded as advisory"
+   require_text "$review" "optional reviewers are advisory only and cannot clear base-roster or red-team flags" \
+     "optional reviewers cannot clear base flags"
++  require_text "$review" "## reviewer diagnostics" \
++    "review artifact preserves reviewer diagnostic section"
++  require_text "$review" "status: 1" \
++    "review artifact records nonzero reviewer subprocess status"
++  require_text "$review" "fixture crash stderr from codex exec" \
++    "review artifact preserves nonzero reviewer diagnostic output"
++  require_text "$review" "selected-output-source: fake-output" \
++    "review artifact records diagnostic output source"
++
++  rm -rf "$fake_review"
++  mkdir -p "$fake_review"
++  printf 'VERDICT: PASS\nNOTE: ok\n' > "$fake_review/contract-checkability"
++  printf 'VERDICT: PASS\nNOTE: ok\n' > "$fake_review/soundness-fit"
++  printf 'VERDICT: PASS\nNOTE: ok\n' > "$fake_review/simplicity-fastness"
++  printf 'VERDICT: PASS\nNOTE: ok\n' > "$fake_review/red-team"
++  printf 'VERDICT: FLAG\nNOTE: advisory performance concern\n' > "$fake_review/performance-cost"
++  write_lean_frame "TODO" one-way
++  HYPERCORE_REVIEW_FAKE_DIR="$fake_review" "$root/adapter/loop.sh" review "$name" --add performance-cost >"$tmp/review-advisory.out" 2>"$tmp/review-advisory.err" \
++    && ok "loop review records optional flags without making them required" \
++    || bad "loop review records optional flags without making them required"
++  require_text "$review" "Overall: PASS" \
++    "optional reviewer FLAG does not override clean base roster"
++  require_text "$review" "- performance-cost: FLAG" \
++    "optional reviewer FLAG is still recorded"
++  require_text "$review" "## advisory optional flags" \
++    "optional reviewer flags have a separate advisory section"
++  require_text "$review" "- performance-cost (advisory): advisory performance concern" \
++    "optional reviewer FLAG remains advisory"
++  require_text "$review" "Disposition: resolved - base roster returned PASS; optional reviewers remain advisory" \
++    "optional reviewer FLAG does not escalate base-roster disposition"
+ 
+   cat > "$frame" <<'EOF'
+ # frame - self-test
+@@ -957,7 +1041,7 @@ Implementation units for phase two:
+   fake_acceptance="$tmp/fake-acceptance"
+   rm -rf "$fake_acceptance" "$root/$name/intent/frame/phase-two"
+   mkdir -p "$fake_acceptance"
+-  printf 'not a structured verdict\n' > "$fake_acceptance/tier-one-unit-001"
++  printf 'PASS\nRATIONALE: bare verdict fixture\nEVIDENCE: old one-word contract\n' > "$fake_acceptance/tier-one-unit-001"
+   write_lean_frame "$route_with_one_unit" two-way
+   write_signoff
+   if HYPERCORE_LOOP_STATE_DIR="$tmp/loop-runs" HYPERCORE_ACCEPTANCE_FAKE_DIR="$fake_acceptance" "$root/adapter/loop.sh" execute "$name" --dry-run >"$tmp/tier-one-flag.out" 2>"$tmp/tier-one-flag.err"; then
+@@ -969,6 +1053,8 @@ Implementation units for phase two:
+     "loop execute explains tier-one required flag blocking"
+   require_text "$(dry_run_artifact "tier-one/unit-001.md")" "Verdict: FLAG" \
+     "tier-one malformed output is recorded as FLAG"
++  require_text "$(dry_run_artifact "tier-one/unit-001.md")" "missing or malformed VERDICT field" \
++    "tier-one malformed output records actionable parser notes"
+   require_text "$(dry_run_artifact "tier-one/unit-001.md")" "Mechanical check immediately before this reviewer" \
+     "tier-one prompt carries the pre-review mechanical check result"
+   require_text "$(dry_run_artifact "tier-one/unit-001.md")" "cumulative worktree snapshot" \
+@@ -979,7 +1065,41 @@ Implementation units for phase two:
+ 
+   rm -rf "$fake_acceptance" "$root/$name/intent/frame/phase-two"
+   mkdir -p "$fake_acceptance"
+-  printf 'PASS\n' > "$fake_acceptance/tier-one-unit-001"
++  printf 'VERDICT: PASS\nRATIONALE: fixture deliberately omits evidence\n' > "$fake_acceptance/tier-one-unit-001"
++  write_lean_frame "$route_with_one_unit" two-way
++  write_signoff
++  if HYPERCORE_LOOP_STATE_DIR="$tmp/loop-runs" HYPERCORE_ACCEPTANCE_FAKE_DIR="$fake_acceptance" "$root/adapter/loop.sh" execute "$name" --dry-run >"$tmp/tier-one-no-evidence.out" 2>"$tmp/tier-one-no-evidence.err"; then
++    bad "loop execute blocks evidence-free tier-one acceptance output"
++  else
++    ok "loop execute blocks evidence-free tier-one acceptance output"
++  fi
++  require_text "$(dry_run_artifact "tier-one/unit-001.md")" "Verdict: FLAG" \
++    "tier-one evidence-free output is recorded as FLAG"
++  require_text "$(dry_run_artifact "tier-one/unit-001.md")" "missing or empty EVIDENCE field" \
++    "tier-one evidence-free output records the evidence defect"
++
++  rm -rf "$fake_acceptance" "$root/$name/intent/frame/phase-two"
++  mkdir -p "$fake_acceptance"
++  write_acceptance_output "$fake_acceptance/tier-one-unit-001" FLAG \
++    "fixture structured flag blocks the required tier-one gate" \
++    "unit handoff fixture states the proof is incomplete"
++  write_lean_frame "$route_with_one_unit" two-way
++  write_signoff
++  if HYPERCORE_LOOP_STATE_DIR="$tmp/loop-runs" HYPERCORE_ACCEPTANCE_FAKE_DIR="$fake_acceptance" "$root/adapter/loop.sh" execute "$name" --dry-run >"$tmp/tier-one-structured-flag.out" 2>"$tmp/tier-one-structured-flag.err"; then
++    bad "loop execute blocks structured tier-one FLAG output"
++  else
++    ok "loop execute blocks structured tier-one FLAG output"
++  fi
++  require_text "$(dry_run_artifact "tier-one/unit-001.md")" "Rationale: fixture structured flag blocks the required tier-one gate" \
++    "tier-one structured FLAG preserves rationale"
++  require_text "$(dry_run_artifact "tier-one/unit-001.md")" "Evidence: unit handoff fixture states the proof is incomplete" \
++    "tier-one structured FLAG preserves evidence"
++
++  rm -rf "$fake_acceptance" "$root/$name/intent/frame/phase-two"
++  mkdir -p "$fake_acceptance"
++  write_acceptance_output "$fake_acceptance/tier-one-unit-001" PASS \
++    "fixture structured pass satisfies the signed unit proof in dry-run" \
++    "dry-run artifact path tier-one/unit-001.md"
+   write_lean_frame "$route_with_one_unit" two-way
+   write_signoff
+   if HYPERCORE_LOOP_STATE_DIR="$tmp/loop-runs" HYPERCORE_ACCEPTANCE_FAKE_DIR="$fake_acceptance" "$root/adapter/loop.sh" execute "$name" --dry-run >"$tmp/two-way-execute.out" 2>"$tmp/two-way-execute.err"; then
+@@ -991,6 +1111,14 @@ Implementation units for phase two:
+     "two-way execute dry-run runs tier-one acceptance"
+   require_text "$tmp/two-way-execute.out" "two-way work: one-way tier-two panel skipped" \
+     "two-way execute dry-run skips the one-way panel"
++  require_text "$(dry_run_artifact "tier-one/unit-001.md")" "source: fake/self-test" \
++    "tier-one dry-run fake acceptance records fake source"
++  require_text "$(dry_run_artifact "tier-one/unit-001.md")" "source-proof: fake acceptance loaded from HYPERCORE_ACCEPTANCE_FAKE_DIR in dry-run; rejected by real archive" \
++    "tier-one dry-run fake acceptance records non-real source proof"
++  require_text "$(dry_run_artifact "tier-one/unit-001.md")" "Rationale: fixture structured pass satisfies the signed unit proof in dry-run" \
++    "tier-one structured PASS preserves rationale"
++  require_text "$(dry_run_artifact "tier-one/unit-001.md")" "Evidence: dry-run artifact path tier-one/unit-001.md" \
++    "tier-one structured PASS preserves evidence"
+   [ ! -e "$root/$name/intent/frame/phase-two/tier-two-panel/whole-acceptance-conformance.md" ] &&
+   [ -z "$(dry_run_artifact "tier-two-panel/whole-acceptance-conformance.md")" ] \
+     && ok "two-way execute dry-run writes no one-way panel verdicts" \
+@@ -998,13 +1126,27 @@ Implementation units for phase two:
+ 
+   rm -rf "$fake_acceptance" "$root/$name/intent/frame/phase-two"
+   mkdir -p "$fake_acceptance"
+-  printf 'PASS\n' > "$fake_acceptance/tier-one-unit-001"
+-  printf 'PASS\n' > "$fake_acceptance/tier-one-unit-002"
+-  printf 'PASS\n' > "$fake_acceptance/panel-whole-acceptance-conformance"
+-  printf 'PASS\n' > "$fake_acceptance/panel-proof-integrity"
+-  printf 'not a structured verdict\n' > "$fake_acceptance/panel-independent-coherence"
+-  printf 'PASS\n' > "$fake_acceptance/panel-security-permissions"
+-  printf 'PASS\n' > "$fake_acceptance/panel-red-team"
++  write_acceptance_output "$fake_acceptance/tier-one-unit-001" PASS \
++    "first unit passes in the panel dry-run fixture" \
++    "tier-one fixture for unit-001"
++  write_acceptance_output "$fake_acceptance/tier-one-unit-002" PASS \
++    "second unit passes in the panel dry-run fixture" \
++    "tier-one fixture for unit-002"
++  write_acceptance_output "$fake_acceptance/panel-whole-acceptance-conformance" PASS \
++    "whole acceptance fixture conforms" \
++    "signed frame fixture and dry-run acceptance directory"
++  write_acceptance_output "$fake_acceptance/panel-proof-integrity" PASS \
++    "proof integrity fixture passes" \
++    "unit handoffs, diffs, and structured fake acceptance fixtures"
++  write_acceptance_output "$fake_acceptance/panel-independent-coherence" FLAG \
++    "independent coherence fixture blocks archive" \
++    "semantic sweep fixture names an unresolved mismatch"
++  write_acceptance_output "$fake_acceptance/panel-security-permissions" PASS \
++    "security permissions fixture passes" \
++    "read-only reviewer prompt and source marker fixture"
++  write_acceptance_output "$fake_acceptance/panel-red-team" PASS \
++    "red-team fixture passes" \
++    "bypass review fixture names no blocker"
+   write_lean_frame "$route_with_two_units" one-way
+   write_valid_review
+   write_signoff
+@@ -1016,18 +1158,233 @@ Implementation units for phase two:
+   require_text "$tmp/panel-flag.err" "tier-two implementation-acceptance panel FLAG" \
+     "loop execute explains one-way panel flag blocking"
+   panel_events="$(find "$tmp/loop-runs" -path "*/events.jsonl" -type f -print | sort | tail -1)"
++  require_text "$tmp/panel-flag.out" "tier-two panel starting 5 concurrent lenses" \
++    "one-way tier-two panel reports concurrent lens start"
++  require_text "$tmp/panel-flag.out" "tier-two red-team started concurrently" \
++    "one-way tier-two panel starts every lens before collecting results"
++  require_text "$panel_events" "tier-two panel starting 5 concurrent lenses" \
++    "tier-two panel records a concurrent panel start event"
+   require_order "$panel_events" "tier-one unit-002 verdict: PASS" "tier-two implementation acceptance lens whole-acceptance-conformance" \
+     "tier-two panel starts only after the final unit tier-one acceptance"
++  panel_start_line="$(grep -n 'started concurrently' "$panel_events" | tail -1 | sed 's/:.*//')"
++  panel_first_result_line="$(grep -n 'tier-two .* verdict:' "$panel_events" | sed -n '1s/:.*//p')"
++  if [ -n "$panel_start_line" ] &&
++     [ -n "$panel_first_result_line" ] &&
++     [ "$panel_start_line" -lt "$panel_first_result_line" ]; then
++    ok "tier-two panel starts all lens subprocesses before collecting results"
++  else
++    bad "tier-two panel did not record all starts before the first result"
++  fi
+   require_text "$(dry_run_artifact "tier-two-panel/independent-coherence.md")" "Verdict: FLAG" \
+-    "malformed independent-coherence output is recorded as FLAG"
+-  require_text "$(dry_run_artifact "tier-two-panel/proof-integrity.md")" "For the proof-integrity lens" \
+-    "tier-two proof-integrity prompt is lens-specific"
+-  require_text "$(dry_run_artifact "tier-two-panel/red-team.md")" "For the red-team lens" \
+-    "tier-two red-team prompt is lens-specific"
++    "structured independent-coherence output is recorded as FLAG"
++  require_text "$(dry_run_artifact "tier-two-panel/independent-coherence.md")" "Evidence: semantic sweep fixture names an unresolved mismatch" \
++    "tier-two structured FLAG preserves evidence"
++  require_panel_lens_prompt "tier-two-panel/whole-acceptance-conformance.md" "whole-acceptance-conformance"
++  require_panel_lens_prompt "tier-two-panel/proof-integrity.md" "proof-integrity"
++  require_panel_lens_prompt "tier-two-panel/independent-coherence.md" "independent-coherence"
++  require_panel_lens_prompt "tier-two-panel/security-permissions.md" "security-permissions"
++  require_panel_lens_prompt "tier-two-panel/red-team.md" "red-team"
+   [ ! -e "$root/$name/intent/frame/phase-two/tier-two-panel/independent-coherence.md" ] \
+     && ok "execute dry-run keeps tier-two artifacts out of the active work frame" \
+     || bad "execute dry-run wrote tier-two artifacts into the active work frame"
+ 
++  rm -rf "$fake_acceptance" "$root/$name/intent/frame/phase-two"
++  mkdir -p "$fake_acceptance"
++  write_acceptance_output "$fake_acceptance/tier-one-unit-001" PASS \
++    "real-run fake fixture must not be usable" \
++    "HYPERCORE_ACCEPTANCE_FAKE_DIR is set outside dry-run"
++  write_lean_frame "$route_with_one_unit" two-way
++  write_signoff
++  if HYPERCORE_LOOP_STATE_DIR="$tmp/loop-runs" HYPERCORE_ACCEPTANCE_FAKE_DIR="$fake_acceptance" "$root/adapter/loop.sh" execute "$name" >"$tmp/real-fake-source.out" 2>"$tmp/real-fake-source.err"; then
++    bad "loop execute rejects fake acceptance source in real runs"
++  else
++    ok "loop execute rejects fake acceptance source in real runs"
++  fi
++  require_text "$tmp/real-fake-source.err" "real execute refuses HYPERCORE_ACCEPTANCE_FAKE_DIR" \
++    "loop execute explains fake acceptance is dry-run only"
++  [ ! -e "$root/$name/intent/frame/phase-two/tier-one/unit-001.md" ] \
++    && ok "real fake-source rejection writes no real tier-one artifact" \
++    || bad "real fake-source rejection wrote a real tier-one artifact"
++
++  fake_builder="$tmp/fake-builder"
++  fake_check="$tmp/fake-check"
++  rm -rf "$fake_acceptance" "$fake_builder" "$fake_check" "$root/$name/intent/frame/phase-two"
++  mkdir -p "$fake_acceptance" "$fake_builder" "$fake_check"
++  write_builder_output "$fake_builder/implement-unit-001-fast-1" 0 \
++    "fake fast builder attempt 1 reaches the mechanical check"
++  write_builder_output "$fake_builder/implement-unit-001-fast-2" 0 \
++    "fake fast builder attempt 2 reaches tier-one acceptance"
++  write_builder_output "$fake_builder/implement-unit-001-fast-3" 0 \
++    "fake fast builder attempt 3 reaches tier-one acceptance"
++  write_builder_output "$fake_builder/implement-unit-001-strong-1" 0 \
++    "fake strong builder attempt succeeds after escalation"
++  write_fake_status "$fake_check/unit-001-fast-1" 1
++  write_fake_status "$fake_check/unit-001-fast-2" 0
++  write_fake_status "$fake_check/unit-001-fast-3" 0
++  write_fake_status "$fake_check/unit-001-strong-1" 0
++  write_acceptance_output "$fake_acceptance/tier-one-unit-001-fast-2" FLAG \
++    "fast attempt 2 fixture keeps the unit unaccepted" \
++    "tier-one fixture for fast attempt 2"
++  write_acceptance_output "$fake_acceptance/tier-one-unit-001-fast-3" FLAG \
++    "fast attempt 3 fixture exhausts the fast budget" \
++    "tier-one fixture for fast attempt 3"
++  write_acceptance_output "$fake_acceptance/tier-one-unit-001-strong-1" PASS \
++    "strong attempt fixture accepts the escalated unit" \
++    "tier-one fixture for strong attempt 1"
++  write_lean_frame "$route_with_one_unit" two-way
++  write_signoff
++  if HYPERCORE_LOOP_STATE_DIR="$tmp/loop-runs" \
++    HYPERCORE_BUILDER_FAKE_DIR="$fake_builder" \
++    HYPERCORE_CHECK_FAKE_DIR="$fake_check" \
++    HYPERCORE_ACCEPTANCE_FAKE_DIR="$fake_acceptance" \
++    CODEX_STRONG_BUILDER_MODEL="gpt-5.3-codex" \
++    "$root/adapter/loop.sh" execute "$name" --dry-run >"$tmp/retry-escalation.out" 2>"$tmp/retry-escalation.err"; then
++    ok "loop execute retries three fast builders then accepts a strong-builder escalation"
++  else
++    bad "loop execute retries three fast builders then accepts a strong-builder escalation"
++  fi
++  require_text "$tmp/retry-escalation.out" "-m gpt-5.3-codex-spark" \
++    "fast builder dry-run command uses the spark default model"
++  require_text "$tmp/retry-escalation.out" "model_reasoning_effort=\\\"xhigh\\\"" \
++    "fast builder dry-run command uses the builder effort default"
++  require_text "$tmp/retry-escalation.out" "-m gpt-5.3-codex" \
++    "strong builder dry-run command uses the strong-builder model knob"
++  require_text "$tmp/retry-escalation.out" "fast builder attempt 1 for unit-001 failed: check.sh red" \
++    "check failure consumes one fast-builder attempt"
++  require_text "$tmp/retry-escalation.out" "fast builder attempt 2 for unit-001 failed: tier-one implementation-acceptance FLAG" \
++    "tier-one FLAG consumes a fast-builder retry"
++  require_text "$tmp/retry-escalation.out" "fast builder attempt 3 for unit-001 failed: tier-one implementation-acceptance FLAG" \
++    "third fast-builder failure exhausts the fast budget"
++  require_text "$tmp/retry-escalation.out" "escalating unit-001 to strong builder after 3 failed fast attempts" \
++    "loop escalates the unit to a strong builder after the fast budget"
++  require_text "$tmp/retry-escalation.out" "strong builder attempt 1 for unit-001 accepted" \
++    "strong-builder escalation accepts only that unit"
++  retry_handoff="$(dry_run_artifact "handoffs/unit-001.md")"
++  require_text "$retry_handoff" "fake strong builder attempt succeeds after escalation" \
++    "final handoff records the accepted strong-builder attempt"
++  reject_text "$retry_handoff" "fake fast builder attempt 2" \
++    "failed fast-builder handoff is overwritten by the accepted attempt"
++
++  rm -rf "$fake_acceptance" "$fake_builder" "$fake_check" "$root/$name/intent/frame/phase-two"
++  mkdir -p "$fake_acceptance" "$fake_builder" "$fake_check"
++  write_builder_output "$fake_builder/implement-unit-001-fast-1" 0 \
++    "fake fast builder attempt 1 fails check"
++  write_builder_output "$fake_builder/implement-unit-001-fast-2" 0 \
++    "fake fast builder attempt 2 fails check"
++  write_builder_output "$fake_builder/implement-unit-001-fast-3" 0 \
++    "fake fast builder attempt 3 fails check"
++  write_builder_output "$fake_builder/implement-unit-001-strong-1" 0 \
++    "fake strong builder attempt still fails check"
++  write_fake_status "$fake_check/unit-001-fast-1" 1
++  write_fake_status "$fake_check/unit-001-fast-2" 1
++  write_fake_status "$fake_check/unit-001-fast-3" 1
++  write_fake_status "$fake_check/unit-001-strong-1" 1
++  write_lean_frame "$route_with_one_unit" two-way
++  write_signoff
++  if HYPERCORE_LOOP_STATE_DIR="$tmp/loop-runs" \
++    HYPERCORE_BUILDER_FAKE_DIR="$fake_builder" \
++    HYPERCORE_CHECK_FAKE_DIR="$fake_check" \
++    HYPERCORE_ACCEPTANCE_FAKE_DIR="$fake_acceptance" \
++    "$root/adapter/loop.sh" execute "$name" --dry-run >"$tmp/strong-stop.out" 2>"$tmp/strong-stop.err"; then
++    bad "loop execute stops for the operator when the strong builder still fails"
++  else
++    ok "loop execute stops for the operator when the strong builder still fails"
++  fi
++  require_text "$tmp/strong-stop.err" "strong-builder attempt failed for unit-001" \
++    "strong-builder failure reports the escalated failure"
++  require_text "$tmp/strong-stop.err" "stays in flight" \
++    "strong-builder failure keeps the work in flight for the operator"
++  require_text "$tmp/strong-stop.out" "escalating unit-001 to strong builder after 3 failed fast attempts" \
++    "strong-stop path escalates only after the fast budget"
++
++  resume_cache="$tmp/resume-cache"
++  rm -rf "$fake_acceptance" "$fake_builder" "$fake_check" "$resume_cache" "$root/$name/intent/frame/phase-two"
++  mkdir -p "$fake_acceptance" "$fake_builder" "$fake_check" "$resume_cache"
++  write_builder_output "$fake_builder/implement-unit-001-fast-1" 0 \
++    "fake builder resume unit 1"
++  write_builder_output "$fake_builder/implement-unit-002-fast-1" 0 \
++    "fake builder resume unit 2"
++  write_fake_status "$fake_check/unit-001-fast-1" 0
++  write_fake_status "$fake_check/unit-002-fast-1" 0
++  write_acceptance_output "$fake_acceptance/tier-one-unit-001-fast-1" PASS \
++    "resume fixture accepts the first unit" \
++    "tier-one fixture for unit-001 fast attempt 1"
++  write_acceptance_output "$fake_acceptance/tier-one-unit-002-fast-1" PASS \
++    "resume fixture accepts the second unit" \
++    "tier-one fixture for unit-002 fast attempt 1"
++  write_lean_frame "$route_with_two_units" two-way
++  write_signoff
++  if HYPERCORE_LOOP_STATE_DIR="$tmp/loop-runs" \
++    HYPERCORE_PHASE_TWO_DRY_RUN_ACCEPTANCE_DIR="$resume_cache" \
++    HYPERCORE_BUILDER_FAKE_DIR="$fake_builder" \
++    HYPERCORE_CHECK_FAKE_DIR="$fake_check" \
++    HYPERCORE_ACCEPTANCE_FAKE_DIR="$fake_acceptance" \
++    "$root/adapter/loop.sh" execute "$name" --dry-run >"$tmp/resume-first.out" 2>"$tmp/resume-first.err"; then
++    ok "loop execute writes resumable unit cache records after accepted units"
++  else
++    bad "loop execute writes resumable unit cache records after accepted units"
++  fi
++  require_text "$tmp/resume-first.out" "cache miss for unit-001" \
++    "first execute builds the first uncached unit"
++  require_text "$tmp/resume-first.out" "cache miss for unit-002" \
++    "first execute builds the second uncached unit"
++  require_text "$resume_cache/cache/unit-001.key" "cache-key:" \
++    "unit-001 cache record carries a cache key"
++  require_text "$resume_cache/cache/unit-001.key" "base-key:" \
++    "unit-001 cache record carries the signed-frame-derived base key"
++  require_text "$resume_cache/cache/unit-001.key" "prior-state-key:" \
++    "unit-001 cache record carries prior-unit state"
++  require_text "$resume_cache/cache/unit-001.key" "loop-version-key:" \
++    "unit-001 cache record carries loop implementation version"
++  require_text "$resume_cache/cache/unit-001.key" "diff-key:" \
++    "unit-001 cache record carries diff evidence"
++  require_text "$resume_cache/cache/unit-001.key" "check-evidence: dry-run fake mechanical check green" \
++    "unit-001 cache record carries green check evidence"
++  require_text "$resume_cache/cache/unit-001.key" "tier-one-verdict: PASS" \
++    "unit-001 cache record carries tier-one PASS evidence"
++  resume_unit_002_cache="$(sed -nE 's/^cache-key:[[:space:]]*(.*)$/\1/p' "$resume_cache/cache/unit-002.key" | sed -n '1p')"
++
++  if HYPERCORE_LOOP_STATE_DIR="$tmp/loop-runs" \
++    HYPERCORE_PHASE_TWO_DRY_RUN_ACCEPTANCE_DIR="$resume_cache" \
++    HYPERCORE_BUILDER_FAKE_DIR="$fake_builder" \
++    HYPERCORE_CHECK_FAKE_DIR="$fake_check" \
++    HYPERCORE_ACCEPTANCE_FAKE_DIR="$fake_acceptance" \
++    "$root/adapter/loop.sh" execute "$name" --dry-run >"$tmp/resume-second.out" 2>"$tmp/resume-second.err"; then
++    ok "loop execute skips unchanged accepted units on rerun"
++  else
++    bad "loop execute skips unchanged accepted units on rerun"
++  fi
++  require_text "$tmp/resume-second.out" "cache hit: skipping unit-001" \
++    "rerun skips the unchanged first unit"
++  require_text "$tmp/resume-second.out" "cache hit: skipping unit-002" \
++    "rerun skips the unchanged second unit"
++  reject_text "$tmp/resume-second.out" "fake builder resume unit 1" \
++    "cache hit does not rerun the first unit builder"
++  reject_text "$tmp/resume-second.out" "tier-one unit-001 verdict" \
++    "cache hit does not rerun first unit tier-one acceptance"
++
++  printf '\ncorrupted prior evidence\n' >> "$resume_cache/handoffs/unit-001.md"
++  if HYPERCORE_LOOP_STATE_DIR="$tmp/loop-runs" \
++    HYPERCORE_PHASE_TWO_DRY_RUN_ACCEPTANCE_DIR="$resume_cache" \
++    HYPERCORE_BUILDER_FAKE_DIR="$fake_builder" \
++    HYPERCORE_CHECK_FAKE_DIR="$fake_check" \
++    HYPERCORE_ACCEPTANCE_FAKE_DIR="$fake_acceptance" \
++    "$root/adapter/loop.sh" execute "$name" --dry-run >"$tmp/resume-third.out" 2>"$tmp/resume-third.err"; then
++    ok "loop execute rebuilds cache misses and invalidates downstream units"
++  else
++    bad "loop execute rebuilds cache misses and invalidates downstream units"
++  fi
++  require_text "$tmp/resume-third.out" "cache miss for unit-001: handoff, diff, check evidence, or tier-one PASS changed" \
++    "corrupted unit evidence causes a cache miss"
++  require_text "$tmp/resume-third.out" "invalidating cached evidence for unit-002: upstream accepted state changed" \
++    "changed prior-unit state invalidates downstream cached evidence"
++  require_text "$tmp/resume-third.out" "fake builder resume unit 2" \
++    "downstream invalidation rebuilds the second unit"
++  resume_out_third="$(sed -nE 's/^cache-key:[[:space:]]*(.*)$/\1/p' "$resume_cache/cache/unit-002.key" | sed -n '1p')"
++  [ -n "$resume_unit_002_cache" ] && [ -n "$resume_out_third" ] && [ "$resume_unit_002_cache" != "$resume_out_third" ] \
++    && ok "downstream rebuild replaces the unit-002 cache key" \
++    || bad "downstream rebuild replaces the unit-002 cache key"
++
+   cleanup_loop_frame_self_test
+   LOOP_FRAME_CHECK_WORK=
+   rm -rf "$tmp"
+@@ -1291,6 +1648,12 @@ require_text "$root/hypercore.md" \
+ require_text "$root/hypercore.md" \
+   "not cryptographic non-repudiation" \
+   "hypercore.md does not overclaim the operator gate"
++require_text "$root/hypercore.md" \
++  "structured verdicts that include rationale and evidence" \
++  "hypercore.md carries structured implementation acceptance"
++require_text "$root/hypercore.md" \
++  "panel lenses started concurrently" \
++  "hypercore.md carries concurrent tier-two panel execution"
+ require_text "$root/intent/collaboration.md" \
+   "never chooses one for the operator" \
+   "collaboration segment folds the neutral-options operator choice"
+@@ -1369,6 +1732,8 @@ require_absent "$retired_prose" \
+   "retired adapter prose is absent"
+ require_absent "$root/OPERATOR-ACTS-FINDINGS.md" \
+   "operator-act scratch findings are removed from the live root"
++require_absent "$root/PERFORMANCE-FINDINGS.md" \
++  "performance scratch findings are removed from the live root"
+ reject_text "$root/.gitignore" \
+   "$retired_local_state" \
+   "tracked ignore material does not hide retired local state"
+@@ -1474,6 +1839,18 @@ require_text "$root/adapter/gates/check.md" \
+ require_text "$root/adapter/gates/check.md" \
+   "tier-one implementation-acceptance" \
+   "check gate names tier-one implementation acceptance"
++require_text "$root/adapter/gates/check.md" \
++  "RATIONALE:" \
++  "check gate requires acceptance rationale"
++require_text "$root/adapter/gates/check.md" \
++  "EVIDENCE:" \
++  "check gate requires acceptance evidence"
++require_text "$root/adapter/gates/check.md" \
++  "starting all required lenses concurrently" \
++  "check gate carries concurrent tier-two panel execution"
++require_text "$root/adapter/gates/check.md" \
++  "deterministic lens paths" \
++  "check gate carries deterministic panel artifact paths"
+ require_text "$root/adapter/gates/check.md" \
+   "independent-coherence" \
+   "check gate assigns one-way coherence to the panel"
+@@ -1483,12 +1860,18 @@ require_text "$root/adapter/gates/implement.md" \
+ require_text "$root/adapter/gates/implement.md" \
+   "lean handoff state" \
+   "implement gate requires lean unit handoff state"
++require_text "$root/adapter/gates/implement.md" \
++  "signed-frame-derived cache state" \
++  "implement gate describes resumable execute as orchestrator state"
+ require_text "$root/adapter/gates/archive.md" \
+   "intent/frame/signoff.md" \
+   "archive gate signs current work-node frames"
+ require_text "$root/adapter/gates/archive.md" \
+   "tier-two implementation-acceptance" \
+   "archive gate blocks one-way work without clean panel artifacts"
++require_text "$root/adapter/gates/archive.md" \
++  "real-source" \
++  "archive gate rejects non-real acceptance artifacts"
+ require_text "$root/adapter/codex.md" \
+   "design-phase collaboration" \
+   "Codex adapter describes phase one as design-phase collaboration"
+@@ -1558,6 +1941,12 @@ require_text "$root/adapter/codex.md" \
+ require_text "$root/adapter/codex.md" \
+   "implementation-acceptance panel" \
+   "Codex adapter carries one-way implementation acceptance"
++require_text "$root/adapter/codex.md" \
++  "structured phase-two acceptance artifacts" \
++  "Codex adapter carries structured phase-two acceptance artifacts"
++require_text "$root/adapter/codex.md" \
++  "starting the required one-way tier-two lenses concurrently" \
++  "Codex adapter carries concurrent tier-two panel execution"
+ reject_text "$root/adapter/codex.md" \
+   "resumed across check and archive" \
+   "Codex adapter no longer describes one resumed phase-two thread"
+@@ -1733,10 +2122,13 @@ require_text "$root/adapter/loop.sh" \
+   'OPTIONAL_REVIEW_ROLES=(' \
+   "loop declares complete optional review roster"
+ require_text "$root/adapter/loop.sh" \
+-  'REVIEW_CMD=("$CODEX_BIN" -a never -s read-only -C "$ROOT")' \
++  'CODEX_CMD=("$CODEX_BIN" -a never -s read-only -C "$ROOT")' \
+   "reviewer subprocesses use literal approval never and read-only sandbox"
+ require_text "$root/adapter/loop.sh" \
+-  'ACCEPTANCE_CMD=("$CODEX_BIN" -a never -s read-only -C "$ROOT")' \
++  'codex_add_review_route_args' \
++  "reviewer subprocesses use the separate strong review route"
++require_text "$root/adapter/loop.sh" \
++  'ACCEPTANCE_CMD=("${CODEX_CMD[@]}")' \
+   "acceptance reviewer subprocesses use literal approval never and read-only sandbox"
+ require_text "$root/adapter/loop.sh" \
+   'HYPERCORE_ACCEPTANCE_TIMEOUT_SECONDS' \
+@@ -1747,36 +2139,144 @@ require_text "$root/adapter/loop.sh" \
+ require_text "$root/adapter/loop.sh" \
+   'validate_review_model' \
+   "loop validates CODEX_REVIEW_MODEL"
++require_text "$root/adapter/loop.sh" \
++  'CODEX_REVIEW_EFFORT:-xhigh' \
++  "loop keeps review effort strong by default"
++require_text "$root/adapter/loop.sh" \
++  'CODEX_BUILDER_MODEL:-gpt-5.3-codex-spark' \
++  "loop routes fast builders to the spark model by default"
++require_text "$root/adapter/loop.sh" \
++  'CODEX_BUILDER_EFFORT:-xhigh' \
++  "loop applies a separate builder effort default"
++require_text "$root/adapter/loop.sh" \
++  'CODEX_STRONG_BUILDER_MODEL' \
++  "loop exposes a strong-builder escalation model knob"
+ require_text "$root/adapter/loop.sh" \
+   'malformed PASS/FLAG verdict; counted as FLAG' \
+   "malformed reviewer output counts as FLAG"
++require_text "$root/adapter/loop.sh" \
++  '## reviewer diagnostics' \
++  "review artifacts preserve diagnostic sections"
++require_text "$root/adapter/loop.sh" \
++  'selected-output-source: %s' \
++  "review artifacts record diagnostic output source"
+ require_text "$root/adapter/loop.sh" \
+   'acceptance_verdict_from_output()' \
+   "loop parses implementation acceptance verdicts exactly"
+ require_text "$root/adapter/loop.sh" \
+-  'missing or malformed PASS/FLAG verdict; counted as FLAG' \
++  'missing or malformed VERDICT field; counted as FLAG' \
+   "malformed acceptance output counts as FLAG"
++require_text "$root/adapter/loop.sh" \
++  'missing or empty EVIDENCE field; counted as FLAG' \
++  "evidence-free acceptance output counts as FLAG"
++require_text "$root/adapter/loop.sh" \
++  'source: %s' \
++  "acceptance artifacts record a source marker"
++require_text "$root/adapter/loop.sh" \
++  'source-proof: %s' \
++  "acceptance artifacts record source proof"
++require_text "$root/adapter/loop.sh" \
++  'real-reviewer' \
++  "real reviewer source is represented explicitly"
++require_text "$root/adapter/loop.sh" \
++  'fake/self-test' \
++  "fake acceptance source is represented explicitly"
++require_text "$root/adapter/loop.sh" \
++  'real execute refuses HYPERCORE_ACCEPTANCE_FAKE_DIR' \
++  "real execute rejects fake acceptance source"
+ require_text "$root/adapter/loop.sh" \
+   'phase_two_units_from_frame_file()' \
+   "loop derives implementation units from the signed frame"
++require_text "$root/adapter/loop.sh" \
++  'PHASE_TWO_CACHE_DIR' \
++  "loop stores per-unit execute cache records"
++require_text "$root/adapter/loop.sh" \
++  'phase_two_unit_base_cache_key()' \
++  "loop computes signed-frame-derived per-unit cache base keys"
++require_text "$root/adapter/loop.sh" \
++  'phase_two_unit_evidence_cache_key()' \
++  "loop folds handoff, diff, check, and tier-one evidence into cache keys"
++require_text "$root/adapter/loop.sh" \
++  'phase_two_unit_cache_hit()' \
++  "loop validates cache hits before skipping units"
++require_text "$root/adapter/loop.sh" \
++  'cache hit: skipping $unit_id' \
++  "loop skips unchanged accepted units on cache hits"
++require_text "$root/adapter/loop.sh" \
++  'invalidating cached evidence for $unit_id: $reason' \
++  "loop invalidates downstream unit evidence when prior state changes"
+ require_text "$root/adapter/loop.sh" \
+   'run_tier_one_acceptance()' \
+   "loop runs tier-one implementation acceptance"
++require_text "$root/adapter/loop.sh" \
++  'run_unit_build_attempt()' \
++  "loop wraps each unit build in an attempt boundary"
++require_text "$root/adapter/loop.sh" \
++  'for fast_attempt in 1 2 3' \
++  "loop gives each unit a three-attempt fast-builder budget"
++require_text "$root/adapter/loop.sh" \
++  'builder-strong' \
++  "loop routes exhausted units to a strong-builder escalation"
++require_text "$root/adapter/loop.sh" \
++  'strong-builder attempt failed for $unit_id' \
++  "loop stops for the operator when the strong builder fails"
++require_text "$root/adapter/loop.sh" \
++  'real execute refuses HYPERCORE_BUILDER_FAKE_DIR' \
++  "real execute rejects fake builder sources"
++require_text "$root/adapter/loop.sh" \
++  'real execute refuses HYPERCORE_CHECK_FAKE_DIR' \
++  "real execute rejects fake check sources"
+ require_text "$root/adapter/loop.sh" \
+   'Mechanical check immediately before this reviewer' \
+   "tier-one acceptance prompt carries mechanical check evidence"
++require_text "$root/adapter/loop.sh" \
++  'RATIONALE: the frame-anchored reason for the verdict' \
++  "tier-one and tier-two prompts require rationale"
++require_text "$root/adapter/loop.sh" \
++  'EVIDENCE: concrete artifact paths, command results, or missing evidence that supports the verdict' \
++  "tier-one and tier-two prompts require evidence"
+ require_text "$root/adapter/loop.sh" \
+   'cumulative worktree snapshot' \
+   "tier-one acceptance prompt explains cumulative diff records"
+ require_text "$root/adapter/loop.sh" \
+   'run_tier_two_panel()' \
+   "loop runs the one-way tier-two implementation acceptance panel"
++require_text "$root/adapter/loop.sh" \
++  'run_tier_two_lens_acceptance()' \
++  "loop isolates each tier-two lens in a per-lens worker"
++require_text "$root/adapter/loop.sh" \
++  'run_tier_two_lens_acceptance "$work_name" "$frame_rel" "$active_rel" "$lens" &' \
++  "loop launches tier-two lens workers concurrently"
++require_text "$root/adapter/loop.sh" \
++  'wait "$pid"' \
++  "loop waits for every concurrent tier-two lens"
++require_text "$root/adapter/loop.sh" \
++  'tier-two panel starting ${#TIER_TWO_PANEL_LENSES[@]} concurrent lenses' \
++  "loop records deterministic concurrent panel start events"
++require_text "$root/adapter/loop.sh" \
++  'tier-two panel all lenses clean' \
++  "loop preserves the all-lenses-clean panel gate"
+ require_text "$root/adapter/loop.sh" \
+   'tier_two_lens_instruction()' \
+   "loop gives each one-way panel lens a specific acceptance prompt"
++require_text "$root/adapter/loop.sh" \
++  'lens_instruction="$(tier_two_lens_instruction "$lens")"' \
++  "loop threads live tier-two lens instructions inside the panel loop"
++require_text "$root/adapter/loop.sh" \
++  'For the whole-acceptance-conformance lens' \
++  "loop has a whole-acceptance-conformance-specific panel prompt"
+ require_text "$root/adapter/loop.sh" \
+   'For the proof-integrity lens' \
+   "loop has a proof-integrity-specific panel prompt"
++require_text "$root/adapter/loop.sh" \
++  'For the independent-coherence lens' \
++  "loop has an independent-coherence-specific panel prompt"
++require_text "$root/adapter/loop.sh" \
++  'For the security-permissions lens' \
++  "loop has a security-permissions-specific panel prompt"
++require_text "$root/adapter/loop.sh" \
++  'For the red-team lens' \
++  "loop has a red-team-specific panel prompt"
+ require_text "$root/adapter/loop.sh" \
+   'required_tier_one_clean_for_panel' \
+   "loop guards the one-way panel behind clean unit-level acceptance"
+@@ -1800,7 +2300,10 @@ require_text "$root/adapter/loop.sh" \
+   "loop gates archive on clean required acceptance artifacts"
+ require_text "$root/adapter/loop.sh" \
+   'required_tier_one_evidence_clean "archive"' \
+-  "loop refuses dry-run tier-one artifacts for real archive"
++  "loop validates tier-one artifacts before real archive"
++require_text "$root/adapter/loop.sh" \
++  'non-real $artifact_desc acceptance source' \
++  "archive validation rejects non-real acceptance sources"
+ require_text "$root/adapter/loop.sh" \
+   'two-way work skips one-way tier-two panel' \
+   "loop keeps two-way work out of the one-way panel"
+@@ -1867,6 +2370,9 @@ reject_text "$root/adapter/loop.sh" \
+ require_text "$root/adapter/loop.sh" \
+   'print_phase_two_status' \
+   "loop status reports phase-two run state"
++require_text "$root/adapter/loop.sh" \
++  'tier_two_panel=%s cache=%s' \
++  "loop status exposes tier-two panel and resumable cache paths"
+ require_text "$root/adapter/loop.sh" \
+   '"phase_two_run":' \
+   "loop status can render phase-two run state as JSON"
+diff --git a/hypercore.md b/hypercore.md
+index 798c9ab..9db8bab 100644
+--- a/hypercore.md
++++ b/hypercore.md
+@@ -68,7 +68,7 @@ operator direction, lean recoverability, then sign-off.
+   `signed-off-by:`, `signed-off-at:`, and `operator-gate: tty`.
+ - Phase-two acceptance is part of reliance calibration: before one-way adoption stamps the
+   operator's endorsement, the built result is checked independently against what the
+-  operator signed.
++  operator signed, with structured verdicts that include rationale and evidence.
+ - Unresolved implementation-acceptance flags block archive and surface to the operator
+   rather than being self-cleared, averaged away, or treated as warnings.
+ - When written ground is insufficient, the machine records the blocker and stops instead
+@@ -216,8 +216,9 @@ orient -> frame -> implement -> check -> archive
+   proof state, target segments, work in flight, sweep, and adoption or shelving claim.
+ - **implement**: after sign-off, build from the written frame in green proof-advancing
+   units.
+-- **check**: run mechanical checks and independent implementation acceptance; one-way
+-  work gets a required implementation-acceptance panel before archive.
++- **check**: run mechanical checks and independent structured implementation acceptance;
++  one-way work gets a required implementation-acceptance panel before archive, with the
++  panel lenses started concurrently after tier-one evidence is clean.
+ - **archive**: adopt or shelve according to the signed frame.
+ 
+ Direction and review are phase-one acts and artifacts, not extra gates. New work that

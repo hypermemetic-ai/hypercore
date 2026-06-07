@@ -36,7 +36,11 @@
 #   HYPERCORE_OPERATOR (optional sign-off identity when <operator> is omitted)
 #   CODEX_BIN (default: codex), CODEX_APPROVAL (default: never)
 #   CODEX_WRITE_SANDBOX (default: workspace-write), CODEX_READ_SANDBOX (default: read-only)
-#   CODEX_REVIEW_MODEL (optional single-token model name for review/acceptance subprocesses)
+#   CODEX_BUILDER_MODEL (default: gpt-5.5 until the two-step plan/build lands), CODEX_BUILDER_EFFORT (default: xhigh)
+#   CODEX_STRONG_BUILDER_MODEL (optional strong-builder escalation model)
+#   CODEX_STRONG_BUILDER_EFFORT (default: CODEX_REVIEW_EFFORT or xhigh)
+#   CODEX_REVIEW_MODEL (optional strong review/acceptance model), CODEX_REVIEW_EFFORT (default: xhigh)
+#   HYPERCORE_PHASE_TWO_DRY_RUN_ACCEPTANCE_DIR (optional stable dry-run acceptance/cache dir for self-tests)
 
 set -euo pipefail
 
@@ -102,6 +106,7 @@ PHASE_TWO_HANDOFF_DIR=""
 PHASE_TWO_DIFF_DIR=""
 PHASE_TWO_TIER_ONE_DIR=""
 PHASE_TWO_PANEL_DIR=""
+PHASE_TWO_CACHE_DIR=""
 LOOP_CURRENT_UNIT=""
 LOOP_FAILURE_REASON=""
 LOOP_RUN_ID=""
@@ -113,6 +118,9 @@ LOOP_RUN_STARTED_AT=""
 LOOP_CURRENT_WORK_STATE=""
 LOOP_CURRENT_ROOT_STATE=""
 LOOP_CURRENT_GATE=""
+UNIT_ATTEMPT_REASON=""
+UNIT_CHECK_STATUS_MSG=""
+UNIT_ACCEPTED_STATUS_MSG=""
 
 die() {
   local msg=$1
@@ -210,7 +218,8 @@ loop_state_write() {
     printf '    "handoffs_dir": %s,\n' "$(json_string "$PHASE_TWO_HANDOFF_DIR")"
     printf '    "diffs_dir": %s,\n' "$(json_string "$PHASE_TWO_DIFF_DIR")"
     printf '    "tier_one_dir": %s,\n' "$(json_string "$PHASE_TWO_TIER_ONE_DIR")"
-    printf '    "tier_two_panel_dir": %s\n' "$(json_string "$PHASE_TWO_PANEL_DIR")"
+    printf '    "tier_two_panel_dir": %s,\n' "$(json_string "$PHASE_TWO_PANEL_DIR")"
+    printf '    "cache_dir": %s\n' "$(json_string "$PHASE_TWO_CACHE_DIR")"
     printf '  }\n'
     printf '}\n'
   } > "$tmp"
@@ -252,7 +261,9 @@ phase_two_run_init() {
   LOOP_CURRENT_ROOT_STATE="$HYPERCORE_LOOP_STATE_DIR/current/root.json"
   active_dir="$(active_work_dir "$work_name")" || die "work is not active in node $NODE_REL: $work_name"
   PHASE_TWO_FRAME_DIR="$(frame_dir_for "$active_dir")"
-  if [ "$DRY_RUN" = 1 ]; then
+  if [ "$DRY_RUN" = 1 ] && [ -n "${HYPERCORE_PHASE_TWO_DRY_RUN_ACCEPTANCE_DIR:-}" ]; then
+    PHASE_TWO_ACCEPTANCE_DIR="$HYPERCORE_PHASE_TWO_DRY_RUN_ACCEPTANCE_DIR"
+  elif [ "$DRY_RUN" = 1 ]; then
     PHASE_TWO_ACCEPTANCE_DIR="$LOOP_RUN_DIR/phase-two-dry-run"
   else
     PHASE_TWO_ACCEPTANCE_DIR="$PHASE_TWO_FRAME_DIR/phase-two"
@@ -262,6 +273,7 @@ phase_two_run_init() {
   PHASE_TWO_DIFF_DIR="$PHASE_TWO_ACCEPTANCE_DIR/diffs"
   PHASE_TWO_TIER_ONE_DIR="$PHASE_TWO_ACCEPTANCE_DIR/tier-one"
   PHASE_TWO_PANEL_DIR="$PHASE_TWO_ACCEPTANCE_DIR/tier-two-panel"
+  PHASE_TWO_CACHE_DIR="$PHASE_TWO_ACCEPTANCE_DIR/cache"
 
   mkdir -p \
     "$LOOP_RUN_GATE_DIR" \
@@ -271,7 +283,8 @@ phase_two_run_init() {
     "$PHASE_TWO_HANDOFF_DIR" \
     "$PHASE_TWO_DIFF_DIR" \
     "$PHASE_TWO_TIER_ONE_DIR" \
-    "$PHASE_TWO_PANEL_DIR"
+    "$PHASE_TWO_PANEL_DIR" \
+    "$PHASE_TWO_CACHE_DIR"
   : > "$LOOP_RUN_EVENTS"
   PHASE_TWO_RUN_ACTIVE=1
   loop_state_write preflight running "phase-two run initialized"
@@ -1745,6 +1758,226 @@ write_current_diff_record() {
   mv "$tmp" "$path"
 }
 
+phase_two_hash_stdin() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum | awk '{ print $1 }'
+  elif command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 | awk '{ print $1 }'
+  else
+    cksum | awk '{ print $1 "-" $2 }'
+  fi
+}
+
+phase_two_hash_text() {
+  printf '%s' "$1" | phase_two_hash_stdin
+}
+
+phase_two_file_digest() {
+  local file=$1
+  [ -f "$file" ] || return 1
+  phase_two_hash_stdin < "$file"
+}
+
+phase_two_frame_digest() {
+  local frame_dir=${1:-$PHASE_TWO_FRAME_DIR} file
+  [ -d "$frame_dir" ] || return 1
+  {
+    find "$frame_dir" -type f ! -path "$frame_dir/phase-two/*" -print \
+      | LC_ALL=C sort \
+      | while IFS= read -r file; do
+          printf 'path:%s\n' "$(relpath "$file")"
+          printf 'digest:%s\n' "$(phase_two_file_digest "$file")"
+        done
+  } | phase_two_hash_stdin
+}
+
+phase_two_loop_version_digest() {
+  phase_two_file_digest "$HERE/loop.sh"
+}
+
+phase_two_initial_prior_state_key() {
+  local work_name=$1
+  phase_two_hash_text "phase-two-prior-state:v1
+node:$NODE_REL
+work:$work_name
+root"
+}
+
+phase_two_cache_path() {
+  local unit_id=$1
+  printf '%s/%s.key' "$PHASE_TWO_CACHE_DIR" "$unit_id"
+}
+
+phase_two_unit_base_cache_key() {
+  local unit_id=$1 proof=$2 prior_state_key=$3 frame_key loop_key proof_key
+  frame_key="$(phase_two_frame_digest)"
+  loop_key="$(phase_two_loop_version_digest)"
+  proof_key="$(phase_two_hash_text "$proof")"
+  phase_two_hash_text "phase-two-unit-base-cache:v1
+node:$NODE_REL
+work:${LOOP_WORK_NAME:-}
+unit:$unit_id
+frame:$frame_key
+proof:$proof_key
+prior-state:$prior_state_key
+loop-version:$loop_key"
+}
+
+phase_two_tier_one_check_evidence() {
+  local file=$1
+  [ -f "$file" ] || return 1
+  sed -nE 's/^Mechanical check immediately before this reviewer:[[:space:]]*(.*)$/\1/p' "$file" | sed -n '1p'
+}
+
+phase_two_check_evidence_reusable() {
+  local evidence=$1 lowered
+  lowered="$(printf '%s' "$evidence" | tr '[:upper:]' '[:lower:]')"
+  case "$lowered" in
+    *green*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+phase_two_acceptance_artifact_cache_clean() {
+  local file=$1 source
+  acceptance_artifact_field_meaningful "$file" Rationale || return 1
+  acceptance_artifact_field_meaningful "$file" Evidence || return 1
+  acceptance_artifact_field_meaningful "$file" source-proof || return 1
+  if [ "$DRY_RUN" != 1 ]; then
+    source="$(acceptance_artifact_source "$file" || true)"
+    [ "$source" = real-reviewer ] || return 1
+    acceptance_artifact_dry_run "$file" && return 1
+  fi
+}
+
+phase_two_unit_evidence_cache_key() {
+  local unit_id=$1 base_key=$2 handoff_path=$3 diff_path=$4 tier_one_path=$5
+  local handoff_key diff_key tier_one_key verdict check_evidence
+  [ -f "$handoff_path" ] || return 1
+  [ -f "$diff_path" ] || return 1
+  [ -f "$tier_one_path" ] || return 1
+  verdict="$(acceptance_artifact_verdict "$tier_one_path" || true)"
+  [ "$verdict" = PASS ] || return 1
+  phase_two_acceptance_artifact_cache_clean "$tier_one_path" || return 1
+  check_evidence="$(phase_two_tier_one_check_evidence "$tier_one_path")"
+  meaningful_text "$check_evidence" >/dev/null || return 1
+  handoff_key="$(phase_two_file_digest "$handoff_path")"
+  diff_key="$(phase_two_file_digest "$diff_path")"
+  tier_one_key="$(phase_two_file_digest "$tier_one_path")"
+  phase_two_hash_text "phase-two-unit-evidence-cache:v1
+unit:$unit_id
+base:$base_key
+handoff-path:$(relpath "$handoff_path")
+handoff:$handoff_key
+diff-path:$(relpath "$diff_path")
+diff:$diff_key
+tier-one-path:$(relpath "$tier_one_path")
+tier-one:$tier_one_key
+check-evidence:$check_evidence
+tier-one-verdict:PASS"
+}
+
+phase_two_cache_record_value() {
+  local file=$1 field=$2
+  [ -f "$file" ] || return 1
+  sed -nE "s/^$field:[[:space:]]*(.*)$/\1/p" "$file" | sed -n '1p'
+}
+
+phase_two_cache_record_key() {
+  local unit_id=$1
+  phase_two_cache_record_value "$(phase_two_cache_path "$unit_id")" cache-key
+}
+
+phase_two_unit_record_status() {
+  local unit_id=$1 file="$PHASE_TWO_UNITS_DIR/$unit_id.md"
+  [ -f "$file" ] || return 1
+  sed -nE 's/^status:[[:space:]]*([^[:space:]]+).*$/\1/p' "$file" | sed -n '1p'
+}
+
+phase_two_write_cache_record() {
+  local unit_id=$1 base_key=$2 prior_state_key=$3 handoff_path=$4 diff_path=$5 tier_one_path=$6
+  local cache_path tmp cache_key check_evidence reusable
+  cache_path="$(phase_two_cache_path "$unit_id")"
+  cache_key="$(phase_two_unit_evidence_cache_key "$unit_id" "$base_key" "$handoff_path" "$diff_path" "$tier_one_path")" \
+    || die "accepted $unit_id is missing cacheable handoff, diff, check, or tier-one PASS evidence"
+  check_evidence="$(phase_two_tier_one_check_evidence "$tier_one_path")"
+  if phase_two_check_evidence_reusable "$check_evidence"; then
+    reusable=yes
+  else
+    reusable=no
+  fi
+  tmp="$cache_path.tmp.$$"
+  {
+    printf '# phase-two execute cache - %s\n\n' "$unit_id"
+    printf 'unit: %s\n' "$unit_id"
+    printf 'status: accepted\n'
+    printf 'updated-at: %s\n' "$(utc_stamp)"
+    printf 'cache-key: %s\n' "$cache_key"
+    printf 'base-key: %s\n' "$base_key"
+    printf 'prior-state-key: %s\n' "$prior_state_key"
+    printf 'loop-version-key: %s\n' "$(phase_two_loop_version_digest)"
+    printf 'frame-key: %s\n' "$(phase_two_frame_digest)"
+    printf 'handoff-key: %s\n' "$(phase_two_file_digest "$handoff_path")"
+    printf 'diff-key: %s\n' "$(phase_two_file_digest "$diff_path")"
+    printf 'tier-one-key: %s\n' "$(phase_two_file_digest "$tier_one_path")"
+    printf 'tier-one-verdict: PASS\n'
+    printf 'check-evidence: %s\n' "$check_evidence"
+    printf 'cache-reusable: %s\n' "$reusable"
+  } > "$tmp"
+  mv "$tmp" "$cache_path"
+  printf '%s' "$cache_key"
+}
+
+phase_two_unit_cache_hit() {
+  local unit_id=$1 base_key=$2 handoff_path=$3 diff_path=$4 tier_one_path=$5
+  local cache_path record_status recorded_base recorded_key reusable recomputed_key
+  PHASE_TWO_CACHE_HIT_KEY=""
+  PHASE_TWO_CACHE_MISS_REASON=""
+  cache_path="$(phase_two_cache_path "$unit_id")"
+  record_status="$(phase_two_unit_record_status "$unit_id" || true)"
+  if [ "$record_status" != accepted ]; then
+    PHASE_TWO_CACHE_MISS_REASON="unit record is not accepted"
+    return 1
+  fi
+  if [ ! -f "$cache_path" ]; then
+    PHASE_TWO_CACHE_MISS_REASON="cache record missing"
+    return 1
+  fi
+  reusable="$(phase_two_cache_record_value "$cache_path" cache-reusable || true)"
+  if [ "$reusable" != yes ]; then
+    PHASE_TWO_CACHE_MISS_REASON="cache record lacks green check evidence"
+    return 1
+  fi
+  recorded_base="$(phase_two_cache_record_value "$cache_path" base-key || true)"
+  if [ "$recorded_base" != "$base_key" ]; then
+    PHASE_TWO_CACHE_MISS_REASON="signed frame, unit proof, prior state, or loop version changed"
+    return 1
+  fi
+  recorded_key="$(phase_two_cache_record_value "$cache_path" cache-key || true)"
+  recomputed_key="$(phase_two_unit_evidence_cache_key "$unit_id" "$base_key" "$handoff_path" "$diff_path" "$tier_one_path" || true)"
+  if [ -z "$recomputed_key" ]; then
+    PHASE_TWO_CACHE_MISS_REASON="accepted evidence is missing, non-PASS, non-real, or incomplete"
+    return 1
+  fi
+  if [ "$recorded_key" != "$recomputed_key" ]; then
+    PHASE_TWO_CACHE_MISS_REASON="handoff, diff, check evidence, or tier-one PASS changed"
+    return 1
+  fi
+  PHASE_TWO_CACHE_HIT_KEY="$recomputed_key"
+  return 0
+}
+
+phase_two_invalidate_unit_cache() {
+  local unit_id=$1 reason=$2 handoff_path=$3 diff_path=$4 tier_one_path=$5 cache_path
+  cache_path="$(phase_two_cache_path "$unit_id")"
+  if [ -f "$handoff_path" ] || [ -f "$diff_path" ] || [ -f "$tier_one_path" ] || [ -f "$cache_path" ]; then
+    printf 'invalidating cached evidence for %s: %s\n' "$unit_id" "$reason"
+    loop_event cache check running "invalidating cached evidence for $unit_id: $reason"
+    loop_state_write check running "invalidating cached evidence for $unit_id: $reason"
+  fi
+  rm -f "$handoff_path" "$diff_path" "$tier_one_path" "$cache_path"
+}
+
 phase_two_write_handoff() {
   local unit_id=$1 proof=$2 output_path=$3 handoff_path=$4 tmp
   tmp="$handoff_path.tmp.$$"
@@ -1760,8 +1993,9 @@ phase_two_write_handoff() {
 }
 
 phase_two_write_unit_record() {
-  local unit_id=$1 status=$2 proof=$3 handoff_path=$4 diff_path=$5 tier_one_path=$6 message=${7-} tmp path
+  local unit_id=$1 status=$2 proof=$3 handoff_path=$4 diff_path=$5 tier_one_path=$6 message=${7-} tmp path cache_path
   path="$PHASE_TWO_UNITS_DIR/$unit_id.md"
+  cache_path="$(phase_two_cache_path "$unit_id")"
   tmp="$path.tmp.$$"
   {
     printf '# phase-two unit - %s\n\n' "$unit_id"
@@ -1772,38 +2006,138 @@ phase_two_write_unit_record() {
     printf 'handoff-path: %s\n' "$(relpath "$handoff_path")"
     printf 'diff-path: %s\n' "$(relpath "$diff_path")"
     printf 'tier-one-verdict-path: %s\n' "$(relpath "$tier_one_path")"
+    printf 'cache-key-path: %s\n' "$(relpath "$cache_path")"
     [ -n "$message" ] && printf 'message: %s\n' "$(short_message "$message")"
   } > "$tmp"
   mv "$tmp" "$path"
 }
 
+acceptance_output_field_count() {
+  local output=$1 field=$2
+  printf '%s\n' "$output" | awk -v field="$field" '
+    BEGIN { target = toupper(field) ":"; count = 0 }
+    {
+      line = $0
+      sub(/^[[:space:]]+/, "", line)
+      upper = toupper(line)
+      if (index(upper, target) == 1) count++
+    }
+    END { print count + 0 }
+  '
+}
+
+acceptance_output_first_field_value() {
+  local output=$1 field=$2
+  printf '%s\n' "$output" | awk -v field="$field" '
+    BEGIN { target = toupper(field) ":" }
+    {
+      line = $0
+      sub(/^[[:space:]]+/, "", line)
+      upper = toupper(line)
+      if (index(upper, target) == 1) {
+        sub(/^[^:]*:[[:space:]]*/, "", line)
+        sub(/[[:space:]]+$/, "", line)
+        print line
+        exit
+      }
+    }
+  '
+}
+
+acceptance_output_verdict_value() {
+  local output=$1
+  printf '%s\n' "$output" | awk '
+    {
+      line = $0
+      sub(/^[[:space:]]+/, "", line)
+      upper = toupper(line)
+      if (index(upper, "VERDICT:") == 1) {
+        sub(/^[^:]*:[[:space:]]*/, "", line)
+        sub(/[[:space:]]+$/, "", line)
+        value = toupper(line)
+        if (value == "PASS" || value == "FLAG") print value
+        exit
+      }
+    }
+  '
+}
+
+acceptance_output_has_required_fields() {
+  local output=$1 verdict_count rationale_count evidence_count verdict rationale evidence
+  verdict_count="$(acceptance_output_field_count "$output" VERDICT)"
+  rationale_count="$(acceptance_output_field_count "$output" RATIONALE)"
+  evidence_count="$(acceptance_output_field_count "$output" EVIDENCE)"
+  verdict="$(acceptance_output_verdict_value "$output")"
+  rationale="$(acceptance_output_first_field_value "$output" RATIONALE)"
+  evidence="$(acceptance_output_first_field_value "$output" EVIDENCE)"
+  [ "$verdict_count" -eq 1 ] || return 1
+  [ "$verdict" = PASS ] || [ "$verdict" = FLAG ] || return 1
+  [ "$rationale_count" -ge 1 ] || return 1
+  [ "$evidence_count" -ge 1 ] || return 1
+  meaningful_text "$rationale" >/dev/null || return 1
+  meaningful_text "$evidence" >/dev/null || return 1
+}
+
 acceptance_verdict_from_output() {
-  local output=$1 status=$2 nonempty_lines verdict_lines pass_lines flag_lines
+  local output=$1 status=$2
   [ "$status" -eq 0 ] || { printf 'FLAG'; return; }
-  nonempty_lines="$(printf '%s\n' "$output" | sed '/^[[:space:]]*$/d' | wc -l | tr -d ' ')"
-  verdict_lines="$(printf '%s\n' "$output" | sed '/^[[:space:]]*$/d' | grep -Ec '^[[:space:]]*(PASS|FLAG)[[:space:]]*$' || true)"
-  pass_lines="$(printf '%s\n' "$output" | sed '/^[[:space:]]*$/d' | grep -Ec '^[[:space:]]*PASS[[:space:]]*$' || true)"
-  flag_lines="$(printf '%s\n' "$output" | sed '/^[[:space:]]*$/d' | grep -Ec '^[[:space:]]*FLAG[[:space:]]*$' || true)"
-  if [ "$nonempty_lines" -eq 1 ] && [ "$verdict_lines" -eq 1 ] && [ "$pass_lines" -eq 1 ] && [ "$flag_lines" -eq 0 ]; then
-    printf 'PASS'
-  elif [ "$nonempty_lines" -eq 1 ] && [ "$verdict_lines" -eq 1 ] && [ "$flag_lines" -eq 1 ] && [ "$pass_lines" -eq 0 ]; then
-    printf 'FLAG'
+  if acceptance_output_has_required_fields "$output"; then
+    acceptance_output_verdict_value "$output"
   else
     printf 'FLAG'
   fi
 }
 
 acceptance_note_from_output() {
-  local output=$1 status=$2
+  local output=$1 status=$2 verdict_count rationale_count evidence_count verdict rationale evidence
   if [ "$status" -ne 0 ]; then
     short_message "acceptance reviewer subprocess exited $status; counted as FLAG"
-  elif [ "$(acceptance_verdict_from_output "$output" "$status")" = PASS ]; then
-    short_message "structured acceptance verdict returned PASS"
-  elif printf '%s\n' "$output" | sed '/^[[:space:]]*$/d' | grep -Eq '^[[:space:]]*FLAG[[:space:]]*$'; then
-    short_message "structured acceptance verdict returned FLAG"
-  else
-    short_message "missing or malformed PASS/FLAG verdict; counted as FLAG"
+    return
   fi
+  verdict_count="$(acceptance_output_field_count "$output" VERDICT)"
+  rationale_count="$(acceptance_output_field_count "$output" RATIONALE)"
+  evidence_count="$(acceptance_output_field_count "$output" EVIDENCE)"
+  verdict="$(acceptance_output_verdict_value "$output")"
+  rationale="$(acceptance_output_first_field_value "$output" RATIONALE)"
+  evidence="$(acceptance_output_first_field_value "$output" EVIDENCE)"
+  if [ "$verdict_count" -ne 1 ] || { [ "$verdict" != PASS ] && [ "$verdict" != FLAG ]; }; then
+    short_message "missing or malformed VERDICT field; counted as FLAG"
+  elif [ "$rationale_count" -lt 1 ] || ! meaningful_text "$rationale" >/dev/null; then
+    short_message "missing or empty RATIONALE field; counted as FLAG"
+  elif [ "$evidence_count" -lt 1 ] || ! meaningful_text "$evidence" >/dev/null; then
+    short_message "missing or empty EVIDENCE field; counted as FLAG"
+  elif [ "$verdict" = PASS ]; then
+    short_message "structured acceptance verdict PASS with rationale and evidence"
+  else
+    short_message "structured acceptance verdict FLAG with rationale and evidence"
+  fi
+}
+
+acceptance_source_proof() {
+  case "$1" in
+    real-reviewer)
+      printf 'real reviewer subprocess completed through codex exec with literal approval never and literal sandbox read-only'
+      ;;
+    dry-run/self-test)
+      printf 'dry-run self-test output generated by loop; rejected by real archive'
+      ;;
+    fake/self-test)
+      printf 'fake acceptance loaded from HYPERCORE_ACCEPTANCE_FAKE_DIR in dry-run; rejected by real archive'
+      ;;
+    *)
+      printf 'unsupported acceptance source'
+      ;;
+  esac
+}
+
+acceptance_finalize_result() {
+  local output=$1 status=$2 source=$3
+  ACCEPTANCE_OUTPUT="$output"
+  ACCEPTANCE_SOURCE="$source"
+  ACCEPTANCE_VERDICT="$(acceptance_verdict_from_output "$output" "$status")"
+  ACCEPTANCE_NOTES="$(acceptance_note_from_output "$output" "$status")"
+  ACCEPTANCE_RATIONALE="$(acceptance_output_first_field_value "$output" RATIONALE)"
+  ACCEPTANCE_EVIDENCE="$(acceptance_output_first_field_value "$output" EVIDENCE)"
 }
 
 run_acceptance_reviewer() {
@@ -1811,9 +2145,21 @@ run_acceptance_reviewer() {
   ACCEPTANCE_VERDICT=FLAG
   ACCEPTANCE_NOTES="missing acceptance reviewer output; counted as FLAG"
   ACCEPTANCE_OUTPUT=""
+  ACCEPTANCE_SOURCE=""
+  ACCEPTANCE_RATIONALE=""
+  ACCEPTANCE_EVIDENCE=""
 
   if [ -n "${HYPERCORE_ACCEPTANCE_FAKE_DIR:-}" ]; then
+    [ "$DRY_RUN" = 1 ] \
+      || die "real execute refuses HYPERCORE_ACCEPTANCE_FAKE_DIR; fake acceptance is dry-run/self-test only"
     fake_file="$HYPERCORE_ACCEPTANCE_FAKE_DIR/$reviewer_key"
+    if [ ! -f "$fake_file" ]; then
+      case "$reviewer_key" in
+        tier-one-unit-[0-9][0-9][0-9]-*)
+          fake_file="$HYPERCORE_ACCEPTANCE_FAKE_DIR/$(printf '%s' "$reviewer_key" | sed -E 's/-(fast|strong)-[0-9]+$//')"
+          ;;
+      esac
+    fi
     if [ -f "$fake_file" ]; then
       output="$(cat "$fake_file")"
       status=0
@@ -1821,24 +2167,21 @@ run_acceptance_reviewer() {
       output="missing fake acceptance reviewer output for $reviewer_key"
       status=1
     fi
-    ACCEPTANCE_OUTPUT="$output"
-    ACCEPTANCE_VERDICT="$(acceptance_verdict_from_output "$output" "$status")"
-    ACCEPTANCE_NOTES="$(acceptance_note_from_output "$output" "$status")"
+    acceptance_finalize_result "$output" "$status" "fake/self-test"
     return 0
   fi
 
   if [ "$DRY_RUN" = 1 ]; then
-    output=PASS
+    output="VERDICT: PASS
+RATIONALE: dry-run self-test default acceptance.
+EVIDENCE: dry-run mode skipped the real reviewer, and the artifact source marker prevents real archive use."
     status=0
-    ACCEPTANCE_OUTPUT="$output"
-    ACCEPTANCE_VERDICT="$(acceptance_verdict_from_output "$output" "$status")"
-    ACCEPTANCE_NOTES="$(acceptance_note_from_output "$output" "$status")"
+    acceptance_finalize_result "$output" "$status" "dry-run/self-test"
     return 0
   fi
 
   command -v "$CODEX_BIN" >/dev/null 2>&1 \
     || die "acceptance review cannot spawn Codex reviewers: Codex binary '$CODEX_BIN' is not on PATH"
-  validate_review_model
   timeout_seconds="${HYPERCORE_ACCEPTANCE_TIMEOUT_SECONDS:-600}"
   case "$timeout_seconds" in
     ""|*[!0-9]*) die "HYPERCORE_ACCEPTANCE_TIMEOUT_SECONDS must be a positive integer" ;;
@@ -1849,8 +2192,9 @@ run_acceptance_reviewer() {
   final="$(mktemp "${TMPDIR:-/tmp}/hypercore-acceptance-$reviewer_key-final.XXXXXX")"
   tmpout="$(mktemp "${TMPDIR:-/tmp}/hypercore-acceptance-$reviewer_key-out.XXXXXX")"
   tmperr="$(mktemp "${TMPDIR:-/tmp}/hypercore-acceptance-$reviewer_key-err.XXXXXX")"
-  ACCEPTANCE_CMD=("$CODEX_BIN" -a never -s read-only -C "$ROOT")
-  [ -n "${CODEX_REVIEW_MODEL:-}" ] && ACCEPTANCE_CMD+=(-m "$CODEX_REVIEW_MODEL")
+  CODEX_CMD=("$CODEX_BIN" -a never -s read-only -C "$ROOT")
+  codex_add_review_route_args
+  ACCEPTANCE_CMD=("${CODEX_CMD[@]}")
   ACCEPTANCE_CMD+=(exec -o "$final" -)
   set +e
   printf '%s' "$prompt" | timeout --kill-after=5s "$timeout_seconds" "${ACCEPTANCE_CMD[@]}" >"$tmpout" 2>"$tmperr"
@@ -1864,9 +2208,7 @@ run_acceptance_reviewer() {
   if [ "$status" -eq 124 ] || [ "$status" -eq 137 ]; then
     output="${output:-acceptance reviewer timed out after ${timeout_seconds}s}"
   fi
-  ACCEPTANCE_OUTPUT="$output"
-  ACCEPTANCE_VERDICT="$(acceptance_verdict_from_output "$output" "$status")"
-  ACCEPTANCE_NOTES="$(acceptance_note_from_output "$output" "$status")"
+  acceptance_finalize_result "$output" "$status" "real-reviewer"
   rm -f "$final" "$tmpout" "$tmperr"
 }
 
@@ -1876,7 +2218,7 @@ tier_two_lens_instruction() {
       printf 'For the whole-acceptance-conformance lens, check the built worktree and phase-two artifacts against the signed acceptance condition, observable acceptance, excluded interpretation, and route.'
       ;;
     proof-integrity)
-      printf 'For the proof-integrity lens, check whether the recorded unit handoffs, diffs, mechanical checks, and acceptance artifacts support the proof claims without dry-run or stale evidence.'
+      printf 'For the proof-integrity lens, check whether the recorded unit handoffs, diffs, mechanical checks, and acceptance artifacts support the proof claims with real-source proof and without dry-run, fake, or stale evidence.'
       ;;
     independent-coherence)
       printf 'For the independent-coherence lens, perform the semantic sweep judgement for one-way adoption; do not claim to solve semantic indexing.'
@@ -1894,12 +2236,16 @@ tier_two_lens_instruction() {
 }
 
 write_acceptance_artifact() {
-  local path=$1 title=$2 reviewer_key=$3 verdict=$4 notes=$5 prompt=$6 output=$7 tmp
+  local path=$1 title=$2 reviewer_key=$3 verdict=$4 source=$5 rationale=$6 evidence=$7 notes=$8 prompt=$9 output=${10} tmp
   tmp="$path.tmp.$$"
   {
     printf '# %s\n\n' "$title"
     printf 'reviewer: %s\n' "$reviewer_key"
     printf 'Verdict: %s\n' "$verdict"
+    printf 'source: %s\n' "$source"
+    printf 'source-proof: %s\n' "$(acceptance_source_proof "$source")"
+    printf 'Rationale: %s\n' "$rationale"
+    printf 'Evidence: %s\n' "$evidence"
     printf 'dry-run: %s\n' "$([ "$DRY_RUN" = 1 ] && printf yes || printf no)"
     printf 'Isolation: acceptance reviewer subprocesses are invoked with literal approval never and literal sandbox read-only.\n'
     printf 'Network isolation: not claimed by this adapter; the Codex CLI invocation is not represented as proof of network isolation.\n'
@@ -1924,9 +2270,42 @@ acceptance_artifact_dry_run() {
   grep -Eq '^dry-run:[[:space:]]*yes[[:space:]]*$' "$file"
 }
 
+acceptance_artifact_source() {
+  local file=$1
+  [ -f "$file" ] || return 1
+  sed -nE 's/^source:[[:space:]]*(real-reviewer|dry-run\/self-test|fake\/self-test)[[:space:]]*$/\1/p' "$file" | sed -n '1p'
+}
+
+acceptance_artifact_field_meaningful() {
+  local file=$1 label=$2 value
+  [ -f "$file" ] || return 1
+  value="$(sed -nE "s/^$label:[[:space:]]*(.*)$/\1/p" "$file" | sed -n '1p')"
+  meaningful_text "$value" >/dev/null
+}
+
+required_acceptance_artifact_fields_clean() {
+  local stage=$1 artifact_desc=$2 file=$3 source
+  acceptance_artifact_field_meaningful "$file" Rationale \
+    || die "$stage blocked by $artifact_desc without rationale"
+  acceptance_artifact_field_meaningful "$file" Evidence \
+    || die "$stage blocked by $artifact_desc without evidence"
+  acceptance_artifact_field_meaningful "$file" source-proof \
+    || die "$stage blocked by $artifact_desc without source proof"
+  if [ "$DRY_RUN" != 1 ]; then
+    source="$(acceptance_artifact_source "$file" || true)"
+    [ "$source" = real-reviewer ] \
+      || die "$stage blocked by non-real $artifact_desc acceptance source: ${source:-missing}"
+    if acceptance_artifact_dry_run "$file"; then
+      die "$stage blocked by dry-run $artifact_desc"
+    fi
+  fi
+}
+
 run_tier_one_acceptance() {
-  local work_name=$1 unit_id=$2 proof=$3 frame_rel=$4 handoff_path=$5 diff_path=$6 check_status=$7 verdict_path prompt reviewer_key
+  local work_name=$1 unit_id=$2 proof=$3 frame_rel=$4 handoff_path=$5 diff_path=$6 check_status=$7 attempt_key="${8:-}"
+  local verdict_path prompt reviewer_key
   reviewer_key="tier-one-$unit_id"
+  [ -n "$attempt_key" ] && reviewer_key="$reviewer_key-$attempt_key"
   verdict_path="$PHASE_TWO_TIER_ONE_DIR/$unit_id.md"
   prompt="Implementation-acceptance reviewer: tier one
 Work: $work_name
@@ -1940,10 +2319,12 @@ Mechanical check immediately before this reviewer: $check_status
 
 Read only the signed frame, the intent it references, the unit handoff, and the unit diff record.
 The unit diff record is a cumulative worktree snapshot after this unit, so it may include other already-built or planned unit changes. Check whether the handoff and proof-obligation-relevant diff content make this unit a proof-advancing delta toward the operator-signed acceptance; do not flag solely because unrelated cumulative diff hunks are present.
-Return exactly one line:
-PASS
-or
-FLAG
+Return exactly these required fields, with exactly one VERDICT line:
+VERDICT: PASS
+RATIONALE: the frame-anchored reason for the verdict
+EVIDENCE: concrete artifact paths, command results, or missing evidence that supports the verdict
+
+Use VERDICT: FLAG instead of VERDICT: PASS when the evidence is missing, stale, uncertain, or mismatched.
 
 Treat uncertainty, missing evidence, or mismatch with the signed frame as FLAG."
   printf '\n--- acceptance: tier one %s ---\n' "$unit_id"
@@ -1952,24 +2333,32 @@ Treat uncertainty, missing evidence, or mismatch with the signed frame as FLAG."
   loop_state_write check running "tier-one implementation acceptance for $unit_id"
   run_acceptance_reviewer "$reviewer_key" "$prompt"
   write_acceptance_artifact "$verdict_path" "tier-one implementation acceptance - $unit_id" \
-    "$reviewer_key" "$ACCEPTANCE_VERDICT" "$ACCEPTANCE_NOTES" "$prompt" "$ACCEPTANCE_OUTPUT"
+    "$reviewer_key" "$ACCEPTANCE_VERDICT" "$ACCEPTANCE_SOURCE" "$ACCEPTANCE_RATIONALE" "$ACCEPTANCE_EVIDENCE" "$ACCEPTANCE_NOTES" "$prompt" "$ACCEPTANCE_OUTPUT"
   loop_event acceptance check "$([ "$ACCEPTANCE_VERDICT" = PASS ] && printf passed || printf failed)" \
-    "tier-one $unit_id verdict: $ACCEPTANCE_VERDICT"
+    "tier-one $unit_id verdict: $ACCEPTANCE_VERDICT - $ACCEPTANCE_NOTES"
   loop_state_write check "$([ "$ACCEPTANCE_VERDICT" = PASS ] && printf passed || printf failed)" \
-    "tier-one $unit_id verdict: $ACCEPTANCE_VERDICT"
-  printf 'tier-one %s verdict: %s (%s)\n' "$unit_id" "$ACCEPTANCE_VERDICT" "$(relpath "$verdict_path")"
-  [ "$ACCEPTANCE_VERDICT" = PASS ] \
-    || die "tier-one implementation-acceptance FLAG for $unit_id — phase two stops before archive; $work_name stays in flight for the operator"
+    "tier-one $unit_id verdict: $ACCEPTANCE_VERDICT - $ACCEPTANCE_NOTES"
+  printf 'tier-one %s verdict: %s (%s; %s)\n' "$unit_id" "$ACCEPTANCE_VERDICT" "$(relpath "$verdict_path")" "$ACCEPTANCE_NOTES"
+  if [ "$ACCEPTANCE_VERDICT" = PASS ]; then
+    return 0
+  fi
+  UNIT_ATTEMPT_REASON="tier-one implementation-acceptance FLAG for $unit_id"
+  return 1
 }
 
-run_tier_two_panel() {
-  local work_name=$1 frame_rel=$2 active_rel=$3 lens reviewer_key verdict_path prompt lens_instruction any_flag=0 verdict
-  printf '\n--- acceptance: tier two one-way panel ---\n'
-  for lens in "${TIER_TWO_PANEL_LENSES[@]}"; do
-    reviewer_key="panel-$lens"
-    verdict_path="$PHASE_TWO_PANEL_DIR/$lens.md"
-    lens_instruction="$(tier_two_lens_instruction "$lens")"
-    prompt="Implementation-acceptance reviewer: tier two one-way panel
+acceptance_artifact_notes() {
+  local file=$1
+  [ -f "$file" ] || return 1
+  sed -nE 's/^Notes:[[:space:]]*(.*)$/\1/p' "$file" | sed -n '1p'
+}
+
+run_tier_two_lens_acceptance() {
+  local work_name=$1 frame_rel=$2 active_rel=$3 lens=$4
+  local reviewer_key verdict_path prompt lens_instruction
+  reviewer_key="panel-$lens"
+  verdict_path="$PHASE_TWO_PANEL_DIR/$lens.md"
+  lens_instruction="$(tier_two_lens_instruction "$lens")"
+  prompt="Implementation-acceptance reviewer: tier two one-way panel
 Work: $work_name
 Node: $NODE_REL
 Lens: $lens
@@ -1979,24 +2368,61 @@ Phase-two acceptance directory: $(relpath "$PHASE_TWO_ACCEPTANCE_DIR")
 
 Read only the signed frame, the intent it references, the built worktree state, and phase-two acceptance artifacts.
 $lens_instruction
-Return exactly one line:
-PASS
-or
-FLAG
+Return exactly these required fields, with exactly one VERDICT line:
+VERDICT: PASS
+RATIONALE: the frame-anchored reason for the verdict
+EVIDENCE: concrete artifact paths, command results, or missing evidence that supports the verdict
+
+Use VERDICT: FLAG instead of VERDICT: PASS when the evidence is missing, stale, uncertain, unresolved, or mismatched.
 
 Treat uncertainty, missing evidence, unresolved tier-one flags, or mismatch with the signed frame as FLAG."
-    LOOP_CURRENT_GATE=check
-    loop_event acceptance check running "tier-two implementation acceptance lens $lens"
-    loop_state_write check running "tier-two implementation acceptance lens $lens"
-    run_acceptance_reviewer "$reviewer_key" "$prompt"
-    write_acceptance_artifact "$verdict_path" "tier-two implementation acceptance - $lens" \
-      "$reviewer_key" "$ACCEPTANCE_VERDICT" "$ACCEPTANCE_NOTES" "$prompt" "$ACCEPTANCE_OUTPUT"
-    loop_event acceptance check "$([ "$ACCEPTANCE_VERDICT" = PASS ] && printf passed || printf failed)" \
-      "tier-two $lens verdict: $ACCEPTANCE_VERDICT"
-    loop_state_write check "$([ "$ACCEPTANCE_VERDICT" = PASS ] && printf passed || printf failed)" \
-      "tier-two $lens verdict: $ACCEPTANCE_VERDICT"
-    printf 'tier-two %s verdict: %s (%s)\n' "$lens" "$ACCEPTANCE_VERDICT" "$(relpath "$verdict_path")"
-    [ "$ACCEPTANCE_VERDICT" = PASS ] || any_flag=1
+  PHASE_TWO_RUN_ACTIVE=0
+  run_acceptance_reviewer "$reviewer_key" "$prompt"
+  write_acceptance_artifact "$verdict_path" "tier-two implementation acceptance - $lens" \
+    "$reviewer_key" "$ACCEPTANCE_VERDICT" "$ACCEPTANCE_SOURCE" "$ACCEPTANCE_RATIONALE" "$ACCEPTANCE_EVIDENCE" "$ACCEPTANCE_NOTES" "$prompt" "$ACCEPTANCE_OUTPUT"
+}
+
+run_tier_two_panel() {
+  local work_name=$1 frame_rel=$2 active_rel=$3 lens reviewer_key verdict_path prompt any_flag=0 verdict
+  local pid wait_status notes
+  declare -A panel_pids
+  printf '\n--- acceptance: tier two one-way panel ---\n'
+  LOOP_CURRENT_GATE=check
+  printf 'tier-two panel starting %s concurrent lenses\n' "${#TIER_TWO_PANEL_LENSES[@]}"
+  loop_event acceptance check running "tier-two panel starting ${#TIER_TWO_PANEL_LENSES[@]} concurrent lenses"
+  loop_state_write check running "tier-two panel starting ${#TIER_TWO_PANEL_LENSES[@]} concurrent lenses"
+  for lens in "${TIER_TWO_PANEL_LENSES[@]}"; do
+    reviewer_key="panel-$lens"
+    verdict_path="$PHASE_TWO_PANEL_DIR/$lens.md"
+    rm -f "$verdict_path"
+    printf 'tier-two %s started concurrently (%s)\n' "$lens" "$(relpath "$verdict_path")"
+    loop_event acceptance check running "tier-two implementation acceptance lens $lens started concurrently"
+    run_tier_two_lens_acceptance "$work_name" "$frame_rel" "$active_rel" "$lens" &
+    panel_pids["$lens"]=$!
+  done
+
+  for lens in "${TIER_TWO_PANEL_LENSES[@]}"; do
+    reviewer_key="panel-$lens"
+    verdict_path="$PHASE_TWO_PANEL_DIR/$lens.md"
+    pid="${panel_pids[$lens]}"
+    wait_status=0
+    wait "$pid" || wait_status=$?
+    if [ "$wait_status" -ne 0 ]; then
+      prompt="tier-two lens $lens failed before writing a reviewer artifact"
+      write_acceptance_artifact "$verdict_path" "tier-two implementation acceptance - $lens" \
+        "$reviewer_key" FLAG "unsupported" "" "" \
+        "tier-two lens subprocess exited $wait_status; counted as FLAG" "$prompt" ""
+    fi
+    verdict="$(acceptance_artifact_verdict "$verdict_path" || true)"
+    notes="$(acceptance_artifact_notes "$verdict_path" || true)"
+    [ -n "$notes" ] || notes="missing acceptance artifact notes; counted as FLAG"
+    [ "$verdict" = PASS ] || verdict=FLAG
+    loop_event acceptance check "$([ "$verdict" = PASS ] && printf passed || printf failed)" \
+      "tier-two $lens verdict: $verdict - $notes"
+    loop_state_write check "$([ "$verdict" = PASS ] && printf passed || printf failed)" \
+      "tier-two $lens verdict: $verdict - $notes"
+    printf 'tier-two %s verdict: %s (%s; %s)\n' "$lens" "$verdict" "$(relpath "$verdict_path")" "$notes"
+    [ "$verdict" = PASS ] || any_flag=1
   done
   if [ "$any_flag" = 1 ]; then
     die "tier-two implementation-acceptance panel FLAG — one-way archive is blocked; $work_name stays in flight for the operator"
@@ -2008,6 +2434,8 @@ Treat uncertainty, missing evidence, unresolved tier-one flags, or mismatch with
     [ "$verdict" = PASS ] \
       || die "one-way archive blocked by missing or non-PASS tier-two verdict for $lens"
   done
+  loop_event acceptance check passed "tier-two panel all lenses clean"
+  loop_state_write check passed "tier-two panel all lenses clean"
 }
 
 required_tier_one_evidence_clean() {
@@ -2018,9 +2446,7 @@ required_tier_one_evidence_clean() {
     verdict="$(acceptance_artifact_verdict "$verdict_path" || true)"
     [ "$verdict" = PASS ] \
       || die "$stage blocked by missing or non-PASS tier-one verdict for $unit_id"
-    if [ "$DRY_RUN" != 1 ] && acceptance_artifact_dry_run "$verdict_path"; then
-      die "$stage blocked by dry-run tier-one verdict for $unit_id"
-    fi
+    required_acceptance_artifact_fields_clean "$stage" "tier-one verdict for $unit_id" "$verdict_path"
   done
 }
 
@@ -2038,11 +2464,10 @@ required_acceptance_clean_for_archive() {
       verdict="$(acceptance_artifact_verdict "$verdict_path" || true)"
       [ "$verdict" = PASS ] \
         || die "one-way archive blocked by missing or non-PASS tier-two verdict for $lens"
-      if [ "$DRY_RUN" != 1 ] && acceptance_artifact_dry_run "$verdict_path"; then
-        die "one-way archive blocked by dry-run tier-two verdict for $lens"
-      fi
+      required_acceptance_artifact_fields_clean "one-way archive" "tier-two verdict for $lens" "$verdict_path"
     done
   fi
+  return 0
 }
 
 phase() {
@@ -2079,7 +2504,7 @@ phase_two_state_file_for() {
 }
 
 print_phase_two_status() {
-  local work_name=$1 state run_id gate status updated message events unit failure acceptance
+  local work_name=$1 state run_id gate status updated message events unit failure acceptance tier_one panel cache
   state="$(phase_two_state_file_for "$work_name")"
   [ -s "$state" ] || return 0
   run_id="$(json_file_string_value "$state" run_id)"
@@ -2091,8 +2516,11 @@ print_phase_two_status() {
   failure="$(json_file_string_value "$state" failure_reason)"
   events="$(json_file_path_value "$state" events_jsonl)"
   acceptance="$(json_file_path_value "$state" phase_two_acceptance_dir)"
-  printf 'phase-two run: run_id=%s gate=%s unit=%s status=%s updated_at=%s state=%s events=%s acceptance=%s failure=%s message=%s\n' \
-    "$run_id" "$gate" "$unit" "$status" "$updated" "$state" "$events" "$acceptance" "$failure" "$message"
+  tier_one="$(json_file_path_value "$state" tier_one_dir)"
+  panel="$(json_file_path_value "$state" tier_two_panel_dir)"
+  cache="$(json_file_path_value "$state" cache_dir)"
+  printf 'phase-two run: run_id=%s gate=%s unit=%s status=%s updated_at=%s state=%s events=%s acceptance=%s tier_one=%s tier_two_panel=%s cache=%s failure=%s message=%s\n' \
+    "$run_id" "$gate" "$unit" "$status" "$updated" "$state" "$events" "$acceptance" "$tier_one" "$panel" "$cache" "$failure" "$message"
 }
 
 print_status_json() {
@@ -2187,23 +2615,79 @@ record_codex_progress_line() {
   loop_state_write "$gate" running "$msg"
 }
 
+codex_model_token_ok() {
+  local value=$1
+  [[ "$value" =~ ^[A-Za-z0-9][A-Za-z0-9._:/+-]*$ ]]
+}
+
+codex_effort_token_ok() {
+  local value=$1
+  [[ "$value" =~ ^[A-Za-z0-9][A-Za-z0-9._+-]*$ ]]
+}
+
+validate_codex_model_var() {
+  local var=$1 value=$2
+  [ -z "$value" ] && return 0
+  codex_model_token_ok "$value" || die "$var must be a single model token"
+}
+
+validate_codex_effort_var() {
+  local var=$1 value=$2
+  [ -z "$value" ] && return 0
+  codex_effort_token_ok "$value" || die "$var must be a single effort token"
+}
+
+codex_add_model_and_effort_args() {
+  local model=$1 effort=$2 model_var=$3 effort_var=$4
+  validate_codex_model_var "$model_var" "$model"
+  validate_codex_effort_var "$effort_var" "$effort"
+  [ -n "$model" ] && CODEX_CMD+=(-m "$model")
+  [ -n "$effort" ] && CODEX_CMD+=(-c "model_reasoning_effort=\"$effort\"")
+  return 0
+}
+
+codex_route_model_and_effort() {
+  local route=$1 model="" effort=""
+  case "$route" in
+    builder-fast)
+      model="${CODEX_BUILDER_MODEL:-gpt-5.5}"
+      effort="${CODEX_BUILDER_EFFORT:-xhigh}"
+      codex_add_model_and_effort_args "$model" "$effort" CODEX_BUILDER_MODEL CODEX_BUILDER_EFFORT
+      ;;
+    builder-strong)
+      model="${CODEX_STRONG_BUILDER_MODEL:-${CODEX_REVIEW_MODEL:-${CODEX_MODEL:-}}}"
+      effort="${CODEX_STRONG_BUILDER_EFFORT:-${CODEX_REVIEW_EFFORT:-xhigh}}"
+      codex_add_model_and_effort_args "$model" "$effort" CODEX_STRONG_BUILDER_MODEL CODEX_STRONG_BUILDER_EFFORT
+      ;;
+    default)
+      model="${CODEX_MODEL:-}"
+      effort="${CODEX_EFFORT:-}"
+      codex_add_model_and_effort_args "$model" "$effort" CODEX_MODEL CODEX_EFFORT
+      ;;
+    *)
+      die "unknown Codex route: $route"
+      ;;
+  esac
+}
+
 codex_cmd_prefix() {
-  local sandbox="$1"
+  local sandbox="$1" route="${2:-default}"
   CODEX_CMD=("$CODEX_BIN" -a "$CODEX_APPROVAL" -s "$sandbox" -C "$ROOT")
-  [ -n "${CODEX_MODEL:-}" ] && CODEX_CMD+=(-m "$CODEX_MODEL")
+  codex_route_model_and_effort "$route"
   [ -n "${CODEX_PROFILE:-}" ] && CODEX_CMD+=(-p "$CODEX_PROFILE")
   return 0
 }
 
 run_codex_gate() {
-  local gate="$1" tools="$2" mode="$3" sid="$4" prompt="$5" sys="$6" sandbox final combined
-  local codex_events gate_output cmd_status pipeline_status msg
+  local gate="$1" tools="$2" mode="$3" sid="$4" prompt="$5" sys="$6" route="${7:-default}" allow_failure="${8:-0}"
+  local sandbox final combined codex_events gate_output cmd_status pipeline_status msg
+  local fake_file fake_status_file fake_status_line
   sandbox="$(codex_sandbox_for_tools "$tools")"
   final="$(mktemp "${TMPDIR:-/tmp}/hypercore-loop-codex-$gate-final.XXXXXX")"
   combined="$(printf '%s\n\n---\n\n%s' "$sys" "$prompt")"
   codex_events="$LOOP_RUN_DIR/events-codex-$gate.jsonl"
   gate_output="$LOOP_RUN_GATE_DIR/$gate.final.md"
-  codex_cmd_prefix "$sandbox"
+  codex_cmd_prefix "$sandbox" "$route"
 
   case "$mode" in
     start)  CODEX_CMD+=(exec --json -o "$final" -) ;;
@@ -2213,6 +2697,45 @@ run_codex_gate() {
   msg="starting $gate gate with Codex sandbox $sandbox"
   loop_event gate-start "$gate" running "$msg"
   loop_state_write "$gate" running "$msg"
+
+  if [ -n "${HYPERCORE_BUILDER_FAKE_DIR:-}" ] && [[ "$route" == builder-* ]]; then
+    [ "$DRY_RUN" = 1 ] \
+      || die "real execute refuses HYPERCORE_BUILDER_FAKE_DIR; fake builders are dry-run/self-test only"
+    fake_file="$HYPERCORE_BUILDER_FAKE_DIR/$gate"
+    fake_status_file="$fake_file.status"
+    if [ -f "$fake_file" ]; then
+      GATE_OUTPUT="$(cat "$fake_file")"
+    else
+      GATE_OUTPUT="fake builder output for $gate"
+    fi
+    cmd_status=0
+    if [ -f "$fake_status_file" ]; then
+      fake_status_line="$(sed -n '1p' "$fake_status_file")"
+      case "$fake_status_line" in
+        ""|*[!0-9]*) die "fake builder status for $gate must be a non-negative integer" ;;
+        *) cmd_status=$fake_status_line ;;
+      esac
+    fi
+    printf '{"type":"fake-builder","gate":%s,"route":%s,"status":%s}\n' \
+      "$(json_string "$gate")" "$(json_string "$route")" "$cmd_status" > "$codex_events"
+    printf '%q ' "${CODEX_CMD[@]}"; printf '<<< stdin: %q\n' "$combined"
+    printf '%s\n' "$GATE_OUTPUT" > "$gate_output"
+    PHASE_TWO_SESSION_ID="fake-builder-$gate"
+    loop_event codex-thread "$gate" running "fake builder session: $PHASE_TWO_SESSION_ID"
+    if [ "$cmd_status" -ne 0 ]; then
+      msg="gate $gate failed: fake builder exited $cmd_status"
+      loop_event gate-failure "$gate" failed "$msg"
+      loop_state_write "$gate" failed "$msg"
+      rm -f "$final"
+      [ "$allow_failure" = 1 ] && return "$cmd_status"
+      die "$msg"
+    fi
+    loop_event gate-finish "$gate" passed "fake builder stored $gate final message at $gate_output"
+    loop_state_write "$gate" passed "fake builder stored $gate final message at $gate_output"
+    rm -f "$final"
+    printf '%s\n' "$GATE_OUTPUT"
+    return 0
+  fi
 
   if [ "$DRY_RUN" = 1 ]; then
     printf '{"type":"dry-run","gate":%s,"mode":%s}\n' "$(json_string "$gate")" "$(json_string "$mode")" > "$codex_events"
@@ -2240,10 +2763,17 @@ run_codex_gate() {
   cmd_status=${pipeline_status[1]}
   if [ "$cmd_status" -ne 0 ]; then
     [ -s "$final" ] && cp "$final" "$gate_output"
+    if [ -s "$final" ]; then
+      GATE_OUTPUT="$(cat "$final")"
+    else
+      GATE_OUTPUT="codex exec exited $cmd_status"
+      printf '%s\n' "$GATE_OUTPUT" > "$gate_output"
+    fi
     msg="gate $gate failed: codex exec exited $cmd_status"
     loop_event gate-failure "$gate" failed "$msg"
     loop_state_write "$gate" failed "$msg"
     rm -f "$final"
+    [ "$allow_failure" = 1 ] && return "$cmd_status"
     die "$msg"
   fi
 
@@ -2266,11 +2796,11 @@ run_codex_gate() {
 # args: <gate-name> <allowed-tools> <mode> <session-id> <prompt> [instruction-gate]
 # mode is start; every phase-two builder, acceptance reviewer, and archive actor is fresh.
 run_gate() {
-  local gate="$1" tools="$2" mode="$3" sid="$4" prompt="$5" instruction_gate="${6:-$1}" sys
+  local gate="$1" tools="$2" mode="$3" sid="$4" prompt="$5" instruction_gate="${6:-$1}" route="${7:-default}" allow_failure="${8:-0}" sys
   sys="$(cat "$GATES/$instruction_gate.md")"
 
   case "$LOOP_HARNESS" in
-    codex) run_codex_gate "$gate" "$tools" "$mode" "$sid" "$prompt" "$sys" ;;
+    codex) run_codex_gate "$gate" "$tools" "$mode" "$sid" "$prompt" "$sys" "$route" "$allow_failure" ;;
     *) die "unsupported LOOP_HARNESS: $LOOP_HARNESS (only codex is supported)" ;;
   esac
 }
@@ -2469,9 +2999,18 @@ valid_optional_review_role() {
 
 validate_review_model() {
   local model=${CODEX_REVIEW_MODEL:-}
-  [ -z "$model" ] && return 0
-  [[ "$model" =~ ^[A-Za-z0-9][A-Za-z0-9._:/+-]*$ ]] \
-    || die "CODEX_REVIEW_MODEL must be a single model token"
+  local effort=${CODEX_REVIEW_EFFORT:-xhigh}
+  validate_codex_model_var CODEX_REVIEW_MODEL "$model"
+  validate_codex_effort_var CODEX_REVIEW_EFFORT "$effort"
+}
+
+codex_add_review_route_args() {
+  local model=${CODEX_REVIEW_MODEL:-}
+  local effort=${CODEX_REVIEW_EFFORT:-xhigh}
+  validate_review_model
+  [ -n "$model" ] && CODEX_CMD+=(-m "$model")
+  [ -n "$effort" ] && CODEX_CMD+=(-c "model_reasoning_effort=\"$effort\"")
+  return 0
 }
 
 reviewer_verdict_from_output() {
@@ -2487,9 +3026,11 @@ reviewer_verdict_from_output() {
 }
 
 reviewer_note_from_output() {
-  local output=$1 status=$2 note
+  local output=$1 status=$2 note diag
   if [ "$status" -ne 0 ]; then
     note="reviewer subprocess exited $status; counted as FLAG"
+    diag="$(printf '%s\n' "$output" | sed -n '/[^[:space:]]/{s/^[[:space:]]*//;p;q;}')"
+    [ -n "$diag" ] && note="$note; diagnostic: $diag"
   elif printf '%s\n' "$output" | grep -Eq '^VERDICT:[[:space:]]*(PASS|FLAG)[[:space:]]*$'; then
     note="$(printf '%s\n' "$output" | sed -nE 's/^NOTE:[[:space:]]*(.*)$/\1/p' | sed -n '1p')"
     [ -n "$note" ] || note="structured verdict returned"
@@ -2499,13 +3040,32 @@ reviewer_note_from_output() {
   short_message "$note"
 }
 
+write_indented_diagnostic_block() {
+  local title=$1 content=$2
+  printf '#### %s\n\n' "$title"
+  if [ -n "$content" ]; then
+    printf '%s\n' "$content" | sed 's/^/    /'
+  else
+    printf '    (none)\n'
+  fi
+  printf '\n'
+}
+
 run_reviewer_role() {
-  local role=$1 work_name=$2 frame_rel=$3 output status final tmpout tmperr prompt fake_file
+  local role=$1 work_name=$2 frame_rel=$3 output status final tmpout tmperr prompt fake_file fake_status_file status_line
+  local stdout_output stderr_output final_output output_source
   REVIEWER_VERDICT=FLAG
   REVIEWER_NOTES="missing reviewer output; counted as FLAG"
+  REVIEWER_STATUS=1
+  REVIEWER_OUTPUT=""
+  REVIEWER_STDOUT=""
+  REVIEWER_STDERR=""
+  REVIEWER_FINAL_OUTPUT=""
+  REVIEWER_OUTPUT_SOURCE=none
 
   if [ -n "${HYPERCORE_REVIEW_FAKE_DIR:-}" ]; then
     fake_file="$HYPERCORE_REVIEW_FAKE_DIR/$role"
+    fake_status_file="$fake_file.status"
     if [ -f "$fake_file" ]; then
       output="$(cat "$fake_file")"
       status=0
@@ -2513,6 +3073,17 @@ run_reviewer_role() {
       output="missing fake reviewer output for $role"
       status=1
     fi
+    if [ -f "$fake_status_file" ]; then
+      status_line="$(sed -n '1p' "$fake_status_file")"
+      case "$status_line" in
+        ""|*[!0-9]*) die "fake reviewer status for $role must be a non-negative integer" ;;
+        *) status=$status_line ;;
+      esac
+    fi
+    REVIEWER_STATUS="$status"
+    REVIEWER_OUTPUT="$output"
+    REVIEWER_FINAL_OUTPUT="$output"
+    REVIEWER_OUTPUT_SOURCE=fake-output
     REVIEWER_VERDICT="$(reviewer_verdict_from_output "$output" "$status")"
     REVIEWER_NOTES="$(reviewer_note_from_output "$output" "$status")"
     return 0
@@ -2520,7 +3091,6 @@ run_reviewer_role() {
 
   command -v "$CODEX_BIN" >/dev/null 2>&1 \
     || die "review cannot spawn Codex reviewers: Codex binary '$CODEX_BIN' is not on PATH"
-  validate_review_model
   final="$(mktemp "${TMPDIR:-/tmp}/hypercore-review-$role-final.XXXXXX")"
   tmpout="$(mktemp "${TMPDIR:-/tmp}/hypercore-review-$role-out.XXXXXX")"
   tmperr="$(mktemp "${TMPDIR:-/tmp}/hypercore-review-$role-err.XXXXXX")"
@@ -2535,18 +3105,37 @@ or
 VERDICT: FLAG
 
 Then optionally add one NOTE: line. Treat uncertainty as FLAG."
-  REVIEW_CMD=("$CODEX_BIN" -a never -s read-only -C "$ROOT")
-  [ -n "${CODEX_REVIEW_MODEL:-}" ] && REVIEW_CMD+=(-m "$CODEX_REVIEW_MODEL")
+  CODEX_CMD=("$CODEX_BIN" -a never -s read-only -C "$ROOT")
+  codex_add_review_route_args
+  REVIEW_CMD=("${CODEX_CMD[@]}")
   REVIEW_CMD+=(exec -o "$final" -)
   set +e
   printf '%s' "$prompt" | "${REVIEW_CMD[@]}" >"$tmpout" 2>"$tmperr"
   status=$?
   set -e
+  stdout_output="$(cat "$tmpout")"
+  stderr_output="$(cat "$tmperr")"
+  final_output=""
   if [ -s "$final" ]; then
-    output="$(cat "$final")"
+    final_output="$(cat "$final")"
+    output="$final_output"
+    output_source=final-output
+  elif [ -n "$stdout_output" ] && [ -n "$stderr_output" ]; then
+    output="$(printf '%s\n%s' "$stdout_output" "$stderr_output")"
+    output_source=stdout-stderr
+  elif [ -n "$stdout_output" ]; then
+    output="$stdout_output"
+    output_source=stdout
   else
-    output="$(cat "$tmpout" "$tmperr")"
+    output="$stderr_output"
+    output_source=stderr
   fi
+  REVIEWER_STATUS="$status"
+  REVIEWER_OUTPUT="$output"
+  REVIEWER_STDOUT="$stdout_output"
+  REVIEWER_STDERR="$stderr_output"
+  REVIEWER_FINAL_OUTPUT="$final_output"
+  REVIEWER_OUTPUT_SOURCE="$output_source"
   REVIEWER_VERDICT="$(reviewer_verdict_from_output "$output" "$status")"
   REVIEWER_NOTES="$(reviewer_note_from_output "$output" "$status")"
   rm -f "$final" "$tmpout" "$tmperr"
@@ -2554,9 +3143,15 @@ Then optionally add one NOTE: line. Treat uncertainty as FLAG."
 
 cmd_review() {
   local work_name="${1:-}" d frame frame_rel reversibility role add_role tmp overall disposition
-  local roles=() optional_roles=() any_flag=0 role_type
+  local roles=() optional_roles=() required_flag=0 advisory_flag=0 role_type
   declare -A verdicts
   declare -A notes
+  declare -A statuses
+  declare -A outputs
+  declare -A stdout_outputs
+  declare -A stderr_outputs
+  declare -A final_outputs
+  declare -A output_sources
   [ -n "$work_name" ] || die "usage: loop.sh [-C <node-path>] review <work-name> [--add <role>]..."
   validate_work_name "$work_name"
   shift
@@ -2585,9 +3180,21 @@ cmd_review() {
     run_reviewer_role "$role" "$work_name" "$frame_rel"
     verdicts["$role"]="$REVIEWER_VERDICT"
     notes["$role"]="$REVIEWER_NOTES"
-    [ "$REVIEWER_VERDICT" = FLAG ] && any_flag=1
+    statuses["$role"]="$REVIEWER_STATUS"
+    outputs["$role"]="$REVIEWER_OUTPUT"
+    stdout_outputs["$role"]="$REVIEWER_STDOUT"
+    stderr_outputs["$role"]="$REVIEWER_STDERR"
+    final_outputs["$role"]="$REVIEWER_FINAL_OUTPUT"
+    output_sources["$role"]="$REVIEWER_OUTPUT_SOURCE"
+    if [ "$REVIEWER_VERDICT" = FLAG ]; then
+      if valid_optional_review_role "$role"; then
+        advisory_flag=1
+      else
+        required_flag=1
+      fi
+    fi
   done
-  if [ "$any_flag" = 1 ]; then
+  if [ "$required_flag" = 1 ]; then
     overall=FLAG
     disposition="escalated - FLAG verdicts must be answered in the frame; optional reviewers are advisory only and cannot clear base-roster or red-team flags"
   else
@@ -2612,19 +3219,41 @@ cmd_review() {
       done
     fi
     printf '\n## unresolved flags\n\n'
-    if [ "$any_flag" = 1 ]; then
+    if [ "$required_flag" = 1 ]; then
       for role in "${roles[@]}"; do
         [ "${verdicts[$role]}" = FLAG ] || continue
         role_type=base
         valid_optional_review_role "$role" && role_type=advisory
+        [ "$role_type" = base ] || continue
         printf -- '- %s (%s): %s\n' "$role" "$role_type" "${notes[$role]}"
       done
     else
       printf 'None.\n'
     fi
+    if [ "${#optional_roles[@]}" -gt 0 ]; then
+      printf '\n## advisory optional flags\n\n'
+      if [ "$advisory_flag" = 1 ]; then
+        for role in "${optional_roles[@]}"; do
+          [ "${verdicts[$role]}" = FLAG ] || continue
+          printf -- '- %s (advisory): %s\n' "$role" "${notes[$role]}"
+        done
+      else
+        printf 'None.\n'
+      fi
+    fi
     printf '\n## reviewer notes\n\n'
     for role in "${roles[@]}"; do
       printf '### %s\n\n%s\n\n' "$role" "${notes[$role]}"
+    done
+    printf '## reviewer diagnostics\n\n'
+    for role in "${roles[@]}"; do
+      printf '### %s\n\n' "$role"
+      printf 'status: %s\n' "${statuses[$role]}"
+      printf 'selected-output-source: %s\n\n' "${output_sources[$role]}"
+      write_indented_diagnostic_block "selected output" "${outputs[$role]}"
+      write_indented_diagnostic_block "final output" "${final_outputs[$role]}"
+      write_indented_diagnostic_block "stdout" "${stdout_outputs[$role]}"
+      write_indented_diagnostic_block "stderr" "${stderr_outputs[$role]}"
     done
   } > "$tmp"
   mv "$tmp" "$frame/review.md"
@@ -2690,10 +3319,109 @@ $errors"
   printf ' execute %s\n' "$work_name"
 }
 
+fake_check_status_for_attempt() {
+  local key=$1 status_file status_line
+  [ -n "${HYPERCORE_CHECK_FAKE_DIR:-}" ] || return 0
+  [ "$DRY_RUN" = 1 ] \
+    || die "real execute refuses HYPERCORE_CHECK_FAKE_DIR; fake checks are dry-run/self-test only"
+  status_file="$HYPERCORE_CHECK_FAKE_DIR/$key.status"
+  [ -f "$status_file" ] || return 0
+  status_line="$(sed -n '1p' "$status_file")"
+  case "$status_line" in
+    ""|*[!0-9]*) die "fake check status for $key must be a non-negative integer" ;;
+  esac
+  return "$status_line"
+}
+
+run_unit_mechanical_check() {
+  local unit_id=$1 attempt_key=$2 status_msg
+  UNIT_CHECK_STATUS_MSG=""
+  printf '\n--- gate: check (mechanical after %s, %s) ---\n' "$unit_id" "$attempt_key"
+  loop_event check check running "running ./check.sh after $unit_id ($attempt_key)"
+  loop_state_write check running "running ./check.sh after $unit_id ($attempt_key)"
+  if [ "$DRY_RUN" = 1 ]; then
+    if [ -n "${HYPERCORE_CHECK_FAKE_DIR:-}" ]; then
+      if fake_check_status_for_attempt "$unit_id-$attempt_key"; then
+        printf '(dry-run fake) check.sh green after %s (%s)\n' "$unit_id" "$attempt_key"
+        loop_event check check passed "dry-run fake check.sh green after $unit_id ($attempt_key)"
+        loop_state_write check passed "dry-run fake check.sh green after $unit_id ($attempt_key)"
+        status_msg="dry-run fake mechanical check green"
+      else
+        UNIT_ATTEMPT_REASON="check.sh red after $unit_id ($attempt_key)"
+        phase_two_write_unit_record "$unit_id" failed "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "$UNIT_ATTEMPT_REASON"
+        loop_event check check failed "dry-run fake check.sh red after $unit_id ($attempt_key)"
+        loop_state_write check failed "dry-run fake check.sh red after $unit_id ($attempt_key)"
+        return 1
+      fi
+    else
+      printf '(dry-run) would run: ./check.sh after %s (%s)\n' "$unit_id" "$attempt_key"
+      loop_event check check skipped "dry-run skipped ./check.sh after $unit_id ($attempt_key)"
+      loop_state_write check skipped "dry-run skipped ./check.sh after $unit_id ($attempt_key)"
+      status_msg="dry-run mechanical check skipped"
+    fi
+  elif check_green; then
+    printf 'check.sh green after %s (%s)\n' "$unit_id" "$attempt_key"
+    loop_event check check passed "check.sh green after $unit_id ($attempt_key)"
+    loop_state_write check passed "check.sh green after $unit_id ($attempt_key)"
+    status_msg="check.sh green"
+  else
+    UNIT_ATTEMPT_REASON="check.sh red after $unit_id ($attempt_key)"
+    phase_two_write_unit_record "$unit_id" failed "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "$UNIT_ATTEMPT_REASON"
+    loop_event check check failed "$UNIT_ATTEMPT_REASON"
+    loop_state_write check failed "$UNIT_ATTEMPT_REASON"
+    return 1
+  fi
+  UNIT_CHECK_STATUS_MSG="$status_msg"
+  return 0
+}
+
+run_unit_build_attempt() {
+  local work_name=$1 unit_id=$2 proof=$3 source_desc=$4 attempt_kind=$5 attempt_number=$6
+  local handoff_path=$7 diff_path=$8 tier_one_path=$9
+  local attempt_key gate_name gate_output_path route status_msg
+  UNIT_ATTEMPT_REASON=""
+  UNIT_ACCEPTED_STATUS_MSG=""
+  attempt_key="$attempt_kind-$attempt_number"
+  gate_name="implement-$unit_id-$attempt_key"
+  route="builder-$attempt_kind"
+  phase_two_write_unit_record "$unit_id" running "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "$attempt_key builder session starting"
+
+  printf '\n--- gate: implement %s (%s builder attempt %s) ---\n' "$unit_id" "$attempt_kind" "$attempt_number"
+  PHASE_TWO_SESSION_ID=""
+  if ! run_gate "$gate_name" "Read Edit Write Bash" start "" \
+    "Implement phase-two unit $unit_id for node-local work $work_name in addressed node $NODE_REL.
+Proof obligation: $proof
+
+Read only $source_desc, the intent it references, and the material needed to build this unit.
+Do not edit parent intent documents in implement; archive folds accepted intent amendments.
+Build only this proof-advancing unit. Leave ./check.sh green. End with a lean handoff naming the changed files, checks prepared, and any real unit proof gap. Do not describe prior, future, or expected acceptance artifacts; the loop records acceptance evidence after tier-one review. Do not describe prior loop run state, unrelated untracked files, or cumulative diff noise unless they are a real proof gap for this unit." \
+    implement "$route" 1; then
+    UNIT_ATTEMPT_REASON="$attempt_kind builder subprocess failed for $unit_id on attempt $attempt_number"
+    phase_two_write_unit_record "$unit_id" failed "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "$UNIT_ATTEMPT_REASON"
+    return 1
+  fi
+
+  gate_output_path="$LOOP_RUN_GATE_DIR/$gate_name.final.md"
+  phase_two_write_handoff "$unit_id" "$proof" "$gate_output_path" "$handoff_path"
+  write_current_diff_record "$diff_path"
+
+  if ! run_unit_mechanical_check "$unit_id" "$attempt_key"; then
+    return 1
+  fi
+  status_msg="$UNIT_CHECK_STATUS_MSG"
+
+  if run_tier_one_acceptance "$work_name" "$unit_id" "$proof" "$frame_rel" "$handoff_path" "$diff_path" "$status_msg" "$attempt_key"; then
+    UNIT_ACCEPTED_STATUS_MSG="$status_msg; tier-one PASS; $attempt_kind builder attempt $attempt_number"
+    return 0
+  fi
+  return 1
+}
+
 cmd_execute() {
   local work_name="${1:-}" active_dir active_rel frame_rel frame_file source_desc archive_collection archive_decision
   local reversibility errors units_text unit_entry unit_id proof gate_name handoff_path diff_path tier_one_path
-  local gate_output_path status_msg units=() unit_ids=()
+  local gate_output_path status_msg fast_attempt unit_accepted units=() unit_ids=()
+  local prior_state_key base_cache_key old_cache_key new_cache_key downstream_invalidated=0
   [ -n "$work_name" ] || die "usage: loop.sh [-C <node-path>] execute <work-name> [--dry-run]"
   validate_work_name "$work_name"
   shift
@@ -2722,6 +3450,15 @@ $errors"
     || die "signed frame does not name implementation units for phase two; cannot re-derive unit boundaries without inventing"
   mapfile -t units <<< "$units_text"
   source_desc="$frame_rel/ (the signed work-node frame)"
+  if [ "$DRY_RUN" != 1 ] && [ -n "${HYPERCORE_ACCEPTANCE_FAKE_DIR:-}" ]; then
+    die "real execute refuses HYPERCORE_ACCEPTANCE_FAKE_DIR; fake acceptance is dry-run/self-test only"
+  fi
+  if [ "$DRY_RUN" != 1 ] && [ -n "${HYPERCORE_BUILDER_FAKE_DIR:-}" ]; then
+    die "real execute refuses HYPERCORE_BUILDER_FAKE_DIR; fake builders are dry-run/self-test only"
+  fi
+  if [ "$DRY_RUN" != 1 ] && [ -n "${HYPERCORE_CHECK_FAKE_DIR:-}" ]; then
+    die "real execute refuses HYPERCORE_CHECK_FAKE_DIR; fake checks are dry-run/self-test only"
+  fi
 
   [ "$LOOP_HARNESS" = codex ] \
     || die "unsupported LOOP_HARNESS: $LOOP_HARNESS (only codex is supported)"
@@ -2733,6 +3470,7 @@ $errors"
     exit 1
   fi
 
+  prior_state_key="$(phase_two_initial_prior_state_key "$work_name")"
   for unit_entry in "${units[@]}"; do
     unit_id="${unit_entry%%$'\t'*}"
     proof="${unit_entry#*$'\t'}"
@@ -2744,45 +3482,61 @@ $errors"
     handoff_path="$PHASE_TWO_HANDOFF_DIR/$unit_id.md"
     diff_path="$PHASE_TWO_DIFF_DIR/$unit_id.diff"
     tier_one_path="$PHASE_TWO_TIER_ONE_DIR/$unit_id.md"
+    base_cache_key="$(phase_two_unit_base_cache_key "$unit_id" "$proof" "$prior_state_key")"
+    old_cache_key="$(phase_two_cache_record_key "$unit_id" || true)"
+
+    if [ "$downstream_invalidated" = 1 ]; then
+      phase_two_invalidate_unit_cache "$unit_id" "upstream accepted state changed" "$handoff_path" "$diff_path" "$tier_one_path"
+    elif phase_two_unit_cache_hit "$unit_id" "$base_cache_key" "$handoff_path" "$diff_path" "$tier_one_path"; then
+      status_msg="resumable cache hit; reused unchanged handoff, diff, green check evidence, and tier-one PASS"
+      printf 'cache hit: skipping %s (%s)\n' "$unit_id" "$PHASE_TWO_CACHE_HIT_KEY"
+      loop_event cache check skipped "cache hit: skipping $unit_id"
+      loop_state_write check skipped "cache hit: skipping $unit_id"
+      phase_two_write_unit_record "$unit_id" accepted "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "$status_msg"
+      prior_state_key="$PHASE_TWO_CACHE_HIT_KEY"
+      continue
+    else
+      printf 'cache miss for %s: %s\n' "$unit_id" "$(short_message "$PHASE_TWO_CACHE_MISS_REASON")"
+      loop_event cache check running "cache miss for $unit_id: $PHASE_TWO_CACHE_MISS_REASON"
+      loop_state_write check running "cache miss for $unit_id: $PHASE_TWO_CACHE_MISS_REASON"
+    fi
     phase_two_write_unit_record "$unit_id" running "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "builder session starting"
 
-    printf '\n--- gate: implement %s ---\n' "$unit_id"
-    PHASE_TWO_SESSION_ID=""
-    run_gate "$gate_name" "Read Edit Write Bash" start "" \
-      "Implement phase-two unit $unit_id for node-local work $work_name in addressed node $NODE_REL.
-Proof obligation: $proof
+    unit_accepted=0
+    for fast_attempt in 1 2 3; do
+      if run_unit_build_attempt "$work_name" "$unit_id" "$proof" "$source_desc" fast "$fast_attempt" "$handoff_path" "$diff_path" "$tier_one_path"; then
+        unit_accepted=1
+        status_msg="$UNIT_ACCEPTED_STATUS_MSG"
+        printf 'fast builder attempt %s for %s accepted\n' "$fast_attempt" "$unit_id"
+        break
+      fi
+      printf 'fast builder attempt %s for %s failed: %s\n' "$fast_attempt" "$unit_id" "$(short_message "$UNIT_ATTEMPT_REASON")"
+      loop_event builder check failed "fast builder attempt $fast_attempt for $unit_id failed: $UNIT_ATTEMPT_REASON"
+      loop_state_write check failed "fast builder attempt $fast_attempt for $unit_id failed: $UNIT_ATTEMPT_REASON"
+    done
 
-Read only $source_desc, the intent it references, and the material needed to build this unit.
-Do not edit parent intent documents in implement; archive folds accepted intent amendments.
-Build only this proof-advancing unit. Leave ./check.sh green. End with a lean handoff naming the changed files, checks prepared, and any real unit proof gap. Do not describe prior, future, or expected acceptance artifacts; the loop records acceptance evidence after tier-one review. Do not describe prior loop run state, unrelated untracked files, or cumulative diff noise unless they are a real proof gap for this unit." \
-      implement
-    gate_output_path="$LOOP_RUN_GATE_DIR/$gate_name.final.md"
-    phase_two_write_handoff "$unit_id" "$proof" "$gate_output_path" "$handoff_path"
-    write_current_diff_record "$diff_path"
-
-    printf '\n--- gate: check (mechanical after %s) ---\n' "$unit_id"
-    loop_event check check running "running ./check.sh after $unit_id"
-    loop_state_write check running "running ./check.sh after $unit_id"
-    if [ "$DRY_RUN" = 1 ]; then
-      printf '(dry-run) would run: ./check.sh after %s\n' "$unit_id"
-      loop_event check check skipped "dry-run skipped ./check.sh after $unit_id"
-      loop_state_write check skipped "dry-run skipped ./check.sh after $unit_id"
-      status_msg="dry-run mechanical check skipped"
-    else
-      if check_green; then
-        printf 'check.sh green after %s\n' "$unit_id"
-        loop_event check check passed "check.sh green after $unit_id"
-        loop_state_write check passed "check.sh green after $unit_id"
-        status_msg="check.sh green"
+    if [ "$unit_accepted" != 1 ]; then
+      printf 'escalating %s to strong builder after 3 failed fast attempts\n' "$unit_id"
+      loop_event builder check running "escalating $unit_id to strong builder after 3 failed fast attempts"
+      loop_state_write check running "escalating $unit_id to strong builder after 3 failed fast attempts"
+      if run_unit_build_attempt "$work_name" "$unit_id" "$proof" "$source_desc" strong 1 "$handoff_path" "$diff_path" "$tier_one_path"; then
+        unit_accepted=1
+        status_msg="$UNIT_ACCEPTED_STATUS_MSG"
+        printf 'strong builder attempt 1 for %s accepted\n' "$unit_id"
       else
-        phase_two_write_unit_record "$unit_id" failed "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "check.sh red"
-        loop_event check check failed "check.sh red after $unit_id — drift, stopping"
-        die "check.sh red after $unit_id — drift, stopping before acceptance"
+        phase_two_write_unit_record "$unit_id" failed "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "$UNIT_ATTEMPT_REASON"
+        die "strong-builder attempt failed for $unit_id; phase two stops for the operator and $work_name stays in flight: $UNIT_ATTEMPT_REASON"
       fi
     fi
 
-    run_tier_one_acceptance "$work_name" "$unit_id" "$proof" "$frame_rel" "$handoff_path" "$diff_path" "$status_msg"
-    phase_two_write_unit_record "$unit_id" accepted "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "$status_msg; tier-one PASS"
+    new_cache_key="$(phase_two_write_cache_record "$unit_id" "$base_cache_key" "$prior_state_key" "$handoff_path" "$diff_path" "$tier_one_path")"
+    if [ -n "$old_cache_key" ] && [ "$old_cache_key" != "$new_cache_key" ]; then
+      downstream_invalidated=1
+    else
+      downstream_invalidated=0
+    fi
+    prior_state_key="$new_cache_key"
+    phase_two_write_unit_record "$unit_id" accepted "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "$status_msg; tier-one PASS; cache-key $new_cache_key"
   done
 
   LOOP_CURRENT_UNIT=""

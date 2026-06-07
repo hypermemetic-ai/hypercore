@@ -68,7 +68,7 @@ operator direction, lean recoverability, then sign-off.
   `signed-off-by:`, `signed-off-at:`, and `operator-gate: tty`.
 - Phase-two acceptance is part of reliance calibration: before one-way adoption stamps the
   operator's endorsement, the built result is checked independently against what the
-  operator signed.
+  operator signed, with structured verdicts that include rationale and evidence.
 - Unresolved implementation-acceptance flags block archive and surface to the operator
   rather than being self-cleared, averaged away, or treated as warnings.
 - When written ground is insufficient, the machine records the blocker and stops instead
@@ -216,8 +216,9 @@ orient -> frame -> implement -> check -> archive
   proof state, target segments, work in flight, sweep, and adoption or shelving claim.
 - **implement**: after sign-off, build from the written frame in green proof-advancing
   units.
-- **check**: run mechanical checks and independent implementation acceptance; one-way
-  work gets a required implementation-acceptance panel before archive.
+- **check**: run mechanical checks and independent structured implementation acceptance;
+  one-way work gets a required implementation-acceptance panel before archive, with the
+  panel lenses started concurrently after tier-one evidence is clean.
 - **archive**: adopt or shelve according to the signed frame.
 
 Direction and review are phase-one acts and artifacts, not extra gates. New work that

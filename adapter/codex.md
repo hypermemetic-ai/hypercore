@@ -82,15 +82,18 @@ the operator's **sign-off**:
   session something it needs, the frame was incomplete. That is the test.
 - **Phase two — implement, check, archive — heads-down.**
   `loop.sh [-C <node-path>] execute <work-name>` builds the delta in green
-  proof-advancing units, records phase-two acceptance artifacts under the work frame,
-  blocks unresolved required `FLAG`s, and runs the one-way
-  implementation-acceptance panel before archive. The required one-way panel lenses are
+  proof-advancing units, records structured phase-two acceptance artifacts under the work
+  frame, reuses unchanged accepted units through signed-frame-derived cache state, blocks
+  unresolved required `FLAG`s, and runs the required one-way implementation-acceptance panel,
+  starting the required one-way tier-two lenses concurrently before archive. The required
+  one-way panel lenses are
   `whole-acceptance-conformance`, `proof-integrity`, `independent-coherence`,
   `security-permissions`, and `red-team`; two-way work pays tier one but skips this
-  panel. Archive adopts or shelves the work according to the signed frame. Adoption folds the
-  accepted delta into the addressed node's intent, stamps each touched segment's foot with
-  the signer, and records adoption history; shelving records history without making
-  proposed parent amendments current.
+  panel. Archive adopts or shelves the work according to the signed frame only after every
+  required acceptance artifact is clean and real-source. Adoption folds the accepted delta
+  into the addressed node's intent, stamps each touched segment's foot with the signer,
+  and records adoption history; shelving records history without making proposed parent
+  amendments current.
 
 A work name is a node-local `NNN-slug`. The root node is assumed when no node is named.
 `loop.sh -C home start 001-example` addresses work in the home child node, and

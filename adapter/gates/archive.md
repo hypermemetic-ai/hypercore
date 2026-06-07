@@ -16,8 +16,9 @@ Stamp the foot of each touched segment with the operator who signed off — the
 invent an endorser; only the signed-off operator stamps a foot.
 
 For one-way work, do not fold or stamp unless the tier-two implementation-acceptance
-panel is present and clean. Do not self-clear, average away, or downgrade required
-`FLAG`s.
+panel is present, clean, and real-source. Do not use dry-run or fake/self-test
+acceptance artifacts for real adoption. Do not self-clear, average away, or downgrade
+required `FLAG`s.
 
 Do not move the work node yourself — the orchestrator records the addressed node-local
 work in node-local history after re-running `check.sh` green.

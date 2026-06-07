@@ -46,15 +46,33 @@ scrutiny required by the signed frame and reversibility.
 or archive fold is trusted.
 after each implementation unit, a fresh independent read-only implementation-acceptance
 reviewer reads the signed frame, unit proof obligation, unit diff, and lean unit handoff,
-then returns exactly `PASS` or `FLAG`.
-for one-way work, a required tier-two implementation-acceptance panel runs before archive;
-two-way work does not run that panel unless later intent explicitly requires it.
+then returns a structured verdict: exactly one `PASS` or `FLAG` with required rationale and
+concrete evidence.
+for one-way work, a required tier-two implementation-acceptance panel runs before archive,
+its lenses started concurrently after every required tier-one artifact is clean; two-way
+work does not run that panel unless later intent explicitly requires it.
 the one-way tier-two panel lenses are `whole-acceptance-conformance`, `proof-integrity`,
 `independent-coherence`, `security-permissions`, and `red-team`.
 the `independent-coherence` lens carries the semantic sweep judgement for one-way archive;
 this does not solve the deeper semantic-indexing problem.
-missing, malformed, nonzero, or non-`PASS`/`FLAG` acceptance reviewer output counts as
-`FLAG`.
+missing, malformed, nonzero, unsupported-source, evidence-free, or non-`PASS`/`FLAG`
+acceptance reviewer output counts as `FLAG`.
+acceptance artifacts record their source as real reviewer, dry-run/self-test, or
+fake/self-test; real execute refuses fake acceptance, and real archive refuses dry-run or
+fake-source required acceptance.
+phase-two builders may be routed separately from reviewers through a fast-builder model
+knob, while tier-one acceptance, tier-two acceptance, and phase-one review stay on the
+strong review floor; the fast-builder default is held at the strong model until the
+two-step plan/build work lands.
+a unit build attempts the fast builder first, retries a failed unit up to three fast
+attempts when `./check.sh` or tier-one acceptance fails, escalates that unit to the strong
+builder after the fast budget, and returns to the operator if the strong attempt still
+fails.
+execute is resumable from the signed frame and on-disk artifacts: a passed unit's build and
+tier-one evidence is reused only when its cache key still matches the signed frame, unit
+proof obligation, relevant prior-unit state, loop implementation version, recorded diff, and
+green mechanical-check evidence, and a cache miss rebuilds the unit and invalidates
+downstream unit evidence.
 unresolved required tier-one or tier-two `FLAG`s halt phase two before archive; the active
 work node remains in flight for the operator.
 the checks re-run for every statement, not only the ones a work node touched.
@@ -147,11 +165,21 @@ the work node's `intent/frame/signoff.md`.
 `loop.sh execute <work-name>` derives implementation units from the signed frame, starts a
 fresh Codex builder session for each unit, and records lean unit handoff, diff, and
 tier-one verdict artifacts under the work frame.
+`loop.sh execute <work-name>` routes builders through `CODEX_BUILDER_MODEL`, defaulting to
+the strong model until the two-step plan/build work lands, separately from the strong review
+route; it gives each unit a three-attempt fast-builder budget, escalates an exhausted unit
+to `CODEX_STRONG_BUILDER_MODEL`, and stops for the operator when the strong builder fails.
 `loop.sh execute <work-name>` runs implementation-acceptance reviewers with literal
 approval `never` and literal sandbox `read-only`.
-`loop.sh execute <work-name>` treats malformed implementation-acceptance output as
-`FLAG`, blocks unresolved required flags, and runs the one-way tier-two panel before
-archive.
+`loop.sh execute <work-name>` writes structured acceptance artifacts with a verdict,
+rationale, evidence, and a `source:` marker, refuses `HYPERCORE_ACCEPTANCE_FAKE_DIR` outside
+dry-run, and lets real archive accept only `source: real-reviewer` required acceptance.
+`loop.sh execute <work-name>` caches per-unit build and tier-one evidence under a
+signed-frame-derived key, skips unchanged accepted units on rerun, and rebuilds cache misses
+while invalidating downstream evidence.
+`loop.sh execute <work-name>` treats malformed, evidence-free, or unsupported-source
+implementation-acceptance output as `FLAG`, blocks unresolved required flags, and runs the
+concurrent one-way tier-two panel before archive.
 `loop.sh execute <work-name>` records the addressed work in node-local history after archive.
 
 ---
