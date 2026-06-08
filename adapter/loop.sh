@@ -36,7 +36,11 @@
 #   HYPERCORE_OPERATOR (optional sign-off identity when <operator> is omitted)
 #   CODEX_BIN (default: codex), CODEX_APPROVAL (default: never)
 #   CODEX_WRITE_SANDBOX (default: workspace-write), CODEX_READ_SANDBOX (default: read-only)
-#   CODEX_BUILDER_MODEL (default: gpt-5.5 until the two-step plan/build lands), CODEX_BUILDER_EFFORT (default: xhigh)
+#   CODEX_PLANNER_MODEL (default: CODEX_STRONG_BUILDER_MODEL, then CODEX_REVIEW_MODEL/CODEX_MODEL)
+#   CODEX_PLANNER_EFFORT (default: CODEX_STRONG_BUILDER_EFFORT, then CODEX_REVIEW_EFFORT or xhigh)
+#   CODEX_BUILDER_MODEL (default: gpt-5.3-codex-spark; two-step has shipped, so
+#     the cheap fast model is behind the plan step and plan-match check)
+#   CODEX_BUILDER_EFFORT (default: xhigh)
 #   CODEX_STRONG_BUILDER_MODEL (optional strong-builder escalation model)
 #   CODEX_STRONG_BUILDER_EFFORT (default: CODEX_REVIEW_EFFORT or xhigh)
 #   CODEX_REVIEW_MODEL (optional strong review/acceptance model), CODEX_REVIEW_EFFORT (default: xhigh)
@@ -109,6 +113,8 @@ PHASE_TWO_RUN_ACTIVE=0
 PHASE_TWO_FRAME_DIR=""
 PHASE_TWO_ACCEPTANCE_DIR=""
 PHASE_TWO_UNITS_DIR=""
+PHASE_TWO_PLAN_DIR=""
+PHASE_TWO_PLAN_MATCH_DIR=""
 PHASE_TWO_HANDOFF_DIR=""
 PHASE_TWO_DIFF_DIR=""
 PHASE_TWO_TIER_ONE_DIR=""
@@ -127,6 +133,7 @@ LOOP_CURRENT_GATE=""
 UNIT_ATTEMPT_REASON=""
 UNIT_CHECK_STATUS_MSG=""
 UNIT_ACCEPTED_STATUS_MSG=""
+PLAN_NON_DECOMPOSABLE_SIGNAL=""
 
 die() {
   local msg=$1
@@ -221,6 +228,8 @@ loop_state_write() {
     printf '    "current_root_state": %s,\n' "$(json_string "$LOOP_CURRENT_ROOT_STATE")"
     printf '    "phase_two_acceptance_dir": %s,\n' "$(json_string "$PHASE_TWO_ACCEPTANCE_DIR")"
     printf '    "units_dir": %s,\n' "$(json_string "$PHASE_TWO_UNITS_DIR")"
+    printf '    "plans_dir": %s,\n' "$(json_string "$PHASE_TWO_PLAN_DIR")"
+    printf '    "plan_match_dir": %s,\n' "$(json_string "$PHASE_TWO_PLAN_MATCH_DIR")"
     printf '    "handoffs_dir": %s,\n' "$(json_string "$PHASE_TWO_HANDOFF_DIR")"
     printf '    "diffs_dir": %s,\n' "$(json_string "$PHASE_TWO_DIFF_DIR")"
     printf '    "tier_one_dir": %s,\n' "$(json_string "$PHASE_TWO_TIER_ONE_DIR")"
@@ -274,6 +283,8 @@ phase_two_run_init() {
     PHASE_TWO_ACCEPTANCE_DIR="$PHASE_TWO_FRAME_DIR/phase-two"
   fi
   PHASE_TWO_UNITS_DIR="$PHASE_TWO_ACCEPTANCE_DIR/units"
+  PHASE_TWO_PLAN_DIR="$PHASE_TWO_ACCEPTANCE_DIR/plans"
+  PHASE_TWO_PLAN_MATCH_DIR="$PHASE_TWO_ACCEPTANCE_DIR/plan-match"
   PHASE_TWO_HANDOFF_DIR="$PHASE_TWO_ACCEPTANCE_DIR/handoffs"
   PHASE_TWO_DIFF_DIR="$PHASE_TWO_ACCEPTANCE_DIR/diffs"
   PHASE_TWO_TIER_ONE_DIR="$PHASE_TWO_ACCEPTANCE_DIR/tier-one"
@@ -284,6 +295,8 @@ phase_two_run_init() {
     "$(dirname "$LOOP_CURRENT_WORK_STATE")" \
     "$(dirname "$LOOP_CURRENT_ROOT_STATE")" \
     "$PHASE_TWO_UNITS_DIR" \
+    "$PHASE_TWO_PLAN_DIR" \
+    "$PHASE_TWO_PLAN_MATCH_DIR" \
     "$PHASE_TWO_HANDOFF_DIR" \
     "$PHASE_TWO_DIFF_DIR" \
     "$PHASE_TWO_TIER_ONE_DIR" \
@@ -1805,25 +1818,108 @@ write_current_diff_record() {
   mv "$tmp" "$path"
 }
 
-phase_two_unit_tier_one_resumable() {
-  # Dead-simple resume: a unit is reusable on a rerun iff its tier-one
-  # acceptance artifact is already on disk as a clean PASS for this signed
-  # frame. No content hashing, no loop-version key, no per-unit cache record --
-  # the artifact lives in this frame's own phase-two tree, so its presence is
-  # the signal. In a real run it must be a real-reviewer, non-dry-run PASS.
-  local tier_one_path=$1 verdict
-  [ -f "$tier_one_path" ] || return 1
-  verdict="$(acceptance_artifact_verdict "$tier_one_path" || true)"
+phase_two_artifact_resumable_pass() {
+  local artifact_path=$1 verdict
+  [ -f "$artifact_path" ] || return 1
+  verdict="$(acceptance_artifact_verdict "$artifact_path" || true)"
   [ "$verdict" = PASS ] || return 1
-  acceptance_artifact_field_meaningful "$tier_one_path" Rationale || return 1
-  acceptance_artifact_field_meaningful "$tier_one_path" Evidence || return 1
-  acceptance_artifact_field_meaningful "$tier_one_path" source-proof || return 1
+  acceptance_artifact_field_meaningful "$artifact_path" Rationale || return 1
+  acceptance_artifact_field_meaningful "$artifact_path" Evidence || return 1
+  acceptance_artifact_field_meaningful "$artifact_path" source-proof || return 1
   if [ "$DRY_RUN" != 1 ]; then
-    [ "$(acceptance_artifact_source "$tier_one_path" || true)" = real-reviewer ] || return 1
-    acceptance_artifact_dry_run "$tier_one_path" && return 1
+    [ "$(acceptance_artifact_source "$artifact_path" || true)" = real-reviewer ] || return 1
+    acceptance_artifact_dry_run "$artifact_path" && return 1
   fi
   return 0
 }
+
+phase_two_unit_resumable() {
+  # A unit is reusable on a rerun only when both gates that make the prior build
+  # trustworthy are already clean for this signed frame: plan-match before the
+  # build, then tier-one after the build.
+  local plan_match_path=$1 tier_one_path=$2
+  phase_two_artifact_resumable_pass "$plan_match_path" || return 1
+  phase_two_artifact_resumable_pass "$tier_one_path" || return 1
+  return 0
+}
+
+planner_non_decomposable_signal_from_output() {
+  local output=$1
+  printf '%s\n' "$output" | awk '
+    function trim(s) {
+      sub(/^[[:space:]]+/, "", s)
+      sub(/[[:space:]]+$/, "", s)
+      return s
+    }
+    {
+      line = trim($0)
+      lowered = tolower(line)
+      if (lowered ~ /^non-decomposable[[:space:]]*:/) {
+        count++
+        value = line
+        sub(/^[^:]*:[[:space:]]*/, "", value)
+        value = tolower(trim(value))
+        if (value != "true" && value != "false") bad = 1
+        found = value
+      }
+    }
+    END {
+      if (count == 1 && bad != 1) {
+        print found
+        exit 0
+      }
+      exit 1
+    }
+  '
+}
+
+phase_two_plan_non_decomposable_signal() {
+  local plan_path=$1
+  awk '
+    function trim(s) {
+      sub(/^[[:space:]]+/, "", s)
+      sub(/[[:space:]]+$/, "", s)
+      return s
+    }
+    /^## readable plan[[:space:]]*$/ { in_readable = 1 }
+    in_readable { next }
+    {
+      line = trim($0)
+      lowered = tolower(line)
+      if (lowered ~ /^non-decomposable[[:space:]]*:/) {
+        count++
+        value = line
+        sub(/^[^:]*:[[:space:]]*/, "", value)
+        value = tolower(trim(value))
+        if (value != "true" && value != "false") bad = 1
+        found = value
+      }
+    }
+    END {
+      if (count == 1 && bad != 1) {
+        print found
+        exit 0
+      }
+      exit 1
+    }
+  ' "$plan_path"
+}
+
+phase_two_write_plan_artifact() {
+  local unit_id=$1 proof=$2 output_path=$3 plan_path=$4 non_decomposable=$5 tmp
+  tmp="$plan_path.tmp.$$"
+  {
+    printf '# plan - %s\n\n' "$unit_id"
+    printf 'unit: %s\n\n' "$unit_id"
+    printf 'proof obligation: %s\n\n' "$proof"
+    printf 'non-decomposable: %s\n\n' "$non_decomposable"
+    printf 'planner-output-path: %s\n\n' "$(relpath "$output_path")"
+    printf '## readable plan\n\n'
+    printf '%s\n' "$GATE_OUTPUT"
+  } > "$tmp"
+  mv "$tmp" "$plan_path"
+}
+
 phase_two_write_handoff() {
   local unit_id=$1 proof=$2 output_path=$3 handoff_path=$4 tmp
   tmp="$handoff_path.tmp.$$"
@@ -1840,7 +1936,10 @@ phase_two_write_handoff() {
 
 phase_two_write_unit_record() {
   local unit_id=$1 status=$2 proof=$3 handoff_path=$4 diff_path=$5 tier_one_path=$6 message=${7-} tmp path
+  local plan_path plan_match_path
   path="$PHASE_TWO_UNITS_DIR/$unit_id.md"
+  plan_path="$PHASE_TWO_PLAN_DIR/$unit_id.md"
+  plan_match_path="$PHASE_TWO_PLAN_MATCH_DIR/$unit_id.md"
   tmp="$path.tmp.$$"
   {
     printf '# phase-two unit - %s\n\n' "$unit_id"
@@ -1848,6 +1947,8 @@ phase_two_write_unit_record() {
     printf 'status: %s\n' "$status"
     printf 'updated-at: %s\n' "$(utc_stamp)"
     printf 'proof-obligation: %s\n' "$proof"
+    printf 'plan-path: %s\n' "$(relpath "$plan_path")"
+    printf 'plan-match-verdict-path: %s\n' "$(relpath "$plan_match_path")"
     printf 'handoff-path: %s\n' "$(relpath "$handoff_path")"
     printf 'diff-path: %s\n' "$(relpath "$diff_path")"
     printf 'tier-one-verdict-path: %s\n' "$(relpath "$tier_one_path")"
@@ -2294,13 +2395,27 @@ required_tier_one_evidence_clean() {
   done
 }
 
+required_plan_match_evidence_clean() {
+  local stage=$1 unit_id verdict_path verdict
+  shift
+  for unit_id in "$@"; do
+    verdict_path="$PHASE_TWO_PLAN_MATCH_DIR/$unit_id.md"
+    verdict="$(acceptance_artifact_verdict "$verdict_path" || true)"
+    [ "$verdict" = PASS ] \
+      || die "$stage blocked by missing or non-PASS plan-match verdict for $unit_id"
+    required_acceptance_artifact_fields_clean "$stage" "plan-match verdict for $unit_id" "$verdict_path"
+  done
+}
+
 required_tier_one_clean_for_panel() {
+  required_plan_match_evidence_clean "tier-two panel" "$@"
   required_tier_one_evidence_clean "tier-two panel" "$@"
 }
 
 required_acceptance_clean_for_archive() {
   local reversibility=$1 lens verdict_path verdict
   shift
+  required_plan_match_evidence_clean "archive" "$@"
   required_tier_one_evidence_clean "archive" "$@"
   if [ "$reversibility" = one-way ]; then
     for lens in "${TIER_TWO_PANEL_LENSES[@]}"; do
@@ -2348,7 +2463,7 @@ phase_two_state_file_for() {
 }
 
 print_phase_two_status() {
-  local work_name=$1 state run_id gate status updated message events unit failure acceptance tier_one panel
+  local work_name=$1 state run_id gate status updated message events unit failure acceptance plan_match tier_one panel
   state="$(phase_two_state_file_for "$work_name")"
   [ -s "$state" ] || return 0
   run_id="$(json_file_string_value "$state" run_id)"
@@ -2360,10 +2475,11 @@ print_phase_two_status() {
   failure="$(json_file_string_value "$state" failure_reason)"
   events="$(json_file_path_value "$state" events_jsonl)"
   acceptance="$(json_file_path_value "$state" phase_two_acceptance_dir)"
+  plan_match="$(json_file_path_value "$state" plan_match_dir)"
   tier_one="$(json_file_path_value "$state" tier_one_dir)"
   panel="$(json_file_path_value "$state" tier_two_panel_dir)"
-  printf 'phase-two run: run_id=%s gate=%s unit=%s status=%s updated_at=%s state=%s events=%s acceptance=%s tier_one=%s tier_two_panel=%s failure=%s message=%s\n' \
-    "$run_id" "$gate" "$unit" "$status" "$updated" "$state" "$events" "$acceptance" "$tier_one" "$panel" "$failure" "$message"
+  printf 'phase-two run: run_id=%s gate=%s unit=%s status=%s updated_at=%s state=%s events=%s acceptance=%s plan_match=%s tier_one=%s tier_two_panel=%s failure=%s message=%s\n' \
+    "$run_id" "$gate" "$unit" "$status" "$updated" "$state" "$events" "$acceptance" "$plan_match" "$tier_one" "$panel" "$failure" "$message"
 }
 
 print_status_json() {
@@ -2492,8 +2608,13 @@ codex_add_model_and_effort_args() {
 codex_route_model_and_effort() {
   local route=$1 model="" effort=""
   case "$route" in
+    planner)
+      model="${CODEX_PLANNER_MODEL:-${CODEX_STRONG_BUILDER_MODEL:-${CODEX_REVIEW_MODEL:-${CODEX_MODEL:-}}}}"
+      effort="${CODEX_PLANNER_EFFORT:-${CODEX_STRONG_BUILDER_EFFORT:-${CODEX_REVIEW_EFFORT:-xhigh}}}"
+      codex_add_model_and_effort_args "$model" "$effort" CODEX_PLANNER_MODEL CODEX_PLANNER_EFFORT
+      ;;
     builder-fast)
-      model="${CODEX_BUILDER_MODEL:-gpt-5.5}"
+      model="${CODEX_BUILDER_MODEL:-gpt-5.3-codex-spark}"
       effort="${CODEX_BUILDER_EFFORT:-xhigh}"
       codex_add_model_and_effort_args "$model" "$effort" CODEX_BUILDER_MODEL CODEX_BUILDER_EFFORT
       ;;
@@ -2541,6 +2662,47 @@ run_codex_gate() {
   loop_event gate-start "$gate" running "$msg"
   loop_state_write "$gate" running "$msg"
 
+  if [ -n "${HYPERCORE_PLANNER_FAKE_DIR:-}" ] && [ "$route" = planner ]; then
+    [ "$DRY_RUN" = 1 ] \
+      || die "real execute refuses HYPERCORE_PLANNER_FAKE_DIR; fake planners are dry-run/self-test only"
+    fake_file="$HYPERCORE_PLANNER_FAKE_DIR/$gate"
+    fake_status_file="$fake_file.status"
+    if [ -f "$fake_file" ]; then
+      GATE_OUTPUT="$(cat "$fake_file")"
+    else
+      GATE_OUTPUT="non-decomposable: false
+
+fake planner output for $gate"
+    fi
+    cmd_status=0
+    if [ -f "$fake_status_file" ]; then
+      fake_status_line="$(sed -n '1p' "$fake_status_file")"
+      case "$fake_status_line" in
+        ""|*[!0-9]*) die "fake planner status for $gate must be a non-negative integer" ;;
+        *) cmd_status=$fake_status_line ;;
+      esac
+    fi
+    printf '{"type":"fake-planner","gate":%s,"route":%s,"status":%s}\n' \
+      "$(json_string "$gate")" "$(json_string "$route")" "$cmd_status" > "$codex_events"
+    printf '%q ' "${CODEX_CMD[@]}"; printf '<<< stdin: %q\n' "$combined"
+    printf '%s\n' "$GATE_OUTPUT" > "$gate_output"
+    PHASE_TWO_SESSION_ID="fake-planner-$gate"
+    loop_event codex-thread "$gate" running "fake planner session: $PHASE_TWO_SESSION_ID"
+    if [ "$cmd_status" -ne 0 ]; then
+      msg="gate $gate failed: fake planner exited $cmd_status"
+      loop_event gate-failure "$gate" failed "$msg"
+      loop_state_write "$gate" failed "$msg"
+      rm -f "$final"
+      [ "$allow_failure" = 1 ] && return "$cmd_status"
+      die "$msg"
+    fi
+    loop_event gate-finish "$gate" passed "fake planner stored $gate final message at $gate_output"
+    loop_state_write "$gate" passed "fake planner stored $gate final message at $gate_output"
+    rm -f "$final"
+    printf '%s\n' "$GATE_OUTPUT"
+    return 0
+  fi
+
   if [ -n "${HYPERCORE_BUILDER_FAKE_DIR:-}" ] && [[ "$route" == builder-* ]]; then
     [ "$DRY_RUN" = 1 ] \
       || die "real execute refuses HYPERCORE_BUILDER_FAKE_DIR; fake builders are dry-run/self-test only"
@@ -2587,7 +2749,13 @@ run_codex_gate() {
       PHASE_TWO_SESSION_ID=dry-run-codex-session
       loop_event codex-thread "$gate" running "dry-run Codex thread: $PHASE_TWO_SESSION_ID"
     fi
-    GATE_OUTPUT="(dry-run) $gate gate final output would be written by Codex."
+    if [[ "$gate" == plan-* ]]; then
+      GATE_OUTPUT="non-decomposable: false
+
+(dry-run) $gate gate final output would be written by Codex."
+    else
+      GATE_OUTPUT="(dry-run) $gate gate final output would be written by Codex."
+    fi
     printf '%s\n' "$GATE_OUTPUT" > "$gate_output"
     loop_event gate-finish "$gate" skipped "dry-run stored $gate final message at $gate_output"
     loop_state_write "$gate" skipped "dry-run stored $gate final message at $gate_output"
@@ -3218,9 +3386,88 @@ run_unit_mechanical_check() {
   return 0
 }
 
+run_unit_plan_step() {
+  local work_name=$1 unit_id=$2 proof=$3 source_desc=$4 plan_path=$5
+  local gate_name gate_output_path non_decomposable
+  gate_name="plan-$unit_id"
+  PLAN_NON_DECOMPOSABLE_SIGNAL=""
+
+  printf '\n--- gate: plan %s ---\n' "$unit_id"
+  PHASE_TWO_SESSION_ID=""
+  if ! run_gate "$gate_name" "Read Bash" start "" \
+    "Plan phase-two unit $unit_id for node-local work $work_name in addressed node $NODE_REL.
+Proof obligation: $proof
+Signed frame: $source_desc
+Readable plan artifact to be written by the orchestrator: $(relpath "$plan_path")" \
+    plan planner 1; then
+    UNIT_ATTEMPT_REASON="planner subprocess failed for $unit_id"
+    loop_event plan plan failed "$UNIT_ATTEMPT_REASON"
+    loop_state_write plan failed "$UNIT_ATTEMPT_REASON"
+    return 1
+  fi
+
+  if ! non_decomposable="$(planner_non_decomposable_signal_from_output "$GATE_OUTPUT")"; then
+    UNIT_ATTEMPT_REASON="planner output missing or malformed non-decomposable signal for $unit_id"
+    loop_event plan plan failed "$UNIT_ATTEMPT_REASON"
+    loop_state_write plan failed "$UNIT_ATTEMPT_REASON"
+    return 1
+  fi
+  PLAN_NON_DECOMPOSABLE_SIGNAL="$non_decomposable"
+  gate_output_path="$LOOP_RUN_GATE_DIR/$gate_name.final.md"
+  phase_two_write_plan_artifact "$unit_id" "$proof" "$gate_output_path" "$plan_path" "$non_decomposable"
+  loop_event plan plan passed "plan artifact written for $unit_id at $(relpath "$plan_path") with non-decomposable: $non_decomposable"
+  loop_state_write plan passed "plan artifact written for $unit_id at $(relpath "$plan_path") with non-decomposable: $non_decomposable"
+  printf 'plan %s written: %s (non-decomposable: %s)\n' "$unit_id" "$(relpath "$plan_path")" "$non_decomposable"
+  return 0
+}
+
+run_plan_match_review() {
+  local work_name=$1 unit_id=$2 proof=$3 frame_rel=$4 plan_path=$5 verdict_path=$6
+  local prompt reviewer_key
+  reviewer_key="plan-match-$unit_id"
+  prompt="Plan-faithfulness reviewer: strong read-only plan match
+Work: $work_name
+Node: $NODE_REL
+Unit: $unit_id
+Proof obligation: $proof
+Signed frame directory: $frame_rel
+Per-unit plan artifact: $(relpath "$plan_path")
+
+You are the dedicated independent strong read-only plan-faithfulness reviewer.
+Read only the signed frame, the intent it references, and the per-unit plan artifact.
+Check whether the plan is faithful to the signed frame route, acceptance condition, observable acceptance, excluded interpretation, constraints, and this unit's proof obligation.
+Confirm the plan carries exactly one non-decomposable: true|false signal and that the signal is justified by the signed frame and proof obligation.
+Do not judge the built implementation; this review happens before the builder is trusted.
+Return exactly these required fields, with exactly one VERDICT line:
+VERDICT: PASS
+RATIONALE: the frame-anchored reason for the verdict
+EVIDENCE: concrete signed-frame or plan artifact paths, quoted field names, or missing evidence that supports the verdict
+
+Use VERDICT: FLAG instead of VERDICT: PASS when the plan is missing, vague, stale, overbroad, implementation-inventing, mismatched to the signed frame, missing or malformed in its non-decomposable signal, unjustified in that signal, or uncertain.
+
+Treat uncertainty, missing evidence, or mismatch with the signed frame as FLAG."
+  printf '\n--- acceptance: plan-match %s ---\n' "$unit_id"
+  LOOP_CURRENT_GATE=check
+  loop_event acceptance check running "plan-faithfulness review for $unit_id"
+  loop_state_write check running "plan-faithfulness review for $unit_id"
+  run_acceptance_reviewer "$reviewer_key" "$prompt"
+  write_acceptance_artifact "$verdict_path" "plan-faithfulness review - $unit_id" \
+    "$reviewer_key" "$ACCEPTANCE_VERDICT" "$ACCEPTANCE_SOURCE" "$ACCEPTANCE_RATIONALE" "$ACCEPTANCE_EVIDENCE" "$ACCEPTANCE_NOTES" "$prompt" "$ACCEPTANCE_OUTPUT"
+  loop_event acceptance check "$([ "$ACCEPTANCE_VERDICT" = PASS ] && printf passed || printf failed)" \
+    "plan-match $unit_id verdict: $ACCEPTANCE_VERDICT - $ACCEPTANCE_NOTES"
+  loop_state_write check "$([ "$ACCEPTANCE_VERDICT" = PASS ] && printf passed || printf failed)" \
+    "plan-match $unit_id verdict: $ACCEPTANCE_VERDICT - $ACCEPTANCE_NOTES"
+  printf 'plan-match %s verdict: %s (%s; %s)\n' "$unit_id" "$ACCEPTANCE_VERDICT" "$(relpath "$verdict_path")" "$ACCEPTANCE_NOTES"
+  if [ "$ACCEPTANCE_VERDICT" = PASS ]; then
+    return 0
+  fi
+  UNIT_ATTEMPT_REASON="plan-faithfulness FLAG for $unit_id"
+  return 1
+}
+
 run_unit_build_attempt() {
   local work_name=$1 unit_id=$2 proof=$3 source_desc=$4 attempt_kind=$5 attempt_number=$6
-  local handoff_path=$7 diff_path=$8 tier_one_path=$9
+  local handoff_path=$7 diff_path=$8 tier_one_path=$9 plan_path=${10}
   local attempt_key gate_name gate_output_path route status_msg
   UNIT_ATTEMPT_REASON=""
   UNIT_ACCEPTED_STATUS_MSG=""
@@ -3234,6 +3481,7 @@ run_unit_build_attempt() {
   if ! run_gate "$gate_name" "Read Edit Write Bash" start "" \
     "Implement phase-two unit $unit_id for node-local work $work_name in addressed node $NODE_REL.
 Proof obligation: $proof
+Per-unit plan artifact: $(relpath "$plan_path")
 Signed frame: $source_desc" \
     implement "$route" 1; then
     UNIT_ATTEMPT_REASON="$attempt_kind builder subprocess failed for $unit_id on attempt $attempt_number"
@@ -3259,7 +3507,7 @@ Signed frame: $source_desc" \
 
 cmd_execute() {
   local work_name="" active_dir active_rel frame_rel frame_file source_desc archive_collection archive_decision
-  local reversibility errors units_text unit_entry unit_id proof gate_name handoff_path diff_path tier_one_path
+  local reversibility errors units_text unit_entry unit_id proof gate_name plan_path plan_match_path handoff_path diff_path tier_one_path plan_non_decomposable
   local gate_output_path status_msg fast_attempt unit_accepted units=() unit_ids=()
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -3302,6 +3550,9 @@ $errors"
   if [ "$DRY_RUN" != 1 ] && [ -n "${HYPERCORE_ACCEPTANCE_FAKE_DIR:-}" ]; then
     die "real execute refuses HYPERCORE_ACCEPTANCE_FAKE_DIR; fake acceptance is dry-run/self-test only"
   fi
+  if [ "$DRY_RUN" != 1 ] && [ -n "${HYPERCORE_PLANNER_FAKE_DIR:-}" ]; then
+    die "real execute refuses HYPERCORE_PLANNER_FAKE_DIR; fake planners are dry-run/self-test only"
+  fi
   if [ "$DRY_RUN" != 1 ] && [ -n "${HYPERCORE_BUILDER_FAKE_DIR:-}" ]; then
     die "real execute refuses HYPERCORE_BUILDER_FAKE_DIR; fake builders are dry-run/self-test only"
   fi
@@ -3327,25 +3578,59 @@ $errors"
     unit_ids+=("$unit_id")
     LOOP_CURRENT_UNIT="$unit_id"
     gate_name="implement-$unit_id"
+    plan_path="$PHASE_TWO_PLAN_DIR/$unit_id.md"
+    plan_match_path="$PHASE_TWO_PLAN_MATCH_DIR/$unit_id.md"
     handoff_path="$PHASE_TWO_HANDOFF_DIR/$unit_id.md"
     diff_path="$PHASE_TWO_DIFF_DIR/$unit_id.diff"
     tier_one_path="$PHASE_TWO_TIER_ONE_DIR/$unit_id.md"
 
-    if phase_two_unit_tier_one_resumable "$tier_one_path"; then
-      printf 'resume: skipping %s (tier-one PASS already on disk for this frame)\n' "$unit_id"
-      loop_event resume check skipped "resume: skipping $unit_id (tier-one PASS already on disk)"
+    if phase_two_unit_resumable "$plan_match_path" "$tier_one_path"; then
+      printf 'resume: skipping %s (plan-match and tier-one PASS already on disk for this frame)\n' "$unit_id"
+      loop_event resume check skipped "resume: skipping $unit_id (plan-match and tier-one PASS already on disk)"
       loop_state_write check skipped "resume: skipping $unit_id"
       phase_two_write_unit_record "$unit_id" accepted "$proof" "$handoff_path" "$diff_path" "$tier_one_path" \
-        "resume: reused tier-one PASS already on disk for this frame"
+        "resume: reused plan-match and tier-one PASS already on disk for this frame"
       continue
     fi
-    printf 'building %s (no reusable tier-one PASS on disk)\n' "$unit_id"
-    rm -f "$handoff_path" "$diff_path" "$tier_one_path"
-    phase_two_write_unit_record "$unit_id" running "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "builder session starting"
+    printf 'building %s (no reusable plan-match and tier-one PASS on disk)\n' "$unit_id"
+    rm -f "$plan_path" "$plan_match_path" "$handoff_path" "$diff_path" "$tier_one_path"
+    phase_two_write_unit_record "$unit_id" running "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "planner session starting"
+
+    if ! run_unit_plan_step "$work_name" "$unit_id" "$proof" "$source_desc" "$plan_path"; then
+      phase_two_write_unit_record "$unit_id" failed "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "$UNIT_ATTEMPT_REASON"
+      die "planner step failed for $unit_id; phase two stops for the operator and $work_name stays in flight: $UNIT_ATTEMPT_REASON"
+    fi
+    phase_two_write_unit_record "$unit_id" running "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "plan artifact written; plan-match review starting"
+
+    if ! run_plan_match_review "$work_name" "$unit_id" "$proof" "$frame_rel" "$plan_path" "$plan_match_path"; then
+      phase_two_write_unit_record "$unit_id" failed "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "$UNIT_ATTEMPT_REASON"
+      die "plan-match review failed for $unit_id; phase two stops for the operator and $work_name stays in flight: $UNIT_ATTEMPT_REASON"
+    fi
+    if ! plan_non_decomposable="$(phase_two_plan_non_decomposable_signal "$plan_path")"; then
+      UNIT_ATTEMPT_REASON="plan artifact missing or malformed non-decomposable signal for $unit_id"
+      phase_two_write_unit_record "$unit_id" failed "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "$UNIT_ATTEMPT_REASON"
+      die "plan signal check failed for $unit_id; phase two stops for the operator and $work_name stays in flight: $UNIT_ATTEMPT_REASON"
+    fi
+    phase_two_write_unit_record "$unit_id" running "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "plan-match PASS; non-decomposable: $plan_non_decomposable; builder session starting"
 
     unit_accepted=0
+    if [ "$plan_non_decomposable" = true ]; then
+      printf 'planner marked %s non-decomposable; routing directly to strong builder\n' "$unit_id"
+      loop_event builder check running "planner marked $unit_id non-decomposable; routing directly to strong builder"
+      loop_state_write check running "planner marked $unit_id non-decomposable; routing directly to strong builder"
+      if run_unit_build_attempt "$work_name" "$unit_id" "$proof" "$source_desc" strong 1 "$handoff_path" "$diff_path" "$tier_one_path" "$plan_path"; then
+        unit_accepted=1
+        status_msg="$UNIT_ACCEPTED_STATUS_MSG"
+        printf 'strong builder attempt 1 for %s accepted (non-decomposable route)\n' "$unit_id"
+      else
+        phase_two_write_unit_record "$unit_id" failed "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "$UNIT_ATTEMPT_REASON"
+        die "strong-builder attempt failed for $unit_id; phase two stops for the operator and $work_name stays in flight: $UNIT_ATTEMPT_REASON"
+      fi
+    fi
+
     for fast_attempt in 1 2 3; do
-      if run_unit_build_attempt "$work_name" "$unit_id" "$proof" "$source_desc" fast "$fast_attempt" "$handoff_path" "$diff_path" "$tier_one_path"; then
+      [ "$unit_accepted" != 1 ] || break
+      if run_unit_build_attempt "$work_name" "$unit_id" "$proof" "$source_desc" fast "$fast_attempt" "$handoff_path" "$diff_path" "$tier_one_path" "$plan_path"; then
         unit_accepted=1
         status_msg="$UNIT_ACCEPTED_STATUS_MSG"
         printf 'fast builder attempt %s for %s accepted\n' "$fast_attempt" "$unit_id"
@@ -3360,7 +3645,7 @@ $errors"
       printf 'escalating %s to strong builder after 3 failed fast attempts\n' "$unit_id"
       loop_event builder check running "escalating $unit_id to strong builder after 3 failed fast attempts"
       loop_state_write check running "escalating $unit_id to strong builder after 3 failed fast attempts"
-      if run_unit_build_attempt "$work_name" "$unit_id" "$proof" "$source_desc" strong 1 "$handoff_path" "$diff_path" "$tier_one_path"; then
+      if run_unit_build_attempt "$work_name" "$unit_id" "$proof" "$source_desc" strong 1 "$handoff_path" "$diff_path" "$tier_one_path" "$plan_path"; then
         unit_accepted=1
         status_msg="$UNIT_ACCEPTED_STATUS_MSG"
         printf 'strong builder attempt 1 for %s accepted\n' "$unit_id"

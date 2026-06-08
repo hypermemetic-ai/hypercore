@@ -27,9 +27,22 @@ acceptance, excluded interpretation, proof state, sweep, and adoption or shelvin
 `observable acceptance` names the concrete command, state, check, or externally inspectable
 condition that phase-two acceptance can test.
 `excluded interpretation` names what the work must not mean.
+the signed frame is held to a judgeability floor: it is legible and falsifiable enough for
+the panel to FLAG a wrong result against a frame claim without reading code, but it is not
+implementation-complete; per-unit plans carry implementation-completeness.
 implementation autonomy begins after sign-off: phase two builds from the signed frame in
 green proof-advancing units, and stops when the frame is incomplete, a check fails, or
 required implementation acceptance returns `FLAG`.
+before each unit build starts, execute runs a strong-model planning sub-step and writes a
+readable per-unit plan artifact under that unit's phase-two tree; the plan is build
+scaffolding, not operator sign-off or adopted intent.
+the per-unit planner output carries exactly one machine-readable
+`non-decomposable: true` or `non-decomposable: false` signal; a missing,
+duplicated, or malformed signal blocks before plan-match or build.
+after each per-unit plan is written and before any builder session starts, execute runs an
+independent strong read-only plan-faithfulness review that checks the plan against the signed
+frame and proof obligation, including whether the non-decomposable signal is justified,
+records a structured `PASS` or `FLAG` with rationale and evidence, and blocks the unit on a missing, malformed, or non-`PASS` plan-match result.
 execute runs phase two from an orchestrator snapshot made at execute start, so a unit that
 edits the live orchestrator material cannot corrupt the already-running phase-two process.
 orient: read the intent documents, the work in flight across the node tree, and the
@@ -70,15 +83,19 @@ the phase-two executor harness while phase-one review stays on the strong review
 the collaborator role defaults to the interactive harness that loaded the adapter.
 phase-two builders may be routed separately from reviewers through a fast-builder model
 knob, while tier-one acceptance, tier-two acceptance, and phase-one review stay on the
-strong review floor; the fast-builder default is held at the strong model until the
-two-step plan/build work lands.
+strong review floor; two-step has shipped, and the default builder is the cheap fast model behind the plan step and plan-match check.
 a unit build attempts the fast builder first, retries a failed unit up to three fast
 attempts when `./check.sh` or tier-one acceptance fails, escalates that unit to the strong
 builder after the fast budget, and returns to the operator if the strong attempt still
 fails.
+when a unit's confirmed plan signal is `non-decomposable: true`, execute routes that unit
+directly to the strong builder instead of spending fast-builder attempts; a
+`non-decomposable: false` signal keeps the existing fast retry and reactive strong
+escalation ladder.
 execute is resumable from the signed frame and on-disk artifacts: a unit is reused on a
-rerun only when its tier-one acceptance artifact is already present as a clean PASS for the
-current signed frame, and any unit without that artifact is rebuilt.
+rerun only when its plan-match artifact and tier-one acceptance artifact are already
+present as clean PASS results for the current signed frame, and any unit without both
+artifacts is rebuilt.
 unresolved required tier-one or tier-two `FLAG`s halt phase two before archive; the active
 work node remains in flight for the operator.
 the checks re-run for every statement, not only the ones a work node touched.
@@ -176,14 +193,15 @@ the work node's `intent/frame/signoff.md`.
 `loop.sh execute <work-name>` derives implementation units from the signed frame, starts a
 fresh builder session for each unit, and records lean unit handoff, diff, and tier-one
 verdict artifacts under the work frame.
+`loop.sh execute <work-name>` runs a planner-model sub-step before each unit build and
+records that unit's human-readable plan artifact at `phase-two/plans/<unit-id>.md`.
 `loop.sh execute <work-name>` passes only dynamic unit identifiers, proof obligation, and
 signed-frame location to the implement actor; the implement contract lives in
 `adapter/gates/implement.md`, which `run_gate` reads for each invocation.
-`loop.sh execute <work-name>` routes builders through the builder-model knob, defaulting to
-the strong model until the two-step plan/build work lands, separately from the strong
-review route; it gives each unit a three-attempt fast-builder budget, escalates an
-exhausted unit through the strong-builder model knob, and stops for the operator when the
-strong builder fails.
+`loop.sh execute <work-name>` routes builders through the builder-model knob; two-step has
+shipped, and the default builder is the cheap fast model behind the plan step and plan-match check, separately from the strong review route; it gives each unit a three-attempt fast-builder
+budget, escalates an exhausted unit through the strong-builder model knob, and stops for
+the operator when the strong builder fails.
 `loop.sh execute <work-name>` runs implementation-acceptance reviewers with literal
 approval `never` and literal sandbox `read-only`.
 `loop.sh execute <work-name>` writes structured acceptance artifacts with a verdict,

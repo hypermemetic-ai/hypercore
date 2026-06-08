@@ -30,10 +30,21 @@ the current handoff path is that an outer supervisor launches a fresh phase-two 
 from the addressed node and supervises the loop's recorded progress, intervening only when
 the loop blocks on a real gate failure or operator need.
 the loop materializes separate builder and reviewer routing, structured acceptance
-artifacts with source markers and fake-source rejection, the per-unit fast-builder retry
-then strong-builder escalation ladder, on-disk resumable execute that skips a unit already
-carrying a clean tier-one PASS for the signed frame, the concurrent
-one-way tier-two panel, and phase-one review subprocess crash diagnostics.
+artifacts with source markers and fake-source rejection, the per-unit non-decomposable
+signal and direct strong-builder route, the per-unit fast-builder retry then
+strong-builder escalation ladder, the shipped two-step builder default where the default builder is the cheap fast model behind the plan step and plan-match check, on-disk resumable execute that skips a unit already carrying a clean plan-match and tier-one PASS for the signed frame, the
+concurrent one-way tier-two panel, and phase-one review subprocess crash diagnostics.
+the loop materializes a per-unit planner route and writes readable plan artifacts before
+builder sessions while keeping the plan as read-only build scaffolding.
+the loop materializes exactly one normalized `non-decomposable: true` or
+`non-decomposable: false` signal in each plan artifact before plan-match or build can
+proceed.
+the loop materializes a dedicated independent strong read-only plan-faithfulness review after
+each per-unit plan, writes plan-match artifacts before builder sessions, and blocks a unit
+whose plan-match artifact is missing, malformed, or not `PASS`.
+the loop routes a confirmed `non-decomposable: true` unit directly to the strong builder
+and leaves `non-decomposable: false` units on the fast-builder retry and reactive
+strong-builder escalation ladder.
 the loop keeps the contract-bearing implement and archive prompt text in
 `adapter/gates/implement.md` and `adapter/gates/archive.md`, while inline execute prompts
 carry only dynamic unit or work context and the archive decision line.
@@ -50,6 +61,11 @@ entry point.
 and act only on that addressed work.
 `loop.sh execute <work-name>` records only the addressed node-local work in that node's
 history.
+`loop.sh execute <work-name>` writes each unit's readable plan artifact under
+`phase-two/plans/` before it starts that unit's builder session.
+`loop.sh execute <work-name>` writes each unit's plan-match artifact under
+`phase-two/plan-match/` and blocks before the builder session unless that artifact records
+a clean `PASS`.
 the orchestrator creates, signs, executes, and records only addressed node-local work
 nodes.
 the gate prompts use addressed-node and node-local work wording and point cleared sessions
@@ -79,9 +95,12 @@ validation, start scaffolding, direction/review helpers, operator-act gating thr
 `/dev/tty` with B-ready `operator-gate:` markers and numbered-option direction, review and
 acceptance isolation settings, strict frame parsing, phase-two acceptance gating, structured
 acceptance legibility, acceptance source markers and fake-source rejection, separate
-builder/reviewer routing with bounded retry and strong escalation, on-disk resumable execute
-that skips units already carrying a clean tier-one PASS, the concurrent tier-two panel, the
-re-read implement/archive prompt contract and
+builder/reviewer routing with bounded retry, the short-but-judgeable frame altitude,
+direct strong routing for confirmed
+non-decomposable units, and strong escalation, the per-unit planner route with readable
+plan artifacts before build artifacts, on-disk resumable execute that skips units already
+carrying a clean plan-match and tier-one PASS, the concurrent tier-two panel, the re-read
+implement/archive prompt contract and
 absence of frozen inline implement/archive contract text, the new operator-act and
 phase-two performance contract in the `collaboration`, `loop`, and `adapter` segments, and
 current-material absence of the retired compatibility route still carry the contract.

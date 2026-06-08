@@ -74,22 +74,35 @@ the work node's `intent/frame/signoff.md`.
 `loop.sh execute <work-name>` derives implementation units from the signed frame, starts a
 fresh builder session for each unit, and records lean unit handoff, diff, and tier-one
 verdict artifacts under the work frame.
+`loop.sh execute <work-name>` runs a planner-model sub-step before each unit build and
+records that unit's human-readable plan artifact at `phase-two/plans/<unit-id>.md`.
+`loop.sh execute <work-name>` requires each planner output to carry exactly one
+`non-decomposable: true` or `non-decomposable: false` signal and records the normalized
+signal in the unit's plan artifact before plan-match or build can proceed.
+`loop.sh execute <work-name>` runs a dedicated independent strong read-only plan-faithfulness
+review after each unit plan is written, records the structured plan-match result at
+`phase-two/plan-match/<unit-id>.md`, and starts no builder for that unit unless the
+plan-match result is a clean `PASS`; the plan-match review checks whether the
+non-decomposable signal is justified by the signed frame and unit proof obligation.
 `loop.sh execute <work-name>` passes only dynamic unit identifiers, proof obligation, and
 signed-frame location to the implement actor; the implement contract lives in
 `adapter/gates/implement.md`, which `run_gate` reads for each invocation.
-`loop.sh execute <work-name>` routes builders through the builder-model knob, defaulting to
-the strong model until the two-step plan/build work lands, separately from the strong
-review route; it gives each unit a three-attempt fast-builder budget, escalates an
-exhausted unit through the strong-builder model knob, and stops for the operator when the
-strong builder fails.
+`loop.sh execute <work-name>` routes builders through the builder-model knob; two-step has
+shipped, and the default builder is the cheap fast model behind the plan step and plan-match check, separately from the strong review route; it gives each unit a three-attempt fast-builder
+budget, escalates an exhausted unit through the strong-builder model knob, and stops for
+the operator when the strong builder fails.
+`loop.sh execute <work-name>` routes a unit with a confirmed `non-decomposable: true` plan
+signal directly through the strong-builder model knob, skipping the fast-builder attempts;
+units signaled `non-decomposable: false` keep the three-fast-attempt retry and reactive
+strong escalation ladder.
 `loop.sh execute <work-name>` runs implementation-acceptance reviewers with literal
 approval `never` and literal sandbox `read-only`.
 `loop.sh execute <work-name>` writes structured acceptance artifacts with a verdict,
 rationale, evidence, and a `source:` marker, refuses `HYPERCORE_ACCEPTANCE_FAKE_DIR` outside
 dry-run, and lets real archive accept only `source: real-reviewer` required acceptance.
-`loop.sh execute <work-name>` resumes from on-disk artifacts: it skips a unit whose tier-one
-acceptance artifact is already a clean PASS for the current signed frame, and rebuilds any
-unit without that artifact.
+`loop.sh execute <work-name>` resumes from on-disk artifacts: it skips a unit only when the
+unit's plan-match artifact and tier-one acceptance artifact are both clean PASS results for
+the current signed frame, and rebuilds any unit without both artifacts.
 `loop.sh execute <work-name>` treats malformed, evidence-free, or unsupported-source
 implementation-acceptance output as `FLAG`, blocks unresolved required flags, and runs the
 concurrent one-way tier-two panel before archive.

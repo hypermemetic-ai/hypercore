@@ -257,8 +257,8 @@ EOF
     "the collaborator role defaults to the interactive harness that loaded the adapter" \
     "phase-one routing self-test sees the collaborator held default"
   require_text "$root/intent/loop.md" \
-    "the fast-builder default is held at the strong model" \
-    "phase-one routing self-test sees the builder held default"
+    "the default builder is the cheap fast model behind the plan step and plan-match check" \
+    "phase-one routing self-test sees the shipped builder default"
   require_text "$root/intent/loop.md" \
     "phase-one review stay on the" \
     "phase-one routing self-test sees the review-floor held default"
@@ -272,8 +272,14 @@ EOF
     'CODEX_REVIEW_EFFORT:-xhigh' \
     "phase-one routing self-test sees the review-effort held default"
   require_text "$root/adapter/loop.sh" \
-    'CODEX_BUILDER_MODEL:-gpt-5.5' \
-    "phase-one routing self-test sees the builder-model held default"
+    'CODEX_PLANNER_MODEL:-${CODEX_STRONG_BUILDER_MODEL:-${CODEX_REVIEW_MODEL:-${CODEX_MODEL:-}}}' \
+    "phase-one routing self-test sees the planner-model strong default"
+  require_text "$root/adapter/loop.sh" \
+    'CODEX_PLANNER_EFFORT:-${CODEX_STRONG_BUILDER_EFFORT:-${CODEX_REVIEW_EFFORT:-xhigh}}' \
+    "phase-one routing self-test sees the planner-effort strong default"
+  require_text "$root/adapter/loop.sh" \
+    'CODEX_BUILDER_MODEL:-gpt-5.3-codex-spark' \
+    "phase-one routing self-test sees the builder-model shipped default"
   require_text "$root/adapter/loop.sh" \
     'CODEX_BUILDER_EFFORT:-xhigh' \
     "phase-one routing self-test sees the builder-effort held default"
@@ -393,8 +399,8 @@ check_no_tracked_live_material_paths() {
 }
 
 check_loop_frame_contract() {
-  local name tmp frame options direction review fake_review fake_acceptance fake_builder fake_check retry_handoff status_out route_with_one_unit route_with_two_units panel_events
-  local panel_start_line panel_first_result_line
+  local name tmp frame options direction review fake_review fake_acceptance fake_planner fake_builder fake_check retry_handoff non_decomp_handoff status_out route_with_one_unit route_with_two_units panel_events
+  local panel_start_line panel_first_result_line plan_artifact plan_match_artifact plan_events
   local resume_dir
   local self_edit_backup self_edit_state self_edit_status self_edit_wait_status self_edit_snapshot_count edit_pid
   local gate_prompt_backup gate_prompt_state gate_prompt_status gate_prompt_wait_status gate_prompt_marker gate_prompt_edit_pid
@@ -726,6 +732,20 @@ EOF
       printf 'RATIONALE: %s\n' "$rationale"
       printf 'EVIDENCE: %s\n' "$evidence"
     } > "$path"
+  }
+
+  write_plan_match_output() {
+    local unit=$1 verdict="${2:-PASS}" rationale="${3:-fixture plan matches the signed frame}" evidence="${4:-plan-match fixture}"
+    write_acceptance_output "$fake_acceptance/plan-match-$unit" "$verdict" "$rationale" "$evidence"
+  }
+
+  write_planner_output() {
+    local path=$1 status=$2 signal=$3 message=$4
+    {
+      printf 'non-decomposable: %s\n\n' "$signal"
+      printf '%s\n' "$message"
+    } > "$path"
+    printf '%s\n' "$status" > "$path.status"
   }
 
   write_builder_output() {
@@ -1382,6 +1402,50 @@ Implementation units for phase two:
   fake_acceptance="$tmp/fake-acceptance"
   rm -rf "$fake_acceptance" "$root/$name/intent/frame/phase-two"
   mkdir -p "$fake_acceptance"
+  write_acceptance_output "$fake_acceptance/tier-one-unit-001" PASS \
+    "fixture tier-one output should not be reached without plan-match" \
+    "missing plan-match blocks before the builder"
+  write_lean_frame "$route_with_one_unit" two-way
+  write_signoff
+  if HYPERCORE_LOOP_STATE_DIR="$tmp/loop-runs" HYPERCORE_ACCEPTANCE_FAKE_DIR="$fake_acceptance" "$root/adapter/loop.sh" execute "$name" --dry-run >"$tmp/plan-match-missing.out" 2>"$tmp/plan-match-missing.err"; then
+    bad "loop execute blocks missing plan-match output"
+  else
+    ok "loop execute blocks missing plan-match output"
+  fi
+  require_text "$tmp/plan-match-missing.err" "plan-match review failed for unit-001" \
+    "missing plan-match failure reports the blocking gate"
+  require_text "$(dry_run_artifact "plan-match/unit-001.md")" "Verdict: FLAG" \
+    "missing plan-match output is recorded as FLAG"
+  require_text "$(dry_run_artifact "plan-match/unit-001.md")" "missing fake acceptance reviewer output for plan-match-unit-001" \
+    "missing plan-match artifact records the missing reviewer output"
+  reject_text "$tmp/plan-match-missing.out" "--- gate: implement unit-001" \
+    "missing plan-match blocks before the unit builder starts"
+
+  rm -rf "$fake_acceptance" "$root/$name/intent/frame/phase-two"
+  mkdir -p "$fake_acceptance"
+  write_plan_match_output unit-001 FLAG \
+    "fixture plan is not faithful to the signed frame" \
+    "plan-match fixture names the frame mismatch"
+  write_acceptance_output "$fake_acceptance/tier-one-unit-001" PASS \
+    "fixture tier-one output should not be reached after plan-match FLAG" \
+    "plan-match FLAG blocks before the builder"
+  write_lean_frame "$route_with_one_unit" two-way
+  write_signoff
+  if HYPERCORE_LOOP_STATE_DIR="$tmp/loop-runs" HYPERCORE_ACCEPTANCE_FAKE_DIR="$fake_acceptance" "$root/adapter/loop.sh" execute "$name" --dry-run >"$tmp/plan-match-flag.out" 2>"$tmp/plan-match-flag.err"; then
+    bad "loop execute blocks structured plan-match FLAG output"
+  else
+    ok "loop execute blocks structured plan-match FLAG output"
+  fi
+  require_text "$(dry_run_artifact "plan-match/unit-001.md")" "Rationale: fixture plan is not faithful to the signed frame" \
+    "structured plan-match FLAG preserves rationale"
+  require_text "$(dry_run_artifact "plan-match/unit-001.md")" "Evidence: plan-match fixture names the frame mismatch" \
+    "structured plan-match FLAG preserves evidence"
+  reject_text "$tmp/plan-match-flag.out" "--- gate: implement unit-001" \
+    "plan-match FLAG blocks before the unit builder starts"
+
+  rm -rf "$fake_acceptance" "$root/$name/intent/frame/phase-two"
+  mkdir -p "$fake_acceptance"
+  write_plan_match_output unit-001
   printf 'PASS\nRATIONALE: bare verdict fixture\nEVIDENCE: old one-word contract\n' > "$fake_acceptance/tier-one-unit-001"
   write_lean_frame "$route_with_one_unit" two-way
   write_signoff
@@ -1406,6 +1470,7 @@ Implementation units for phase two:
 
   rm -rf "$fake_acceptance" "$root/$name/intent/frame/phase-two"
   mkdir -p "$fake_acceptance"
+  write_plan_match_output unit-001
   printf 'VERDICT: PASS\nRATIONALE: fixture deliberately omits evidence\n' > "$fake_acceptance/tier-one-unit-001"
   write_lean_frame "$route_with_one_unit" two-way
   write_signoff
@@ -1421,6 +1486,7 @@ Implementation units for phase two:
 
   rm -rf "$fake_acceptance" "$root/$name/intent/frame/phase-two"
   mkdir -p "$fake_acceptance"
+  write_plan_match_output unit-001
   write_acceptance_output "$fake_acceptance/tier-one-unit-001" FLAG \
     "fixture structured flag blocks the required tier-one gate" \
     "unit handoff fixture states the proof is incomplete"
@@ -1438,6 +1504,7 @@ Implementation units for phase two:
 
   rm -rf "$fake_acceptance" "$root/$name/intent/frame/phase-two"
   mkdir -p "$fake_acceptance"
+  write_plan_match_output unit-001
   write_acceptance_output "$fake_acceptance/tier-one-unit-001" PASS \
     "fixture structured pass satisfies the signed unit proof in dry-run" \
     "dry-run artifact path tier-one/unit-001.md"
@@ -1450,8 +1517,44 @@ Implementation units for phase two:
   fi
   require_text "$tmp/two-way-execute.out" "tier-one unit-001 verdict: PASS" \
     "two-way execute dry-run runs tier-one acceptance"
+  require_text "$tmp/two-way-execute.out" "plan-match unit-001 verdict: PASS" \
+    "two-way execute dry-run runs plan-match acceptance before tier-one"
   require_text "$tmp/two-way-execute.out" "two-way work: one-way tier-two panel skipped" \
     "two-way execute dry-run skips the one-way panel"
+  plan_artifact="$(dry_run_artifact "plans/unit-001.md")"
+  [ -n "$plan_artifact" ] \
+    && ok "two-way execute dry-run records a per-unit plan artifact" \
+    || bad "two-way execute dry-run did not record a per-unit plan artifact"
+  require_text "$plan_artifact" "# plan - unit-001" \
+    "per-unit plan artifact has a readable heading"
+  require_text "$plan_artifact" "## readable plan" \
+    "per-unit plan artifact has a readable plan section"
+  require_text "$plan_artifact" "planner-output-path:" \
+    "per-unit plan artifact records the planner output path"
+  require_text "$plan_artifact" "non-decomposable: false" \
+    "per-unit plan artifact records the default decomposable signal"
+  plan_match_artifact="$(dry_run_artifact "plan-match/unit-001.md")"
+  [ -n "$plan_match_artifact" ] \
+    && ok "two-way execute dry-run records a per-unit plan-match artifact" \
+    || bad "two-way execute dry-run did not record a per-unit plan-match artifact"
+  require_text "$plan_match_artifact" "# plan-faithfulness review - unit-001" \
+    "per-unit plan-match artifact has a plan-faithfulness heading"
+  require_text "$plan_match_artifact" "Per-unit plan artifact:" \
+    "plan-match prompt names the plan artifact"
+  require_text "$plan_match_artifact" "Signed frame directory:" \
+    "plan-match prompt names the signed frame"
+  plan_events="$(find "$tmp/loop-runs" -path "*/events.jsonl" -type f -print | sort | tail -1)"
+  require_order "$plan_events" "plan artifact written for unit-001" "stored implement-unit-001-fast-1 final message" \
+    "dry-run execute records the plan artifact before the unit build artifact"
+  require_order "$plan_events" "plan-match unit-001 verdict: PASS" "stored implement-unit-001-fast-1 final message" \
+    "dry-run execute records the plan-match result before the unit build artifact"
+  require_order "$tmp/two-way-execute.out" "--- gate: plan unit-001 ---" "--- acceptance: plan-match unit-001 ---" \
+    "dry-run execute runs the plan gate before the plan-match gate"
+  require_order "$tmp/two-way-execute.out" "--- acceptance: plan-match unit-001 ---" "--- gate: implement unit-001" \
+    "dry-run execute runs the plan-match gate before the implement gate"
+  [ ! -e "$root/$name/intent/frame/phase-two/plans/unit-001.md" ] \
+    && ok "execute dry-run keeps plan artifacts out of the active work frame" \
+    || bad "execute dry-run wrote plan artifacts into the active work frame"
   require_text "$(dry_run_artifact "tier-one/unit-001.md")" "source: fake/self-test" \
     "tier-one dry-run fake acceptance records fake source"
   require_text "$(dry_run_artifact "tier-one/unit-001.md")" "source-proof: fake acceptance loaded from HYPERCORE_ACCEPTANCE_FAKE_DIR in dry-run; rejected by real archive" \
@@ -1478,6 +1581,7 @@ Implementation units for phase two:
     "execute auto-detect explains the zero-candidate case"
   rm -rf "$fake_acceptance" "$tmp/auto-loop-runs"
   mkdir -p "$fake_acceptance"
+  write_plan_match_output unit-001
   write_acceptance_output "$fake_acceptance/tier-one-unit-001" PASS \
     "auto-detect fixture accepts the single inferred work" \
     "bare execute resolved the only signed unarchived work node"
@@ -1506,6 +1610,7 @@ Implementation units for phase two:
   fake_check="$tmp/fake-check"
   rm -rf "$fake_acceptance" "$fake_builder" "$fake_check" "$self_edit_state" "$root/$name/intent/frame/phase-two"
   mkdir -p "$fake_acceptance" "$fake_builder" "$fake_check"
+  write_plan_match_output unit-001
   write_builder_output "$fake_builder/implement-unit-001-fast-1" 0 \
     "fake builder keeps running while live loop material is edited"
   write_fake_status "$fake_check/unit-001-fast-1" 0
@@ -1533,7 +1638,11 @@ Implementation units for phase two:
     exit 1
   ) &
   edit_pid=$!
-  if HYPERCORE_LOOP_STATE_DIR="$self_edit_state" \
+  if env -u HYPERCORE_LOOP_SNAPSHOT_ACTIVE \
+    -u HYPERCORE_LOOP_SNAPSHOT_PATH \
+    -u HYPERCORE_LOOP_ORIGINAL_HERE \
+    -u HYPERCORE_LOOP_ORIGINAL_ROOT \
+    HYPERCORE_LOOP_STATE_DIR="$self_edit_state" \
     HYPERCORE_BUILDER_FAKE_DIR="$fake_builder" \
     HYPERCORE_CHECK_FAKE_DIR="$fake_check" \
     HYPERCORE_ACCEPTANCE_FAKE_DIR="$fake_acceptance" \
@@ -1566,6 +1675,7 @@ Implementation units for phase two:
   fake_check="$tmp/fake-check"
   rm -rf "$fake_acceptance" "$fake_builder" "$fake_check" "$gate_prompt_state" "$root/$name/intent/frame/phase-two"
   mkdir -p "$fake_acceptance" "$fake_builder" "$fake_check"
+  write_plan_match_output unit-001
   write_builder_output "$fake_builder/implement-unit-001-fast-1" 0 \
     "fake builder completes before the archive prompt is edited"
   write_fake_status "$fake_check/unit-001-fast-1" 0
@@ -1616,6 +1726,8 @@ Implementation units for phase two:
 
   rm -rf "$fake_acceptance" "$root/$name/intent/frame/phase-two"
   mkdir -p "$fake_acceptance"
+  write_plan_match_output unit-001
+  write_plan_match_output unit-002
   write_acceptance_output "$fake_acceptance/tier-one-unit-001" PASS \
     "first unit passes in the panel dry-run fixture" \
     "tier-one fixture for unit-001"
@@ -1696,10 +1808,77 @@ Implementation units for phase two:
     && ok "real fake-source rejection writes no real tier-one artifact" \
     || bad "real fake-source rejection wrote a real tier-one artifact"
 
+  fake_planner="$tmp/fake-planner"
+  rm -rf "$fake_acceptance" "$fake_planner" "$root/$name/intent/frame/phase-two"
+  mkdir -p "$fake_acceptance" "$fake_planner"
+  printf 'planner fixture omits the required routing signal\n' > "$fake_planner/plan-unit-001"
+  printf '0\n' > "$fake_planner/plan-unit-001.status"
+  write_plan_match_output unit-001
+  write_lean_frame "$route_with_one_unit" two-way
+  write_signoff
+  if HYPERCORE_LOOP_STATE_DIR="$tmp/loop-runs" \
+    HYPERCORE_PLANNER_FAKE_DIR="$fake_planner" \
+    HYPERCORE_ACCEPTANCE_FAKE_DIR="$fake_acceptance" \
+    "$root/adapter/loop.sh" execute "$name" --dry-run >"$tmp/non-decomposable-missing.out" 2>"$tmp/non-decomposable-missing.err"; then
+    bad "loop execute blocks planner output without a non-decomposable signal"
+  else
+    ok "loop execute blocks planner output without a non-decomposable signal"
+  fi
+  require_text "$tmp/non-decomposable-missing.err" "planner output missing or malformed non-decomposable signal for unit-001" \
+    "missing non-decomposable signal reports the planner defect"
+  reject_text "$tmp/non-decomposable-missing.out" "--- acceptance: plan-match unit-001" \
+    "missing non-decomposable signal blocks before plan-match"
+  reject_text "$tmp/non-decomposable-missing.out" "--- gate: implement unit-001" \
+    "missing non-decomposable signal blocks before the unit builder starts"
+
+  fake_planner="$tmp/fake-planner"
+  fake_builder="$tmp/fake-builder"
+  fake_check="$tmp/fake-check"
+  rm -rf "$fake_acceptance" "$fake_planner" "$fake_builder" "$fake_check" "$root/$name/intent/frame/phase-two"
+  mkdir -p "$fake_acceptance" "$fake_planner" "$fake_builder" "$fake_check"
+  write_planner_output "$fake_planner/plan-unit-001" 0 true \
+    "fixture planner marks the unit as non-decomposable and gives the strong builder the direct implementation steps"
+  write_plan_match_output unit-001 PASS \
+    "fixture plan-match confirms the non-decomposable signal is faithful" \
+    "plan artifact records non-decomposable: true"
+  write_builder_output "$fake_builder/implement-unit-001-strong-1" 0 \
+    "fake strong builder handles the non-decomposable unit directly"
+  write_fake_status "$fake_check/unit-001-strong-1" 0
+  write_acceptance_output "$fake_acceptance/tier-one-unit-001-strong-1" PASS \
+    "strong direct fixture accepts the non-decomposable unit" \
+    "tier-one fixture for direct strong-builder route"
+  write_lean_frame "$route_with_one_unit" two-way
+  write_signoff
+  if HYPERCORE_LOOP_STATE_DIR="$tmp/loop-runs" \
+    HYPERCORE_PLANNER_FAKE_DIR="$fake_planner" \
+    HYPERCORE_BUILDER_FAKE_DIR="$fake_builder" \
+    HYPERCORE_CHECK_FAKE_DIR="$fake_check" \
+    HYPERCORE_ACCEPTANCE_FAKE_DIR="$fake_acceptance" \
+    CODEX_STRONG_BUILDER_MODEL="gpt-5.3-codex" \
+    "$root/adapter/loop.sh" execute "$name" --dry-run >"$tmp/non-decomposable-route.out" 2>"$tmp/non-decomposable-route.err"; then
+    ok "loop execute routes confirmed non-decomposable units directly to the strong builder"
+  else
+    bad "loop execute routes confirmed non-decomposable units directly to the strong builder"
+  fi
+  require_text "$tmp/non-decomposable-route.out" "planner marked unit-001 non-decomposable; routing directly to strong builder" \
+    "non-decomposable signal triggers direct strong-builder routing"
+  require_text "$tmp/non-decomposable-route.out" "--- gate: implement unit-001 (strong builder attempt 1) ---" \
+    "direct non-decomposable route starts the strong builder"
+  reject_text "$tmp/non-decomposable-route.out" "--- gate: implement unit-001 (fast builder attempt" \
+    "direct non-decomposable route skips fast-builder attempts"
+  require_order "$tmp/non-decomposable-route.out" "plan-match unit-001 verdict: PASS" "planner marked unit-001 non-decomposable; routing directly to strong builder" \
+    "direct strong-builder route waits for plan-match PASS"
+  require_text "$(dry_run_artifact "plans/unit-001.md")" "non-decomposable: true" \
+    "direct route plan artifact records the confirmed non-decomposable signal"
+  non_decomp_handoff="$(dry_run_artifact "handoffs/unit-001.md")"
+  require_text "$non_decomp_handoff" "fake strong builder handles the non-decomposable unit directly" \
+    "direct route handoff records the strong-builder output"
+
   fake_builder="$tmp/fake-builder"
   fake_check="$tmp/fake-check"
   rm -rf "$fake_acceptance" "$fake_builder" "$fake_check" "$root/$name/intent/frame/phase-two"
   mkdir -p "$fake_acceptance" "$fake_builder" "$fake_check"
+  write_plan_match_output unit-001
   write_builder_output "$fake_builder/implement-unit-001-fast-1" 0 \
     "fake fast builder attempt 1 reaches the mechanical check"
   write_builder_output "$fake_builder/implement-unit-001-fast-2" 0 \
@@ -1733,8 +1912,8 @@ Implementation units for phase two:
   else
     bad "loop execute retries three fast builders then accepts a strong-builder escalation"
   fi
-  require_text "$tmp/retry-escalation.out" "-m gpt-5.5" \
-    "fast builder dry-run command uses the gpt-5.5 builder default"
+  require_text "$tmp/retry-escalation.out" "-m gpt-5.3-codex-spark" \
+    "fast builder dry-run command uses the gpt-5.3-codex-spark builder default"
   require_text "$tmp/retry-escalation.out" "model_reasoning_effort=\\\"xhigh\\\"" \
     "fast builder dry-run command uses the builder effort default"
   require_text "$tmp/retry-escalation.out" "-m gpt-5.3-codex" \
@@ -1757,6 +1936,7 @@ Implementation units for phase two:
 
   rm -rf "$fake_acceptance" "$fake_builder" "$fake_check" "$root/$name/intent/frame/phase-two"
   mkdir -p "$fake_acceptance" "$fake_builder" "$fake_check"
+  write_plan_match_output unit-001
   write_builder_output "$fake_builder/implement-unit-001-fast-1" 0 \
     "fake fast builder attempt 1 fails check"
   write_builder_output "$fake_builder/implement-unit-001-fast-2" 0 \
@@ -1787,10 +1967,12 @@ Implementation units for phase two:
   require_text "$tmp/strong-stop.out" "escalating unit-001 to strong builder after 3 failed fast attempts" \
     "strong-stop path escalates only after the fast budget"
 
-  # --- dead-simple on-disk resume: skip a unit iff its tier-one PASS is already on disk ---
+  # --- on-disk resume: skip a unit only when plan-match and tier-one PASS are already on disk ---
   resume_dir="$tmp/resume-acceptance"
   rm -rf "$fake_acceptance" "$fake_builder" "$fake_check" "$resume_dir" "$root/$name/intent/frame/phase-two"
   mkdir -p "$fake_acceptance" "$fake_builder" "$fake_check" "$resume_dir"
+  write_plan_match_output unit-001
+  write_plan_match_output unit-002
   write_builder_output "$fake_builder/implement-unit-001-fast-1" 0 \
     "fake builder resume unit 1"
   write_builder_output "$fake_builder/implement-unit-002-fast-1" 0 \
@@ -1811,9 +1993,9 @@ Implementation units for phase two:
     HYPERCORE_CHECK_FAKE_DIR="$fake_check" \
     HYPERCORE_ACCEPTANCE_FAKE_DIR="$fake_acceptance" \
     "$root/adapter/loop.sh" execute "$name" --dry-run >"$tmp/resume-first.out" 2>"$tmp/resume-first.err"; then
-    ok "loop execute builds units with no tier-one PASS on disk"
+    ok "loop execute builds units with no plan-match and tier-one PASS on disk"
   else
-    bad "loop execute builds units with no tier-one PASS on disk"
+    bad "loop execute builds units with no plan-match and tier-one PASS on disk"
   fi
   require_text "$tmp/resume-first.out" "building unit-001" \
     "first execute builds the first unit"
@@ -1821,6 +2003,8 @@ Implementation units for phase two:
     "first execute builds the second unit"
   require_text "$resume_dir/tier-one/unit-001.md" "Verdict: PASS" \
     "first execute leaves a tier-one PASS artifact on disk for unit-001"
+  require_text "$resume_dir/plan-match/unit-001.md" "Verdict: PASS" \
+    "first execute leaves a plan-match PASS artifact on disk for unit-001"
 
   if HYPERCORE_LOOP_STATE_DIR="$tmp/loop-runs" \
     HYPERCORE_PHASE_TWO_DRY_RUN_ACCEPTANCE_DIR="$resume_dir" \
@@ -1828,18 +2012,36 @@ Implementation units for phase two:
     HYPERCORE_CHECK_FAKE_DIR="$fake_check" \
     HYPERCORE_ACCEPTANCE_FAKE_DIR="$fake_acceptance" \
     "$root/adapter/loop.sh" execute "$name" --dry-run >"$tmp/resume-second.out" 2>"$tmp/resume-second.err"; then
-    ok "loop execute skips units whose tier-one PASS is already on disk"
+    ok "loop execute skips units whose plan-match and tier-one PASS are already on disk"
   else
-    bad "loop execute skips units whose tier-one PASS is already on disk"
+    bad "loop execute skips units whose plan-match and tier-one PASS are already on disk"
   fi
   require_text "$tmp/resume-second.out" "resume: skipping unit-001" \
-    "rerun skips the first unit from its on-disk tier-one PASS"
+    "rerun skips the first unit from its on-disk plan-match and tier-one PASS"
   require_text "$tmp/resume-second.out" "resume: skipping unit-002" \
-    "rerun skips the second unit from its on-disk tier-one PASS"
+    "rerun skips the second unit from its on-disk plan-match and tier-one PASS"
   reject_text "$tmp/resume-second.out" "building unit-001" \
-    "rerun does not rebuild a unit that has a tier-one PASS on disk"
+    "rerun does not rebuild a unit that has plan-match and tier-one PASS on disk"
   reject_text "$tmp/resume-second.out" "fake builder resume unit 1" \
     "rerun does not invoke the first unit builder"
+
+  rm -f "$resume_dir/plan-match/unit-002.md"
+  if HYPERCORE_LOOP_STATE_DIR="$tmp/loop-runs" \
+    HYPERCORE_PHASE_TWO_DRY_RUN_ACCEPTANCE_DIR="$resume_dir" \
+    HYPERCORE_BUILDER_FAKE_DIR="$fake_builder" \
+    HYPERCORE_CHECK_FAKE_DIR="$fake_check" \
+    HYPERCORE_ACCEPTANCE_FAKE_DIR="$fake_acceptance" \
+    "$root/adapter/loop.sh" execute "$name" --dry-run >"$tmp/resume-missing-plan-match.out" 2>"$tmp/resume-missing-plan-match.err"; then
+    ok "loop execute rebuilds a unit whose plan-match PASS is missing"
+  else
+    bad "loop execute rebuilds a unit whose plan-match PASS is missing"
+  fi
+  require_text "$tmp/resume-missing-plan-match.out" "resume: skipping unit-001" \
+    "plan-match resume test keeps the fully proven unit skipped"
+  require_text "$tmp/resume-missing-plan-match.out" "building unit-002" \
+    "tier-one PASS alone does not skip a unit whose plan-match PASS is missing"
+  reject_text "$tmp/resume-missing-plan-match.out" "fake builder resume unit 1" \
+    "missing plan-match for unit 2 does not rebuild unit 1"
 
   rm -f "$resume_dir/tier-one/unit-001.md"
   if HYPERCORE_LOOP_STATE_DIR="$tmp/loop-runs" \
@@ -1855,7 +2057,7 @@ Implementation units for phase two:
   require_text "$tmp/resume-third.out" "building unit-001" \
     "a unit with no tier-one PASS on disk rebuilds on rerun"
   require_text "$tmp/resume-third.out" "resume: skipping unit-002" \
-    "a unit whose tier-one PASS remains on disk still skips"
+    "a unit whose plan-match and tier-one PASS remain on disk still skips"
   cleanup_loop_frame_self_test
   LOOP_FRAME_CHECK_WORK=
   rm -rf "$tmp"
@@ -2150,6 +2352,30 @@ require_text "$root/intent/collaboration.md" \
   "bounded proof-floor recovery" \
   "collaboration segment folds bounded build retry"
 require_text "$root/intent/loop.md" \
+  "the signed frame is held to a judgeability floor" \
+  "loop segment states the signed-frame judgeability floor"
+require_text "$root/intent/loop.md" \
+  "per-unit plans carry implementation-completeness" \
+  "loop segment keeps implementation-completeness in plans"
+require_text "$root/intent/adapter.md" \
+  "signed frame at the judgeable altitude" \
+  "adapter segment keeps the signed frame judgeable"
+require_text "$root/intent/adapter.md" \
+  "the per-unit plan carries implementation-completeness" \
+  "adapter segment keeps implementation-completeness in the plan"
+require_text "$root/intent/collaboration.md" \
+  "complete lean frame has the same judgeability floor" \
+  "collaboration segment keeps lean frame language judgeable"
+require_text "$root/intent/collaboration.md" \
+  "FLAG a wrong result against a frame claim without reading code" \
+  "collaboration segment keeps the frame falsifiable without code reading"
+require_text "$root/intent/adapter.md" \
+  "short-but-judgeable frame altitude" \
+  "adapter segment says check.sh protects frame altitude"
+require_text "$root/intent/machine-statements/adapter.md" \
+  "short-but-judgeable frame altitude" \
+  "adapter machine statements say check.sh protects frame altitude"
+require_text "$root/intent/loop.md" \
   "a structured verdict" \
   "loop segment folds structured acceptance verdicts"
 require_text "$root/intent/loop.md" \
@@ -2162,8 +2388,8 @@ require_text "$root/intent/loop.md" \
   "execute is resumable" \
   "loop segment folds resumable execute"
 require_text "$root/intent/loop.md" \
-  "tier-one acceptance artifact is already present as a clean PASS" \
-  "loop segment folds on-disk tier-one-PASS resume"
+  "plan-match artifact and tier-one acceptance artifact are already" \
+  "loop segment folds on-disk plan-match-and-tier-one resume"
 require_text "$root/intent/loop.md" \
   "orchestrator snapshot made at execute start" \
   "loop segment folds phase-two orchestrator self-edit safety"
@@ -2189,7 +2415,7 @@ require_text "$root/intent/loop.md" \
   "started concurrently" \
   "loop segment folds the concurrent tier-two panel"
 require_text "$root/intent/adapter.md" \
-  "on-disk resumable execute that skips a unit already" \
+  "execute that skips a unit already carrying clean plan-match" \
   "adapter segment folds resumable execute materialization"
 require_text "$root/intent/adapter.md" \
   "running execute from a snapshot" \
@@ -2216,8 +2442,8 @@ require_text "$root/intent/machine-statements/loop.md" \
   "the archive contract lives in" \
   "loop machine statements fold archive prompt relocation"
 require_text "$root/intent/machine-statements/loop.md" \
-  "skips a unit whose tier-one" \
-  "loop machine statements fold on-disk resume"
+  "skips a unit only when the" \
+  "loop machine statements fold on-disk plan-match-and-tier-one resume"
 require_text "$root/intent/machine-statements/adapter.md" \
   "on-disk resumable execute that skips a unit already" \
   "adapter machine statements fold resumable execute materialization"
@@ -2252,8 +2478,17 @@ require_text "$root/intent/loop.md" \
   "the collaborator role defaults to the interactive harness that loaded the adapter" \
   "loop segment holds the collaborator default"
 require_text "$root/intent/loop.md" \
+  "the default builder is the cheap fast model behind the plan step and plan-match check" \
+  "loop segment records the shipped builder default"
+reject_text "$root/intent/loop.md" \
   "the fast-builder default is held at the strong model" \
-  "loop segment holds the builder default"
+  "loop segment has no held-builder default clause"
+reject_text "$root/intent/machine-statements/loop.md" \
+  "the strong model until the two-step plan/build work lands" \
+  "loop machine statements have no held-builder default clause"
+reject_text "$root/adapter/loop.sh" \
+  "until the two-step plan/build lands" \
+  "loop materialization has no held-builder default note"
 require_text "$root/intent/loop.md" \
   "phase-one review stay on the" \
   "loop segment holds the strong review floor"
@@ -2315,7 +2550,7 @@ check_no_tracked_live_material_paths
   || bad "adapter/loop.sh is missing or not executable"
 [ -x "$root/bin/home-signoff" ] && ok "bin/home-signoff exists and is executable" \
   || bad "bin/home-signoff is missing or not executable"
-for gate in orient frame implement check archive; do
+for gate in orient frame plan implement check archive; do
   [ -f "$root/adapter/gates/$gate.md" ] \
     && ok "adapter/gates/$gate.md exists" \
     || bad "adapter/gates/$gate.md missing"
@@ -2468,6 +2703,24 @@ require_text "$root/adapter/gates/check.md" \
 require_text "$root/adapter/gates/check.md" \
   "independent-coherence" \
   "check gate assigns one-way coherence to the panel"
+require_text "$root/adapter/gates/plan.md" \
+  "per-unit plan gate" \
+  "plan gate identifies the planner role"
+require_text "$root/adapter/gates/plan.md" \
+  "Read only the addressed node-local work" \
+  "plan gate preserves cleared-session read scope"
+require_text "$root/adapter/gates/plan.md" \
+  "Write a human-readable implementation plan" \
+  "plan gate requires a readable per-unit plan"
+require_text "$root/adapter/gates/plan.md" \
+  "do not edit files" \
+  "plan gate prevents planner material edits"
+require_text "$root/adapter/gates/plan.md" \
+  "non-decomposable: true" \
+  "plan gate requires the non-decomposable true signal"
+require_text "$root/adapter/gates/plan.md" \
+  "non-decomposable: false" \
+  "plan gate requires the non-decomposable false signal"
 require_text "$root/adapter/gates/implement.md" \
   "signed frame under \`intent/frame/\`" \
   "implement gate reads current work-node frames"
@@ -2808,8 +3061,14 @@ require_text "$root/adapter/loop.sh" \
   'CODEX_REVIEW_EFFORT:-xhigh' \
   "loop keeps review effort strong by default"
 require_text "$root/adapter/loop.sh" \
-  'CODEX_BUILDER_MODEL:-gpt-5.5' \
-  "loop defaults fast builders to gpt-5.5 until the two-step plan/build lands"
+  'CODEX_PLANNER_MODEL:-${CODEX_STRONG_BUILDER_MODEL:-${CODEX_REVIEW_MODEL:-${CODEX_MODEL:-}}}' \
+  "loop exposes a planner-model knob defaulting to the strong model"
+require_text "$root/adapter/loop.sh" \
+  'CODEX_PLANNER_EFFORT:-${CODEX_STRONG_BUILDER_EFFORT:-${CODEX_REVIEW_EFFORT:-xhigh}}' \
+  "loop exposes a planner-effort knob defaulting to strong effort"
+require_text "$root/adapter/loop.sh" \
+  'CODEX_BUILDER_MODEL:-gpt-5.3-codex-spark' \
+  "loop defaults fast builders to gpt-5.3-codex-spark after two-step shipped"
 require_text "$root/adapter/loop.sh" \
   'CODEX_BUILDER_EFFORT:-xhigh' \
   "loop applies a separate builder effort default"
@@ -2853,11 +3112,56 @@ require_text "$root/adapter/loop.sh" \
   'phase_two_units_from_frame_file()' \
   "loop derives implementation units from the signed frame"
 require_text "$root/adapter/loop.sh" \
-  'phase_two_unit_tier_one_resumable()' \
-  "loop defines the on-disk tier-one-PASS resume check"
+  'run_unit_plan_step()' \
+  "loop runs a planner step before unit builds"
+require_text "$root/adapter/loop.sh" \
+  'phase_two_write_plan_artifact()' \
+  "loop writes readable per-unit plan artifacts"
+require_text "$root/adapter/loop.sh" \
+  'planner_non_decomposable_signal_from_output()' \
+  "loop parses the planner non-decomposable signal"
+require_text "$root/adapter/loop.sh" \
+  'phase_two_plan_non_decomposable_signal()' \
+  "loop re-checks the plan artifact non-decomposable signal"
+require_text "$root/adapter/loop.sh" \
+  'planner output missing or malformed non-decomposable signal for $unit_id' \
+  "loop blocks planner output without a valid non-decomposable signal"
+require_text "$root/adapter/loop.sh" \
+  'printf '\''non-decomposable: %s\n\n'\'' "$non_decomposable"' \
+  "loop records the normalized non-decomposable signal in the plan artifact"
+require_text "$root/adapter/loop.sh" \
+  'PHASE_TWO_PLAN_DIR="$PHASE_TWO_ACCEPTANCE_DIR/plans"' \
+  "loop stores per-unit plans under the phase-two tree"
+require_text "$root/adapter/loop.sh" \
+  'PHASE_TWO_PLAN_MATCH_DIR="$PHASE_TWO_ACCEPTANCE_DIR/plan-match"' \
+  "loop stores per-unit plan-match results under the phase-two tree"
+require_text "$root/adapter/loop.sh" \
+  'run_plan_match_review()' \
+  "loop runs a plan-faithfulness review before unit builds"
+require_text "$root/adapter/loop.sh" \
+  'Plan-faithfulness reviewer: strong read-only plan match' \
+  "plan-match reviewer prompt names the dedicated reviewer"
+require_text "$root/adapter/loop.sh" \
+  'You are the dedicated independent strong read-only plan-faithfulness reviewer.' \
+  "plan-match reviewer prompt states the strong read-only reviewer role"
+require_text "$root/adapter/loop.sh" \
+  'Read only the signed frame, the intent it references, and the per-unit plan artifact.' \
+  "plan-match reviewer is read-only against frame and plan"
+require_text "$root/adapter/loop.sh" \
+  'Confirm the plan carries exactly one non-decomposable: true|false signal' \
+  "plan-match reviewer checks the non-decomposable signal"
+require_text "$root/adapter/loop.sh" \
+  'plan-match review failed for $unit_id' \
+  "loop blocks a unit on unresolved plan-match flags"
+require_text "$root/adapter/loop.sh" \
+  'required_plan_match_evidence_clean' \
+  "loop validates plan-match artifacts before panel and archive"
+require_text "$root/adapter/loop.sh" \
+  'phase_two_unit_resumable()' \
+  "loop defines the on-disk plan-match-and-tier-one resume check"
 require_text "$root/adapter/loop.sh" \
   'resume: skipping $unit_id' \
-  "loop skips units whose tier-one PASS is already on disk"
+  "loop skips units whose plan-match and tier-one PASS are already on disk"
 reject_text "$root/adapter/loop.sh" \
   'phase_two_unit_cache_hit' \
   "loop no longer carries the retired content-hash execute cache"
@@ -2867,6 +3171,12 @@ require_text "$root/adapter/loop.sh" \
 require_text "$root/adapter/loop.sh" \
   'run_unit_build_attempt()' \
   "loop wraps each unit build in an attempt boundary"
+require_text "$root/adapter/loop.sh" \
+  '[ "$plan_non_decomposable" = true ]' \
+  "loop branches on the confirmed non-decomposable signal"
+require_text "$root/adapter/loop.sh" \
+  'planner marked $unit_id non-decomposable; routing directly to strong builder' \
+  "loop routes confirmed non-decomposable units directly to the strong builder"
 require_text "$root/adapter/loop.sh" \
   'for fast_attempt in 1 2 3' \
   "loop gives each unit a three-attempt fast-builder budget"
@@ -2894,6 +3204,78 @@ require_text "$root/adapter/loop.sh" \
 require_text "$root/adapter/loop.sh" \
   'cumulative worktree snapshot' \
   "tier-one acceptance prompt explains cumulative diff records"
+require_text "$root/intent/loop.md" \
+  "before each unit build starts, execute runs a strong-model planning sub-step" \
+  "loop intent states the per-unit planning step"
+require_text "$root/intent/loop.md" \
+  'records that unit'"'"'s human-readable plan artifact at `phase-two/plans/<unit-id>.md`' \
+  "loop intent states the readable plan artifact path"
+require_text "$root/intent/loop.md" \
+  '`non-decomposable: true` or `non-decomposable: false` signal' \
+  "loop intent states the explicit non-decomposable signal"
+require_text "$root/intent/loop.md" \
+  "independent strong read-only plan-faithfulness review" \
+  "loop intent states the plan-faithfulness review"
+require_text "$root/intent/loop.md" \
+  "including whether the non-decomposable signal is justified" \
+  "loop intent states plan-match checks the non-decomposable signal"
+require_text "$root/intent/loop.md" \
+  "blocks the unit on a missing, malformed, or non-\`PASS\` plan-match result" \
+  "loop intent states plan-match blocking"
+require_text "$root/intent/loop.md" \
+  "directly to the strong builder instead of spending fast-builder attempts" \
+  "loop intent states direct strong-builder routing for non-decomposable units"
+require_text "$root/intent/machine-statements/loop.md" \
+  'runs a planner-model sub-step before each unit build' \
+  "loop machine statements carry the planner sub-step"
+require_text "$root/intent/machine-statements/loop.md" \
+  "records the normalized" \
+  "loop machine statements carry normalized non-decomposable signal recording"
+require_text "$root/intent/machine-statements/loop.md" \
+  'phase-two/plan-match/<unit-id>.md' \
+  "loop machine statements carry the plan-match artifact path"
+require_text "$root/intent/machine-statements/loop.md" \
+  "starts no builder for that unit unless the" \
+  "loop machine statements carry plan-match builder blocking"
+require_text "$root/intent/machine-statements/loop.md" \
+  "directly through the strong-builder model knob" \
+  "loop machine statements carry direct strong-builder routing"
+require_text "$root/intent/adapter.md" \
+  "the phase-two orchestrator starts each implementation unit with a strong-model planning" \
+  "adapter intent states the materialized planning sub-step"
+require_text "$root/intent/adapter.md" \
+  "confirms each plan artifact carries exactly one" \
+  "adapter intent states the non-decomposable signal confirmation"
+require_text "$root/intent/adapter.md" \
+  "dedicated independent strong read-only plan-faithfulness review" \
+  "adapter intent states the materialized plan-faithfulness review"
+require_text "$root/intent/adapter.md" \
+  "routes a confirmed \`non-decomposable: true\` unit directly to" \
+  "adapter intent states direct strong-builder routing"
+require_text "$root/intent/adapter.md" \
+  "direct strong routing for confirmed" \
+  "adapter intent says check.sh protects direct non-decomposable routing"
+require_text "$root/intent/adapter.md" \
+  "artifacts with source markers and fake-source rejection, the per-unit planner route and" \
+  "adapter intent states the planner route materialization"
+require_text "$root/intent/adapter.md" \
+  "per-unit plan-faithfulness review and plan-match artifacts" \
+  "adapter intent states plan-match artifact materialization"
+require_text "$root/intent/machine-statements/adapter.md" \
+  "per-unit planner route and writes readable plan artifacts before" \
+  "adapter machine statements carry readable plan artifacts before build"
+require_text "$root/intent/machine-statements/adapter.md" \
+  "exactly one normalized \`non-decomposable: true\`" \
+  "adapter machine statements carry normalized non-decomposable signal materialization"
+require_text "$root/intent/machine-statements/adapter.md" \
+  "writes plan-match artifacts before builder sessions" \
+  "adapter machine statements carry plan-match artifacts before build"
+require_text "$root/intent/machine-statements/adapter.md" \
+  "routes a confirmed \`non-decomposable: true\` unit directly" \
+  "adapter machine statements carry direct strong-builder routing"
+require_text "$root/intent/machine-statements/adapter.md" \
+  "direct strong routing for confirmed" \
+  "adapter machine statements say check.sh protects direct non-decomposable routing"
 require_text "$root/adapter/loop.sh" \
   'run_tier_two_panel()' \
   "loop runs the one-way tier-two implementation acceptance panel"
@@ -3076,6 +3458,9 @@ require_text "$root/adapter/loop.sh" \
   'print_phase_two_status' \
   "loop status reports phase-two run state"
 require_text "$root/adapter/loop.sh" \
+  'plan_match=%s' \
+  "loop status exposes the plan-match path"
+require_text "$root/adapter/loop.sh" \
   'tier_two_panel=%s failure=%s' \
   "loop status exposes the tier-two panel path"
 require_text "$root/adapter/loop.sh" \
@@ -3174,7 +3559,7 @@ check_loop_frame_contract
 echo "root - retired user-facing path examples"
 for file in "$root/README.md" "$root/hypercore.md" "$root/adapter/codex.md" \
   "$root/adapter/codex-mounted.md" \
-  "$root/adapter/gates/orient.md" "$root/adapter/gates/frame.md" \
+  "$root/adapter/gates/orient.md" "$root/adapter/gates/frame.md" "$root/adapter/gates/plan.md" \
   "$root/adapter/gates/implement.md" "$root/adapter/gates/check.md" \
   "$root/adapter/gates/archive.md" "$root/bin/home" "$root/bin/home-signoff" \
   "$root/home/README.md" "$root/signoff" "$root/direction" "$root/review"; do

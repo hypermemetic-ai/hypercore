@@ -18,9 +18,25 @@ alternative framing, information-gain questions, reversibility, review where req
 a decision surface for substantive operator direction; after sign-off, implement, check,
 and archive run through cleared sessions that re-derive each unit and acceptance review
 from the signed frame directory and lean phase-two handoff artifacts alone.
+the rigid workflow keeps the signed frame at the judgeable altitude: legible and
+falsifiable enough for a panel to FLAG a wrong result against a frame claim without reading
+code, while the per-unit plan carries implementation-completeness for the builder.
 the phase-two orchestrator protects self-editing work by running execute from a snapshot
 made at execute start; later edits to the live orchestrator material do not change the
 already-running process.
+the phase-two orchestrator starts each implementation unit with a strong-model planning
+sub-step and records a readable per-unit plan artifact before the builder session starts;
+the plan is read-only build scaffolding and not an operator act.
+the phase-two orchestrator confirms each plan artifact carries exactly one
+`non-decomposable: true` or `non-decomposable: false` signal before plan-match or build can
+proceed.
+the phase-two orchestrator runs a dedicated independent strong read-only plan-faithfulness review
+after each per-unit plan and before the builder session; a missing, malformed, or
+non-`PASS` plan-match result blocks the unit, including when the non-decomposable signal is
+not justified by the signed frame and unit proof obligation.
+the phase-two orchestrator routes a confirmed `non-decomposable: true` unit directly to
+the strong builder, while a `non-decomposable: false` unit uses the fast-builder retry
+ladder and reactive strong-builder escalation.
 phase two has a real supervisor-to-executor handoff: after sign-off, an outer supervisor
 launches a fresh phase-two executor from the addressed node and supervises its recorded
 progress, intervening only when the loop blocks on a real gate failure or operator need.
@@ -95,10 +111,13 @@ root.
 the loop streams inner executor JSON events into the phase-two run state while
 printing concise progress, without changing the cleared-session contract.
 the loop materializes separate builder and reviewer routing, structured acceptance
-artifacts with source markers and fake-source rejection, the per-unit fast-builder retry
-then strong-builder escalation ladder, on-disk resumable execute that skips a unit already
-carrying a clean tier-one PASS for the signed frame, the concurrent one-way tier-two panel,
-and phase-one review subprocess crash diagnostics.
+artifacts with source markers and fake-source rejection, the per-unit planner route and
+readable plan artifacts, the per-unit plan-faithfulness review and plan-match artifacts,
+the per-unit non-decomposable signal and direct strong-builder route, the per-unit
+fast-builder retry then strong-builder escalation ladder, the shipped two-step builder
+default where the default builder is the cheap fast model behind the plan step and plan-match check, on-disk resumable execute that skips a unit already carrying clean plan-match and tier-one
+PASS results for the signed frame, the concurrent one-way tier-two panel, and phase-one
+review subprocess crash diagnostics.
 `adapter/loop.sh` accepts one node-local work name in the addressed node for new work.
 the root node is the default addressed node.
 `loop.sh -C <node-path> <gate> <work-name>` addresses work in a child node, including a
@@ -110,6 +129,11 @@ the addressed node and blocks when there are zero or more than one.
 and act only on that addressed work.
 `loop.sh execute <work-name>` records only the addressed node-local work in that node's
 history.
+`loop.sh execute <work-name>` writes each unit's readable plan artifact under
+`phase-two/plans/` before it starts that unit's builder session.
+`loop.sh execute <work-name>` writes each unit's plan-match artifact under
+`phase-two/plan-match/` and blocks before the builder session unless that artifact records
+a clean `PASS`.
 the orchestrator creates, signs, executes, and records only addressed node-local work
 nodes.
 the gate prompts use addressed-node and node-local work wording and point cleared sessions
@@ -139,9 +163,12 @@ validation, start scaffolding, direction/review helpers, operator-act gating thr
 `/dev/tty` with B-ready `operator-gate:` markers and numbered-option direction, review and
 acceptance isolation settings, strict frame parsing, phase-two acceptance gating, structured
 acceptance legibility, acceptance source markers and fake-source rejection, separate
-builder/reviewer routing with bounded retry and strong escalation, on-disk resumable execute
-that skips units already carrying a clean tier-one PASS, the concurrent tier-two panel, the
-re-read implement/archive prompt contract and
+builder/reviewer routing with bounded retry, the short-but-judgeable frame altitude,
+direct strong routing for confirmed
+non-decomposable units, and strong escalation, the per-unit planner route with readable
+plan artifacts before build artifacts, on-disk resumable execute that skips units already
+carrying a clean plan-match and tier-one PASS, the concurrent tier-two panel, the re-read
+implement/archive prompt contract and
 absence of frozen inline implement/archive contract text, the new operator-act and
 phase-two performance contract in the `collaboration`, `loop`, and `adapter` segments, and
 current-material absence of the retired compatibility route still carry the contract.

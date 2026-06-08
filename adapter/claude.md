@@ -23,6 +23,8 @@ without re-deriving the whole methodology from 2000 lines of intent every sessio
   `adapter/loop.sh execute` from the addressed node and watch its recorded progress.
   Codex builds; you intervene only when the loop blocks on a real gate failure or an
   operator decision. You never hand-edit phase-two material to "help" the build.
+- Two-step has shipped; the default builder is the cheap fast model behind the plan step
+  and plan-match check, materialized as `gpt-5.3-codex-spark`.
 - You never write direction or sign-off for the operator. The machine never endorses.
 
 ## Load budget — the point of this file is less tax

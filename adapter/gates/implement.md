@@ -24,7 +24,7 @@ acceptance artifacts; the loop records acceptance evidence after tier-one review
 describe prior loop run state, unrelated untracked files, or cumulative diff noise unless
 they are a real proof gap for this unit.
 
-Execute may resume by skipping units whose tier-one acceptance artifact is already a clean
+Execute may resume by skipping units whose plan-match and tier-one acceptance artifacts are already a clean
 PASS on disk for the signed frame. Treat that as orchestrator state only: build and report
 the requested unit, and do not speculate about acceptance artifacts that the check gate
 records.

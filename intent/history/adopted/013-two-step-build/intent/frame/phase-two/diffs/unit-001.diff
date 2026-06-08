@@ -1,0 +1,490 @@
+# worktree diff record
+
+Recorded at: 2026-06-08T06:39:49Z
+
+## status
+
+Tracked changes only; untracked files are excluded from this unit diff record.
+
+A  013-two-step-build/intent/frame/direction.md
+A  013-two-step-build/intent/frame/frame.md
+A  013-two-step-build/intent/frame/options.md
+A  013-two-step-build/intent/frame/review.md
+A  013-two-step-build/intent/frame/signoff.md
+A  013-two-step-build/intent/organizing-document.md
+ M adapter/loop.sh
+ M check.sh
+ M intent/adapter.md
+ M intent/loop.md
+ M intent/machine-statements/adapter.md
+ M intent/machine-statements/loop.md
+
+## diff
+
+diff --git a/adapter/loop.sh b/adapter/loop.sh
+index 7a7e32d..59e1be8 100755
+--- a/adapter/loop.sh
++++ b/adapter/loop.sh
+@@ -36,6 +36,8 @@
+ #   HYPERCORE_OPERATOR (optional sign-off identity when <operator> is omitted)
+ #   CODEX_BIN (default: codex), CODEX_APPROVAL (default: never)
+ #   CODEX_WRITE_SANDBOX (default: workspace-write), CODEX_READ_SANDBOX (default: read-only)
++#   CODEX_PLANNER_MODEL (default: CODEX_STRONG_BUILDER_MODEL, then CODEX_REVIEW_MODEL/CODEX_MODEL)
++#   CODEX_PLANNER_EFFORT (default: CODEX_STRONG_BUILDER_EFFORT, then CODEX_REVIEW_EFFORT or xhigh)
+ #   CODEX_BUILDER_MODEL (default: gpt-5.5 until the two-step plan/build lands), CODEX_BUILDER_EFFORT (default: xhigh)
+ #   CODEX_STRONG_BUILDER_MODEL (optional strong-builder escalation model)
+ #   CODEX_STRONG_BUILDER_EFFORT (default: CODEX_REVIEW_EFFORT or xhigh)
+@@ -109,6 +111,7 @@ PHASE_TWO_RUN_ACTIVE=0
+ PHASE_TWO_FRAME_DIR=""
+ PHASE_TWO_ACCEPTANCE_DIR=""
+ PHASE_TWO_UNITS_DIR=""
++PHASE_TWO_PLAN_DIR=""
+ PHASE_TWO_HANDOFF_DIR=""
+ PHASE_TWO_DIFF_DIR=""
+ PHASE_TWO_TIER_ONE_DIR=""
+@@ -221,6 +224,7 @@ loop_state_write() {
+     printf '    "current_root_state": %s,\n' "$(json_string "$LOOP_CURRENT_ROOT_STATE")"
+     printf '    "phase_two_acceptance_dir": %s,\n' "$(json_string "$PHASE_TWO_ACCEPTANCE_DIR")"
+     printf '    "units_dir": %s,\n' "$(json_string "$PHASE_TWO_UNITS_DIR")"
++    printf '    "plans_dir": %s,\n' "$(json_string "$PHASE_TWO_PLAN_DIR")"
+     printf '    "handoffs_dir": %s,\n' "$(json_string "$PHASE_TWO_HANDOFF_DIR")"
+     printf '    "diffs_dir": %s,\n' "$(json_string "$PHASE_TWO_DIFF_DIR")"
+     printf '    "tier_one_dir": %s,\n' "$(json_string "$PHASE_TWO_TIER_ONE_DIR")"
+@@ -274,6 +278,7 @@ phase_two_run_init() {
+     PHASE_TWO_ACCEPTANCE_DIR="$PHASE_TWO_FRAME_DIR/phase-two"
+   fi
+   PHASE_TWO_UNITS_DIR="$PHASE_TWO_ACCEPTANCE_DIR/units"
++  PHASE_TWO_PLAN_DIR="$PHASE_TWO_ACCEPTANCE_DIR/plans"
+   PHASE_TWO_HANDOFF_DIR="$PHASE_TWO_ACCEPTANCE_DIR/handoffs"
+   PHASE_TWO_DIFF_DIR="$PHASE_TWO_ACCEPTANCE_DIR/diffs"
+   PHASE_TWO_TIER_ONE_DIR="$PHASE_TWO_ACCEPTANCE_DIR/tier-one"
+@@ -284,6 +289,7 @@ phase_two_run_init() {
+     "$(dirname "$LOOP_CURRENT_WORK_STATE")" \
+     "$(dirname "$LOOP_CURRENT_ROOT_STATE")" \
+     "$PHASE_TWO_UNITS_DIR" \
++    "$PHASE_TWO_PLAN_DIR" \
+     "$PHASE_TWO_HANDOFF_DIR" \
+     "$PHASE_TWO_DIFF_DIR" \
+     "$PHASE_TWO_TIER_ONE_DIR" \
+@@ -1824,6 +1830,21 @@ phase_two_unit_tier_one_resumable() {
+   fi
+   return 0
+ }
++
++phase_two_write_plan_artifact() {
++  local unit_id=$1 proof=$2 output_path=$3 plan_path=$4 tmp
++  tmp="$plan_path.tmp.$$"
++  {
++    printf '# plan - %s\n\n' "$unit_id"
++    printf 'unit: %s\n\n' "$unit_id"
++    printf 'proof obligation: %s\n\n' "$proof"
++    printf 'planner-output-path: %s\n\n' "$(relpath "$output_path")"
++    printf '## readable plan\n\n'
++    printf '%s\n' "$GATE_OUTPUT"
++  } > "$tmp"
++  mv "$tmp" "$plan_path"
++}
++
+ phase_two_write_handoff() {
+   local unit_id=$1 proof=$2 output_path=$3 handoff_path=$4 tmp
+   tmp="$handoff_path.tmp.$$"
+@@ -1840,7 +1861,9 @@ phase_two_write_handoff() {
+ 
+ phase_two_write_unit_record() {
+   local unit_id=$1 status=$2 proof=$3 handoff_path=$4 diff_path=$5 tier_one_path=$6 message=${7-} tmp path
++  local plan_path
+   path="$PHASE_TWO_UNITS_DIR/$unit_id.md"
++  plan_path="$PHASE_TWO_PLAN_DIR/$unit_id.md"
+   tmp="$path.tmp.$$"
+   {
+     printf '# phase-two unit - %s\n\n' "$unit_id"
+@@ -1848,6 +1871,7 @@ phase_two_write_unit_record() {
+     printf 'status: %s\n' "$status"
+     printf 'updated-at: %s\n' "$(utc_stamp)"
+     printf 'proof-obligation: %s\n' "$proof"
++    printf 'plan-path: %s\n' "$(relpath "$plan_path")"
+     printf 'handoff-path: %s\n' "$(relpath "$handoff_path")"
+     printf 'diff-path: %s\n' "$(relpath "$diff_path")"
+     printf 'tier-one-verdict-path: %s\n' "$(relpath "$tier_one_path")"
+@@ -2492,6 +2516,11 @@ codex_add_model_and_effort_args() {
+ codex_route_model_and_effort() {
+   local route=$1 model="" effort=""
+   case "$route" in
++    planner)
++      model="${CODEX_PLANNER_MODEL:-${CODEX_STRONG_BUILDER_MODEL:-${CODEX_REVIEW_MODEL:-${CODEX_MODEL:-}}}}"
++      effort="${CODEX_PLANNER_EFFORT:-${CODEX_STRONG_BUILDER_EFFORT:-${CODEX_REVIEW_EFFORT:-xhigh}}}"
++      codex_add_model_and_effort_args "$model" "$effort" CODEX_PLANNER_MODEL CODEX_PLANNER_EFFORT
++      ;;
+     builder-fast)
+       model="${CODEX_BUILDER_MODEL:-gpt-5.5}"
+       effort="${CODEX_BUILDER_EFFORT:-xhigh}"
+@@ -3218,9 +3247,36 @@ run_unit_mechanical_check() {
+   return 0
+ }
+ 
++run_unit_plan_step() {
++  local work_name=$1 unit_id=$2 proof=$3 source_desc=$4 plan_path=$5
++  local gate_name gate_output_path
++  gate_name="plan-$unit_id"
++
++  printf '\n--- gate: plan %s ---\n' "$unit_id"
++  PHASE_TWO_SESSION_ID=""
++  if ! run_gate "$gate_name" "Read Bash" start "" \
++    "Plan phase-two unit $unit_id for node-local work $work_name in addressed node $NODE_REL.
++Proof obligation: $proof
++Signed frame: $source_desc
++Readable plan artifact to be written by the orchestrator: $(relpath "$plan_path")" \
++    plan planner 1; then
++    UNIT_ATTEMPT_REASON="planner subprocess failed for $unit_id"
++    loop_event plan plan failed "$UNIT_ATTEMPT_REASON"
++    loop_state_write plan failed "$UNIT_ATTEMPT_REASON"
++    return 1
++  fi
++
++  gate_output_path="$LOOP_RUN_GATE_DIR/$gate_name.final.md"
++  phase_two_write_plan_artifact "$unit_id" "$proof" "$gate_output_path" "$plan_path"
++  loop_event plan plan passed "plan artifact written for $unit_id at $(relpath "$plan_path")"
++  loop_state_write plan passed "plan artifact written for $unit_id at $(relpath "$plan_path")"
++  printf 'plan %s written: %s\n' "$unit_id" "$(relpath "$plan_path")"
++  return 0
++}
++
+ run_unit_build_attempt() {
+   local work_name=$1 unit_id=$2 proof=$3 source_desc=$4 attempt_kind=$5 attempt_number=$6
+-  local handoff_path=$7 diff_path=$8 tier_one_path=$9
++  local handoff_path=$7 diff_path=$8 tier_one_path=$9 plan_path=${10}
+   local attempt_key gate_name gate_output_path route status_msg
+   UNIT_ATTEMPT_REASON=""
+   UNIT_ACCEPTED_STATUS_MSG=""
+@@ -3234,6 +3290,7 @@ run_unit_build_attempt() {
+   if ! run_gate "$gate_name" "Read Edit Write Bash" start "" \
+     "Implement phase-two unit $unit_id for node-local work $work_name in addressed node $NODE_REL.
+ Proof obligation: $proof
++Per-unit plan artifact: $(relpath "$plan_path")
+ Signed frame: $source_desc" \
+     implement "$route" 1; then
+     UNIT_ATTEMPT_REASON="$attempt_kind builder subprocess failed for $unit_id on attempt $attempt_number"
+@@ -3259,7 +3316,7 @@ Signed frame: $source_desc" \
+ 
+ cmd_execute() {
+   local work_name="" active_dir active_rel frame_rel frame_file source_desc archive_collection archive_decision
+-  local reversibility errors units_text unit_entry unit_id proof gate_name handoff_path diff_path tier_one_path
++  local reversibility errors units_text unit_entry unit_id proof gate_name plan_path handoff_path diff_path tier_one_path
+   local gate_output_path status_msg fast_attempt unit_accepted units=() unit_ids=()
+   while [ $# -gt 0 ]; do
+     case "$1" in
+@@ -3327,6 +3384,7 @@ $errors"
+     unit_ids+=("$unit_id")
+     LOOP_CURRENT_UNIT="$unit_id"
+     gate_name="implement-$unit_id"
++    plan_path="$PHASE_TWO_PLAN_DIR/$unit_id.md"
+     handoff_path="$PHASE_TWO_HANDOFF_DIR/$unit_id.md"
+     diff_path="$PHASE_TWO_DIFF_DIR/$unit_id.diff"
+     tier_one_path="$PHASE_TWO_TIER_ONE_DIR/$unit_id.md"
+@@ -3340,12 +3398,18 @@ $errors"
+       continue
+     fi
+     printf 'building %s (no reusable tier-one PASS on disk)\n' "$unit_id"
+-    rm -f "$handoff_path" "$diff_path" "$tier_one_path"
+-    phase_two_write_unit_record "$unit_id" running "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "builder session starting"
++    rm -f "$plan_path" "$handoff_path" "$diff_path" "$tier_one_path"
++    phase_two_write_unit_record "$unit_id" running "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "planner session starting"
++
++    if ! run_unit_plan_step "$work_name" "$unit_id" "$proof" "$source_desc" "$plan_path"; then
++      phase_two_write_unit_record "$unit_id" failed "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "$UNIT_ATTEMPT_REASON"
++      die "planner step failed for $unit_id; phase two stops for the operator and $work_name stays in flight: $UNIT_ATTEMPT_REASON"
++    fi
++    phase_two_write_unit_record "$unit_id" running "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "plan artifact written; builder session starting"
+ 
+     unit_accepted=0
+     for fast_attempt in 1 2 3; do
+-      if run_unit_build_attempt "$work_name" "$unit_id" "$proof" "$source_desc" fast "$fast_attempt" "$handoff_path" "$diff_path" "$tier_one_path"; then
++      if run_unit_build_attempt "$work_name" "$unit_id" "$proof" "$source_desc" fast "$fast_attempt" "$handoff_path" "$diff_path" "$tier_one_path" "$plan_path"; then
+         unit_accepted=1
+         status_msg="$UNIT_ACCEPTED_STATUS_MSG"
+         printf 'fast builder attempt %s for %s accepted\n' "$fast_attempt" "$unit_id"
+@@ -3360,7 +3424,7 @@ $errors"
+       printf 'escalating %s to strong builder after 3 failed fast attempts\n' "$unit_id"
+       loop_event builder check running "escalating $unit_id to strong builder after 3 failed fast attempts"
+       loop_state_write check running "escalating $unit_id to strong builder after 3 failed fast attempts"
+-      if run_unit_build_attempt "$work_name" "$unit_id" "$proof" "$source_desc" strong 1 "$handoff_path" "$diff_path" "$tier_one_path"; then
++      if run_unit_build_attempt "$work_name" "$unit_id" "$proof" "$source_desc" strong 1 "$handoff_path" "$diff_path" "$tier_one_path" "$plan_path"; then
+         unit_accepted=1
+         status_msg="$UNIT_ACCEPTED_STATUS_MSG"
+         printf 'strong builder attempt 1 for %s accepted\n' "$unit_id"
+diff --git a/check.sh b/check.sh
+index 3e42f78..9a8f1ec 100755
+--- a/check.sh
++++ b/check.sh
+@@ -271,6 +271,12 @@ EOF
+   require_text "$root/adapter/loop.sh" \
+     'CODEX_REVIEW_EFFORT:-xhigh' \
+     "phase-one routing self-test sees the review-effort held default"
++  require_text "$root/adapter/loop.sh" \
++    'CODEX_PLANNER_MODEL:-${CODEX_STRONG_BUILDER_MODEL:-${CODEX_REVIEW_MODEL:-${CODEX_MODEL:-}}}' \
++    "phase-one routing self-test sees the planner-model strong default"
++  require_text "$root/adapter/loop.sh" \
++    'CODEX_PLANNER_EFFORT:-${CODEX_STRONG_BUILDER_EFFORT:-${CODEX_REVIEW_EFFORT:-xhigh}}' \
++    "phase-one routing self-test sees the planner-effort strong default"
+   require_text "$root/adapter/loop.sh" \
+     'CODEX_BUILDER_MODEL:-gpt-5.5' \
+     "phase-one routing self-test sees the builder-model held default"
+@@ -394,7 +400,7 @@ check_no_tracked_live_material_paths() {
+ 
+ check_loop_frame_contract() {
+   local name tmp frame options direction review fake_review fake_acceptance fake_builder fake_check retry_handoff status_out route_with_one_unit route_with_two_units panel_events
+-  local panel_start_line panel_first_result_line
++  local panel_start_line panel_first_result_line plan_artifact plan_events
+   local resume_dir
+   local self_edit_backup self_edit_state self_edit_status self_edit_wait_status self_edit_snapshot_count edit_pid
+   local gate_prompt_backup gate_prompt_state gate_prompt_status gate_prompt_wait_status gate_prompt_marker gate_prompt_edit_pid
+@@ -1452,6 +1458,24 @@ Implementation units for phase two:
+     "two-way execute dry-run runs tier-one acceptance"
+   require_text "$tmp/two-way-execute.out" "two-way work: one-way tier-two panel skipped" \
+     "two-way execute dry-run skips the one-way panel"
++  plan_artifact="$(dry_run_artifact "plans/unit-001.md")"
++  [ -n "$plan_artifact" ] \
++    && ok "two-way execute dry-run records a per-unit plan artifact" \
++    || bad "two-way execute dry-run did not record a per-unit plan artifact"
++  require_text "$plan_artifact" "# plan - unit-001" \
++    "per-unit plan artifact has a readable heading"
++  require_text "$plan_artifact" "## readable plan" \
++    "per-unit plan artifact has a readable plan section"
++  require_text "$plan_artifact" "planner-output-path:" \
++    "per-unit plan artifact records the planner output path"
++  plan_events="$(find "$tmp/loop-runs" -path "*/events.jsonl" -type f -print | sort | tail -1)"
++  require_order "$plan_events" "plan artifact written for unit-001" "stored implement-unit-001-fast-1 final message" \
++    "dry-run execute records the plan artifact before the unit build artifact"
++  require_order "$tmp/two-way-execute.out" "--- gate: plan unit-001 ---" "--- gate: implement unit-001" \
++    "dry-run execute runs the plan gate before the implement gate"
++  [ ! -e "$root/$name/intent/frame/phase-two/plans/unit-001.md" ] \
++    && ok "execute dry-run keeps plan artifacts out of the active work frame" \
++    || bad "execute dry-run wrote plan artifacts into the active work frame"
+   require_text "$(dry_run_artifact "tier-one/unit-001.md")" "source: fake/self-test" \
+     "tier-one dry-run fake acceptance records fake source"
+   require_text "$(dry_run_artifact "tier-one/unit-001.md")" "source-proof: fake acceptance loaded from HYPERCORE_ACCEPTANCE_FAKE_DIR in dry-run; rejected by real archive" \
+@@ -1533,7 +1557,11 @@ Implementation units for phase two:
+     exit 1
+   ) &
+   edit_pid=$!
+-  if HYPERCORE_LOOP_STATE_DIR="$self_edit_state" \
++  if env -u HYPERCORE_LOOP_SNAPSHOT_ACTIVE \
++    -u HYPERCORE_LOOP_SNAPSHOT_PATH \
++    -u HYPERCORE_LOOP_ORIGINAL_HERE \
++    -u HYPERCORE_LOOP_ORIGINAL_ROOT \
++    HYPERCORE_LOOP_STATE_DIR="$self_edit_state" \
+     HYPERCORE_BUILDER_FAKE_DIR="$fake_builder" \
+     HYPERCORE_CHECK_FAKE_DIR="$fake_check" \
+     HYPERCORE_ACCEPTANCE_FAKE_DIR="$fake_acceptance" \
+@@ -2315,7 +2343,7 @@ check_no_tracked_live_material_paths
+   || bad "adapter/loop.sh is missing or not executable"
+ [ -x "$root/bin/home-signoff" ] && ok "bin/home-signoff exists and is executable" \
+   || bad "bin/home-signoff is missing or not executable"
+-for gate in orient frame implement check archive; do
++for gate in orient frame plan implement check archive; do
+   [ -f "$root/adapter/gates/$gate.md" ] \
+     && ok "adapter/gates/$gate.md exists" \
+     || bad "adapter/gates/$gate.md missing"
+@@ -2468,6 +2496,18 @@ require_text "$root/adapter/gates/check.md" \
+ require_text "$root/adapter/gates/check.md" \
+   "independent-coherence" \
+   "check gate assigns one-way coherence to the panel"
++require_text "$root/adapter/gates/plan.md" \
++  "per-unit plan gate" \
++  "plan gate identifies the planner role"
++require_text "$root/adapter/gates/plan.md" \
++  "Read only the addressed node-local work" \
++  "plan gate preserves cleared-session read scope"
++require_text "$root/adapter/gates/plan.md" \
++  "Write a human-readable implementation plan" \
++  "plan gate requires a readable per-unit plan"
++require_text "$root/adapter/gates/plan.md" \
++  "do not edit files" \
++  "plan gate prevents planner material edits"
+ require_text "$root/adapter/gates/implement.md" \
+   "signed frame under \`intent/frame/\`" \
+   "implement gate reads current work-node frames"
+@@ -2807,6 +2847,12 @@ require_text "$root/adapter/loop.sh" \
+ require_text "$root/adapter/loop.sh" \
+   'CODEX_REVIEW_EFFORT:-xhigh' \
+   "loop keeps review effort strong by default"
++require_text "$root/adapter/loop.sh" \
++  'CODEX_PLANNER_MODEL:-${CODEX_STRONG_BUILDER_MODEL:-${CODEX_REVIEW_MODEL:-${CODEX_MODEL:-}}}' \
++  "loop exposes a planner-model knob defaulting to the strong model"
++require_text "$root/adapter/loop.sh" \
++  'CODEX_PLANNER_EFFORT:-${CODEX_STRONG_BUILDER_EFFORT:-${CODEX_REVIEW_EFFORT:-xhigh}}' \
++  "loop exposes a planner-effort knob defaulting to strong effort"
+ require_text "$root/adapter/loop.sh" \
+   'CODEX_BUILDER_MODEL:-gpt-5.5' \
+   "loop defaults fast builders to gpt-5.5 until the two-step plan/build lands"
+@@ -2852,6 +2898,15 @@ require_text "$root/adapter/loop.sh" \
+ require_text "$root/adapter/loop.sh" \
+   'phase_two_units_from_frame_file()' \
+   "loop derives implementation units from the signed frame"
++require_text "$root/adapter/loop.sh" \
++  'run_unit_plan_step()' \
++  "loop runs a planner step before unit builds"
++require_text "$root/adapter/loop.sh" \
++  'phase_two_write_plan_artifact()' \
++  "loop writes readable per-unit plan artifacts"
++require_text "$root/adapter/loop.sh" \
++  'PHASE_TWO_PLAN_DIR="$PHASE_TWO_ACCEPTANCE_DIR/plans"' \
++  "loop stores per-unit plans under the phase-two tree"
+ require_text "$root/adapter/loop.sh" \
+   'phase_two_unit_tier_one_resumable()' \
+   "loop defines the on-disk tier-one-PASS resume check"
+@@ -2894,6 +2949,24 @@ require_text "$root/adapter/loop.sh" \
+ require_text "$root/adapter/loop.sh" \
+   'cumulative worktree snapshot' \
+   "tier-one acceptance prompt explains cumulative diff records"
++require_text "$root/intent/loop.md" \
++  "before each unit build starts, execute runs a strong-model planning sub-step" \
++  "loop intent states the per-unit planning step"
++require_text "$root/intent/loop.md" \
++  'records that unit'"'"'s human-readable plan artifact at `phase-two/plans/<unit-id>.md`' \
++  "loop intent states the readable plan artifact path"
++require_text "$root/intent/machine-statements/loop.md" \
++  'runs a planner-model sub-step before each unit build' \
++  "loop machine statements carry the planner sub-step"
++require_text "$root/intent/adapter.md" \
++  "the phase-two orchestrator starts each implementation unit with a strong-model planning" \
++  "adapter intent states the materialized planning sub-step"
++require_text "$root/intent/adapter.md" \
++  "artifacts with source markers and fake-source rejection, the per-unit planner route and" \
++  "adapter intent states the planner route materialization"
++require_text "$root/intent/machine-statements/adapter.md" \
++  "per-unit planner route and writes readable plan artifacts before" \
++  "adapter machine statements carry readable plan artifacts before build"
+ require_text "$root/adapter/loop.sh" \
+   'run_tier_two_panel()' \
+   "loop runs the one-way tier-two implementation acceptance panel"
+@@ -3174,7 +3247,7 @@ check_loop_frame_contract
+ echo "root - retired user-facing path examples"
+ for file in "$root/README.md" "$root/hypercore.md" "$root/adapter/codex.md" \
+   "$root/adapter/codex-mounted.md" \
+-  "$root/adapter/gates/orient.md" "$root/adapter/gates/frame.md" \
++  "$root/adapter/gates/orient.md" "$root/adapter/gates/frame.md" "$root/adapter/gates/plan.md" \
+   "$root/adapter/gates/implement.md" "$root/adapter/gates/check.md" \
+   "$root/adapter/gates/archive.md" "$root/bin/home" "$root/bin/home-signoff" \
+   "$root/home/README.md" "$root/signoff" "$root/direction" "$root/review"; do
+diff --git a/intent/adapter.md b/intent/adapter.md
+index 7951a26..ca08800 100644
+--- a/intent/adapter.md
++++ b/intent/adapter.md
+@@ -21,6 +21,9 @@ from the signed frame directory and lean phase-two handoff artifacts alone.
+ the phase-two orchestrator protects self-editing work by running execute from a snapshot
+ made at execute start; later edits to the live orchestrator material do not change the
+ already-running process.
++the phase-two orchestrator starts each implementation unit with a strong-model planning
++sub-step and records a readable per-unit plan artifact before the builder session starts;
++the plan is read-only build scaffolding and not an operator act.
+ phase two has a real supervisor-to-executor handoff: after sign-off, an outer supervisor
+ launches a fresh phase-two executor from the addressed node and supervises its recorded
+ progress, intervening only when the loop blocks on a real gate failure or operator need.
+@@ -95,10 +98,11 @@ root.
+ the loop streams inner executor JSON events into the phase-two run state while
+ printing concise progress, without changing the cleared-session contract.
+ the loop materializes separate builder and reviewer routing, structured acceptance
+-artifacts with source markers and fake-source rejection, the per-unit fast-builder retry
+-then strong-builder escalation ladder, on-disk resumable execute that skips a unit already
+-carrying a clean tier-one PASS for the signed frame, the concurrent one-way tier-two panel,
+-and phase-one review subprocess crash diagnostics.
++artifacts with source markers and fake-source rejection, the per-unit planner route and
++readable plan artifacts, the per-unit fast-builder retry then strong-builder escalation
++ladder, on-disk resumable execute that skips a unit already carrying a clean tier-one PASS
++for the signed frame, the concurrent one-way tier-two panel, and phase-one review
++subprocess crash diagnostics.
+ `adapter/loop.sh` accepts one node-local work name in the addressed node for new work.
+ the root node is the default addressed node.
+ `loop.sh -C <node-path> <gate> <work-name>` addresses work in a child node, including a
+@@ -110,6 +114,8 @@ the addressed node and blocks when there are zero or more than one.
+ and act only on that addressed work.
+ `loop.sh execute <work-name>` records only the addressed node-local work in that node's
+ history.
++`loop.sh execute <work-name>` writes each unit's readable plan artifact under
++`phase-two/plans/` before it starts that unit's builder session.
+ the orchestrator creates, signs, executes, and records only addressed node-local work
+ nodes.
+ the gate prompts use addressed-node and node-local work wording and point cleared sessions
+@@ -139,8 +145,9 @@ validation, start scaffolding, direction/review helpers, operator-act gating thr
+ `/dev/tty` with B-ready `operator-gate:` markers and numbered-option direction, review and
+ acceptance isolation settings, strict frame parsing, phase-two acceptance gating, structured
+ acceptance legibility, acceptance source markers and fake-source rejection, separate
+-builder/reviewer routing with bounded retry and strong escalation, on-disk resumable execute
+-that skips units already carrying a clean tier-one PASS, the concurrent tier-two panel, the
++builder/reviewer routing with bounded retry and strong escalation, the per-unit planner
++route with readable plan artifacts before build artifacts, on-disk resumable execute that
++skips units already carrying a clean tier-one PASS, the concurrent tier-two panel, the
+ re-read implement/archive prompt contract and
+ absence of frozen inline implement/archive contract text, the new operator-act and
+ phase-two performance contract in the `collaboration`, `loop`, and `adapter` segments, and
+diff --git a/intent/loop.md b/intent/loop.md
+index 6b1da0e..1af8cb3 100644
+--- a/intent/loop.md
++++ b/intent/loop.md
+@@ -30,6 +30,9 @@ condition that phase-two acceptance can test.
+ implementation autonomy begins after sign-off: phase two builds from the signed frame in
+ green proof-advancing units, and stops when the frame is incomplete, a check fails, or
+ required implementation acceptance returns `FLAG`.
++before each unit build starts, execute runs a strong-model planning sub-step and writes a
++readable per-unit plan artifact under that unit's phase-two tree; the plan is build
++scaffolding, not operator sign-off or adopted intent.
+ execute runs phase two from an orchestrator snapshot made at execute start, so a unit that
+ edits the live orchestrator material cannot corrupt the already-running phase-two process.
+ orient: read the intent documents, the work in flight across the node tree, and the
+@@ -176,6 +179,8 @@ the work node's `intent/frame/signoff.md`.
+ `loop.sh execute <work-name>` derives implementation units from the signed frame, starts a
+ fresh builder session for each unit, and records lean unit handoff, diff, and tier-one
+ verdict artifacts under the work frame.
++`loop.sh execute <work-name>` runs a planner-model sub-step before each unit build and
++records that unit's human-readable plan artifact at `phase-two/plans/<unit-id>.md`.
+ `loop.sh execute <work-name>` passes only dynamic unit identifiers, proof obligation, and
+ signed-frame location to the implement actor; the implement contract lives in
+ `adapter/gates/implement.md`, which `run_gate` reads for each invocation.
+diff --git a/intent/machine-statements/adapter.md b/intent/machine-statements/adapter.md
+index 54ec8d5..7f4248d 100644
+--- a/intent/machine-statements/adapter.md
++++ b/intent/machine-statements/adapter.md
+@@ -34,6 +34,8 @@ artifacts with source markers and fake-source rejection, the per-unit fast-build
+ then strong-builder escalation ladder, on-disk resumable execute that skips a unit already
+ carrying a clean tier-one PASS for the signed frame, the concurrent
+ one-way tier-two panel, and phase-one review subprocess crash diagnostics.
++the loop materializes a per-unit planner route and writes readable plan artifacts before
++builder sessions while keeping the plan as read-only build scaffolding.
+ the loop keeps the contract-bearing implement and archive prompt text in
+ `adapter/gates/implement.md` and `adapter/gates/archive.md`, while inline execute prompts
+ carry only dynamic unit or work context and the archive decision line.
+@@ -50,6 +52,8 @@ entry point.
+ and act only on that addressed work.
+ `loop.sh execute <work-name>` records only the addressed node-local work in that node's
+ history.
++`loop.sh execute <work-name>` writes each unit's readable plan artifact under
++`phase-two/plans/` before it starts that unit's builder session.
+ the orchestrator creates, signs, executes, and records only addressed node-local work
+ nodes.
+ the gate prompts use addressed-node and node-local work wording and point cleared sessions
+@@ -79,8 +83,9 @@ validation, start scaffolding, direction/review helpers, operator-act gating thr
+ `/dev/tty` with B-ready `operator-gate:` markers and numbered-option direction, review and
+ acceptance isolation settings, strict frame parsing, phase-two acceptance gating, structured
+ acceptance legibility, acceptance source markers and fake-source rejection, separate
+-builder/reviewer routing with bounded retry and strong escalation, on-disk resumable execute
+-that skips units already carrying a clean tier-one PASS, the concurrent tier-two panel, the
++builder/reviewer routing with bounded retry and strong escalation, the per-unit planner
++route with readable plan artifacts before build artifacts, on-disk resumable execute that
++skips units already carrying a clean tier-one PASS, the concurrent tier-two panel, the
+ re-read implement/archive prompt contract and
+ absence of frozen inline implement/archive contract text, the new operator-act and
+ phase-two performance contract in the `collaboration`, `loop`, and `adapter` segments, and
+diff --git a/intent/machine-statements/loop.md b/intent/machine-statements/loop.md
+index b61a26d..5a14d07 100644
+--- a/intent/machine-statements/loop.md
++++ b/intent/machine-statements/loop.md
+@@ -74,6 +74,8 @@ the work node's `intent/frame/signoff.md`.
+ `loop.sh execute <work-name>` derives implementation units from the signed frame, starts a
+ fresh builder session for each unit, and records lean unit handoff, diff, and tier-one
+ verdict artifacts under the work frame.
++`loop.sh execute <work-name>` runs a planner-model sub-step before each unit build and
++records that unit's human-readable plan artifact at `phase-two/plans/<unit-id>.md`.
+ `loop.sh execute <work-name>` passes only dynamic unit identifiers, proof obligation, and
+ signed-frame location to the implement actor; the implement contract lives in
+ `adapter/gates/implement.md`, which `run_gate` reads for each invocation.

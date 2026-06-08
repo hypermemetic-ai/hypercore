@@ -37,7 +37,9 @@ or operator need.
 
 The current materialization also keeps the `CODEX_*` environment knob names in
 `adapter/loop.sh`. Those names are implementation binding, while the intent states the
-builder-model, strong-builder, review-model, and review-effort roles.
+builder-model, strong-builder, review-model, and review-effort roles. Two-step has shipped;
+the default builder is the cheap fast model behind the plan step and plan-match check,
+materialized as `gpt-5.3-codex-spark`.
 
 ## Orient before you touch anything
 
@@ -107,7 +109,7 @@ the operator's **sign-off**:
 - **Phase two — implement, check, archive — heads-down.**
   `loop.sh [-C <node-path>] execute [<work-name>]` builds the delta in green
   proof-advancing units, records structured phase-two acceptance artifacts under the work
-  frame, resumes by skipping units already carrying a clean tier-one PASS for the signed
+  frame, resumes by skipping units already carrying a clean plan-match and tier-one PASS for the signed
   frame, blocks unresolved required `FLAG`s, and runs the required one-way implementation-acceptance panel,
   starting the required one-way tier-two lenses concurrently before archive. The required
   one-way panel lenses are
