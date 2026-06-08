@@ -96,11 +96,9 @@ the loop streams inner executor JSON events into the phase-two run state while
 printing concise progress, without changing the cleared-session contract.
 the loop materializes separate builder and reviewer routing, structured acceptance
 artifacts with source markers and fake-source rejection, the per-unit fast-builder retry
-then strong-builder escalation ladder, a resumable per-unit execute cache, the concurrent
-one-way tier-two panel, and phase-one review subprocess crash diagnostics.
-the materialized execute cache is non-fatal: a cache-record failure is logged as a soft
-miss and affects only future resumability, not phase-two correctness or whether execute
-continues.
+then strong-builder escalation ladder, on-disk resumable execute that skips a unit already
+carrying a clean tier-one PASS for the signed frame, the concurrent one-way tier-two panel,
+and phase-one review subprocess crash diagnostics.
 `adapter/loop.sh` accepts one node-local work name in the addressed node for new work.
 the root node is the default addressed node.
 `loop.sh -C <node-path> <gate> <work-name>` addresses work in a child node, including a
@@ -141,8 +139,8 @@ validation, start scaffolding, direction/review helpers, operator-act gating thr
 `/dev/tty` with B-ready `operator-gate:` markers and numbered-option direction, review and
 acceptance isolation settings, strict frame parsing, phase-two acceptance gating, structured
 acceptance legibility, acceptance source markers and fake-source rejection, separate
-builder/reviewer routing with bounded retry and strong escalation, resumable execute
-caching including non-fatal cache-record soft misses, the concurrent tier-two panel, the
+builder/reviewer routing with bounded retry and strong escalation, on-disk resumable execute
+that skips units already carrying a clean tier-one PASS, the concurrent tier-two panel, the
 re-read implement/archive prompt contract and
 absence of frozen inline implement/archive contract text, the new operator-act and
 phase-two performance contract in the `collaboration`, `loop`, and `adapter` segments, and

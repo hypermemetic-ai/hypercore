@@ -395,7 +395,7 @@ check_no_tracked_live_material_paths() {
 check_loop_frame_contract() {
   local name tmp frame options direction review fake_review fake_acceptance fake_builder fake_check retry_handoff status_out route_with_one_unit route_with_two_units panel_events
   local panel_start_line panel_first_result_line
-  local resume_cache poison_cache resume_out_first resume_out_second resume_out_third resume_unit_001_cache resume_unit_002_cache
+  local resume_dir
   local self_edit_backup self_edit_state self_edit_status self_edit_wait_status self_edit_snapshot_count edit_pid
   local gate_prompt_backup gate_prompt_state gate_prompt_status gate_prompt_wait_status gate_prompt_marker gate_prompt_edit_pid
   local auto_name_one auto_name_two auto_node_rel auto_frame_dir
@@ -1787,9 +1787,10 @@ Implementation units for phase two:
   require_text "$tmp/strong-stop.out" "escalating unit-001 to strong builder after 3 failed fast attempts" \
     "strong-stop path escalates only after the fast budget"
 
-  resume_cache="$tmp/resume-cache"
-  rm -rf "$fake_acceptance" "$fake_builder" "$fake_check" "$resume_cache" "$root/$name/intent/frame/phase-two"
-  mkdir -p "$fake_acceptance" "$fake_builder" "$fake_check" "$resume_cache"
+  # --- dead-simple on-disk resume: skip a unit iff its tier-one PASS is already on disk ---
+  resume_dir="$tmp/resume-acceptance"
+  rm -rf "$fake_acceptance" "$fake_builder" "$fake_check" "$resume_dir" "$root/$name/intent/frame/phase-two"
+  mkdir -p "$fake_acceptance" "$fake_builder" "$fake_check" "$resume_dir"
   write_builder_output "$fake_builder/implement-unit-001-fast-1" 0 \
     "fake builder resume unit 1"
   write_builder_output "$fake_builder/implement-unit-002-fast-1" 0 \
@@ -1805,127 +1806,56 @@ Implementation units for phase two:
   write_lean_frame "$route_with_two_units" two-way
   write_signoff
   if HYPERCORE_LOOP_STATE_DIR="$tmp/loop-runs" \
-    HYPERCORE_PHASE_TWO_DRY_RUN_ACCEPTANCE_DIR="$resume_cache" \
+    HYPERCORE_PHASE_TWO_DRY_RUN_ACCEPTANCE_DIR="$resume_dir" \
     HYPERCORE_BUILDER_FAKE_DIR="$fake_builder" \
     HYPERCORE_CHECK_FAKE_DIR="$fake_check" \
     HYPERCORE_ACCEPTANCE_FAKE_DIR="$fake_acceptance" \
     "$root/adapter/loop.sh" execute "$name" --dry-run >"$tmp/resume-first.out" 2>"$tmp/resume-first.err"; then
-    ok "loop execute writes resumable unit cache records after accepted units"
+    ok "loop execute builds units with no tier-one PASS on disk"
   else
-    bad "loop execute writes resumable unit cache records after accepted units"
+    bad "loop execute builds units with no tier-one PASS on disk"
   fi
-  require_text "$tmp/resume-first.out" "cache miss for unit-001" \
-    "first execute builds the first uncached unit"
-  require_text "$tmp/resume-first.out" "cache miss for unit-002" \
-    "first execute builds the second uncached unit"
-  require_text "$resume_cache/cache/unit-001.key" "cache-key:" \
-    "unit-001 cache record carries a cache key"
-  require_text "$resume_cache/cache/unit-001.key" "base-key:" \
-    "unit-001 cache record carries the signed-frame-derived base key"
-  require_text "$resume_cache/cache/unit-001.key" "prior-state-key:" \
-    "unit-001 cache record carries prior-unit state"
-  require_text "$resume_cache/cache/unit-001.key" "loop-version-key:" \
-    "unit-001 cache record carries loop implementation version"
-  require_text "$resume_cache/cache/unit-001.key" "diff-key:" \
-    "unit-001 cache record carries diff evidence"
-  require_text "$resume_cache/cache/unit-001.key" "check-evidence: dry-run fake mechanical check green" \
-    "unit-001 cache record carries green check evidence"
-  require_text "$resume_cache/cache/unit-001.key" "tier-one-verdict: PASS" \
-    "unit-001 cache record carries tier-one PASS evidence"
-  resume_unit_002_cache="$(sed -nE 's/^cache-key:[[:space:]]*(.*)$/\1/p' "$resume_cache/cache/unit-002.key" | sed -n '1p')"
+  require_text "$tmp/resume-first.out" "building unit-001" \
+    "first execute builds the first unit"
+  require_text "$tmp/resume-first.out" "building unit-002" \
+    "first execute builds the second unit"
+  require_text "$resume_dir/tier-one/unit-001.md" "Verdict: PASS" \
+    "first execute leaves a tier-one PASS artifact on disk for unit-001"
 
   if HYPERCORE_LOOP_STATE_DIR="$tmp/loop-runs" \
-    HYPERCORE_PHASE_TWO_DRY_RUN_ACCEPTANCE_DIR="$resume_cache" \
+    HYPERCORE_PHASE_TWO_DRY_RUN_ACCEPTANCE_DIR="$resume_dir" \
     HYPERCORE_BUILDER_FAKE_DIR="$fake_builder" \
     HYPERCORE_CHECK_FAKE_DIR="$fake_check" \
     HYPERCORE_ACCEPTANCE_FAKE_DIR="$fake_acceptance" \
     "$root/adapter/loop.sh" execute "$name" --dry-run >"$tmp/resume-second.out" 2>"$tmp/resume-second.err"; then
-    ok "loop execute skips unchanged accepted units on rerun"
+    ok "loop execute skips units whose tier-one PASS is already on disk"
   else
-    bad "loop execute skips unchanged accepted units on rerun"
+    bad "loop execute skips units whose tier-one PASS is already on disk"
   fi
-  require_text "$tmp/resume-second.out" "cache hit: skipping unit-001" \
-    "rerun skips the unchanged first unit"
-  require_text "$tmp/resume-second.out" "cache hit: skipping unit-002" \
-    "rerun skips the unchanged second unit"
+  require_text "$tmp/resume-second.out" "resume: skipping unit-001" \
+    "rerun skips the first unit from its on-disk tier-one PASS"
+  require_text "$tmp/resume-second.out" "resume: skipping unit-002" \
+    "rerun skips the second unit from its on-disk tier-one PASS"
+  reject_text "$tmp/resume-second.out" "building unit-001" \
+    "rerun does not rebuild a unit that has a tier-one PASS on disk"
   reject_text "$tmp/resume-second.out" "fake builder resume unit 1" \
-    "cache hit does not rerun the first unit builder"
-  reject_text "$tmp/resume-second.out" "tier-one unit-001 verdict" \
-    "cache hit does not rerun first unit tier-one acceptance"
+    "rerun does not invoke the first unit builder"
 
-  printf '\ncorrupted prior evidence\n' >> "$resume_cache/handoffs/unit-001.md"
+  rm -f "$resume_dir/tier-one/unit-001.md"
   if HYPERCORE_LOOP_STATE_DIR="$tmp/loop-runs" \
-    HYPERCORE_PHASE_TWO_DRY_RUN_ACCEPTANCE_DIR="$resume_cache" \
+    HYPERCORE_PHASE_TWO_DRY_RUN_ACCEPTANCE_DIR="$resume_dir" \
     HYPERCORE_BUILDER_FAKE_DIR="$fake_builder" \
     HYPERCORE_CHECK_FAKE_DIR="$fake_check" \
     HYPERCORE_ACCEPTANCE_FAKE_DIR="$fake_acceptance" \
     "$root/adapter/loop.sh" execute "$name" --dry-run >"$tmp/resume-third.out" 2>"$tmp/resume-third.err"; then
-    ok "loop execute rebuilds cache misses and invalidates downstream units"
+    ok "loop execute rebuilds only the unit whose tier-one PASS is missing"
   else
-    bad "loop execute rebuilds cache misses and invalidates downstream units"
+    bad "loop execute rebuilds only the unit whose tier-one PASS is missing"
   fi
-  require_text "$tmp/resume-third.out" "cache miss for unit-001: handoff, diff, check evidence, or tier-one PASS changed" \
-    "corrupted unit evidence causes a cache miss"
-  require_text "$tmp/resume-third.out" "invalidating cached evidence for unit-002: upstream accepted state changed" \
-    "changed prior-unit state invalidates downstream cached evidence"
-  require_text "$tmp/resume-third.out" "fake builder resume unit 2" \
-    "downstream invalidation rebuilds the second unit"
-  resume_out_third="$(sed -nE 's/^cache-key:[[:space:]]*(.*)$/\1/p' "$resume_cache/cache/unit-002.key" | sed -n '1p')"
-  [ -n "$resume_unit_002_cache" ] && [ -n "$resume_out_third" ] && [ "$resume_unit_002_cache" != "$resume_out_third" ] \
-    && ok "downstream rebuild replaces the unit-002 cache key" \
-    || bad "downstream rebuild replaces the unit-002 cache key"
-
-  poison_cache="$tmp/poison-cache"
-  rm -rf "$fake_acceptance" "$fake_builder" "$fake_check" "$poison_cache" "$root/$name/intent/frame/phase-two"
-  mkdir -p "$fake_acceptance" "$fake_builder" "$fake_check" "$poison_cache/cache/unit-001.key"
-  write_builder_output "$fake_builder/implement-unit-001-fast-1" 0 \
-    "fake builder poison unit 1"
-  write_builder_output "$fake_builder/implement-unit-002-fast-1" 0 \
-    "fake builder poison unit 2"
-  write_fake_status "$fake_check/unit-001-fast-1" 0
-  write_fake_status "$fake_check/unit-002-fast-1" 0
-  write_acceptance_output "$fake_acceptance/tier-one-unit-001-fast-1" PASS \
-    "poison fixture accepts the first unit" \
-    "tier-one fixture for poisoned cache-record soft miss"
-  write_acceptance_output "$fake_acceptance/tier-one-unit-002-fast-1" PASS \
-    "poison fixture accepts the second unit" \
-    "tier-one fixture proves the run proceeds after the soft miss"
-  write_lean_frame "$route_with_two_units" two-way
-  write_signoff
-  if HYPERCORE_LOOP_STATE_DIR="$tmp/loop-runs" \
-    HYPERCORE_PHASE_TWO_DRY_RUN_ACCEPTANCE_DIR="$poison_cache" \
-    HYPERCORE_BUILDER_FAKE_DIR="$fake_builder" \
-    HYPERCORE_CHECK_FAKE_DIR="$fake_check" \
-    HYPERCORE_ACCEPTANCE_FAKE_DIR="$fake_acceptance" \
-    "$root/adapter/loop.sh" execute "$name" --dry-run >"$tmp/cache-poison-first.out" 2>"$tmp/cache-poison-first.err"; then
-    ok "loop execute treats a poisoned cache-record path as a soft miss"
-  else
-    bad "loop execute treats a poisoned cache-record path as a soft miss"
-  fi
-  require_text "$tmp/cache-poison-first.out" "cache record soft-miss for unit-001: cache record path is not a regular file" \
-    "poisoned cache-record path is logged as a soft miss"
-  require_text "$tmp/cache-poison-first.out" "fake builder poison unit 2" \
-    "cache-record soft miss does not halt the following unit"
-  require_text "$poison_cache/units/unit-001.md" "cache record soft-miss; accepted-state-key" \
-    "soft-missed unit record stays accepted without claiming a persisted cache record"
-
-  if HYPERCORE_LOOP_STATE_DIR="$tmp/loop-runs" \
-    HYPERCORE_PHASE_TWO_DRY_RUN_ACCEPTANCE_DIR="$poison_cache" \
-    HYPERCORE_BUILDER_FAKE_DIR="$fake_builder" \
-    HYPERCORE_CHECK_FAKE_DIR="$fake_check" \
-    HYPERCORE_ACCEPTANCE_FAKE_DIR="$fake_acceptance" \
-    "$root/adapter/loop.sh" execute "$name" --dry-run >"$tmp/cache-poison-second.out" 2>"$tmp/cache-poison-second.err"; then
-    ok "soft-missed cache records rebuild on rerun instead of aborting"
-  else
-    bad "soft-missed cache records rebuild on rerun instead of aborting"
-  fi
-  require_text "$tmp/cache-poison-second.out" "cache miss for unit-001: cache record missing" \
-    "soft-missed cache record is a future cache miss"
-  require_text "$tmp/cache-poison-second.out" "fake builder poison unit 1" \
-    "soft-missed unit rebuilds on the next execute run"
-  reject_text "$tmp/cache-poison-second.out" "cache hit: skipping unit-001" \
-    "soft-missed unit is not skipped on rerun"
-
+  require_text "$tmp/resume-third.out" "building unit-001" \
+    "a unit with no tier-one PASS on disk rebuilds on rerun"
+  require_text "$tmp/resume-third.out" "resume: skipping unit-002" \
+    "a unit whose tier-one PASS remains on disk still skips"
   cleanup_loop_frame_self_test
   LOOP_FRAME_CHECK_WORK=
   rm -rf "$tmp"
@@ -2232,8 +2162,8 @@ require_text "$root/intent/loop.md" \
   "execute is resumable" \
   "loop segment folds resumable execute"
 require_text "$root/intent/loop.md" \
-  "cache recording is not a correctness gate" \
-  "loop segment folds non-fatal cache recording"
+  "tier-one acceptance artifact is already present as a clean PASS" \
+  "loop segment folds on-disk tier-one-PASS resume"
 require_text "$root/intent/loop.md" \
   "orchestrator snapshot made at execute start" \
   "loop segment folds phase-two orchestrator self-edit safety"
@@ -2259,11 +2189,8 @@ require_text "$root/intent/loop.md" \
   "started concurrently" \
   "loop segment folds the concurrent tier-two panel"
 require_text "$root/intent/adapter.md" \
-  "resumable per-unit execute cache" \
+  "on-disk resumable execute that skips a unit already" \
   "adapter segment folds resumable execute materialization"
-require_text "$root/intent/adapter.md" \
-  "cache-record failure is logged as a soft" \
-  "adapter segment folds non-fatal cache-record failures"
 require_text "$root/intent/adapter.md" \
   "running execute from a snapshot" \
   "adapter segment folds phase-two orchestrator self-edit safety"
@@ -2289,11 +2216,11 @@ require_text "$root/intent/machine-statements/loop.md" \
   "the archive contract lives in" \
   "loop machine statements fold archive prompt relocation"
 require_text "$root/intent/machine-statements/loop.md" \
-  "per-unit cache-record failure as a logged soft miss" \
-  "loop machine statements fold non-fatal cache-record failures"
+  "skips a unit whose tier-one" \
+  "loop machine statements fold on-disk resume"
 require_text "$root/intent/machine-statements/adapter.md" \
-  "cache-record failure is logged as a soft" \
-  "adapter machine statements fold non-fatal cache-record failures"
+  "on-disk resumable execute that skips a unit already" \
+  "adapter machine statements fold resumable execute materialization"
 require_text "$root/intent/machine-statements/adapter.md" \
   'snapshots and re-execs itself at the start of `execute`' \
   "adapter machine statements fold orchestrator snapshot materialization"
@@ -2548,7 +2475,7 @@ require_text "$root/adapter/gates/implement.md" \
   "lean handoff state" \
   "implement gate requires lean unit handoff state"
 require_text "$root/adapter/gates/implement.md" \
-  "signed-frame-derived cache state" \
+  "Execute may resume by skipping units" \
   "implement gate describes resumable execute as orchestrator state"
 require_text "$root/adapter/gates/implement.md" \
   "When this unit's own proof" \
@@ -2736,9 +2663,6 @@ require_text "$root/adapter/loop.sh" \
 require_text "$root/adapter/loop.sh" \
   'exec "$snapshot_path" "${cmd[@]}"' \
   "loop re-execs execute from the snapshot path"
-require_text "$root/adapter/loop.sh" \
-  'phase_two_file_digest "$LOOP_SCRIPT_PATH"' \
-  "loop version digest uses the running script path"
 require_text "$root/adapter/loop.sh" \
   'LOOP_RUN_EVENTS="$LOOP_RUN_DIR/events.jsonl"' \
   "loop writes a run event JSONL file"
@@ -2929,29 +2853,14 @@ require_text "$root/adapter/loop.sh" \
   'phase_two_units_from_frame_file()' \
   "loop derives implementation units from the signed frame"
 require_text "$root/adapter/loop.sh" \
-  'PHASE_TWO_CACHE_DIR' \
-  "loop stores per-unit execute cache records"
+  'phase_two_unit_tier_one_resumable()' \
+  "loop defines the on-disk tier-one-PASS resume check"
 require_text "$root/adapter/loop.sh" \
-  'phase_two_unit_base_cache_key()' \
-  "loop computes signed-frame-derived per-unit cache base keys"
-require_text "$root/adapter/loop.sh" \
-  'phase_two_unit_evidence_cache_key()' \
-  "loop folds handoff, diff, check, and tier-one evidence into cache keys"
-require_text "$root/adapter/loop.sh" \
-  'phase_two_unit_cache_hit()' \
-  "loop validates cache hits before skipping units"
-require_text "$root/adapter/loop.sh" \
-  'cache hit: skipping $unit_id' \
-  "loop skips unchanged accepted units on cache hits"
-require_text "$root/adapter/loop.sh" \
-  'phase_two_unit_soft_miss_prior_state_key()' \
-  "loop carries a nonempty prior-state marker for cache-record soft misses"
-require_text "$root/adapter/loop.sh" \
-  'cache record soft-miss for $unit_id' \
-  "loop logs cache-record failures as soft misses"
-require_text "$root/adapter/loop.sh" \
-  'invalidating cached evidence for $unit_id: $reason' \
-  "loop invalidates downstream unit evidence when prior state changes"
+  'resume: skipping $unit_id' \
+  "loop skips units whose tier-one PASS is already on disk"
+reject_text "$root/adapter/loop.sh" \
+  'phase_two_unit_cache_hit' \
+  "loop no longer carries the retired content-hash execute cache"
 require_text "$root/adapter/loop.sh" \
   'run_tier_one_acceptance()' \
   "loop runs tier-one implementation acceptance"
@@ -3167,8 +3076,8 @@ require_text "$root/adapter/loop.sh" \
   'print_phase_two_status' \
   "loop status reports phase-two run state"
 require_text "$root/adapter/loop.sh" \
-  'tier_two_panel=%s cache=%s' \
-  "loop status exposes tier-two panel and resumable cache paths"
+  'tier_two_panel=%s failure=%s' \
+  "loop status exposes the tier-two panel path"
 require_text "$root/adapter/loop.sh" \
   '"phase_two_run":' \
   "loop status can render phase-two run state as JSON"

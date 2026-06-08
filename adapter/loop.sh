@@ -40,7 +40,7 @@
 #   CODEX_STRONG_BUILDER_MODEL (optional strong-builder escalation model)
 #   CODEX_STRONG_BUILDER_EFFORT (default: CODEX_REVIEW_EFFORT or xhigh)
 #   CODEX_REVIEW_MODEL (optional strong review/acceptance model), CODEX_REVIEW_EFFORT (default: xhigh)
-#   HYPERCORE_PHASE_TWO_DRY_RUN_ACCEPTANCE_DIR (optional stable dry-run acceptance/cache dir for self-tests)
+#   HYPERCORE_PHASE_TWO_DRY_RUN_ACCEPTANCE_DIR (optional stable dry-run acceptance dir for self-tests)
 
 set -euo pipefail
 
@@ -113,7 +113,6 @@ PHASE_TWO_HANDOFF_DIR=""
 PHASE_TWO_DIFF_DIR=""
 PHASE_TWO_TIER_ONE_DIR=""
 PHASE_TWO_PANEL_DIR=""
-PHASE_TWO_CACHE_DIR=""
 LOOP_CURRENT_UNIT=""
 LOOP_FAILURE_REASON=""
 LOOP_RUN_ID=""
@@ -225,8 +224,7 @@ loop_state_write() {
     printf '    "handoffs_dir": %s,\n' "$(json_string "$PHASE_TWO_HANDOFF_DIR")"
     printf '    "diffs_dir": %s,\n' "$(json_string "$PHASE_TWO_DIFF_DIR")"
     printf '    "tier_one_dir": %s,\n' "$(json_string "$PHASE_TWO_TIER_ONE_DIR")"
-    printf '    "tier_two_panel_dir": %s,\n' "$(json_string "$PHASE_TWO_PANEL_DIR")"
-    printf '    "cache_dir": %s\n' "$(json_string "$PHASE_TWO_CACHE_DIR")"
+    printf '    "tier_two_panel_dir": %s\n' "$(json_string "$PHASE_TWO_PANEL_DIR")"
     printf '  }\n'
     printf '}\n'
   } > "$tmp"
@@ -280,7 +278,6 @@ phase_two_run_init() {
   PHASE_TWO_DIFF_DIR="$PHASE_TWO_ACCEPTANCE_DIR/diffs"
   PHASE_TWO_TIER_ONE_DIR="$PHASE_TWO_ACCEPTANCE_DIR/tier-one"
   PHASE_TWO_PANEL_DIR="$PHASE_TWO_ACCEPTANCE_DIR/tier-two-panel"
-  PHASE_TWO_CACHE_DIR="$PHASE_TWO_ACCEPTANCE_DIR/cache"
 
   mkdir -p \
     "$LOOP_RUN_GATE_DIR" \
@@ -290,8 +287,7 @@ phase_two_run_init() {
     "$PHASE_TWO_HANDOFF_DIR" \
     "$PHASE_TWO_DIFF_DIR" \
     "$PHASE_TWO_TIER_ONE_DIR" \
-    "$PHASE_TWO_PANEL_DIR" \
-    "$PHASE_TWO_CACHE_DIR"
+    "$PHASE_TWO_PANEL_DIR"
   : > "$LOOP_RUN_EVENTS"
   PHASE_TWO_RUN_ACTIVE=1
   loop_state_write preflight running "phase-two run initialized"
@@ -1809,258 +1805,25 @@ write_current_diff_record() {
   mv "$tmp" "$path"
 }
 
-phase_two_hash_stdin() {
-  if command -v sha256sum >/dev/null 2>&1; then
-    sha256sum | awk '{ print $1 }'
-  elif command -v shasum >/dev/null 2>&1; then
-    shasum -a 256 | awk '{ print $1 }'
-  else
-    cksum | awk '{ print $1 "-" $2 }'
-  fi
-}
-
-phase_two_hash_text() {
-  printf '%s' "$1" | phase_two_hash_stdin
-}
-
-phase_two_file_digest() {
-  local file=$1
-  [ -f "$file" ] || return 1
-  phase_two_hash_stdin < "$file"
-}
-
-phase_two_frame_digest() {
-  local frame_dir=${1:-$PHASE_TWO_FRAME_DIR} file
-  [ -d "$frame_dir" ] || return 1
-  {
-    find "$frame_dir" -type f ! -path "$frame_dir/phase-two/*" -print \
-      | LC_ALL=C sort \
-      | while IFS= read -r file; do
-          printf 'path:%s\n' "$(relpath "$file")"
-          printf 'digest:%s\n' "$(phase_two_file_digest "$file")"
-        done
-  } | phase_two_hash_stdin
-}
-
-phase_two_loop_version_digest() {
-  phase_two_file_digest "$LOOP_SCRIPT_PATH"
-}
-
-phase_two_initial_prior_state_key() {
-  local work_name=$1
-  phase_two_hash_text "phase-two-prior-state:v1
-node:$NODE_REL
-work:$work_name
-root"
-}
-
-phase_two_cache_path() {
-  local unit_id=$1
-  printf '%s/%s.key' "$PHASE_TWO_CACHE_DIR" "$unit_id"
-}
-
-phase_two_unit_base_cache_key() {
-  local unit_id=$1 proof=$2 prior_state_key=$3 frame_key loop_key proof_key
-  frame_key="$(phase_two_frame_digest)"
-  loop_key="$(phase_two_loop_version_digest)"
-  proof_key="$(phase_two_hash_text "$proof")"
-  phase_two_hash_text "phase-two-unit-base-cache:v1
-node:$NODE_REL
-work:${LOOP_WORK_NAME:-}
-unit:$unit_id
-frame:$frame_key
-proof:$proof_key
-prior-state:$prior_state_key
-loop-version:$loop_key"
-}
-
-phase_two_tier_one_check_evidence() {
-  local file=$1
-  [ -f "$file" ] || return 1
-  sed -nE 's/^Mechanical check immediately before this reviewer:[[:space:]]*(.*)$/\1/p' "$file" | sed -n '1p'
-}
-
-phase_two_check_evidence_reusable() {
-  local evidence=$1 lowered
-  lowered="$(printf '%s' "$evidence" | tr '[:upper:]' '[:lower:]')"
-  case "$lowered" in
-    *green*) return 0 ;;
-    *) return 1 ;;
-  esac
-}
-
-phase_two_acceptance_artifact_cache_clean() {
-  local file=$1 source
-  acceptance_artifact_field_meaningful "$file" Rationale || return 1
-  acceptance_artifact_field_meaningful "$file" Evidence || return 1
-  acceptance_artifact_field_meaningful "$file" source-proof || return 1
-  if [ "$DRY_RUN" != 1 ]; then
-    source="$(acceptance_artifact_source "$file" || true)"
-    [ "$source" = real-reviewer ] || return 1
-    acceptance_artifact_dry_run "$file" && return 1
-  fi
-}
-
-phase_two_unit_evidence_cache_key() {
-  local unit_id=$1 base_key=$2 handoff_path=$3 diff_path=$4 tier_one_path=$5
-  local handoff_key diff_key tier_one_key verdict check_evidence
-  [ -f "$handoff_path" ] || return 1
-  [ -f "$diff_path" ] || return 1
+phase_two_unit_tier_one_resumable() {
+  # Dead-simple resume: a unit is reusable on a rerun iff its tier-one
+  # acceptance artifact is already on disk as a clean PASS for this signed
+  # frame. No content hashing, no loop-version key, no per-unit cache record --
+  # the artifact lives in this frame's own phase-two tree, so its presence is
+  # the signal. In a real run it must be a real-reviewer, non-dry-run PASS.
+  local tier_one_path=$1 verdict
   [ -f "$tier_one_path" ] || return 1
   verdict="$(acceptance_artifact_verdict "$tier_one_path" || true)"
   [ "$verdict" = PASS ] || return 1
-  phase_two_acceptance_artifact_cache_clean "$tier_one_path" || return 1
-  check_evidence="$(phase_two_tier_one_check_evidence "$tier_one_path")"
-  meaningful_text "$check_evidence" >/dev/null || return 1
-  handoff_key="$(phase_two_file_digest "$handoff_path")"
-  diff_key="$(phase_two_file_digest "$diff_path")"
-  tier_one_key="$(phase_two_file_digest "$tier_one_path")"
-  phase_two_hash_text "phase-two-unit-evidence-cache:v1
-unit:$unit_id
-base:$base_key
-handoff-path:$(relpath "$handoff_path")
-handoff:$handoff_key
-diff-path:$(relpath "$diff_path")
-diff:$diff_key
-tier-one-path:$(relpath "$tier_one_path")
-tier-one:$tier_one_key
-check-evidence:$check_evidence
-tier-one-verdict:PASS"
-}
-
-phase_two_unit_soft_miss_prior_state_key() {
-  local unit_id=$1 base_key=$2
-  phase_two_hash_text "phase-two-cache-record-soft-miss:v1
-node:$NODE_REL
-work:${LOOP_WORK_NAME:-}
-unit:$unit_id
-base:$base_key
-run:$LOOP_RUN_ID"
-}
-
-phase_two_cache_record_value() {
-  local file=$1 field=$2
-  [ -f "$file" ] || return 1
-  sed -nE "s/^$field:[[:space:]]*(.*)$/\1/p" "$file" | sed -n '1p'
-}
-
-phase_two_cache_record_key() {
-  local unit_id=$1
-  phase_two_cache_record_value "$(phase_two_cache_path "$unit_id")" cache-key
-}
-
-phase_two_unit_record_status() {
-  local unit_id=$1 file="$PHASE_TWO_UNITS_DIR/$unit_id.md"
-  [ -f "$file" ] || return 1
-  sed -nE 's/^status:[[:space:]]*([^[:space:]]+).*$/\1/p' "$file" | sed -n '1p'
-}
-
-phase_two_write_cache_record() {
-  local unit_id=$1 base_key=$2 prior_state_key=$3 handoff_path=$4 diff_path=$5 tier_one_path=$6
-  local cache_path tmp cache_key check_evidence reusable
-  cache_key=${7:-}
-  PHASE_TWO_CACHE_RECORD_FAILURE_REASON=""
-  cache_path="$(phase_two_cache_path "$unit_id")"
-  if [ -z "$cache_key" ]; then
-    cache_key="$(phase_two_unit_evidence_cache_key "$unit_id" "$base_key" "$handoff_path" "$diff_path" "$tier_one_path")" || {
-      PHASE_TWO_CACHE_RECORD_FAILURE_REASON="accepted evidence is incomplete or not cache-reusable"
-      return 1
-    }
+  acceptance_artifact_field_meaningful "$tier_one_path" Rationale || return 1
+  acceptance_artifact_field_meaningful "$tier_one_path" Evidence || return 1
+  acceptance_artifact_field_meaningful "$tier_one_path" source-proof || return 1
+  if [ "$DRY_RUN" != 1 ]; then
+    [ "$(acceptance_artifact_source "$tier_one_path" || true)" = real-reviewer ] || return 1
+    acceptance_artifact_dry_run "$tier_one_path" && return 1
   fi
-  check_evidence="$(phase_two_tier_one_check_evidence "$tier_one_path")"
-  if phase_two_check_evidence_reusable "$check_evidence"; then
-    reusable=yes
-  else
-    reusable=no
-  fi
-  if [ -e "$cache_path" ] && [ ! -f "$cache_path" ]; then
-    PHASE_TWO_CACHE_RECORD_FAILURE_REASON="cache record path is not a regular file"
-    return 1
-  fi
-  tmp="$cache_path.tmp.$$"
-  if ! {
-    printf '# phase-two execute cache - %s\n\n' "$unit_id"
-    printf 'unit: %s\n' "$unit_id"
-    printf 'status: accepted\n'
-    printf 'updated-at: %s\n' "$(utc_stamp)"
-    printf 'cache-key: %s\n' "$cache_key"
-    printf 'base-key: %s\n' "$base_key"
-    printf 'prior-state-key: %s\n' "$prior_state_key"
-    printf 'loop-version-key: %s\n' "$(phase_two_loop_version_digest)"
-    printf 'frame-key: %s\n' "$(phase_two_frame_digest)"
-    printf 'handoff-key: %s\n' "$(phase_two_file_digest "$handoff_path")"
-    printf 'diff-key: %s\n' "$(phase_two_file_digest "$diff_path")"
-    printf 'tier-one-key: %s\n' "$(phase_two_file_digest "$tier_one_path")"
-    printf 'tier-one-verdict: PASS\n'
-    printf 'check-evidence: %s\n' "$check_evidence"
-    printf 'cache-reusable: %s\n' "$reusable"
-  } > "$tmp"; then
-    PHASE_TWO_CACHE_RECORD_FAILURE_REASON="could not write temporary cache record"
-    rm -f "$tmp" 2>/dev/null || true
-    return 1
-  fi
-  if ! mv "$tmp" "$cache_path"; then
-    PHASE_TWO_CACHE_RECORD_FAILURE_REASON="could not install cache record"
-    rm -f "$tmp" 2>/dev/null || true
-    return 1
-  fi
-  if [ ! -f "$cache_path" ]; then
-    PHASE_TWO_CACHE_RECORD_FAILURE_REASON="cache record was not installed as a regular file"
-    return 1
-  fi
-  printf '%s' "$cache_key"
-}
-
-phase_two_unit_cache_hit() {
-  local unit_id=$1 base_key=$2 handoff_path=$3 diff_path=$4 tier_one_path=$5
-  local cache_path record_status recorded_base recorded_key reusable recomputed_key
-  PHASE_TWO_CACHE_HIT_KEY=""
-  PHASE_TWO_CACHE_MISS_REASON=""
-  cache_path="$(phase_two_cache_path "$unit_id")"
-  record_status="$(phase_two_unit_record_status "$unit_id" || true)"
-  if [ "$record_status" != accepted ]; then
-    PHASE_TWO_CACHE_MISS_REASON="unit record is not accepted"
-    return 1
-  fi
-  if [ ! -f "$cache_path" ]; then
-    PHASE_TWO_CACHE_MISS_REASON="cache record missing"
-    return 1
-  fi
-  reusable="$(phase_two_cache_record_value "$cache_path" cache-reusable || true)"
-  if [ "$reusable" != yes ]; then
-    PHASE_TWO_CACHE_MISS_REASON="cache record lacks green check evidence"
-    return 1
-  fi
-  recorded_base="$(phase_two_cache_record_value "$cache_path" base-key || true)"
-  if [ "$recorded_base" != "$base_key" ]; then
-    PHASE_TWO_CACHE_MISS_REASON="signed frame, unit proof, prior state, or loop version changed"
-    return 1
-  fi
-  recorded_key="$(phase_two_cache_record_value "$cache_path" cache-key || true)"
-  recomputed_key="$(phase_two_unit_evidence_cache_key "$unit_id" "$base_key" "$handoff_path" "$diff_path" "$tier_one_path" || true)"
-  if [ -z "$recomputed_key" ]; then
-    PHASE_TWO_CACHE_MISS_REASON="accepted evidence is missing, non-PASS, non-real, or incomplete"
-    return 1
-  fi
-  if [ "$recorded_key" != "$recomputed_key" ]; then
-    PHASE_TWO_CACHE_MISS_REASON="handoff, diff, check evidence, or tier-one PASS changed"
-    return 1
-  fi
-  PHASE_TWO_CACHE_HIT_KEY="$recomputed_key"
   return 0
 }
-
-phase_two_invalidate_unit_cache() {
-  local unit_id=$1 reason=$2 handoff_path=$3 diff_path=$4 tier_one_path=$5 cache_path
-  cache_path="$(phase_two_cache_path "$unit_id")"
-  if [ -f "$handoff_path" ] || [ -f "$diff_path" ] || [ -f "$tier_one_path" ] || [ -f "$cache_path" ]; then
-    printf 'invalidating cached evidence for %s: %s\n' "$unit_id" "$reason"
-    loop_event cache check running "invalidating cached evidence for $unit_id: $reason"
-    loop_state_write check running "invalidating cached evidence for $unit_id: $reason"
-  fi
-  rm -f "$handoff_path" "$diff_path" "$tier_one_path" "$cache_path"
-}
-
 phase_two_write_handoff() {
   local unit_id=$1 proof=$2 output_path=$3 handoff_path=$4 tmp
   tmp="$handoff_path.tmp.$$"
@@ -2076,9 +1839,8 @@ phase_two_write_handoff() {
 }
 
 phase_two_write_unit_record() {
-  local unit_id=$1 status=$2 proof=$3 handoff_path=$4 diff_path=$5 tier_one_path=$6 message=${7-} tmp path cache_path
+  local unit_id=$1 status=$2 proof=$3 handoff_path=$4 diff_path=$5 tier_one_path=$6 message=${7-} tmp path
   path="$PHASE_TWO_UNITS_DIR/$unit_id.md"
-  cache_path="$(phase_two_cache_path "$unit_id")"
   tmp="$path.tmp.$$"
   {
     printf '# phase-two unit - %s\n\n' "$unit_id"
@@ -2089,7 +1851,6 @@ phase_two_write_unit_record() {
     printf 'handoff-path: %s\n' "$(relpath "$handoff_path")"
     printf 'diff-path: %s\n' "$(relpath "$diff_path")"
     printf 'tier-one-verdict-path: %s\n' "$(relpath "$tier_one_path")"
-    printf 'cache-key-path: %s\n' "$(relpath "$cache_path")"
     [ -n "$message" ] && printf 'message: %s\n' "$(short_message "$message")"
   } > "$tmp"
   mv "$tmp" "$path"
@@ -2587,7 +2348,7 @@ phase_two_state_file_for() {
 }
 
 print_phase_two_status() {
-  local work_name=$1 state run_id gate status updated message events unit failure acceptance tier_one panel cache
+  local work_name=$1 state run_id gate status updated message events unit failure acceptance tier_one panel
   state="$(phase_two_state_file_for "$work_name")"
   [ -s "$state" ] || return 0
   run_id="$(json_file_string_value "$state" run_id)"
@@ -2601,9 +2362,8 @@ print_phase_two_status() {
   acceptance="$(json_file_path_value "$state" phase_two_acceptance_dir)"
   tier_one="$(json_file_path_value "$state" tier_one_dir)"
   panel="$(json_file_path_value "$state" tier_two_panel_dir)"
-  cache="$(json_file_path_value "$state" cache_dir)"
-  printf 'phase-two run: run_id=%s gate=%s unit=%s status=%s updated_at=%s state=%s events=%s acceptance=%s tier_one=%s tier_two_panel=%s cache=%s failure=%s message=%s\n' \
-    "$run_id" "$gate" "$unit" "$status" "$updated" "$state" "$events" "$acceptance" "$tier_one" "$panel" "$cache" "$failure" "$message"
+  printf 'phase-two run: run_id=%s gate=%s unit=%s status=%s updated_at=%s state=%s events=%s acceptance=%s tier_one=%s tier_two_panel=%s failure=%s message=%s\n' \
+    "$run_id" "$gate" "$unit" "$status" "$updated" "$state" "$events" "$acceptance" "$tier_one" "$panel" "$failure" "$message"
 }
 
 print_status_json() {
@@ -3501,7 +3261,6 @@ cmd_execute() {
   local work_name="" active_dir active_rel frame_rel frame_file source_desc archive_collection archive_decision
   local reversibility errors units_text unit_entry unit_id proof gate_name handoff_path diff_path tier_one_path
   local gate_output_path status_msg fast_attempt unit_accepted units=() unit_ids=()
-  local prior_state_key base_cache_key old_cache_key new_cache_key cache_record_msg cache_record_reason downstream_invalidated=0
   while [ $# -gt 0 ]; do
     case "$1" in
       --dry-run)
@@ -3560,7 +3319,6 @@ $errors"
     exit 1
   fi
 
-  prior_state_key="$(phase_two_initial_prior_state_key "$work_name")"
   for unit_entry in "${units[@]}"; do
     unit_id="${unit_entry%%$'\t'*}"
     proof="${unit_entry#*$'\t'}"
@@ -3572,24 +3330,17 @@ $errors"
     handoff_path="$PHASE_TWO_HANDOFF_DIR/$unit_id.md"
     diff_path="$PHASE_TWO_DIFF_DIR/$unit_id.diff"
     tier_one_path="$PHASE_TWO_TIER_ONE_DIR/$unit_id.md"
-    base_cache_key="$(phase_two_unit_base_cache_key "$unit_id" "$proof" "$prior_state_key")"
-    old_cache_key="$(phase_two_cache_record_key "$unit_id" || true)"
 
-    if [ "$downstream_invalidated" = 1 ]; then
-      phase_two_invalidate_unit_cache "$unit_id" "upstream accepted state changed" "$handoff_path" "$diff_path" "$tier_one_path"
-    elif phase_two_unit_cache_hit "$unit_id" "$base_cache_key" "$handoff_path" "$diff_path" "$tier_one_path"; then
-      status_msg="resumable cache hit; reused unchanged handoff, diff, green check evidence, and tier-one PASS"
-      printf 'cache hit: skipping %s (%s)\n' "$unit_id" "$PHASE_TWO_CACHE_HIT_KEY"
-      loop_event cache check skipped "cache hit: skipping $unit_id"
-      loop_state_write check skipped "cache hit: skipping $unit_id"
-      phase_two_write_unit_record "$unit_id" accepted "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "$status_msg"
-      prior_state_key="$PHASE_TWO_CACHE_HIT_KEY"
+    if phase_two_unit_tier_one_resumable "$tier_one_path"; then
+      printf 'resume: skipping %s (tier-one PASS already on disk for this frame)\n' "$unit_id"
+      loop_event resume check skipped "resume: skipping $unit_id (tier-one PASS already on disk)"
+      loop_state_write check skipped "resume: skipping $unit_id"
+      phase_two_write_unit_record "$unit_id" accepted "$proof" "$handoff_path" "$diff_path" "$tier_one_path" \
+        "resume: reused tier-one PASS already on disk for this frame"
       continue
-    else
-      printf 'cache miss for %s: %s\n' "$unit_id" "$(short_message "$PHASE_TWO_CACHE_MISS_REASON")"
-      loop_event cache check running "cache miss for $unit_id: $PHASE_TWO_CACHE_MISS_REASON"
-      loop_state_write check running "cache miss for $unit_id: $PHASE_TWO_CACHE_MISS_REASON"
     fi
+    printf 'building %s (no reusable tier-one PASS on disk)\n' "$unit_id"
+    rm -f "$handoff_path" "$diff_path" "$tier_one_path"
     phase_two_write_unit_record "$unit_id" running "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "builder session starting"
 
     unit_accepted=0
@@ -3619,32 +3370,7 @@ $errors"
       fi
     fi
 
-    PHASE_TWO_CACHE_RECORD_FAILURE_REASON=""
-    new_cache_key="$(phase_two_unit_evidence_cache_key "$unit_id" "$base_cache_key" "$handoff_path" "$diff_path" "$tier_one_path" || true)"
-    if [ -z "$new_cache_key" ]; then
-      PHASE_TWO_CACHE_RECORD_FAILURE_REASON="accepted evidence is incomplete or not cache-reusable"
-    fi
-    if [ -n "$new_cache_key" ] \
-      && phase_two_write_cache_record "$unit_id" "$base_cache_key" "$prior_state_key" "$handoff_path" "$diff_path" "$tier_one_path" "$new_cache_key" >/dev/null; then
-      cache_record_msg="cache-key $new_cache_key"
-    else
-      cache_record_reason="${PHASE_TWO_CACHE_RECORD_FAILURE_REASON:-accepted evidence could not be written to cache}"
-      if [ -z "$new_cache_key" ]; then
-        new_cache_key="$(phase_two_unit_soft_miss_prior_state_key "$unit_id" "$base_cache_key")"
-      fi
-      printf 'cache record soft-miss for %s: %s; continuing (cache is an optimization, not a correctness gate)\n' \
-        "$unit_id" "$cache_record_reason"
-      loop_event cache check skipped "cache record soft-miss for $unit_id: $cache_record_reason"
-      loop_state_write check skipped "cache record soft-miss for $unit_id: $cache_record_reason"
-      cache_record_msg="cache record soft-miss; accepted-state-key $new_cache_key"
-    fi
-    if [ -n "$old_cache_key" ] && [ "$old_cache_key" != "$new_cache_key" ]; then
-      downstream_invalidated=1
-    else
-      downstream_invalidated=0
-    fi
-    prior_state_key="$new_cache_key"
-    phase_two_write_unit_record "$unit_id" accepted "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "$status_msg; tier-one PASS; $cache_record_msg"
+    phase_two_write_unit_record "$unit_id" accepted "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "$status_msg; tier-one PASS"
   done
 
   LOOP_CURRENT_UNIT=""

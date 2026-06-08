@@ -107,8 +107,8 @@ the operator's **sign-off**:
 - **Phase two — implement, check, archive — heads-down.**
   `loop.sh [-C <node-path>] execute [<work-name>]` builds the delta in green
   proof-advancing units, records structured phase-two acceptance artifacts under the work
-  frame, reuses unchanged accepted units through signed-frame-derived cache state, blocks
-  unresolved required `FLAG`s, and runs the required one-way implementation-acceptance panel,
+  frame, resumes by skipping units already carrying a clean tier-one PASS for the signed
+  frame, blocks unresolved required `FLAG`s, and runs the required one-way implementation-acceptance panel,
   starting the required one-way tier-two lenses concurrently before archive. The required
   one-way panel lenses are
   `whole-acceptance-conformance`, `proof-integrity`, `independent-coherence`,

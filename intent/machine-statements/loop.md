@@ -87,12 +87,9 @@ approval `never` and literal sandbox `read-only`.
 `loop.sh execute <work-name>` writes structured acceptance artifacts with a verdict,
 rationale, evidence, and a `source:` marker, refuses `HYPERCORE_ACCEPTANCE_FAKE_DIR` outside
 dry-run, and lets real archive accept only `source: real-reviewer` required acceptance.
-`loop.sh execute <work-name>` caches per-unit build and tier-one evidence under a
-signed-frame-derived key, skips unchanged accepted units on rerun, and rebuilds cache misses
-while invalidating downstream evidence.
-`loop.sh execute <work-name>` treats a per-unit cache-record failure as a logged soft miss:
-it keeps the unit accepted, continues phase two, and leaves that unit uncached for the next
-run instead of failing a correctness gate.
+`loop.sh execute <work-name>` resumes from on-disk artifacts: it skips a unit whose tier-one
+acceptance artifact is already a clean PASS for the current signed frame, and rebuilds any
+unit without that artifact.
 `loop.sh execute <work-name>` treats malformed, evidence-free, or unsupported-source
 implementation-acceptance output as `FLAG`, blocks unresolved required flags, and runs the
 concurrent one-way tier-two panel before archive.
