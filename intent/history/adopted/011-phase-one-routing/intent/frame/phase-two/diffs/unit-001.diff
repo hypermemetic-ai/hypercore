@@ -1,0 +1,543 @@
+# worktree diff record
+
+Recorded at: 2026-06-08T00:32:50Z
+
+## status
+
+Tracked changes only; untracked files are excluded from this unit diff record.
+
+A  011-phase-one-routing/intent/frame/direction.md
+A  011-phase-one-routing/intent/frame/frame.md
+A  011-phase-one-routing/intent/frame/options.md
+A  011-phase-one-routing/intent/frame/review-supplementary.md
+A  011-phase-one-routing/intent/frame/review.md
+A  011-phase-one-routing/intent/frame/signoff.md
+A  011-phase-one-routing/intent/organizing-document.md
+ M adapter/codex.md
+ M check.sh
+ M hypercore.md
+ M intent/adapter.md
+ M intent/collaboration.md
+ M intent/loop.md
+ M intent/machine-statements/adapter.md
+ M intent/machine-statements/collaboration.md
+ M intent/machine-statements/loop.md
+ M intent/organizing-document.md
+
+## diff
+
+diff --git a/adapter/codex.md b/adapter/codex.md
+index f71f4cd..5999590 100644
+--- a/adapter/codex.md
++++ b/adapter/codex.md
+@@ -15,6 +15,23 @@ intent and run the loop, not because you chose to, but because the workflow make
+ gates unskippable. Pointing alone is a request; the orchestrator is how agreement is
+ kept.
+ 
++## Current Harness Binding
++
++The current root binding is Codex. The root `AGENTS.md` entry point is symlinked to
++`adapter/codex.md`; it is the harness-mandated pointer and not where the adapter lives.
++Nested work under this root receives that entry point through the project instruction
++chain, so nested nodes do not carry their own adapter material.
++
++The current materialization binds Codex to both phase one and phase two. Phase one defaults
++to the interactive Codex harness that loaded this adapter. Phase two is driven by
++`adapter/loop.sh`, which invokes fresh `codex exec` sessions for builders, reviewers, and
++the archive actor; the orchestrator records raw Codex JSON event streams and Codex thread
++ids as current binding facts.
++
++The current materialization also keeps the `CODEX_*` environment knob names in
++`adapter/loop.sh`. Those names are implementation binding, while the intent states the
++builder-model, strong-builder, review-model, and review-effort roles.
++
+ ## Orient before you touch anything
+ 
+ First classify the request surface. Ordinary conversation, explanation, and read-only
+diff --git a/check.sh b/check.sh
+index 1f39843..9a6faca 100755
+--- a/check.sh
++++ b/check.sh
+@@ -68,6 +68,73 @@ reject_regular_file() {
+   fi
+ }
+ 
++contract_statement_product_absence() {
++  local file=$1 scope=$2 label=$3 output status
++  output="$(HYPERCORE_CONTRACT_SCOPE="$scope" perl -0ne '
++    my $scope = $ENV{HYPERCORE_CONTRACT_SCOPE} || "all";
++    my $text = $_;
++
++    if ($scope eq "hypercore-adapter") {
++      if ($text =~ /^## adapter\n(.*?)(?=^## |\z)/ms) {
++        $text = $1;
++      } else {
++        print "$ARGV: missing ## adapter section\n";
++        exit 1;
++      }
++    } elsif ($scope eq "organizing-adapter") {
++      my @kept;
++      my $taking = 0;
++      for my $line (split /\n/, $text) {
++        if ($line =~ /^- \*\*adapter\*\*/) {
++          $taking = 1;
++        } elsif ($taking && $line =~ /^\s*$/) {
++          last;
++        }
++        push @kept, $line if $taking;
++      }
++      if (!@kept) {
++        print "$ARGV: missing adapter bullet\n";
++        exit 1;
++      }
++      $text = join("\n", @kept) . "\n";
++    }
++
++    my %allowed = map { $_ => 1 } (
++      "adapter/codex.md",
++      "AGENTS.md",
++      "adapter/codex-mounted.md",
++      "adapter/loop.sh",
++    );
++    my @spans;
++    while ($text =~ /`([^`\n]+)`/g) {
++      push @spans, [$-[1], $+[1], $1];
++    }
++
++    my $product = qr/(?<![A-Za-z0-9_])(?:codex|claude|opus|gpt-[0-9][A-Za-z0-9._-]*|CODEX_[A-Za-z0-9_]*)(?![A-Za-z0-9_])/i;
++    while ($text =~ /$product/g) {
++      my ($start, $end, $token) = ($-[0], $+[0], $&);
++      my $ok = 0;
++      for my $span (@spans) {
++        if ($start >= $span->[0] && $end <= $span->[1] && $allowed{$span->[2]}) {
++          $ok = 1;
++          last;
++        }
++      }
++      next if $ok;
++      my $prefix = substr($text, 0, $start);
++      my $line = 1 + ($prefix =~ tr/\n//);
++      print "$ARGV:$line: product token \"$token\" is outside a whitelisted materialization pointer\n";
++      exit 1;
++    }
++  ' "$file" 2>&1)"
++  status=$?
++  if [ $status -eq 0 ]; then
++    ok "$label"
++  else
++    bad "$label ($output)"
++  fi
++}
++
+ shopt -s nullglob
+ HOME_GREENFIELD_CHECK_TMP=
+ HOME_GREENFIELD_CHECK_MOUNT=
+@@ -1696,6 +1763,55 @@ require_text "$root/intent/loop.md" \
+ require_text "$root/intent/adapter.md" \
+   "resumable per-unit execute cache" \
+   "adapter segment folds resumable execute materialization"
++require_text "$root/intent/collaboration.md" \
++  "the phase-one collaborator is the harness role that drives orient and frame" \
++  "collaboration segment names the phase-one collaborator role"
++require_text "$root/intent/collaboration.md" \
++  "phase-one corpus-throughput work" \
++  "collaboration segment allows delegated phase-one throughput"
++require_text "$root/intent/collaboration.md" \
++  "the framer is not its own witness" \
++  "collaboration segment keeps the review floor independent of the framer"
++require_text "$root/intent/loop.md" \
++  "phase-one labor may be routed by role" \
++  "loop segment carries phase-one routing"
++require_text "$root/intent/loop.md" \
++  "the collaborator role defaults to the interactive harness that loaded the adapter" \
++  "loop segment holds the collaborator default"
++require_text "$root/intent/loop.md" \
++  "the fast-builder default is held at the strong model" \
++  "loop segment holds the builder default"
++require_text "$root/intent/loop.md" \
++  "phase-one review stay on the" \
++  "loop segment holds the strong review floor"
++require_text "$root/intent/adapter.md" \
++  "an adapter binds a harness to a phase" \
++  "adapter segment permits per-phase harness binding"
++require_text "$root/intent/adapter.md" \
++  "the phase-one collaborator role defaults to the interactive harness" \
++  "adapter segment holds the collaborator materialization default"
++require_text "$root/adapter/codex.md" \
++  "to the interactive Codex harness that loaded this adapter" \
++  "current binding records the collaborator held default"
++require_text "$root/adapter/codex.md" \
++  "builder-model, strong-builder, review-model, and review-effort roles" \
++  "current binding separates material knob names from role statements"
++contract_statement_product_absence "$root/intent/collaboration.md" all \
++  "collaboration intent has no unscoped harness product token"
++contract_statement_product_absence "$root/intent/loop.md" all \
++  "loop intent has no unscoped harness product token"
++contract_statement_product_absence "$root/intent/adapter.md" all \
++  "adapter intent has no unscoped harness product token"
++contract_statement_product_absence "$root/intent/machine-statements/collaboration.md" all \
++  "collaboration machine statements have no unscoped harness product token"
++contract_statement_product_absence "$root/intent/machine-statements/loop.md" all \
++  "loop machine statements have no unscoped harness product token"
++contract_statement_product_absence "$root/intent/machine-statements/adapter.md" all \
++  "adapter machine statements have no unscoped harness product token"
++contract_statement_product_absence "$root/hypercore.md" hypercore-adapter \
++  "hypercore adapter section has no unscoped harness product token"
++contract_statement_product_absence "$root/intent/organizing-document.md" organizing-adapter \
++  "organizing adapter bullet has no unscoped harness product token"
+ [ -x "$root/check.sh" ] \
+   && ok "check.sh exists and is executable" \
+   || bad "check.sh is missing or not executable"
+diff --git a/hypercore.md b/hypercore.md
+index 9db8bab..530d5a5 100644
+--- a/hypercore.md
++++ b/hypercore.md
+@@ -256,8 +256,8 @@ The adapter binds a harness to the methodology.
+ harness loads adapter -> adapter points to intent + loop -> gates become enforceable
+ ```
+ 
+-For Codex, the root `AGENTS.md` points at the adapter. The adapter does not replace the
+-intent; it routes the machine to the intent and makes the loop's gates rigid.
++For the current binding, `AGENTS.md` points at `adapter/codex.md`. The adapter does not
++replace the intent; it routes the machine to the intent and makes the loop's gates rigid.
+ 
+ Phase one is interactive design work. Phase two is cleared, heads-down execution from the
+ signed frame. If a gate precondition fails, the adapter blocks instead of warning.
+diff --git a/intent/adapter.md b/intent/adapter.md
+index d7bda9c..97528c2 100644
+--- a/intent/adapter.md
++++ b/intent/adapter.md
+@@ -19,23 +19,22 @@ a decision surface for substantive operator direction; after sign-off, implement
+ and archive run through cleared sessions that re-derive each unit and acceptance review
+ from the signed frame directory and lean phase-two handoff artifacts alone.
+ direction and review are phase-one acts or artifacts, not loop gates.
+-the Codex review roster for one-way phase-one work has a base roster of
++the review roster for one-way phase-one work has a base roster of
+ `contract-checkability`, `soundness-fit`, `simplicity-fastness`, and `red-team`.
+-the Codex implementation-acceptance reviewer for each phase-two unit is independent and
+-read-only.
+-the Codex tier-two implementation-acceptance panel for one-way work has required lenses
++the implementation-acceptance reviewer for each phase-two unit is independent and read-only.
++the tier-two implementation-acceptance panel for one-way work has required lenses
+ `whole-acceptance-conformance`, `proof-integrity`, `independent-coherence`,
+ `security-permissions`, and `red-team`.
+-the complete optional Codex review roster is `implementation-maintainability`,
++the complete optional review roster is `implementation-maintainability`,
+ `security-permissions`, `operator-ergonomics`, `migration-compatibility`,
+ `domain-evidence`, and `performance-cost`.
+ optional reviewers are advisory additions and cannot override, outvote, average away, or
+ dilute unresolved base-roster or red-team flags.
+-the Codex adapter classifies the request surface before changing material: ordinary
++the adapter classifies the request surface before changing material: ordinary
+ conversation and read-only inspection may proceed directly, while governed work starts or
+ continues a work node.
+-the Codex adapter rejects perceived simplicity, file count, convenience, and low risk as
+-waivers for governed work.
++the adapter rejects perceived simplicity, file count, convenience, and low risk as waivers
++for governed work.
+ on request the adapter renders a statement of the intent intelligible in plain language
+ without altering it.
+ the adapter carries only what the intent cannot yet reach the harness with -- the order to
+@@ -43,6 +42,10 @@ read the intent first, and disciplines not yet written as statements; each is a
+ folded into the intent by later work and then dropped.
+ an adapter is per harness; one node may be bound by more than one, each loaded by its own
+ harness.
++an adapter binds a harness to a phase; phase one and phase two may bind different harnesses,
++and the current materialization binds one harness to both phases.
++the phase-one collaborator role defaults to the interactive harness that loaded the
++adapter; no orchestrator routing knob is required until a materialization routes that role.
+ the adapter material is materialized only at the methodology root, with the prose it routes
+ to, and not in any nested node; a mounted external project may carry a target-local entry
+ point that links to root-managed adapter material and routes direct-path work back to the
+@@ -54,27 +57,29 @@ the intent has since absorbed, is caught as drift.
+ 
+ ## machine
+ the current root harness adapter is materialized as `adapter/codex.md`.
+-the Codex harness loads its adapter through a root `AGENTS.md` symlinked to
+-`adapter/codex.md`; the root entry is the harness's mandated pointer, holding nothing, not
+-where the adapter lives.
+-a machine working in a nested node under the root is bound by Codex including the root
+-`AGENTS.md` in the project instruction chain from the project root to the current
+-directory, so no node below the root carries its own adapter material.
++the current materialization binds the same harness to phase one and phase two; the
++phase-one collaborator is the interactive harness that loaded the adapter.
++the harness loads its adapter through a root `AGENTS.md` symlinked to `adapter/codex.md`;
++the root entry is the harness's mandated pointer, holding nothing, not where the adapter
++lives.
++a machine working in a nested node under the root is bound by the root `AGENTS.md` in the
++project instruction chain from the project root to the current directory, so no node below
++the root carries its own adapter material.
+ a mounted external project may carry a target-local `AGENTS.md` entry point for
+ direct-path openings; the entry point links to root-managed adapter material and routes
+ back to the root adapter and loop instead of copying root adapter material into the
+ mounted node.
+ the rigid workflow is materialized as `adapter/loop.sh`, realizing the two-phase shape
+-over the Codex phase-two harness: each implementation unit opens a fresh `codex exec`
+-builder session from the signed frame, and acceptance reviewers and the archive actor are
+-fresh sessions rather than resumes of the builder.
+-the Codex loop records phase-two run state under `HYPERCORE_LOOP_STATE_DIR`, defaulting to
+-`.hypercore/loop-runs`, with run-local state, event history, raw Codex gate streams, gate
++over the phase-two executor harness: each implementation unit opens a fresh builder
++session from the signed frame, and acceptance reviewers and the archive actor are fresh
++sessions rather than resumes of the builder.
++the loop records phase-two run state under `HYPERCORE_LOOP_STATE_DIR`, defaulting to
++`.hypercore/loop-runs`, with run-local state, event history, raw harness gate streams, gate
+ final outputs, acceptance artifact paths, and current pointers for the addressed work and
+ root.
+-the Codex loop streams inner `codex exec --json` events into the phase-two run state while
++the loop streams inner executor JSON events into the phase-two run state while
+ printing concise progress, without changing the cleared-session contract.
+-the Codex loop materializes separate builder and reviewer routing, structured acceptance
++the loop materializes separate builder and reviewer routing, structured acceptance
+ artifacts with source markers and fake-source rejection, the per-unit fast-builder retry
+ then strong-builder escalation ladder, a resumable per-unit execute cache, the concurrent
+ one-way tier-two panel, and phase-one review subprocess crash diagnostics.
+@@ -105,10 +110,10 @@ framing and requires `intent/frame/review.md` for one-way work.
+ the frame gate prompt tells the machine not to write operator direction, not to collect
+ direction retrospectively, and not to let optional reviewer verdicts clear base-roster or
+ red-team flags.
+-the Codex adapter prose describes phase one as design-phase collaboration with direction
++the adapter prose describes phase one as design-phase collaboration with direction
+ and review artifacts, while preserving phase two as cleared, heads-down execution from the
+ signed frame directory and lean phase-two handoff artifacts.
+-`check.sh` mechanically checks that the gate prompts, Codex adapter prose, loop frame
++`check.sh` mechanically checks that the gate prompts, adapter prose, loop frame
+ validation, start scaffolding, direction/review helpers, operator-act gating through
+ `/dev/tty` with B-ready `operator-gate:` markers and numbered-option direction, review and
+ acceptance isolation settings, strict frame parsing, phase-two acceptance gating, structured
+@@ -117,8 +122,8 @@ builder/reviewer routing with bounded retry and strong escalation, resumable exe
+ caching, the concurrent tier-two panel, the new operator-act and phase-two performance
+ contract in the `collaboration`, `loop`, and `adapter` segments, and current-material
+ absence of the retired compatibility route still carry the contract.
+-each gate's instructions are held in a file in `adapter/gates/`; the Codex path includes them in
+-the `codex exec` gate prompt; the orchestrator owns gate order and preconditions and
++each gate's instructions are held in a file in `adapter/gates/`; the harness path includes
++them in the executor gate prompt; the orchestrator owns gate order and preconditions and
+ blocks a gate whose preconditions fail.
+ sign-off for new work records `signed-off-by:`, `signed-off-at:`, and `operator-gate: tty`
+ in the work-node frame's `intent/frame/signoff.md`; the orchestrator seals phase two until
+diff --git a/intent/collaboration.md b/intent/collaboration.md
+index 83ab76a..49db957 100644
+--- a/intent/collaboration.md
++++ b/intent/collaboration.md
+@@ -5,10 +5,17 @@ collaboration is the working relation by which operator and machine keep the wor
+ effective collaboration is complementarity, not maximal automation: the operator sets purpose, constraints, acceptance, and open direction; the machine searches, synthesizes, drafts, executes, checks, and settles only what the intent and operator leave open.
+ collaboration keeps common ground recoverable without treating field count as proof of collaboration quality.
+ phase one is an arc: understanding before route, scrutiny sized by reversibility, operator direction, lean recoverability, and sign-off.
++the phase-one collaborator is the harness role that drives orient and frame: it carries
++operator-facing judgment, surfaces understanding and options, and frames the signed route.
++phase-one corpus-throughput work -- research, the orient corpus read, and the sweep map --
++may be delegated by the collaborator when written ground preserves accountability and
++operator direction.
+ before a route is written, the machine gives a teach-back, at least one alternative framing, information-gain questions, and a reversibility classification.
+ one-way work requires distinct-route scrutiny before route settlement, including a mechanically spawned base review roster.
+ the base review roster is `contract-checkability`, `soundness-fit`, `simplicity-fastness`, and `red-team`; optional reviewers are additive and advisory only.
+ optional reviewers cannot override, outvote, average away, or dilute unresolved base-roster or red-team flags.
++for one-way work, the strong review floor that scrutinizes a frame is independent of the
++collaborator that framed it; the framer is not its own witness.
+ review quality is not proved by artifact scanning; review artifacts record structured signal, unresolved flags, and disposition.
+ direction and sign-off are the two anchored operator acts in phase one, and the machine performs neither for itself.
+ operator direction is substantive: it records a selected route, constraint, or explicit delegation with `direction-by:`.
+@@ -29,7 +36,7 @@ collaboration degrades gracefully: when written ground is insufficient, the mach
+ 
+ ## machine
+ phase-two handoff state is written as common ground for the operator and later tooling:
+-the addressed work's current or recent gate, current unit, status, Codex thread id, latest
++the addressed work's current or recent gate, current unit, status, harness session id, latest
+ message, failure reason, event history, run artifact paths, and phase-two acceptance
+ artifact paths are recoverable from loop state files.
+ 
+diff --git a/intent/loop.md b/intent/loop.md
+index 08d4577..8bd5109 100644
+--- a/intent/loop.md
++++ b/intent/loop.md
+@@ -60,6 +60,10 @@ acceptance reviewer output counts as `FLAG`.
+ acceptance artifacts record their source as real reviewer, dry-run/self-test, or
+ fake/self-test; real execute refuses fake acceptance, and real archive refuses dry-run or
+ fake-source required acceptance.
++phase-one labor may be routed by role: the collaborator drives operator-facing orient and
++frame work, corpus-throughput work may be delegated, and the collaborator may differ from
++the phase-two executor harness while phase-one review stays on the strong review floor.
++the collaborator role defaults to the interactive harness that loaded the adapter.
+ phase-two builders may be routed separately from reviewers through a fast-builder model
+ knob, while tier-one acceptance, tier-two acceptance, and phase-one review stay on the
+ strong review floor; the fast-builder default is held at the strong model until the
+@@ -104,11 +108,12 @@ corpus.
+ `loop.sh frame`, `signoff`, `execute`, and `status` resolve the addressed node-local work and
+ act only on that addressed work.
+ `loop.sh execute <work-name>` exposes phase-two run state for the addressed work while it
+-runs and after recent failure or completion, including the active gate, status, Codex
+-thread id, latest message, event history, and run artifact paths.
+-before launching the first phase-two Codex gate, `loop.sh execute <work-name>` checks that
+-the Codex binary is present and that Codex home/session state is writable; a failed
+-preflight records failed run state and stops before `codex exec`.
++runs and after recent failure or completion, including the active gate, status, harness
++session id, latest message, event history, and run artifact paths.
++before launching the first phase-two executor gate, `loop.sh execute <work-name>` checks
++that the configured executor binary is present and that executor home/session state is
++writable; a failed preflight records failed run state and stops before the executor
++session starts.
+ `loop.sh status <work-name>` reports the addressed work's current phase and, for
+ non-historical work with phase-two state, the current or recent run's gate, status, state
+ path, event path, and latest message; `loop.sh status --json <work-name>` renders the same
+@@ -163,12 +168,13 @@ optional reviewer verdicts cannot clear unresolved base-roster or red-team flags
+ new work sign-off records `signed-off-by:`, `signed-off-at:`, and `operator-gate: tty` in
+ the work node's `intent/frame/signoff.md`.
+ `loop.sh execute <work-name>` derives implementation units from the signed frame, starts a
+-fresh Codex builder session for each unit, and records lean unit handoff, diff, and
+-tier-one verdict artifacts under the work frame.
+-`loop.sh execute <work-name>` routes builders through `CODEX_BUILDER_MODEL`, defaulting to
+-the strong model until the two-step plan/build work lands, separately from the strong review
+-route; it gives each unit a three-attempt fast-builder budget, escalates an exhausted unit
+-to `CODEX_STRONG_BUILDER_MODEL`, and stops for the operator when the strong builder fails.
++fresh builder session for each unit, and records lean unit handoff, diff, and tier-one
++verdict artifacts under the work frame.
++`loop.sh execute <work-name>` routes builders through the builder-model knob, defaulting to
++the strong model until the two-step plan/build work lands, separately from the strong
++review route; it gives each unit a three-attempt fast-builder budget, escalates an
++exhausted unit through the strong-builder model knob, and stops for the operator when the
++strong builder fails.
+ `loop.sh execute <work-name>` runs implementation-acceptance reviewers with literal
+ approval `never` and literal sandbox `read-only`.
+ `loop.sh execute <work-name>` writes structured acceptance artifacts with a verdict,
+diff --git a/intent/machine-statements/adapter.md b/intent/machine-statements/adapter.md
+index 7a704b0..fddc96b 100644
+--- a/intent/machine-statements/adapter.md
++++ b/intent/machine-statements/adapter.md
+@@ -1,27 +1,29 @@
+ # adapter -- machine statements
+ 
+ the current root harness adapter is materialized as `adapter/codex.md`.
+-the Codex harness loads its adapter through a root `AGENTS.md` symlinked to
+-`adapter/codex.md`; the root entry is the harness's mandated pointer, holding nothing, not
+-where the adapter lives.
+-a machine working in a nested node under the root is bound by Codex including the root
+-`AGENTS.md` in the project instruction chain from the project root to the current
+-directory, so no node below the root carries its own adapter material.
++the current materialization binds the same harness to phase one and phase two; the
++phase-one collaborator is the interactive harness that loaded the adapter.
++the harness loads its adapter through a root `AGENTS.md` symlinked to `adapter/codex.md`;
++the root entry is the harness's mandated pointer, holding nothing, not where the adapter
++lives.
++a machine working in a nested node under the root is bound by the root `AGENTS.md` in the
++project instruction chain from the project root to the current directory, so no node below
++the root carries its own adapter material.
+ a mounted external project may carry a target-local `AGENTS.md` entry point for
+ direct-path openings; the entry point links to root-managed adapter material and routes
+ back to the root adapter and loop instead of copying root adapter material into the
+ mounted node.
+ the rigid workflow is materialized as `adapter/loop.sh`, realizing the two-phase shape
+-over the Codex phase-two harness: each implementation unit opens a fresh `codex exec`
+-builder session from the signed frame, and acceptance reviewers and the archive actor are
+-fresh sessions rather than resumes of the builder.
+-the Codex loop records phase-two run state under `HYPERCORE_LOOP_STATE_DIR`, defaulting to
+-`.hypercore/loop-runs`, with run-local state, event history, raw Codex gate streams, gate
++over the phase-two executor harness: each implementation unit opens a fresh builder
++session from the signed frame, and acceptance reviewers and the archive actor are fresh
++sessions rather than resumes of the builder.
++the loop records phase-two run state under `HYPERCORE_LOOP_STATE_DIR`, defaulting to
++`.hypercore/loop-runs`, with run-local state, event history, raw harness gate streams, gate
+ final outputs, acceptance artifact paths, and current pointers for the addressed work and
+ root.
+-the Codex loop streams inner `codex exec --json` events into the phase-two run state while
++the loop streams inner executor JSON events into the phase-two run state while
+ printing concise progress, without changing the cleared-session contract.
+-the Codex loop materializes separate builder and reviewer routing, structured acceptance
++the loop materializes separate builder and reviewer routing, structured acceptance
+ artifacts with source markers and fake-source rejection, the per-unit fast-builder retry
+ then strong-builder escalation ladder, a resumable per-unit execute cache, the concurrent
+ one-way tier-two panel, and phase-one review subprocess crash diagnostics.
+@@ -52,10 +54,10 @@ framing and requires `intent/frame/review.md` for one-way work.
+ the frame gate prompt tells the machine not to write operator direction, not to collect
+ direction retrospectively, and not to let optional reviewer verdicts clear base-roster or
+ red-team flags.
+-the Codex adapter prose describes phase one as design-phase collaboration with direction
++the adapter prose describes phase one as design-phase collaboration with direction
+ and review artifacts, while preserving phase two as cleared, heads-down execution from the
+ signed frame directory and lean phase-two handoff artifacts.
+-`check.sh` mechanically checks that the gate prompts, Codex adapter prose, loop frame
++`check.sh` mechanically checks that the gate prompts, adapter prose, loop frame
+ validation, start scaffolding, direction/review helpers, operator-act gating through
+ `/dev/tty` with B-ready `operator-gate:` markers and numbered-option direction, review and
+ acceptance isolation settings, strict frame parsing, phase-two acceptance gating, structured
+@@ -64,8 +66,8 @@ builder/reviewer routing with bounded retry and strong escalation, resumable exe
+ caching, the concurrent tier-two panel, the new operator-act and phase-two performance
+ contract in the `collaboration`, `loop`, and `adapter` segments, and current-material
+ absence of the retired compatibility route still carry the contract.
+-each gate's instructions are held in a file in `adapter/gates/`; the Codex path includes them in
+-the `codex exec` gate prompt; the orchestrator owns gate order and preconditions and
++each gate's instructions are held in a file in `adapter/gates/`; the harness path includes
++them in the executor gate prompt; the orchestrator owns gate order and preconditions and
+ blocks a gate whose preconditions fail.
+ sign-off for new work records `signed-off-by:`, `signed-off-at:`, and `operator-gate: tty`
+ in the work-node frame's `intent/frame/signoff.md`; the orchestrator seals phase two until
+diff --git a/intent/machine-statements/collaboration.md b/intent/machine-statements/collaboration.md
+index 81e8f88..5058567 100644
+--- a/intent/machine-statements/collaboration.md
++++ b/intent/machine-statements/collaboration.md
+@@ -1,6 +1,6 @@
+ # collaboration — machine statements
+ 
+ phase-two handoff state is written as common ground for the operator and later tooling:
+-the addressed work's current or recent gate, current unit, status, Codex thread id, latest
++the addressed work's current or recent gate, current unit, status, harness session id, latest
+ message, failure reason, event history, run artifact paths, and phase-two acceptance
+ artifact paths are recoverable from loop state files.
+diff --git a/intent/machine-statements/loop.md b/intent/machine-statements/loop.md
+index 8fbea36..ec719e2 100644
+--- a/intent/machine-statements/loop.md
++++ b/intent/machine-statements/loop.md
+@@ -8,12 +8,13 @@ corpus.
+ `loop.sh frame`, `signoff`, `execute`, and `status` resolve the addressed node-local work and
+ act only on that addressed work.
+ `loop.sh execute <work-name>` exposes phase-two run state for the addressed work while it
+-runs and after recent failure or completion, including the active gate, status, Codex
+-thread id, current unit, latest message, failure reason, event history, run artifact
++runs and after recent failure or completion, including the active gate, status, harness
++session id, current unit, latest message, failure reason, event history, run artifact
+ paths, and phase-two acceptance artifact paths.
+-before launching the first phase-two Codex gate, `loop.sh execute <work-name>` checks that
+-the Codex binary is present and that Codex home/session state is writable; a failed
+-preflight records failed run state and stops before `codex exec`.
++before launching the first phase-two executor gate, `loop.sh execute <work-name>` checks
++that the configured executor binary is present and that executor home/session state is
++writable; a failed preflight records failed run state and stops before the executor
++session starts.
+ `loop.sh status <work-name>` reports the addressed work's current phase and, for
+ non-historical work with phase-two state, the current or recent run's gate, status, state
+ path, event path, and latest message; `loop.sh status --json <work-name>` renders the same
+@@ -68,12 +69,13 @@ optional reviewer verdicts cannot clear unresolved base-roster or red-team flags
+ new work sign-off records `signed-off-by:`, `signed-off-at:`, and `operator-gate: tty` in
+ the work node's `intent/frame/signoff.md`.
+ `loop.sh execute <work-name>` derives implementation units from the signed frame, starts a
+-fresh Codex builder session for each unit, and records lean unit handoff, diff, and
+-tier-one verdict artifacts under the work frame.
+-`loop.sh execute <work-name>` routes builders through `CODEX_BUILDER_MODEL`, defaulting to
+-the strong model until the two-step plan/build work lands, separately from the strong review
+-route; it gives each unit a three-attempt fast-builder budget, escalates an exhausted unit
+-to `CODEX_STRONG_BUILDER_MODEL`, and stops for the operator when the strong builder fails.
++fresh builder session for each unit, and records lean unit handoff, diff, and tier-one
++verdict artifacts under the work frame.
++`loop.sh execute <work-name>` routes builders through the builder-model knob, defaulting to
++the strong model until the two-step plan/build work lands, separately from the strong
++review route; it gives each unit a three-attempt fast-builder budget, escalates an
++exhausted unit through the strong-builder model knob, and stops for the operator when the
++strong builder fails.
+ `loop.sh execute <work-name>` runs implementation-acceptance reviewers with literal
+ approval `never` and literal sandbox `read-only`.
+ `loop.sh execute <work-name>` writes structured acceptance artifacts with a verdict,
+diff --git a/intent/organizing-document.md b/intent/organizing-document.md
+index 2b37be7..43f21c1 100644
+--- a/intent/organizing-document.md
++++ b/intent/organizing-document.md
+@@ -19,8 +19,8 @@ leaf-materialized by `hypercore.md` and `check.sh`, divided along one axis:
+   amendments, and node boundaries.
+ - **adapter** -- the binding between a harness and the loop: what the harness loads at the
+   start of work, promising agreement and enforcing it as a rigid workflow. Materialized at
+-  the root by the methodology prose, the harness adapter (`AGENTS.md` for Codex), and the
+-  orchestrator under `adapter/`.
++  the root by the methodology prose, the harness entry point (`AGENTS.md`), the current
++  binding (`adapter/codex.md`), and the orchestrator under `adapter/`.
+ 
+ The **governed work** -- durable child nodes and mounted work under this root:
+ 
