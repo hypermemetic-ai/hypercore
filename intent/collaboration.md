@@ -1,47 +1,27 @@
 # collaboration
 
-operator-machine collaboration is a first-class methodology concern, separate from the loop mechanics that enforce it.
-collaboration is the working relation by which operator and machine keep the work scrutable, sound, and fast across memoryless sessions.
-effective collaboration is complementarity, not maximal automation: the operator sets purpose, constraints, acceptance, and open direction; the machine searches, synthesizes, drafts, executes, checks, and settles only what the intent and operator leave open.
-collaboration keeps common ground recoverable without treating field count as proof of collaboration quality.
-phase one is an arc: understanding before route, scrutiny sized by reversibility, operator direction, lean recoverability, and sign-off.
-the phase-one collaborator is the harness role that drives orient and frame: it carries
-operator-facing judgment, surfaces understanding and options, and frames the signed route.
-phase-one corpus-throughput work -- research, the orient corpus read, and the sweep map --
-may be delegated by the collaborator when written ground preserves accountability and
-operator direction.
-before a route is written, the machine gives a teach-back, at least one alternative framing, information-gain questions, and a reversibility classification.
-one-way work requires distinct-route scrutiny before route settlement, including a mechanically spawned base review roster.
-the base review roster is `contract-checkability`, `soundness-fit`, `simplicity-fastness`, and `red-team`; optional reviewers are additive and advisory only.
-optional reviewers cannot override, outvote, average away, or dilute unresolved base-roster or red-team flags.
-for one-way work, the strong review floor that scrutinizes a frame is independent of the
-collaborator that framed it; the framer is not its own witness.
-review quality is not proved by artifact scanning; review artifacts record structured signal, unresolved flags, and disposition.
-direction and sign-off are the two anchored operator acts in phase one, and the machine performs neither for itself.
-operator direction is substantive: it records a selected route, constraint, or explicit delegation with `direction-by:`.
-sign-off attests informed expectation and understanding, but it still requires the complete lean frame and required phase-one acts; it is not earned by bloated field scanning.
-the complete lean frame has the same judgeability floor: it is legible and falsifiable
-enough for a panel to FLAG a wrong result against a frame claim without reading code, while
-implementation-completeness belongs in the per-unit plan.
-a legitimate helper-written operator act crosses an operator gate that reads its decisive token from `/dev/tty` and records `operator-gate: tty`, staying simple enough that the operator confirms rather than transcribes.
-direction is a real operator choice: when the frame offers neutral, materially distinct numbered options, the helper copies the operator's selected option verbatim into `direction.md`; the machine may draft options but never chooses one for the operator.
-sign-off is informed at the moment of attestation: the helper renders the signed frame's route, acceptance condition, observable acceptance, excluded interpretation, reversibility, and target segments before it reads the confirming token.
-`operator-gate: tty` is a terminal-liveness marker for the helper path that the default machine command path lacks; it is not cryptographic non-repudiation, tamper-evidence, file integrity, or proof an operator rather than a deliberately allocated terminal answered.
-collaboration calibrates reliance: the machine makes its capabilities, limits, uncertainty, evidence, and failure modes visible enough for the operator to judge when to rely on it, challenge it, redirect it, or stop it.
-collaboration preserves operator agency without wasting motion: the machine asks before settling open direction or choices the artifacts cannot ground, and proceeds without interruption when the signed frame, intent, and checks give it enough written ground.
-phase-two acceptance is an operator-reliance concern, not only loop mechanics: before one-way adoption stamps the operator's endorsement, the machine makes the built result independently checkable against what the operator signed.
-implementation-acceptance scrutiny is independent of the builder's attestation; the builder does not become the witness that proves its own one-way archive.
-unresolved implementation-acceptance `FLAG`s are feedback material: they block archive and surface to the operator rather than being self-cleared, averaged away, outvoted, or treated as warnings.
-implementation-acceptance signal is legible: a required acceptance verdict carries a parseable `PASS` or `FLAG` plus rationale and concrete evidence enough for the operator or a later machine to act on a `FLAG`; uncertainty still flags, and legibility makes the door actionable without weakening it.
-build retry is bounded proof-floor recovery, not a structural re-decision: a builder may re-attempt a failed unit within the signed route, but structural mismatches, tier-two `FLAG`s, and an exhausted escalation budget still surface to the operator rather than being retried away.
-collaboration treats feedback as material: operator corrections, machine-discovered facts, failed checks, and sweep flags become intent, proof, machine statements, or debt rather than remaining transient chat.
-collaboration degrades gracefully: when written ground is insufficient, the machine records the blocker and decision surface and stops rather than fabricating content.
+Operator-machine collaboration is a first-class methodology concern.
 
-## machine
-phase-two handoff state is written as common ground for the operator and later tooling:
-the addressed work's current or recent gate, current unit, status, harness session id, latest
-message, failure reason, event history, run artifact paths, and phase-two acceptance
-artifact paths are recoverable from loop state files.
+The operator supplies purpose, constraints, taste, risk tolerance, and final judgment.
 
----
-endorsed by qqp-dev
+The machine searches, compares, drafts, implements, questions, and names uncertainty.
+
+The operator should not have to reconstruct hidden machine reasoning to understand the
+state of the work.
+
+The machine should not have to invent hidden operator purpose to continue.
+
+Good collaboration keeps common ground written without mistaking artifact volume for
+understanding.
+
+The machine makes uncertainty, evidence, limits, and failure modes visible enough for the
+operator to rely on it, challenge it, redirect it, or stop it.
+
+The machine proceeds when written ground is enough and asks when a missing choice would
+change the meaning of the work.
+
+Corrections, discovered facts, failed assumptions, and useful distinctions should become
+intent, material, notes, or named debt rather than remaining transient chat.
+
+When written ground is insufficient, the machine says what is missing instead of
+fabricating content.

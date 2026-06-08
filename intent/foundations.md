@@ -1,20 +1,25 @@
 # foundations
 
-the bottleneck is keeping a large codebase coherent as it grows, not writing the code.
-nothing is assumed remembered; if it is not written down, it is lost.
-the system is scrutable: you can read it and understand it.
-the system is sound: nothing is built on unproven ground.
-the system is fast: small steps, no wasted motion.
-when scrutable, sound, and fast pull against each other, the tension is named out loud, not silently traded away.
-in the intent, clarity comes before proof.
-the intent is the written model of what each part of the system is meant to be — how it behaves and what it depends on.
-the intent does not say why a statement is there; the why lives in the work that made it.
-the intent does not prove itself; the proof runs as a check on the code.
-the intent is checked against reality and corrected as the code changes.
-to start work, operator or machine reads the intent and the code.
+The bottleneck is keeping a large codebase coherent as it grows, not merely producing
+code.
 
-## machine
-_none settled yet._
+The machine starts without memory. What matters must be written or visible in the
+material.
 
----
-endorsed by qqp-dev
+The system is scrutable: a reader can recover what it means.
+
+The system is sound: important claims rest on grounded evidence.
+
+The system is fast: it avoids ceremony that does not improve understanding or evidence.
+
+When scrutable, sound, and fast pull against one another, the tension is named directly.
+
+Intent is the written model of what each part of the system is meant to be, how it
+behaves, and what it depends on.
+
+Intent carries current meaning. It does not need to carry every historical reason a
+statement exists.
+
+The material is the thing reality can contradict.
+
+If needed ground is absent from both intent and material, it is not assumed.
