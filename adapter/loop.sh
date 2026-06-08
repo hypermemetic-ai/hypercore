@@ -27,7 +27,7 @@
 #   loop.sh [-C <node-path>] frame    <work-name>              check the frame is written and ready for sign-off
 #   loop.sh [-C <node-path>] signoff  [<work-name> [<operator>]]
 #                                                               record the operator's sign-off (the human gate)
-#   loop.sh [-C <node-path>] execute  <work-name> [--dry-run]  run phase two on a cleared session
+#   loop.sh [-C <node-path>] execute  [<work-name>] [--dry-run] run phase two on a cleared session
 #   loop.sh [-C <node-path>] status   [--json] <work-name>     print the work node's current phase
 #
 # Env:
@@ -44,8 +44,15 @@
 
 set -euo pipefail
 
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT="$(cd "$HERE/.." && pwd)"
+LOOP_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOOP_SCRIPT_PATH="$LOOP_SCRIPT_DIR/$(basename "${BASH_SOURCE[0]}")"
+if [ "${HYPERCORE_LOOP_SNAPSHOT_ACTIVE:-0}" = 1 ]; then
+  HERE="${HYPERCORE_LOOP_ORIGINAL_HERE:-$LOOP_SCRIPT_DIR}"
+  ROOT="${HYPERCORE_LOOP_ORIGINAL_ROOT:-$(cd "$HERE/.." && pwd)}"
+else
+  HERE="$LOOP_SCRIPT_DIR"
+  ROOT="$(cd "$HERE/.." && pwd)"
+fi
 GATES="$HERE/gates"
 NODE="$ROOT"
 NODE_REL="."
@@ -359,6 +366,28 @@ phase_two_preflight() {
   msg="preflight passed: Codex binary is present and $codex_home can hold session state"
   loop_event preflight preflight passed "$msg"
   loop_state_write preflight passed "$msg"
+}
+
+phase_two_reexec_from_snapshot() {
+  local sub=$1 snapshot_dir snapshot_path node_slug cmd=()
+  shift
+  [ "$sub" = execute ] || return 0
+  [ "${HYPERCORE_LOOP_SNAPSHOT_ACTIVE:-0}" = 1 ] && return 0
+
+  node_slug="$(phase_two_node_slug "$NODE_REL")"
+  snapshot_dir="$HYPERCORE_LOOP_STATE_DIR/snapshots/$(utc_stamp_id)-$node_slug-pid$$"
+  snapshot_path="$snapshot_dir/loop.sh"
+  mkdir -p "$snapshot_dir"
+  cp "$LOOP_SCRIPT_PATH" "$snapshot_path"
+  chmod 500 "$snapshot_path"
+
+  [ "$NODE_REL" = "." ] || cmd+=(-C "$NODE_REL")
+  cmd+=("$sub" "$@")
+  export HYPERCORE_LOOP_SNAPSHOT_ACTIVE=1
+  export HYPERCORE_LOOP_SNAPSHOT_PATH="$snapshot_path"
+  export HYPERCORE_LOOP_ORIGINAL_HERE="$HERE"
+  export HYPERCORE_LOOP_ORIGINAL_ROOT="$ROOT"
+  exec "$snapshot_path" "${cmd[@]}"
 }
 
 ensure_work_history() {
@@ -1641,6 +1670,28 @@ infer_signoff_work_name() {
   esac
 }
 
+executable_work_candidates() {
+  local d name
+  for d in "$WORKS"/*/; do
+    [ -d "$d" ] || continue
+    name="$(basename "${d%/}")"
+    work_name_ok "$name" || continue
+    is_work_node "$d" || continue
+    signed_off_at "$d" || continue
+    printf '%s\n' "$name"
+  done
+}
+
+infer_execute_work_name() {
+  local candidates=() name
+  while IFS= read -r name; do candidates+=("$name"); done < <(executable_work_candidates)
+  case "${#candidates[@]}" in
+    1) printf '%s' "${candidates[0]}" ;;
+    0) die "cannot infer work name: no signed, unarchived work node in node $NODE_REL; pass <work-name>" ;;
+    *) die "cannot infer work name: multiple signed, unarchived work nodes in node $NODE_REL: ${candidates[*]}; pass <work-name>" ;;
+  esac
+}
+
 current_operator_candidates() {
   local f
   for f in "$NODE/$INTENT_TREE"/*.md; do
@@ -1792,7 +1843,7 @@ phase_two_frame_digest() {
 }
 
 phase_two_loop_version_digest() {
-  phase_two_file_digest "$HERE/loop.sh"
+  phase_two_file_digest "$LOOP_SCRIPT_PATH"
 }
 
 phase_two_initial_prior_state_key() {
@@ -1877,6 +1928,16 @@ check-evidence:$check_evidence
 tier-one-verdict:PASS"
 }
 
+phase_two_unit_soft_miss_prior_state_key() {
+  local unit_id=$1 base_key=$2
+  phase_two_hash_text "phase-two-cache-record-soft-miss:v1
+node:$NODE_REL
+work:${LOOP_WORK_NAME:-}
+unit:$unit_id
+base:$base_key
+run:$LOOP_RUN_ID"
+}
+
 phase_two_cache_record_value() {
   local file=$1 field=$2
   [ -f "$file" ] || return 1
@@ -1897,17 +1958,27 @@ phase_two_unit_record_status() {
 phase_two_write_cache_record() {
   local unit_id=$1 base_key=$2 prior_state_key=$3 handoff_path=$4 diff_path=$5 tier_one_path=$6
   local cache_path tmp cache_key check_evidence reusable
+  cache_key=${7:-}
+  PHASE_TWO_CACHE_RECORD_FAILURE_REASON=""
   cache_path="$(phase_two_cache_path "$unit_id")"
-  cache_key="$(phase_two_unit_evidence_cache_key "$unit_id" "$base_key" "$handoff_path" "$diff_path" "$tier_one_path")" \
-    || die "accepted $unit_id is missing cacheable handoff, diff, check, or tier-one PASS evidence"
+  if [ -z "$cache_key" ]; then
+    cache_key="$(phase_two_unit_evidence_cache_key "$unit_id" "$base_key" "$handoff_path" "$diff_path" "$tier_one_path")" || {
+      PHASE_TWO_CACHE_RECORD_FAILURE_REASON="accepted evidence is incomplete or not cache-reusable"
+      return 1
+    }
+  fi
   check_evidence="$(phase_two_tier_one_check_evidence "$tier_one_path")"
   if phase_two_check_evidence_reusable "$check_evidence"; then
     reusable=yes
   else
     reusable=no
   fi
+  if [ -e "$cache_path" ] && [ ! -f "$cache_path" ]; then
+    PHASE_TWO_CACHE_RECORD_FAILURE_REASON="cache record path is not a regular file"
+    return 1
+  fi
   tmp="$cache_path.tmp.$$"
-  {
+  if ! {
     printf '# phase-two execute cache - %s\n\n' "$unit_id"
     printf 'unit: %s\n' "$unit_id"
     printf 'status: accepted\n'
@@ -1923,8 +1994,20 @@ phase_two_write_cache_record() {
     printf 'tier-one-verdict: PASS\n'
     printf 'check-evidence: %s\n' "$check_evidence"
     printf 'cache-reusable: %s\n' "$reusable"
-  } > "$tmp"
-  mv "$tmp" "$cache_path"
+  } > "$tmp"; then
+    PHASE_TWO_CACHE_RECORD_FAILURE_REASON="could not write temporary cache record"
+    rm -f "$tmp" 2>/dev/null || true
+    return 1
+  fi
+  if ! mv "$tmp" "$cache_path"; then
+    PHASE_TWO_CACHE_RECORD_FAILURE_REASON="could not install cache record"
+    rm -f "$tmp" 2>/dev/null || true
+    return 1
+  fi
+  if [ ! -f "$cache_path" ]; then
+    PHASE_TWO_CACHE_RECORD_FAILURE_REASON="cache record was not installed as a regular file"
+    return 1
+  fi
   printf '%s' "$cache_key"
 }
 
@@ -3391,10 +3474,7 @@ run_unit_build_attempt() {
   if ! run_gate "$gate_name" "Read Edit Write Bash" start "" \
     "Implement phase-two unit $unit_id for node-local work $work_name in addressed node $NODE_REL.
 Proof obligation: $proof
-
-Read only $source_desc, the intent it references, and the material needed to build this unit.
-Do not edit parent intent documents in implement; archive folds accepted intent amendments.
-Build only this proof-advancing unit. Leave ./check.sh green. End with a lean handoff naming the changed files, checks prepared, and any real unit proof gap. Do not describe prior, future, or expected acceptance artifacts; the loop records acceptance evidence after tier-one review. Do not describe prior loop run state, unrelated untracked files, or cumulative diff noise unless they are a real proof gap for this unit." \
+Signed frame: $source_desc" \
     implement "$route" 1; then
     UNIT_ATTEMPT_REASON="$attempt_kind builder subprocess failed for $unit_id on attempt $attempt_number"
     phase_two_write_unit_record "$unit_id" failed "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "$UNIT_ATTEMPT_REASON"
@@ -3418,18 +3498,28 @@ Build only this proof-advancing unit. Leave ./check.sh green. End with a lean ha
 }
 
 cmd_execute() {
-  local work_name="${1:-}" active_dir active_rel frame_rel frame_file source_desc archive_collection archive_decision
+  local work_name="" active_dir active_rel frame_rel frame_file source_desc archive_collection archive_decision
   local reversibility errors units_text unit_entry unit_id proof gate_name handoff_path diff_path tier_one_path
   local gate_output_path status_msg fast_attempt unit_accepted units=() unit_ids=()
-  local prior_state_key base_cache_key old_cache_key new_cache_key downstream_invalidated=0
-  [ -n "$work_name" ] || die "usage: loop.sh [-C <node-path>] execute <work-name> [--dry-run]"
-  validate_work_name "$work_name"
-  shift
-  if [ "${1:-}" = "--dry-run" ]; then
-    DRY_RUN=1
+  local prior_state_key base_cache_key old_cache_key new_cache_key cache_record_msg cache_record_reason downstream_invalidated=0
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --dry-run)
+        [ "$DRY_RUN" = 0 ] || die "usage: loop.sh [-C <node-path>] execute [<work-name>] [--dry-run]"
+        DRY_RUN=1
+        ;;
+      --*)
+        die "usage: loop.sh [-C <node-path>] execute [<work-name>] [--dry-run]"
+        ;;
+      *)
+        [ -z "$work_name" ] || die "usage: loop.sh [-C <node-path>] execute [<work-name>] [--dry-run]"
+        work_name="$1"
+        ;;
+    esac
     shift
-  fi
-  [ $# -eq 0 ] || die "usage: loop.sh [-C <node-path>] execute <work-name> [--dry-run]"
+  done
+  [ -n "$work_name" ] || work_name="$(infer_execute_work_name)"
+  validate_work_name "$work_name"
   active_dir="$(active_work_dir "$work_name")" || die "work is not active in node $NODE_REL: $work_name"
   active_rel="$(relpath "$active_dir")"
   frame_rel="$(relpath "$(frame_dir_for "$active_dir")")"
@@ -3529,14 +3619,32 @@ $errors"
       fi
     fi
 
-    new_cache_key="$(phase_two_write_cache_record "$unit_id" "$base_cache_key" "$prior_state_key" "$handoff_path" "$diff_path" "$tier_one_path")"
+    PHASE_TWO_CACHE_RECORD_FAILURE_REASON=""
+    new_cache_key="$(phase_two_unit_evidence_cache_key "$unit_id" "$base_cache_key" "$handoff_path" "$diff_path" "$tier_one_path" || true)"
+    if [ -z "$new_cache_key" ]; then
+      PHASE_TWO_CACHE_RECORD_FAILURE_REASON="accepted evidence is incomplete or not cache-reusable"
+    fi
+    if [ -n "$new_cache_key" ] \
+      && phase_two_write_cache_record "$unit_id" "$base_cache_key" "$prior_state_key" "$handoff_path" "$diff_path" "$tier_one_path" "$new_cache_key" >/dev/null; then
+      cache_record_msg="cache-key $new_cache_key"
+    else
+      cache_record_reason="${PHASE_TWO_CACHE_RECORD_FAILURE_REASON:-accepted evidence could not be written to cache}"
+      if [ -z "$new_cache_key" ]; then
+        new_cache_key="$(phase_two_unit_soft_miss_prior_state_key "$unit_id" "$base_cache_key")"
+      fi
+      printf 'cache record soft-miss for %s: %s; continuing (cache is an optimization, not a correctness gate)\n' \
+        "$unit_id" "$cache_record_reason"
+      loop_event cache check skipped "cache record soft-miss for $unit_id: $cache_record_reason"
+      loop_state_write check skipped "cache record soft-miss for $unit_id: $cache_record_reason"
+      cache_record_msg="cache record soft-miss; accepted-state-key $new_cache_key"
+    fi
     if [ -n "$old_cache_key" ] && [ "$old_cache_key" != "$new_cache_key" ]; then
       downstream_invalidated=1
     else
       downstream_invalidated=0
     fi
     prior_state_key="$new_cache_key"
-    phase_two_write_unit_record "$unit_id" accepted "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "$status_msg; tier-one PASS; cache-key $new_cache_key"
+    phase_two_write_unit_record "$unit_id" accepted "$proof" "$handoff_path" "$diff_path" "$tier_one_path" "$status_msg; tier-one PASS; $cache_record_msg"
   done
 
   LOOP_CURRENT_UNIT=""
@@ -3570,7 +3678,10 @@ $errors"
 
   PHASE_TWO_SESSION_ID=""
   run_gate archive "Read Edit Write" start "" \
-    "Adopt or shelve node-local work $work_name in addressed node $NODE_REL from $active_rel according to its signed frame and the clean phase-two acceptance artifacts under $(relpath "$PHASE_TWO_ACCEPTANCE_DIR"). If adopting, fold its accepted delta into that node's intent documents and stamp each touched segment's foot with the signed-off-by operator. End with ARCHIVE_DECISION: ADOPTED or ARCHIVE_DECISION: SHELVED."
+    "Archive node-local work $work_name in addressed node $NODE_REL from $active_rel.
+Signed frame: $frame_rel/
+Clean phase-two acceptance artifacts: $(relpath "$PHASE_TWO_ACCEPTANCE_DIR").
+Decision line: ARCHIVE_DECISION: ADOPTED or ARCHIVE_DECISION: SHELVED."
   printf '\n--- gate: adoption history (move) ---\n'
   if [ "$DRY_RUN" = 1 ]; then
     archive_collection="$(archive_collection_for_active_dir "$active_dir" adopted)"
@@ -3579,13 +3690,13 @@ $errors"
     loop_event archive archive skipped "dry-run would record $work_name in adopted history"
     loop_state_write archive skipped "dry-run would record $work_name in adopted history"
   else
-    loop_event check archive running "running ./check.sh after archive fold"
-    loop_state_write archive running "running ./check.sh after archive fold"
+    loop_event check archive running "running ./check.sh after archive decision"
+    loop_state_write archive running "running ./check.sh after archive decision"
     if check_green; then
-      loop_event check archive passed "check.sh green after archive fold"
+      loop_event check archive passed "check.sh green after archive decision"
     else
-      loop_event check archive failed "check.sh red after fold — stopping before archive"
-      die "check.sh red after fold — stopping before archive"
+      loop_event check archive failed "check.sh red after archive decision — stopping before history move"
+      die "check.sh red after archive decision — stopping before history move"
     fi
     archive_decision="$(archive_decision_from_output)"
     loop_event archive-decision archive passed "archive decision: $archive_decision"
@@ -3650,6 +3761,7 @@ main() {
   done
 
   local sub="${1:-}"; shift || true
+  phase_two_reexec_from_snapshot "$sub" "$@"
   case "$sub" in
     start)   cmd_start   "$@";;
     direct)  cmd_direct  "$@";;

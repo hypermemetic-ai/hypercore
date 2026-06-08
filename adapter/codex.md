@@ -28,6 +28,13 @@ to the interactive Codex harness that loaded this adapter. Phase two is driven b
 the archive actor; the orchestrator records raw Codex JSON event streams and Codex thread
 ids as current binding facts.
 
+The handoff after sign-off is Opus supervising Codex, not Opus doing phase two itself:
+Opus launches a fresh Codex orchestrator from the addressed node and has it run
+`adapter/loop.sh execute [<work-name>]`; that orchestrator then launches the nested
+`codex exec` builder, reviewer, panel, and archive sessions. Opus watches the loop's
+recorded progress and intervenes only when the orchestrator blocks on a real gate failure
+or operator need.
+
 The current materialization also keeps the `CODEX_*` environment knob names in
 `adapter/loop.sh`. Those names are implementation binding, while the intent states the
 builder-model, strong-builder, review-model, and review-effort roles.
@@ -98,7 +105,7 @@ the operator's **sign-off**:
   implementation-acceptance reviewer. If the frame directory doesn't tell a cleared
   session something it needs, the frame was incomplete. That is the test.
 - **Phase two — implement, check, archive — heads-down.**
-  `loop.sh [-C <node-path>] execute <work-name>` builds the delta in green
+  `loop.sh [-C <node-path>] execute [<work-name>]` builds the delta in green
   proof-advancing units, records structured phase-two acceptance artifacts under the work
   frame, reuses unchanged accepted units through signed-frame-derived cache state, blocks
   unresolved required `FLAG`s, and runs the required one-way implementation-acceptance panel,
@@ -117,6 +124,10 @@ A work name is a node-local `NNN-slug`. The root node is assumed when no node is
 `loop.sh -C home/<name> start 001-example` addresses work through a
 linked mounted node's mount path. Current work is addressed by the node path plus one
 node-local work name, with the frame under that work node's `intent/frame/`.
+`start` is the phase-one entry point that creates a new work node. `execute` is the
+phase-two entry point for a signed work node; when `<work-name>` is omitted, it resolves
+only the single signed, unarchived work node in the addressed node and blocks when there
+are zero or more than one.
 
 The gates and their order are the loop, already intent (`intent/loop.md`); the
 orchestrator only operationalizes them and blocks a gate whose preconditions fail.

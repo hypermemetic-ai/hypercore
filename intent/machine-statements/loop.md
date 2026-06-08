@@ -11,6 +11,9 @@ act only on that addressed work.
 runs and after recent failure or completion, including the active gate, status, harness
 session id, current unit, latest message, failure reason, event history, run artifact
 paths, and phase-two acceptance artifact paths.
+`loop.sh execute <work-name>` re-execs from a read-only snapshot of `adapter/loop.sh` at
+execute start before phase-two builders, reviewers, or archive actors can edit the live
+orchestrator material.
 before launching the first phase-two executor gate, `loop.sh execute <work-name>` checks
 that the configured executor binary is present and that executor home/session state is
 writable; a failed preflight records failed run state and stops before the executor
@@ -71,6 +74,9 @@ the work node's `intent/frame/signoff.md`.
 `loop.sh execute <work-name>` derives implementation units from the signed frame, starts a
 fresh builder session for each unit, and records lean unit handoff, diff, and tier-one
 verdict artifacts under the work frame.
+`loop.sh execute <work-name>` passes only dynamic unit identifiers, proof obligation, and
+signed-frame location to the implement actor; the implement contract lives in
+`adapter/gates/implement.md`, which `run_gate` reads for each invocation.
 `loop.sh execute <work-name>` routes builders through the builder-model knob, defaulting to
 the strong model until the two-step plan/build work lands, separately from the strong
 review route; it gives each unit a three-attempt fast-builder budget, escalates an
@@ -84,7 +90,13 @@ dry-run, and lets real archive accept only `source: real-reviewer` required acce
 `loop.sh execute <work-name>` caches per-unit build and tier-one evidence under a
 signed-frame-derived key, skips unchanged accepted units on rerun, and rebuilds cache misses
 while invalidating downstream evidence.
+`loop.sh execute <work-name>` treats a per-unit cache-record failure as a logged soft miss:
+it keeps the unit accepted, continues phase two, and leaves that unit uncached for the next
+run instead of failing a correctness gate.
 `loop.sh execute <work-name>` treats malformed, evidence-free, or unsupported-source
 implementation-acceptance output as `FLAG`, blocks unresolved required flags, and runs the
 concurrent one-way tier-two panel before archive.
+`loop.sh execute <work-name>` passes only dynamic work location, acceptance artifact
+location, and the archive decision line to the archive actor; the archive contract lives in
+`adapter/gates/archive.md`, which `run_gate` reads for each invocation.
 `loop.sh execute <work-name>` records the addressed work in node-local history after archive.

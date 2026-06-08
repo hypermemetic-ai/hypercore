@@ -40,6 +40,37 @@ reject_text() {
     || ok "$label"
 }
 
+reject_text_between() {
+  local file=$1 start=$2 end=$3 needle=$4 label=$5 output status
+  output="$(HYPERCORE_RANGE_START="$start" HYPERCORE_RANGE_END="$end" HYPERCORE_RANGE_NEEDLE="$needle" perl -0ne '
+    my $start = $ENV{HYPERCORE_RANGE_START};
+    my $end = $ENV{HYPERCORE_RANGE_END};
+    my $needle = $ENV{HYPERCORE_RANGE_NEEDLE};
+    my $text = $_;
+    my $s = index($text, $start);
+    if ($s < 0) {
+      print "$ARGV missing range start: $start\n";
+      exit 2;
+    }
+    my $e = index($text, $end, $s + length($start));
+    if ($e < 0) {
+      print "$ARGV missing range end after $start: $end\n";
+      exit 2;
+    }
+    my $range = substr($text, $s, $e - $s);
+    if (index($range, $needle) >= 0) {
+      print "$ARGV range contains retired text: $needle\n";
+      exit 1;
+    }
+  ' "$file" 2>&1)"
+  status=$?
+  if [ "$status" -eq 0 ]; then
+    ok "$label"
+  else
+    bad "$label ($output)"
+  fi
+}
+
 require_absent() {
   local path=$1 label=$2
   { [ ! -e "$path" ] && [ ! -L "$path" ]; } \
@@ -364,7 +395,10 @@ check_no_tracked_live_material_paths() {
 check_loop_frame_contract() {
   local name tmp frame options direction review fake_review fake_acceptance fake_builder fake_check retry_handoff status_out route_with_one_unit route_with_two_units panel_events
   local panel_start_line panel_first_result_line
-  local resume_cache resume_out_first resume_out_second resume_out_third resume_unit_001_cache resume_unit_002_cache
+  local resume_cache poison_cache resume_out_first resume_out_second resume_out_third resume_unit_001_cache resume_unit_002_cache
+  local self_edit_backup self_edit_state self_edit_status self_edit_wait_status self_edit_snapshot_count edit_pid
+  local gate_prompt_backup gate_prompt_state gate_prompt_status gate_prompt_wait_status gate_prompt_marker gate_prompt_edit_pid
+  local auto_name_one auto_name_two auto_node_rel auto_frame_dir
 
   echo "root - loop frame contract"
   tmp="$(mktemp -d "${TMPDIR:-/tmp}/hypercore-loop-frame-check.XXXXXX")" \
@@ -698,6 +732,131 @@ EOF
     local path=$1 status=$2 message=$3
     printf '%s\n' "$message" > "$path"
     printf '%s\n' "$status" > "$path.status"
+  }
+
+  write_child_signed_work() {
+    local node_rel=$1 child_name=$2 child_dir child_frame child_options child_direction
+    child_dir="$root/$node_rel/$child_name"
+    child_frame="$child_dir/intent/frame"
+    child_options="$child_frame/options.md"
+    child_direction="$child_frame/direction.md"
+    rm -rf "$child_dir"
+    mkdir -p "$child_frame"
+    cat > "$child_frame/frame.md" <<EOF
+# frame - $child_name
+
+## work
+
+Addressed node: $node_rel
+
+Node-local work name: $child_name
+
+Target segments: loop
+
+Work in flight: none
+
+## problem
+
+Lean execute auto-detect self-test.
+
+## constraints
+
+Keep this frame intentionally narrow.
+
+## decision surface or open direction
+
+The operator direction surface is named.
+
+Reversibility: two-way
+
+## route
+
+Exercise omitted execute work-name resolution in dry-run.
+
+Implementation units for phase two:
+
+1. Auto-detect dry-run unit: prove omitted execute work-name resolution.
+
+## acceptance condition
+
+Execute resolves the single signed, unarchived work node.
+
+## observable acceptance
+
+Run loop execute without a work-name for this self-test node.
+
+## excluded interpretation
+
+This self-test does not adopt parent intent.
+
+## proof state
+
+The proof state is recorded.
+
+## sweep
+
+The sweep is recorded.
+
+## adoption claim
+
+The adoption claim is recorded.
+EOF
+    cat > "$child_options" <<EOF
+# options - $child_name
+
+Direction options are drafted by the machine for operator selection.
+
+## option 1
+
+id: chosen-option
+kind: selected-route
+summary: operator chose auto-detect route
+reversibility: two-way
+tradeoff: exercises execute auto-detect while keeping the fixture narrow.
+
+## option 2
+
+id: alternate-option
+kind: selected-route
+summary: operator chose alternate auto-detect route
+reversibility: two-way
+tradeoff: keeps the option surface materially distinct without changing the fixture.
+
+## rejection choices
+
+none: The operator may reject all options and send the work back to frame.
+abort: The operator may abort without writing direction.
+EOF
+    cat > "$child_direction" <<EOF
+# direction - $child_name
+
+direction-by: qqp-dev
+direction-given-at: 2026-06-07T00:00:00Z
+operator-gate: tty
+selected-route: operator chose auto-detect route
+EOF
+    cat > "$child_frame/review.md" <<'EOF'
+# review - self-test
+
+Overall: PASS
+Isolation: reviewer subprocesses are invoked with literal approval never and literal sandbox read-only.
+Network isolation: not claimed by this adapter.
+Disposition: resolved - base roster returned PASS.
+
+## base roster verdicts
+
+- contract-checkability: PASS
+- soundness-fit: PASS
+- simplicity-fastness: PASS
+- red-team: PASS
+EOF
+    cat > "$child_frame/signoff.md" <<EOF
+# signoff - $child_name
+
+signed-off-by: qqp-dev
+signed-off-at: 2026-06-07T00:00:00Z
+operator-gate: tty
+EOF
   }
 
   write_fake_status() {
@@ -1306,6 +1465,155 @@ Implementation units for phase two:
     && ok "two-way execute dry-run writes no one-way panel verdicts" \
     || bad "two-way execute dry-run wrote one-way panel verdicts"
 
+  auto_node_rel="$name"
+  auto_name_one="998-auto-execute-one-$$"
+  auto_name_two="997-auto-execute-two-$$"
+  rm -rf "$tmp/auto-loop-runs" "$root/$auto_node_rel/$auto_name_one" "$root/$auto_node_rel/$auto_name_two"
+  if HYPERCORE_LOOP_STATE_DIR="$tmp/auto-loop-runs" "$root/adapter/loop.sh" -C "$auto_node_rel" execute --dry-run >"$tmp/auto-zero.out" 2>"$tmp/auto-zero.err"; then
+    bad "loop execute without work-name blocks when no signed unarchived work exists"
+  else
+    ok "loop execute without work-name blocks when no signed unarchived work exists"
+  fi
+  require_text "$tmp/auto-zero.err" "no signed, unarchived work node" \
+    "execute auto-detect explains the zero-candidate case"
+  rm -rf "$fake_acceptance" "$tmp/auto-loop-runs"
+  mkdir -p "$fake_acceptance"
+  write_acceptance_output "$fake_acceptance/tier-one-unit-001" PASS \
+    "auto-detect fixture accepts the single inferred work" \
+    "bare execute resolved the only signed unarchived work node"
+  write_child_signed_work "$auto_node_rel" "$auto_name_one"
+  if HYPERCORE_LOOP_STATE_DIR="$tmp/auto-loop-runs" HYPERCORE_ACCEPTANCE_FAKE_DIR="$fake_acceptance" "$root/adapter/loop.sh" -C "$auto_node_rel" execute --dry-run >"$tmp/auto-single.out" 2>"$tmp/auto-single.err"; then
+    ok "loop execute without work-name resolves the single signed unarchived work"
+  else
+    bad "loop execute without work-name resolves the single signed unarchived work"
+  fi
+  require_text "$tmp/auto-single.out" "re-deriving $auto_name_one in node $auto_node_rel from its frame" \
+    "execute auto-detect runs the inferred work"
+  require_text "$tmp/auto-single.out" "tier-one unit-001 verdict: PASS" \
+    "execute auto-detect reaches tier-one for the inferred work"
+  write_child_signed_work "$auto_node_rel" "$auto_name_two"
+  if HYPERCORE_LOOP_STATE_DIR="$tmp/auto-loop-runs" "$root/adapter/loop.sh" -C "$auto_node_rel" execute --dry-run >"$tmp/auto-multiple.out" 2>"$tmp/auto-multiple.err"; then
+    bad "loop execute without work-name blocks when multiple signed unarchived works exist"
+  else
+    ok "loop execute without work-name blocks when multiple signed unarchived works exist"
+  fi
+  require_text "$tmp/auto-multiple.err" "multiple signed, unarchived work nodes" \
+    "execute auto-detect explains the ambiguous-candidate case"
+
+  self_edit_state="$tmp/self-edit-loop-runs"
+  self_edit_backup="$tmp/loop.sh.self-edit-backup"
+  fake_builder="$tmp/fake-builder"
+  fake_check="$tmp/fake-check"
+  rm -rf "$fake_acceptance" "$fake_builder" "$fake_check" "$self_edit_state" "$root/$name/intent/frame/phase-two"
+  mkdir -p "$fake_acceptance" "$fake_builder" "$fake_check"
+  write_builder_output "$fake_builder/implement-unit-001-fast-1" 0 \
+    "fake builder keeps running while live loop material is edited"
+  write_fake_status "$fake_check/unit-001-fast-1" 0
+  write_acceptance_output "$fake_acceptance/tier-one-unit-001-fast-1" PASS \
+    "snapshot fixture accepts the self-edit-safe unit" \
+    "live adapter/loop.sh was edited after execute snapshot creation"
+  write_lean_frame "$route_with_one_unit" two-way
+  write_signoff
+  cp "$root/adapter/loop.sh" "$self_edit_backup"
+  (
+    i=0
+    while [ "$i" -lt 250 ]; do
+      if find "$self_edit_state/snapshots" -name loop.sh -type f -print -quit 2>/dev/null | grep -q .; then
+        {
+          printf '#!/usr/bin/env bash\n'
+          printf 'printf "%s\\n" "live loop material edited during snapshot self-test" >&2\n'
+          printf 'exit 97\n'
+        } > "$root/adapter/loop.sh"
+        chmod +x "$root/adapter/loop.sh"
+        exit 0
+      fi
+      i=$((i + 1))
+      sleep 0.02
+    done
+    exit 1
+  ) &
+  edit_pid=$!
+  if HYPERCORE_LOOP_STATE_DIR="$self_edit_state" \
+    HYPERCORE_BUILDER_FAKE_DIR="$fake_builder" \
+    HYPERCORE_CHECK_FAKE_DIR="$fake_check" \
+    HYPERCORE_ACCEPTANCE_FAKE_DIR="$fake_acceptance" \
+    "$root/adapter/loop.sh" execute "$name" --dry-run >"$tmp/self-edit-snapshot.out" 2>"$tmp/self-edit-snapshot.err"; then
+    self_edit_status=0
+  else
+    self_edit_status=$?
+  fi
+  wait "$edit_pid"
+  self_edit_wait_status=$?
+  cp "$self_edit_backup" "$root/adapter/loop.sh"
+  chmod +x "$root/adapter/loop.sh"
+  [ "$self_edit_wait_status" -eq 0 ] \
+    && ok "self-test edits live adapter/loop.sh after execute snapshot creation" \
+    || bad "self-test edits live adapter/loop.sh after execute snapshot creation"
+  [ "$self_edit_status" -eq 0 ] \
+    && ok "loop execute survives a live adapter/loop.sh edit by running from its snapshot" \
+    || bad "loop execute survives a live adapter/loop.sh edit by running from its snapshot"
+  require_text "$tmp/self-edit-snapshot.out" "tier-one unit-001 verdict: PASS" \
+    "snapshot-run execute reaches tier-one after the live loop edit"
+  self_edit_snapshot_count="$(find "$self_edit_state/snapshots" -name loop.sh -type f -print 2>/dev/null | wc -l | tr -d ' ')"
+  [ "${self_edit_snapshot_count:-0}" -gt 0 ] \
+    && ok "loop execute creates a self snapshot before phase-two work" \
+    || bad "loop execute creates a self snapshot before phase-two work"
+
+  gate_prompt_state="$tmp/gate-prompt-loop-runs"
+  gate_prompt_backup="$tmp/archive.md.gate-prompt-backup"
+  gate_prompt_marker="HYPERCORE_DYNAMIC_GATE_PROMPT_MARKER_$$"
+  fake_builder="$tmp/fake-builder"
+  fake_check="$tmp/fake-check"
+  rm -rf "$fake_acceptance" "$fake_builder" "$fake_check" "$gate_prompt_state" "$root/$name/intent/frame/phase-two"
+  mkdir -p "$fake_acceptance" "$fake_builder" "$fake_check"
+  write_builder_output "$fake_builder/implement-unit-001-fast-1" 0 \
+    "fake builder completes before the archive prompt is edited"
+  write_fake_status "$fake_check/unit-001-fast-1" 0
+  write_acceptance_output "$fake_acceptance/tier-one-unit-001-fast-1" PASS \
+    "dynamic prompt fixture accepts the implemented unit" \
+    "archive gate prompt was edited after implement in the same execute run"
+  write_lean_frame "$route_with_one_unit" two-way
+  write_signoff
+  cp "$root/adapter/gates/archive.md" "$gate_prompt_backup"
+  (
+    i=0
+    while [ "$i" -lt 500 ]; do
+      if find "$gate_prompt_state" -path "*/gates/implement-unit-001-fast-1.final.md" -type f -print -quit 2>/dev/null | grep -q .; then
+        {
+          printf '\n'
+          printf 'Self-test dynamic gate prompt marker: %s\n' "$gate_prompt_marker"
+        } >> "$root/adapter/gates/archive.md"
+        exit 0
+      fi
+      i=$((i + 1))
+      sleep 0.01
+    done
+    exit 1
+  ) &
+  gate_prompt_edit_pid=$!
+  if HYPERCORE_LOOP_STATE_DIR="$gate_prompt_state" \
+    HYPERCORE_BUILDER_FAKE_DIR="$fake_builder" \
+    HYPERCORE_CHECK_FAKE_DIR="$fake_check" \
+    HYPERCORE_ACCEPTANCE_FAKE_DIR="$fake_acceptance" \
+    "$root/adapter/loop.sh" execute "$name" --dry-run >"$tmp/gate-prompt-reread.out" 2>"$tmp/gate-prompt-reread.err"; then
+    gate_prompt_status=0
+  else
+    gate_prompt_status=$?
+  fi
+  wait "$gate_prompt_edit_pid"
+  gate_prompt_wait_status=$?
+  cp "$gate_prompt_backup" "$root/adapter/gates/archive.md"
+  [ "$gate_prompt_wait_status" -eq 0 ] \
+    && ok "self-test edits adapter/gates/archive.md after the implement gate" \
+    || bad "self-test edits adapter/gates/archive.md after the implement gate"
+  [ "$gate_prompt_status" -eq 0 ] \
+    && ok "loop execute reaches archive after a mid-run gate prompt edit" \
+    || bad "loop execute reaches archive after a mid-run gate prompt edit"
+  require_text "$tmp/gate-prompt-reread.out" "$gate_prompt_marker" \
+    "archive gate prompt reflects the mid-run gate file edit"
+  reject_text "$root/adapter/gates/archive.md" "$gate_prompt_marker" \
+    "dynamic gate prompt self-test restores archive.md"
+
   rm -rf "$fake_acceptance" "$root/$name/intent/frame/phase-two"
   mkdir -p "$fake_acceptance"
   write_acceptance_output "$fake_acceptance/tier-one-unit-001" PASS \
@@ -1566,6 +1874,57 @@ Implementation units for phase two:
   [ -n "$resume_unit_002_cache" ] && [ -n "$resume_out_third" ] && [ "$resume_unit_002_cache" != "$resume_out_third" ] \
     && ok "downstream rebuild replaces the unit-002 cache key" \
     || bad "downstream rebuild replaces the unit-002 cache key"
+
+  poison_cache="$tmp/poison-cache"
+  rm -rf "$fake_acceptance" "$fake_builder" "$fake_check" "$poison_cache" "$root/$name/intent/frame/phase-two"
+  mkdir -p "$fake_acceptance" "$fake_builder" "$fake_check" "$poison_cache/cache/unit-001.key"
+  write_builder_output "$fake_builder/implement-unit-001-fast-1" 0 \
+    "fake builder poison unit 1"
+  write_builder_output "$fake_builder/implement-unit-002-fast-1" 0 \
+    "fake builder poison unit 2"
+  write_fake_status "$fake_check/unit-001-fast-1" 0
+  write_fake_status "$fake_check/unit-002-fast-1" 0
+  write_acceptance_output "$fake_acceptance/tier-one-unit-001-fast-1" PASS \
+    "poison fixture accepts the first unit" \
+    "tier-one fixture for poisoned cache-record soft miss"
+  write_acceptance_output "$fake_acceptance/tier-one-unit-002-fast-1" PASS \
+    "poison fixture accepts the second unit" \
+    "tier-one fixture proves the run proceeds after the soft miss"
+  write_lean_frame "$route_with_two_units" two-way
+  write_signoff
+  if HYPERCORE_LOOP_STATE_DIR="$tmp/loop-runs" \
+    HYPERCORE_PHASE_TWO_DRY_RUN_ACCEPTANCE_DIR="$poison_cache" \
+    HYPERCORE_BUILDER_FAKE_DIR="$fake_builder" \
+    HYPERCORE_CHECK_FAKE_DIR="$fake_check" \
+    HYPERCORE_ACCEPTANCE_FAKE_DIR="$fake_acceptance" \
+    "$root/adapter/loop.sh" execute "$name" --dry-run >"$tmp/cache-poison-first.out" 2>"$tmp/cache-poison-first.err"; then
+    ok "loop execute treats a poisoned cache-record path as a soft miss"
+  else
+    bad "loop execute treats a poisoned cache-record path as a soft miss"
+  fi
+  require_text "$tmp/cache-poison-first.out" "cache record soft-miss for unit-001: cache record path is not a regular file" \
+    "poisoned cache-record path is logged as a soft miss"
+  require_text "$tmp/cache-poison-first.out" "fake builder poison unit 2" \
+    "cache-record soft miss does not halt the following unit"
+  require_text "$poison_cache/units/unit-001.md" "cache record soft-miss; accepted-state-key" \
+    "soft-missed unit record stays accepted without claiming a persisted cache record"
+
+  if HYPERCORE_LOOP_STATE_DIR="$tmp/loop-runs" \
+    HYPERCORE_PHASE_TWO_DRY_RUN_ACCEPTANCE_DIR="$poison_cache" \
+    HYPERCORE_BUILDER_FAKE_DIR="$fake_builder" \
+    HYPERCORE_CHECK_FAKE_DIR="$fake_check" \
+    HYPERCORE_ACCEPTANCE_FAKE_DIR="$fake_acceptance" \
+    "$root/adapter/loop.sh" execute "$name" --dry-run >"$tmp/cache-poison-second.out" 2>"$tmp/cache-poison-second.err"; then
+    ok "soft-missed cache records rebuild on rerun instead of aborting"
+  else
+    bad "soft-missed cache records rebuild on rerun instead of aborting"
+  fi
+  require_text "$tmp/cache-poison-second.out" "cache miss for unit-001: cache record missing" \
+    "soft-missed cache record is a future cache miss"
+  require_text "$tmp/cache-poison-second.out" "fake builder poison unit 1" \
+    "soft-missed unit rebuilds on the next execute run"
+  reject_text "$tmp/cache-poison-second.out" "cache hit: skipping unit-001" \
+    "soft-missed unit is not skipped on rerun"
 
   cleanup_loop_frame_self_test
   LOOP_FRAME_CHECK_WORK=
@@ -1873,11 +2232,83 @@ require_text "$root/intent/loop.md" \
   "execute is resumable" \
   "loop segment folds resumable execute"
 require_text "$root/intent/loop.md" \
+  "cache recording is not a correctness gate" \
+  "loop segment folds non-fatal cache recording"
+require_text "$root/intent/loop.md" \
+  "orchestrator snapshot made at execute start" \
+  "loop segment folds phase-two orchestrator self-edit safety"
+require_text "$root/intent/loop.md" \
+  "when a unit's own proof is a check over addressed-node intent" \
+  "loop segment permits proof-required intent edits in implement"
+require_text "$root/intent/loop.md" \
+  "adoption verifies the accepted applied delta against the signed frame" \
+  "loop segment reconciles archive with applied phase-two deltas"
+require_text "$root/intent/loop.md" \
+  "does not re-fold intent statements that phase-two units already applied in place" \
+  "loop segment forbids duplicate archive content fold"
+require_text "$root/intent/active-work.md" \
+  "applies in place during phase two is in-flight" \
+  "active-work segment clarifies in-flight phase-two material"
+require_text "$root/intent/active-work.md" \
+  "not adopted-current" \
+  "active-work segment distinguishes adopted-current truth"
+require_text "$root/intent/active-work.md" \
+  "parent intent remains current as adopted truth" \
+  "active-work segment scopes current truth to adoption"
+require_text "$root/intent/loop.md" \
   "started concurrently" \
   "loop segment folds the concurrent tier-two panel"
 require_text "$root/intent/adapter.md" \
   "resumable per-unit execute cache" \
   "adapter segment folds resumable execute materialization"
+require_text "$root/intent/adapter.md" \
+  "cache-record failure is logged as a soft" \
+  "adapter segment folds non-fatal cache-record failures"
+require_text "$root/intent/adapter.md" \
+  "running execute from a snapshot" \
+  "adapter segment folds phase-two orchestrator self-edit safety"
+require_text "$root/intent/adapter.md" \
+  "exactly one signed, unarchived work node" \
+  "adapter segment folds execute auto-detect"
+require_text "$root/intent/adapter.md" \
+  "launches a fresh phase-two executor" \
+  "adapter segment folds the supervisor-to-executor handoff"
+require_text "$root/intent/adapter.md" \
+  "implement and archive gate contracts live in re-read gate files" \
+  "adapter segment folds re-read implement/archive prompt contracts"
+require_text "$root/intent/adapter.md" \
+  "absence of frozen inline implement/archive contract text" \
+  "adapter segment folds absence of frozen inline prompt contracts"
+require_text "$root/intent/machine-statements/loop.md" \
+  're-execs from a read-only snapshot of `adapter/loop.sh`' \
+  "loop machine statements fold execute-start orchestrator snapshotting"
+require_text "$root/intent/machine-statements/loop.md" \
+  "the implement contract lives in" \
+  "loop machine statements fold implement prompt relocation"
+require_text "$root/intent/machine-statements/loop.md" \
+  "the archive contract lives in" \
+  "loop machine statements fold archive prompt relocation"
+require_text "$root/intent/machine-statements/loop.md" \
+  "per-unit cache-record failure as a logged soft miss" \
+  "loop machine statements fold non-fatal cache-record failures"
+require_text "$root/intent/machine-statements/adapter.md" \
+  "cache-record failure is logged as a soft" \
+  "adapter machine statements fold non-fatal cache-record failures"
+require_text "$root/intent/machine-statements/adapter.md" \
+  'snapshots and re-execs itself at the start of `execute`' \
+  "adapter machine statements fold orchestrator snapshot materialization"
+require_text "$root/intent/machine-statements/adapter.md" \
+  "single signed, unarchived work node" \
+  "adapter machine statements fold execute auto-detect"
+require_text "$root/intent/machine-statements/adapter.md" \
+  "launches a fresh phase-two executor" \
+  "adapter machine statements fold the supervisor-to-executor handoff"
+require_text "$root/intent/machine-statements/adapter.md" \
+  "contract-bearing implement and archive prompt text" \
+  "adapter machine statements fold prompt contract relocation"
+require_text "$root/intent/machine-statements/adapter.md" \
+  "absence of frozen inline implement/archive contract text" \
+  "adapter machine statements fold inline prompt absence"
 require_text "$root/intent/collaboration.md" \
   "the phase-one collaborator is the harness role that drives orient and frame" \
   "collaboration segment names the phase-one collaborator role"
@@ -2119,9 +2550,39 @@ require_text "$root/adapter/gates/implement.md" \
 require_text "$root/adapter/gates/implement.md" \
   "signed-frame-derived cache state" \
   "implement gate describes resumable execute as orchestrator state"
+require_text "$root/adapter/gates/implement.md" \
+  "When this unit's own proof" \
+  "implement gate carries proof-required intent edit exception"
+require_text "$root/adapter/gates/implement.md" \
+  "edit the addressed node's intent documents" \
+  "implement gate permits required intent edits"
+require_text "$root/adapter/gates/implement.md" \
+  "Build only the requested proof-advancing unit" \
+  "implement gate scopes builders to one unit"
+require_text "$root/adapter/gates/implement.md" \
+  "Do not describe prior, future, or expected" \
+  "implement gate keeps acceptance evidence out of handoffs"
+reject_text "$root/adapter/gates/implement.md" \
+  "Do not edit parent intent documents" \
+  "implement gate no longer carries the retired blanket intent-edit ban"
+reject_text "$root/adapter/gates/implement.md" \
+  "Do not edit the intent documents" \
+  "implement gate no longer forbids all intent edits"
 require_text "$root/adapter/gates/archive.md" \
   "intent/frame/signoff.md" \
   "archive gate signs current work-node frames"
+require_text "$root/adapter/gates/archive.md" \
+  "applied delta against the signed frame" \
+  "archive gate verifies the applied delta"
+require_text "$root/adapter/gates/archive.md" \
+  "Do not apply parent-intent content as a separate archive fold" \
+  "archive gate forbids duplicate content fold"
+require_text "$root/adapter/gates/archive.md" \
+  "records the addressed node-local" \
+  "archive gate leaves history recording to the orchestrator"
+reject_text "$root/adapter/gates/archive.md" \
+  "apply anything the units left unapplied" \
+  "archive gate no longer requires a separate content fold"
 require_text "$root/adapter/gates/archive.md" \
   "tier-two implementation-acceptance" \
   "archive gate blocks one-way work without clean panel artifacts"
@@ -2216,6 +2677,18 @@ require_text "$root/adapter/codex.md" \
   "adopts or shelves the work according to the signed frame" \
   "Codex adapter describes adoption or shelving"
 require_text "$root/adapter/codex.md" \
+  "Opus launches a fresh Codex orchestrator" \
+  "Codex adapter describes the Opus to Codex handoff"
+require_text "$root/adapter/codex.md" \
+  'adapter/loop.sh execute [<work-name>]' \
+  "Codex adapter names the phase-two launch command"
+require_text "$root/adapter/codex.md" \
+  '`start` is the phase-one entry point' \
+  "Codex adapter distinguishes start from execute"
+require_text "$root/adapter/codex.md" \
+  "single signed, unarchived work node" \
+  "Codex adapter describes execute auto-detect"
+require_text "$root/adapter/codex.md" \
   "./signoff" \
   "Codex adapter names the root sign-off helper"
 require_text "$root/adapter/codex-mounted.md" \
@@ -2254,6 +2727,18 @@ require_text "$root/adapter/loop.sh" \
 require_text "$root/adapter/loop.sh" \
   'HYPERCORE_LOOP_STATE_DIR="${HYPERCORE_LOOP_STATE_DIR:-$ROOT/.hypercore/loop-runs}"' \
   "loop defaults phase-two state under .hypercore/loop-runs"
+require_text "$root/adapter/loop.sh" \
+  'phase_two_reexec_from_snapshot()' \
+  "loop has an execute-start self snapshot helper"
+require_text "$root/adapter/loop.sh" \
+  'HYPERCORE_LOOP_SNAPSHOT_ACTIVE' \
+  "loop guards against recursive snapshot re-exec"
+require_text "$root/adapter/loop.sh" \
+  'exec "$snapshot_path" "${cmd[@]}"' \
+  "loop re-execs execute from the snapshot path"
+require_text "$root/adapter/loop.sh" \
+  'phase_two_file_digest "$LOOP_SCRIPT_PATH"' \
+  "loop version digest uses the running script path"
 require_text "$root/adapter/loop.sh" \
   'LOOP_RUN_EVENTS="$LOOP_RUN_DIR/events.jsonl"' \
   "loop writes a run event JSONL file"
@@ -2459,6 +2944,12 @@ require_text "$root/adapter/loop.sh" \
   'cache hit: skipping $unit_id' \
   "loop skips unchanged accepted units on cache hits"
 require_text "$root/adapter/loop.sh" \
+  'phase_two_unit_soft_miss_prior_state_key()' \
+  "loop carries a nonempty prior-state marker for cache-record soft misses"
+require_text "$root/adapter/loop.sh" \
+  'cache record soft-miss for $unit_id' \
+  "loop logs cache-record failures as soft misses"
+require_text "$root/adapter/loop.sh" \
   'invalidating cached evidence for $unit_id: $reason' \
   "loop invalidates downstream unit evidence when prior state changes"
 require_text "$root/adapter/loop.sh" \
@@ -2540,11 +3031,14 @@ require_text "$root/adapter/loop.sh" \
   'required_tier_one_evidence_clean "tier-two panel"' \
   "loop explains blocked panel ordering when unit-level acceptance is incomplete"
 require_text "$root/adapter/loop.sh" \
-  'Do not describe prior, future, or expected acceptance artifacts' \
-  "loop tells builders not to speculate about acceptance artifacts"
-require_text "$root/adapter/loop.sh" \
-  'Do not describe prior loop run state' \
-  "loop tells builders not to carry stale run-state notes into handoffs"
+  'Signed frame: $source_desc' \
+  "loop passes dynamic signed-frame location to implement"
+require_text "$root/adapter/gates/implement.md" \
+  'Do not describe prior, future, or expected' \
+  "implement gate tells builders not to speculate about acceptance artifacts"
+require_text "$root/adapter/gates/implement.md" \
+  'describe prior loop run state' \
+  "implement gate tells builders not to carry stale run-state notes into handoffs"
 require_text "$root/adapter/loop.sh" \
   'status --short --untracked-files=no' \
   "loop excludes unrelated untracked files from unit diff status"
@@ -2567,8 +3061,54 @@ require_text "$root/adapter/loop.sh" \
   'optional reviewers cannot clear them' \
   "loop reports optional reviewer non-override"
 require_text "$root/adapter/loop.sh" \
+  'sys="$(cat "$GATES/$instruction_gate.md")"' \
+  "run_gate re-reads gate prompt files per invocation"
+require_text "$root/adapter/loop.sh" \
+  'Decision line: ARCHIVE_DECISION: ADOPTED or ARCHIVE_DECISION: SHELVED' \
+  "loop passes the archive decision line dynamically"
+require_text "$root/adapter/loop.sh" \
   'archive decision must be exactly one line' \
   "loop parses archive decision exactly and singularly"
+reject_text_between "$root/adapter/loop.sh" \
+  "run_unit_build_attempt() {" \
+  "cmd_execute() {" \
+  'Read only $source_desc' \
+  "loop inline implement prompt no longer carries read-scope contract"
+reject_text_between "$root/adapter/loop.sh" \
+  "run_unit_build_attempt() {" \
+  "cmd_execute() {" \
+  "When this unit's own proof" \
+  "loop inline implement prompt no longer carries intent-edit contract"
+reject_text_between "$root/adapter/loop.sh" \
+  "run_unit_build_attempt() {" \
+  "cmd_execute() {" \
+  "Build only this proof-advancing unit" \
+  "loop inline implement prompt no longer carries unit-scope contract"
+reject_text_between "$root/adapter/loop.sh" \
+  "run_unit_build_attempt() {" \
+  "cmd_execute() {" \
+  "Do not describe prior, future, or expected acceptance artifacts" \
+  "loop inline implement prompt no longer carries handoff hygiene contract"
+reject_text_between "$root/adapter/loop.sh" \
+  'run_gate archive "Read Edit Write"' \
+  "printf '\\n--- gate: adoption history (move) ---\\n'" \
+  "Adopt or shelve node-local work" \
+  "loop inline archive prompt no longer carries adoption contract"
+reject_text_between "$root/adapter/loop.sh" \
+  'run_gate archive "Read Edit Write"' \
+  "printf '\\n--- gate: adoption history (move) ---\\n'" \
+  "according to its signed frame and the clean phase-two acceptance artifacts" \
+  "loop inline archive prompt no longer carries signed-frame contract"
+reject_text_between "$root/adapter/loop.sh" \
+  'run_gate archive "Read Edit Write"' \
+  "printf '\\n--- gate: adoption history (move) ---\\n'" \
+  "apply anything the units left unapplied" \
+  "loop inline archive prompt no longer carries separate-fold contract"
+reject_text_between "$root/adapter/loop.sh" \
+  'run_gate archive "Read Edit Write"' \
+  "printf '\\n--- gate: adoption history (move) ---\\n'" \
+  "stamp each touched segment's foot" \
+  "loop inline archive prompt no longer carries stamping contract"
 require_text "$root/adapter/loop.sh" \
   'running ./check.sh after history move' \
   "loop checks again after moving work history"
@@ -2644,6 +3184,12 @@ reject_text "$root/adapter/loop.sh" \
 require_text "$root/adapter/loop.sh" \
   "infer_signoff_work_name" \
   "loop can infer the single signable work node"
+require_text "$root/adapter/loop.sh" \
+  "infer_execute_work_name" \
+  "loop can infer the single signed unarchived work node"
+require_text "$root/adapter/loop.sh" \
+  "multiple signed, unarchived work nodes" \
+  "loop blocks ambiguous execute work inference"
 require_text "$root/adapter/loop.sh" \
   "HYPERCORE_OPERATOR" \
   "loop can infer sign-off operator from the environment"

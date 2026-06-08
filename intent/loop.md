@@ -30,6 +30,8 @@ condition that phase-two acceptance can test.
 implementation autonomy begins after sign-off: phase two builds from the signed frame in
 green proof-advancing units, and stops when the frame is incomplete, a check fails, or
 required implementation acceptance returns `FLAG`.
+execute runs phase two from an orchestrator snapshot made at execute start, so a unit that
+edits the live orchestrator material cannot corrupt the already-running phase-two process.
 orient: read the intent documents, the work in flight across the node tree, and the
 material's conventions; search the web for what you do not know; ask the operator what the
 artifacts cannot tell you; do not guess.
@@ -40,6 +42,8 @@ implement: build in proof-advancing units from the signed frame.
 an implementation unit is the smallest proof-advancing delta that leaves `./check.sh`
 green; units are vertical slices, so statements, material, and checks land together when
 the work requires all three.
+when a unit's own proof is a check over addressed-node intent, implement may edit that
+intent in the unit; those edits remain in-flight proof material until archive adoption.
 check: prove each statement with checks on the material, and run the phase-two acceptance
 scrutiny required by the signed frame and reversibility.
 `./check.sh` is green at every phase-two unit boundary and before any acceptance verdict
@@ -77,6 +81,9 @@ tier-one evidence is reused only when its cache key still matches the signed fra
 proof obligation, relevant prior-unit state, loop implementation version, recorded diff, and
 green mechanical-check evidence, and a cache miss rebuilds the unit and invalidates
 downstream unit evidence.
+cache recording is not a correctness gate: a per-unit cache-record failure is logged as a
+soft miss, phase two continues from the accepted unit evidence, and the unit rebuilds on a
+later run rather than aborting execute.
 unresolved required tier-one or tier-two `FLAG`s halt phase two before archive; the active
 work node remains in flight for the operator.
 the checks re-run for every statement, not only the ones a work node touched.
@@ -85,8 +92,9 @@ happens.
 archive: adopt or shelve the work according to the signed frame.
 one-way archive cannot fold or stamp until required implementation-acceptance artifacts
 are present and clean.
-adoption folds accepted child statements and material into the parent, stamps each touched
+adoption verifies the accepted applied delta against the signed frame, stamps each touched
 segment's foot with this operator, and records the work node as adopted history.
+adoption does not re-fold intent statements that phase-two units already applied in place.
 shelving records the work node as shelved history without changing parent truth.
 large work breaks into related work at frame, and related work is an ordinary work node in
 the node it alters.
@@ -110,6 +118,9 @@ act only on that addressed work.
 `loop.sh execute <work-name>` exposes phase-two run state for the addressed work while it
 runs and after recent failure or completion, including the active gate, status, harness
 session id, latest message, event history, and run artifact paths.
+`loop.sh execute <work-name>` re-execs from a read-only snapshot of `adapter/loop.sh` at
+execute start before phase-two builders, reviewers, or archive actors can edit the live
+orchestrator material.
 before launching the first phase-two executor gate, `loop.sh execute <work-name>` checks
 that the configured executor binary is present and that executor home/session state is
 writable; a failed preflight records failed run state and stops before the executor
@@ -170,6 +181,9 @@ the work node's `intent/frame/signoff.md`.
 `loop.sh execute <work-name>` derives implementation units from the signed frame, starts a
 fresh builder session for each unit, and records lean unit handoff, diff, and tier-one
 verdict artifacts under the work frame.
+`loop.sh execute <work-name>` passes only dynamic unit identifiers, proof obligation, and
+signed-frame location to the implement actor; the implement contract lives in
+`adapter/gates/implement.md`, which `run_gate` reads for each invocation.
 `loop.sh execute <work-name>` routes builders through the builder-model knob, defaulting to
 the strong model until the two-step plan/build work lands, separately from the strong
 review route; it gives each unit a three-attempt fast-builder budget, escalates an
@@ -183,9 +197,15 @@ dry-run, and lets real archive accept only `source: real-reviewer` required acce
 `loop.sh execute <work-name>` caches per-unit build and tier-one evidence under a
 signed-frame-derived key, skips unchanged accepted units on rerun, and rebuilds cache misses
 while invalidating downstream evidence.
+`loop.sh execute <work-name>` treats a per-unit cache-record failure as a logged soft miss:
+it keeps the unit accepted, continues phase two, and leaves that unit uncached for the next
+run instead of failing a correctness gate.
 `loop.sh execute <work-name>` treats malformed, evidence-free, or unsupported-source
 implementation-acceptance output as `FLAG`, blocks unresolved required flags, and runs the
 concurrent one-way tier-two panel before archive.
+`loop.sh execute <work-name>` passes only dynamic work location, acceptance artifact
+location, and the archive decision line to the archive actor; the archive contract lives in
+`adapter/gates/archive.md`, which `run_gate` reads for each invocation.
 `loop.sh execute <work-name>` records the addressed work in node-local history after archive.
 
 ---

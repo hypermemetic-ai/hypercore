@@ -13,8 +13,16 @@ node is a dormant slot, not a fake project.
 
 Materialize the delta in the requested proof-advancing unit. Keep the unit small enough
 that `./check.sh` can be green at the unit boundary. Write only lean handoff state needed
-by later cleared sessions and independent acceptance reviewers. Do **not** edit the intent
-documents — folding the delta into them is the archive gate, not this one.
+by later cleared sessions and independent acceptance reviewers. When this unit's own proof
+is a check over intent, edit the addressed node's intent documents
+(`intent/<segment>.md` and `intent/machine-statements/<segment>.md`) in this unit so
+`./check.sh` is green at the unit boundary; otherwise leave intent changes to the archive
+gate.
+
+Build only the requested proof-advancing unit. Do not describe prior, future, or expected
+acceptance artifacts; the loop records acceptance evidence after tier-one review. Do not
+describe prior loop run state, unrelated untracked files, or cumulative diff noise unless
+they are a real proof gap for this unit.
 
 Execute may resume through signed-frame-derived cache state that reuses already accepted
 units. Treat that as orchestrator state only: build and report the requested unit, and do

@@ -5,9 +5,12 @@ whatever node-local material its work needs beside that reserved tree.
 active work is bounded by the parent intent statements whose reach includes it.
 a work node may propose parent intent or parent material amendments without making those
 amendments current.
-until adoption accepts an amendment, the parent intent remains current.
-adoption folds accepted child statements and material into the parent and records the work
-node as history.
+intent or material that a signed work node applies in place during phase two is in-flight,
+not adopted-current.
+until adoption accepts an amendment, the parent intent remains current as adopted truth;
+this does not deny that in-flight phase-two proof material may be present in the worktree.
+adoption stamps the operator's endorsement and records history, making the accepted applied
+delta adopted-current.
 shelving records the work node as history without making its proposed amendments parent
 truth.
 a work node may be temporary, durable, adopted, shelved, abandoned, or indefinitely active.
