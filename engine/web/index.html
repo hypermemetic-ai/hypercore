@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>hypercore</title>
+    <script src="https://unpkg.com/cytoscape@3.31.2/dist/cytoscape.min.js"></script>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        background: #f7f7f4;
+        color: #202124;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+      }
+
+      .app {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 320px;
+        min-height: 100vh;
+      }
+
+      .stage {
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr);
+        min-width: 0;
+      }
+
+      .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 60px;
+        padding: 12px 16px;
+        border-bottom: 1px solid #d9d6cc;
+        background: #fffdf8;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 700;
+      }
+
+      label {
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      select {
+        min-width: 220px;
+        max-width: 100%;
+        padding: 8px 10px;
+        border: 1px solid #b9b5aa;
+        border-radius: 6px;
+        background: white;
+        color: #202124;
+      }
+
+      #cy {
+        min-height: 0;
+      }
+
+      .panel {
+        border-left: 1px solid #d9d6cc;
+        background: #ffffff;
+        padding: 18px;
+        overflow: auto;
+      }
+
+      .panel h2 {
+        margin: 0 0 4px;
+        font-size: 18px;
+      }
+
+      .muted {
+        color: #64675f;
+        font-size: 13px;
+      }
+
+      .section {
+        margin-top: 18px;
+      }
+
+      .section h3 {
+        margin: 0 0 8px;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0;
+        color: #64675f;
+      }
+
+      pre {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        margin: 0;
+        padding: 10px;
+        border: 1px solid #dadde2;
+        border-radius: 6px;
+        background: #f5f7fa;
+        font-size: 12px;
+      }
+
+      ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      li {
+        padding: 8px 0;
+        border-top: 1px solid #ece9df;
+        font-size: 13px;
+      }
+
+      @media (max-width: 780px) {
+        .app {
+          grid-template-columns: 1fr;
+          grid-template-rows: minmax(58vh, 1fr) auto;
+        }
+
+        .panel {
+          border-left: 0;
+          border-top: 1px solid #d9d6cc;
+          max-height: 42vh;
+        }
+
+        .toolbar {
+          flex-wrap: wrap;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <section class="stage" aria-label="Graph">
+        <div class="toolbar">
+          <h1>hypercore</h1>
+          <label for="clusterSelect">Cluster</label>
+          <select id="clusterSelect">
+            <option value="">All relations</option>
+          </select>
+        </div>
+        <div id="cy"></div>
+      </section>
+      <aside class="panel" id="details">
+        <h2>No node selected</h2>
+        <p class="muted">Click a node to inspect it.</p>
+      </aside>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>
