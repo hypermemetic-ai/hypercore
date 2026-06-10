@@ -21,3 +21,7 @@ Folding is reflected in both places. The database records the fold, and the file
 An operation is one move on the problem state, of six kinds: frame, gather, derive, generate, test, commit. Work is made of operations.
 
 The alphabet of operations never grows. Named clusters of operations are the compounds that grow freely; decomposition is how a compound expands, not a primitive.
+
+An operation earns a node when it crosses the operator–machine boundary or when a fold depends on its standing; reasoning that stays inside one party is absorbed into the operations it serves. The graph is a commitment ledger, not a trace of everything thought.
+
+Derive is on probation: as of 2026-06-10 no derive operation has been recorded. A multi-step projection worth checking independently of the verdict it feeds is a derive and is recorded as one. If derive stays unused through inference-heavy work, the operator decides whether it folds into test and gather. [machine]

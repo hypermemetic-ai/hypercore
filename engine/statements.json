@@ -440,6 +440,24 @@
       "owner": "operator",
       "segment": "work",
       "text": "The alphabet of operations never grows. Named clusters of operations are the compounds that grow freely; decomposition is how a compound expands, not a primitive."
+    },
+    {
+      "created_at": "2026-06-10T14:27:52.400901",
+      "id": "s_f34d13b0",
+      "links": [],
+      "ord": 12,
+      "owner": "operator",
+      "segment": "work",
+      "text": "An operation earns a node when it crosses the operator\u2013machine boundary or when a fold depends on its standing; reasoning that stays inside one party is absorbed into the operations it serves. The graph is a commitment ledger, not a trace of everything thought."
+    },
+    {
+      "created_at": "2026-06-10T14:27:52.633887",
+      "id": "s_88dc042e",
+      "links": [],
+      "ord": 13,
+      "owner": "machine",
+      "segment": "work",
+      "text": "Derive is on probation: as of 2026-06-10 no derive operation has been recorded. A multi-step projection worth checking independently of the verdict it feeds is a derive and is recorded as one. If derive stays unused through inference-heavy work, the operator decides whether it folds into test and gather."
     }
   ]
 }
