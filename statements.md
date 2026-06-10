@@ -18,6 +18,6 @@ The operator and the machine are both bound by coherence. When the operator's de
 
 When the operator leaves a meaningful choice open and the machine settles it, that settlement is visible as machine-owned intent until the operator takes it on. The operator must be informed of this.
 
-Intent is discovered through work more than collected in advance. Revising a statement must stay cheap, or intent hardens into a spec the work quietly ignores. [machine]
+A revision lands as one edit and one commit; nothing we build may grow that path. What it breaks becomes work, after it lands.
 
 The default motion is ratification: the machine drafts concrete statements and the operator endorses, amends, or strikes them. The operator is rarely asked to author from nothing.
