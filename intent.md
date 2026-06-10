@@ -72,7 +72,9 @@ The machine never endorses for the operator.
 
 Ownership does not make a statement true. When evidence turns against a statement — whoever owns it — the operator hears about it; only the owner changes the words.
 
-An intent is operator-owned or machine-owned. The material that corresponds to it answers to whichever stands behind it.
+Every statement is endorsed or unendorsed: endorsed is the operator's responsibility, unendorsed is the machine's. Material answers to whoever is responsible for the statement behind it.
+
+Unendorsed statements are debt. Leaving one unprocessed doesn't stop the machine from asking again; and as unendorsed statements come to depend on each other, the operator's model of the system drifts from reality.
 
 Ownership is visible in the file itself: a machine-owned statement ends with the marker [machine]. Endorsing drops the marker; amending and striking are the operator's other two answers.
 
