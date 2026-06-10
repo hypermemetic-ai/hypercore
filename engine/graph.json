@@ -97,11 +97,12 @@
       "props": {
         "check": "operator",
         "fold_when": "the operator works in the dark viewer comfortably and watches a change land without refreshing",
+        "folded_at": "2026-06-10T20:46:57+00:00",
         "on": "s_7b70bab7",
         "produces": [
           "s_cb9d5e78"
         ],
-        "status": "open"
+        "status": "abandoned"
       }
     },
     {
@@ -112,8 +113,9 @@
       "props": {
         "check": "operator",
         "fold_when": "the operator runs one real piece of work end to end from the queue \u2014 scopes it, decides with consequences in view, answers in place \u2014 without the terminal or the raw graph",
+        "folded_at": "2026-06-10T20:46:57+00:00",
         "on": "s_7c4763c0",
-        "status": "open"
+        "status": "abandoned"
       }
     },
     {
@@ -142,8 +144,9 @@
       "props": {
         "check": "operator",
         "fold_when": "the operator opens the viewer and can tell machine-owned statements and open work apart at a glance",
+        "folded_at": "2026-06-10T20:46:58+00:00",
         "on": "s_f35147a3",
-        "status": "open"
+        "status": "abandoned"
       }
     },
     {
@@ -154,8 +157,9 @@
       "props": {
         "check": "operator",
         "fold_when": "the operator watches an operation land live, sees the queue of what awaits their judgment, and records a verdict or endorsement in the viewer without touching the CLI",
+        "folded_at": "2026-06-10T20:46:58+00:00",
         "on": "s_a6ea7c7a",
-        "status": "open"
+        "status": "abandoned"
       }
     },
     {

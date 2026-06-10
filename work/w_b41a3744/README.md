@@ -1,9 +1,10 @@
 # viewer as workbench: live loop, judgment queue, act in place
 
-`w_b41a3744` · **open** · check: operator
+`w_b41a3744` · **abandoned** · check: operator
 
 on: `s_a6ea7c7a` — "The viewer is where the operator acts, not only reads: the loop is visible live as operat…"
 fold when: the operator watches an operation land live, sees the queue of what awaits their judgment, and records a verdict or endorsement in the viewer without touching the CLI
+folded: 2026-06-10T20:46:58+00:00
 
 ## frame
 

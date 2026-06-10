@@ -1,9 +1,10 @@
 # viewer shows ownership and work status
 
-`w_55b5404b` · **open** · check: operator
+`w_55b5404b` · **abandoned** · check: operator
 
 on: `s_f35147a3` — "The operator can read the system's state at a glance: the viewer shows who owns each stat…"
 fold when: the operator opens the viewer and can tell machine-owned statements and open work apart at a glance
+folded: 2026-06-10T20:46:58+00:00
 
 ## gather
 

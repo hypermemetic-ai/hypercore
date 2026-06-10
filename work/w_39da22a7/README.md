@@ -1,9 +1,10 @@
 # the command center: a queue of decisions with consequences
 
-`w_39da22a7` · **open** · check: operator
+`w_39da22a7` · **abandoned** · check: operator
 
 on: `s_7c4763c0` — "The operator's interface is a queue of decisions. A decision arrives with the context to …"
 fold when: the operator runs one real piece of work end to end from the queue — scopes it, decides with consequences in view, answers in place — without the terminal or the raw graph
+folded: 2026-06-10T20:46:57+00:00
 
 ## frame
 

@@ -1,9 +1,10 @@
 # viewer comfort: dark mode, readability, live updates
 
-`w_1baf8df3` · **open** · check: operator
+`w_1baf8df3` · **abandoned** · check: operator
 
 on: `s_7b70bab7` — "The viewer is comfortable to live in: dark by default and easy on the eyes, readable, and…"
 fold when: the operator works in the dark viewer comfortably and watches a change land without refreshing
+folded: 2026-06-10T20:46:57+00:00
 produces:
 - `s_cb9d5e78` — "The viewer keeps itself current: it watches a cheap fingerprint of the store and re-deriv…"
 
