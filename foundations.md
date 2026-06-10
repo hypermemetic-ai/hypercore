@@ -26,6 +26,4 @@ Conversation produces decisions. Conversation around an open decision brings inf
 
 Whether work is done now, decomposed into subgraphs, deferred, or declined is itself a queued decision, and every decision records its grounds at the moment it is made. [machine]
 
-The viewer is comfortable to live in: dark by default and easy on the eyes, readable, and live — changes to the graph appear as they are made, without the operator refreshing. [machine]
-
-The viewer keeps itself current: it watches a cheap fingerprint of the store and re-derives the whole view when the graph moves. Staleness is the machine's to notice, never the operator's to manage. [machine]
+Staleness is the machine's to notice, never the operator's to manage.
