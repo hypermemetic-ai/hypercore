@@ -1,4 +1,0 @@
-# Python 3.12 required (3.13/3.14 + the duckpgq community build segfault on LOAD).
-# duckdb pinned to 1.4.1: newest version where the duckpgq community extension
-# loads AND runs. 1.5.0/1.5.1 segfault on LOAD; 1.5.2/1.5.3 have no duckpgq build.
-duckdb==1.4.1
