@@ -43,7 +43,17 @@ class HypercoreHandler(SimpleHTTPRequestHandler):
 
 def serve(db_path: str = "hypercore.duckdb", host: str = "127.0.0.1", port: int = 8000):
     handler = partial(HypercoreHandler, db_path=db_path, directory=str(WEB_ROOT))
-    httpd = ThreadingHTTPServer((host, port), handler)
+    try:
+        httpd = ThreadingHTTPServer((host, port), handler)
+    except OSError as exc:
+        if exc.errno == 98:  # EADDRINUSE
+            raise ValueError(
+                f"port {port} is already serving — likely an earlier "
+                f"`hypercore serve`. The running one reads the database and "
+                f"files per request, so it is already current: open "
+                f"http://{host}:{port}/. To run a second viewer, pass --port."
+            ) from exc
+        raise
     print(f"serving http://{host}:{port} from {WEB_ROOT}")
     try:
         httpd.serve_forever()

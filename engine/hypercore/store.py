@@ -42,8 +42,9 @@ class Store:
         label: str,
         id: str | None = None,
         props: dict | None = None,
+        id_prefix: str = "n_",
     ) -> str:
-        node_id = id or self._new_id("n_", "nodes")
+        node_id = id or self._new_id(id_prefix, "nodes")
         self._ensure_new("nodes", node_id)
         self.con.execute(
             "INSERT INTO nodes (id, kind, label, props) VALUES (?, ?, ?, ?)",
@@ -126,6 +127,161 @@ class Store:
             [material_id, node_id, kind, label, lang, body, path],
         )
         return material_id
+
+    def update_node(
+        self,
+        id: str,
+        label: str | None = None,
+        props_patch: dict | None = None,
+    ) -> None:
+        """Change a node's label and/or merge a patch into its props.
+
+        A patch key set to None removes that key.
+        """
+        self._ensure_exists("nodes", id, "node")
+        if label is not None:
+            self.con.execute("UPDATE nodes SET label = ? WHERE id = ?", [label, id])
+        if props_patch:
+            row = self.con.execute(
+                "SELECT props FROM nodes WHERE id = ?", [id]
+            ).fetchone()
+            props = self._parse_json(row[0])
+            props.update(props_patch)
+            props = {k: v for k, v in props.items() if v is not None}
+            self.con.execute(
+                "UPDATE nodes SET props = ? WHERE id = ?", [self._json(props), id]
+            )
+
+    def delete_node(self, id: str) -> dict:
+        """Delete a node, its material, and every relation touching it.
+
+        Returns what went with it, so the caller can report the loss rather
+        than silently orphan the graph around it.
+        """
+        self._ensure_exists("nodes", id, "node")
+        relations = self._relation_dicts(
+            self.con.execute(
+                "SELECT id, src, dst, type, props FROM relations WHERE src = ? OR dst = ?",
+                [id, id],
+            ).fetchall()
+        )
+        relation_ids = [relation["id"] for relation in relations]
+        if relation_ids:
+            placeholders = ",".join("?" for _ in relation_ids)
+            self.con.execute(
+                f"DELETE FROM cluster_relations WHERE relation_id IN ({placeholders})",
+                relation_ids,
+            )
+            self.con.execute(
+                f"DELETE FROM relations WHERE id IN ({placeholders})",
+                relation_ids,
+            )
+        material_ids = [
+            row[0]
+            for row in self.con.execute(
+                "SELECT id FROM material WHERE node_id = ?", [id]
+            ).fetchall()
+        ]
+        self.con.execute("DELETE FROM material WHERE node_id = ?", [id])
+        self.con.execute("DELETE FROM nodes WHERE id = ?", [id])
+        return {"relations": relations, "material": material_ids}
+
+    def dump(self) -> dict:
+        """The whole store as one JSON-ready dict, bodies included.
+
+        This is the durable form of the graph: deterministic, diffable, and
+        loadable back without loss. The DuckDB file is only a working copy.
+        """
+
+        def rows(sql: str) -> list[dict]:
+            cursor = self.con.execute(sql)
+            columns = [d[0] for d in cursor.description]
+            return [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+        data = {
+            "nodes": rows(
+                "SELECT id, kind, label, props, created_at FROM nodes ORDER BY id"
+            ),
+            "relations": rows(
+                "SELECT id, src, dst, type, props, created_at FROM relations ORDER BY id"
+            ),
+            "clusters": rows(
+                "SELECT id, name, description, created_at FROM clusters ORDER BY id"
+            ),
+            "cluster_relations": rows(
+                """
+                SELECT cluster_id, relation_id FROM cluster_relations
+                ORDER BY cluster_id, relation_id
+                """
+            ),
+            "material": rows(
+                """
+                SELECT id, node_id, kind, label, lang, body, path, created_at
+                FROM material ORDER BY id
+                """
+            ),
+        }
+        for table in data.values():
+            for row in table:
+                if "props" in row:
+                    row["props"] = self._parse_json(row["props"])
+                if row.get("created_at") is not None:
+                    row["created_at"] = row["created_at"].isoformat()
+        return data
+
+    def load(self, data: dict) -> None:
+        """Replace the store's contents with a dumped snapshot."""
+        self.clear()
+        for row in data.get("nodes", []):
+            self.con.execute(
+                "INSERT INTO nodes (id, kind, label, props, created_at) VALUES (?, ?, ?, ?, ?)",
+                [
+                    row["id"],
+                    row["kind"],
+                    row["label"],
+                    self._json(row.get("props")),
+                    row.get("created_at"),
+                ],
+            )
+        for row in data.get("relations", []):
+            self.con.execute(
+                "INSERT INTO relations (id, src, dst, type, props, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                [
+                    row["id"],
+                    row["src"],
+                    row["dst"],
+                    row["type"],
+                    self._json(row.get("props")),
+                    row.get("created_at"),
+                ],
+            )
+        for row in data.get("clusters", []):
+            self.con.execute(
+                "INSERT INTO clusters (id, name, description, created_at) VALUES (?, ?, ?, ?)",
+                [row["id"], row["name"], row.get("description"), row.get("created_at")],
+            )
+        for row in data.get("cluster_relations", []):
+            self.con.execute(
+                "INSERT INTO cluster_relations (cluster_id, relation_id) VALUES (?, ?)",
+                [row["cluster_id"], row["relation_id"]],
+            )
+        for row in data.get("material", []):
+            self.con.execute(
+                """
+                INSERT INTO material (id, node_id, kind, label, lang, body, path, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    row["id"],
+                    row["node_id"],
+                    row["kind"],
+                    row.get("label"),
+                    row.get("lang"),
+                    row.get("body"),
+                    row.get("path"),
+                    row.get("created_at"),
+                ],
+            )
 
     def neighbors(
         self,

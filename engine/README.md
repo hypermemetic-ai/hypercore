@@ -19,6 +19,13 @@ Query commands print JSON (readable by both humans and agents). Mutation
 commands — `add-node`, `add-relation`, `add-cluster`, `add-material` — print the
 new id. `--db PATH` chooses the database file (default `hypercore.duckdb`).
 
+Intent and work have their own verbs: `add-statement` / `amend` / `strike` /
+`endorse` for statements, `work-open` / `work-add` / `work-check` / `work-fold`
+for execution graphs, `status` / `show` to navigate. Every mutating verb
+rewrites the root markdown and `graph.json` (the durable, git-tracked form of
+the graph; the `.duckdb` file is ignored by git and rebuilt with `load`).
+`ingest` only bootstraps an empty database from the files.
+
 The viewer opens the database **read-only**. Change the graph with the CLI, then
 refresh the browser.
 
