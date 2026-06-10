@@ -373,6 +373,21 @@ function statementReferences(sid) {
   return { bound, produced };
 }
 
+// The blast radius of answering a statement, computed before the click —
+// the consequence engine's client half (s_7c4763c0, s_070617cf). Mirrors
+// Store.statement_consequences so card and verb tell the same story.
+function statementConsequences(sid) {
+  const { bound, produced } = statementReferences(sid);
+  const anchorsOpen = bound.filter((n) => (n.props || {}).status !== "folded");
+  const anchorsFolded = bound.filter(
+    (n) => (n.props || {}).status === "folded",
+  );
+  const linkedBy = statements().filter((s) =>
+    (s.links || []).some((link) => link.to === sid),
+  );
+  return { anchorsOpen, anchorsFolded, produced, linkedBy };
+}
+
 // Open tests whose judge is the operator: their verdicts are judgment the
 // machine cannot spend (s_81c38173).
 function operatorTestsOpen() {
@@ -602,9 +617,123 @@ function renderQueue(panel) {
   }
 
   for (const s of pending) {
-    box.appendChild(statementRow(s, { endorsable: true }));
+    box.appendChild(decisionCard(s));
   }
   panel.appendChild(box);
+}
+
+/* ---------- decision cards: context and consequences before the click ---------- */
+
+// A pending statement as a decision card (s_7c4763c0): the question, why
+// it is in front of the operator, what each answer entails — with the
+// breakage computed and in view at the moment of deciding, not after it.
+function decisionCard(statement) {
+  const card = document.createElement("div");
+  card.className = "row task card machine";
+  card.dataset.statement = statement.id;
+
+  const meta = document.createElement("span");
+  meta.className = "meta";
+  meta.appendChild(badge("ratify", "machine"));
+  const id = document.createElement("span");
+  id.className = "id";
+  id.textContent = `${statement.id} · ${statement.segment}`;
+  meta.appendChild(id);
+  card.appendChild(meta);
+
+  const text = document.createElement("div");
+  text.className = "task-text link";
+  text.textContent = clip(statement.text, 240);
+  text.addEventListener("click", () => selectStatement(statement.id));
+  card.appendChild(text);
+
+  card.appendChild(whyLine(statement));
+  card.appendChild(consequencesBlock(statement));
+
+  const actions = document.createElement("div");
+  actions.className = "actions";
+  actions.appendChild(endorseButton(statement.id));
+  card.appendChild(actions);
+  actions.appendChild(statementActions(statement));
+  return card;
+}
+
+// Why this decision is in front of the operator: its provenance.
+function whyLine(statement) {
+  const why = document.createElement("div");
+  why.className = "why";
+  const { produced } = statementReferences(statement.id);
+  if (produced.length) {
+    const work = produced[0];
+    why.textContent = "drafted by the machine, produced by ";
+    const link = document.createElement("span");
+    link.className = "link";
+    link.textContent = `${work.id} — ${clip(work.label, 60)}`;
+    link.addEventListener("click", () => selectNode(work.id));
+    why.appendChild(link);
+  } else {
+    why.textContent =
+      "drafted by the machine, awaiting your answer: endorse, amend, or strike";
+  }
+  return why;
+}
+
+// What each answer entails — the card's consequence readout. Endorse and
+// amend never break anything; strike's line is computed, never assumed.
+function consequencesBlock(statement) {
+  const list = document.createElement("ul");
+  list.className = "consequences";
+
+  const line = (verb, parts, warn) => {
+    const li = document.createElement("li");
+    if (warn) li.className = "warn";
+    const v = document.createElement("span");
+    v.className = "verb";
+    v.textContent = verb;
+    li.appendChild(v);
+    for (const part of parts) {
+      li.appendChild(
+        typeof part === "string" ? document.createTextNode(part) : part,
+      );
+    }
+    list.appendChild(li);
+  };
+
+  const idLink = (node) => {
+    const span = document.createElement("span");
+    span.className = "link";
+    span.textContent = node.id;
+    span.title = node.label || node.text || "";
+    span.addEventListener("click", () =>
+      node.kind ? selectNode(node.id) : selectStatement(node.id),
+    );
+    return span;
+  };
+
+  if (statement.owner === "machine") {
+    line("endorse", ["the words become yours; nothing else moves"]);
+    line("amend", ["your words replace the machine's; ownership follows"]);
+  } else {
+    line("amend", ["your words replace these"]);
+  }
+
+  const c = statementConsequences(statement.id);
+  const broken = [];
+  for (const n of c.anchorsOpen) {
+    broken.push("open work loses its anchor: ", idLink(n), "  ");
+  }
+  for (const n of c.anchorsFolded.concat(c.produced)) {
+    broken.push("a folded record points at nothing: ", idLink(n), "  ");
+  }
+  for (const s of c.linkedBy) {
+    broken.push("loses its link target: ", idLink(s), "  ");
+  }
+  if (broken.length) {
+    line("strike", ["⚠ ", ...broken], true);
+  } else {
+    line("strike", ["removes the words; nothing references them"]);
+  }
+  return list;
 }
 
 function renderFeed(panel) {
@@ -1221,6 +1350,9 @@ function renderStatementDetails(statement) {
   }
   details.appendChild(owner);
 
+  // What each answer entails, computed — the same readout the card shows.
+  details.appendChild(consequencesBlock(statement));
+
   // The operator's other two answers (endorsement.md): amend and strike.
   details.appendChild(statementActions(statement));
 
@@ -1265,12 +1397,25 @@ function statementActions(statement) {
   form.className = "inline-form column";
   form.hidden = true;
 
-  amend.addEventListener("click", () => {
+  // Grounds ride with every answer (s_565ca729): a strike that means
+  // "I disagree" and one that means "I don't understand" should be
+  // tellable apart in the record.
+  const groundsInput = (placeholder) => {
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "grounds";
+    input.placeholder = placeholder;
+    return input;
+  };
+
+  amend.addEventListener("click", (event) => {
+    event.stopPropagation();
     form.hidden = false;
     form.innerHTML = "";
     const input = document.createElement("textarea");
     input.className = "grounds";
     input.value = statement.text;
+    const because = groundsInput("because — recorded with the decision");
     const save = document.createElement("button");
     save.type = "button";
     save.className = "verdict pass";
@@ -1279,7 +1424,11 @@ function statementActions(statement) {
       const text = input.value.trim();
       if (!text) return;
       save.textContent = "…";
-      const result = await act("/api/amend", { id: statement.id, text });
+      const result = await act("/api/amend", {
+        id: statement.id,
+        text,
+        grounds: because.value.trim(),
+      });
       if (result) selectStatement(statement.id);
     });
     const cancel = document.createElement("button");
@@ -1292,32 +1441,53 @@ function statementActions(statement) {
     const buttons = document.createElement("div");
     buttons.className = "inline-form";
     buttons.append(save, cancel);
-    form.append(input, buttons);
+    form.append(input, because, buttons);
     input.focus();
   });
 
-  strike.addEventListener("click", async () => {
-    if (!strike.classList.contains("confirm")) {
-      strike.classList.add("confirm");
-      strike.textContent = "strike — sure?";
-      setTimeout(() => {
-        strike.classList.remove("confirm");
-        strike.textContent = "strike";
-      }, 2500);
-      return;
-    }
-    strike.textContent = "…";
-    const result = await act("/api/strike", { id: statement.id });
-    if (result) {
-      state.selected = null;
-      markSelectedRow();
-      const details = document.getElementById("details");
-      details.innerHTML = "";
-      details.appendChild(titleEl("Statement struck"));
-      details.appendChild(
-        mutedLine(`${statement.id} removed: ${clip(statement.text, 90)}`),
-      );
-    }
+  strike.addEventListener("click", (event) => {
+    // Striking opens the decision, never lands it: the breakage and a
+    // grounds field come first (s_070617cf), the red button second.
+    event.stopPropagation();
+    form.hidden = false;
+    form.innerHTML = "";
+    form.appendChild(consequencesBlock(statement));
+    const because = groundsInput(
+      "because — disagreement and confusion read differently later",
+    );
+    const confirm = document.createElement("button");
+    confirm.type = "button";
+    confirm.className = "quiet danger confirm";
+    confirm.textContent = "strike it";
+    confirm.addEventListener("click", async () => {
+      confirm.textContent = "…";
+      const result = await act("/api/strike", {
+        id: statement.id,
+        grounds: because.value.trim(),
+      });
+      if (result) {
+        state.selected = null;
+        markSelectedRow();
+        const details = document.getElementById("details");
+        details.innerHTML = "";
+        details.appendChild(titleEl("Statement struck"));
+        details.appendChild(
+          mutedLine(`${statement.id} removed: ${clip(statement.text, 90)}`),
+        );
+      }
+    });
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.className = "quiet";
+    cancel.textContent = "keep it";
+    cancel.addEventListener("click", () => {
+      form.hidden = true;
+    });
+    const buttons = document.createElement("div");
+    buttons.className = "inline-form";
+    buttons.append(because, confirm, cancel);
+    form.appendChild(buttons);
+    because.focus();
   });
 
   wrap.append(amend, strike, form);

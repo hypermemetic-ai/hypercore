@@ -372,6 +372,53 @@
         color: var(--accent);
       }
 
+      /* ---- decision cards: context and consequences before the click ---- */
+
+      .card .why {
+        font-size: 11.5px;
+        color: var(--muted);
+        margin: 0 0 4px;
+      }
+
+      .card .why .link,
+      .consequences .link {
+        cursor: pointer;
+        text-decoration: underline dotted;
+      }
+
+      .card .why .link:hover,
+      .consequences .link:hover {
+        color: var(--accent);
+      }
+
+      ul.consequences {
+        margin: 4px 0 6px;
+        padding: 0 0 0 8px;
+        border-left: 2px solid var(--border-soft);
+        list-style: none;
+        font-size: 11.5px;
+        color: var(--muted);
+      }
+
+      ul.consequences li {
+        margin: 2px 0;
+      }
+
+      ul.consequences .verb {
+        display: inline-block;
+        min-width: 52px;
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      ul.consequences li.warn {
+        color: var(--fail);
+      }
+
+      ul.consequences li.warn .link {
+        color: var(--fail);
+      }
+
       .actions {
         display: flex;
         flex-wrap: wrap;

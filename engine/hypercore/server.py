@@ -107,6 +107,7 @@ class HypercoreHandler(SimpleHTTPRequestHandler):
             ids = payload.get("ids")
             if not isinstance(ids, list) or not ids:
                 raise ValueError("ids: a non-empty list of statement ids")
+            grounds = (payload.get("grounds") or "").strip() or None
             endorsed, already = [], []
             with Store(self.db_path) as store:
                 for sid in ids:
@@ -117,6 +118,13 @@ class HypercoreHandler(SimpleHTTPRequestHandler):
                         already.append(sid)
                     else:
                         store.update_statement(sid, owner="operator")
+                        store.record_decision(
+                            "endorse",
+                            sid,
+                            text=statement["text"],
+                            grounds=grounds,
+                            actor="operator, via the viewer",
+                        )
                         endorsed.append(sid)
                 write_views(store)
             self.send_json(
@@ -169,9 +177,17 @@ class HypercoreHandler(SimpleHTTPRequestHandler):
             text = (payload.get("text") or "").strip()
             if not sid or not text:
                 raise ValueError("id and text are required")
+            grounds = (payload.get("grounds") or "").strip() or None
             with Store(self.db_path) as store:
-                fetch_statement(store, sid)
+                statement = fetch_statement(store, sid)
                 store.update_statement(sid, text=text, owner="operator")
+                store.record_decision(
+                    "amend",
+                    sid,
+                    text=statement["text"],
+                    grounds=grounds,
+                    actor="operator, via the viewer",
+                )
                 write_views(store)
             self.send_json(200, {"id": sid, "owner": "operator"})
         except ValueError as exc:
@@ -189,12 +205,43 @@ class HypercoreHandler(SimpleHTTPRequestHandler):
             sid = payload.get("id")
             if not sid:
                 raise ValueError("id is required")
+            grounds = (payload.get("grounds") or "").strip() or None
             with Store(self.db_path) as store:
                 statement = fetch_statement(store, sid)
+                # Blast radius before the strike lands (s_070617cf); the
+                # card showed it, the response restates it for the record.
+                consequences = store.statement_consequences(sid)
                 store.delete_statement(sid)
                 renumber_segment(store, statement["segment"])
+                store.record_decision(
+                    "strike",
+                    sid,
+                    text=statement["text"],
+                    grounds=grounds,
+                    actor="operator, via the viewer",
+                )
                 write_views(store)
-            self.send_json(200, {"struck": sid, "text": statement["text"]})
+            self.send_json(
+                200,
+                {
+                    "struck": sid,
+                    "text": statement["text"],
+                    "breaks": {
+                        "anchors_open": [
+                            n["id"] for n in consequences["anchors_open"]
+                        ],
+                        "anchors_folded": [
+                            n["id"] for n in consequences["anchors_folded"]
+                        ],
+                        "produced": [
+                            n["id"] for n in consequences["produced"]
+                        ],
+                        "linked_by": [
+                            s["id"] for s in consequences["linked_by"]
+                        ],
+                    },
+                },
+            )
         except ValueError as exc:
             self.send_json(400, {"error": str(exc)})
         except Exception as exc:

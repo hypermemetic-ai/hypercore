@@ -1,6 +1,7 @@
 {
   "cluster_relations": [],
   "clusters": [],
+  "decisions": [],
   "material": [
     {
       "body": null,
@@ -444,6 +445,19 @@
       }
     },
     {
+      "created_at": "2026-06-10T15:08:04.028845",
+      "id": "wn_55eb6516",
+      "kind": "gather",
+      "label": "operator scoped the work: thin slice first, on the machine's recommendation \u2014 consequence engine + decision cards over the ratification queue; triage later, machine-behind-the-interface last (their words: your call, approved)",
+      "props": {
+        "roles": {
+          "execute": "machine",
+          "propose": "operator"
+        },
+        "work": "w_39da22a7"
+      }
+    },
+    {
       "created_at": "2026-06-10T03:41:34.458210",
       "id": "wn_627539fe",
       "kind": "test",
@@ -674,6 +688,20 @@
       }
     },
     {
+      "created_at": "2026-06-10T15:26:20.073584",
+      "id": "wn_96296798",
+      "kind": "test",
+      "label": "the operator ratifies from cards: context and consequences are in view at the moment of deciding, and the grounds they type survive the statement they answer",
+      "props": {
+        "roles": {
+          "execute": "machine",
+          "judge": "operator",
+          "propose": "machine"
+        },
+        "work": "w_39da22a7"
+      }
+    },
+    {
       "created_at": "2026-06-10T13:14:38.364736",
       "id": "wn_9b596c72",
       "kind": "test",
@@ -745,6 +773,22 @@
       }
     },
     {
+      "created_at": "2026-06-10T15:26:17.601749",
+      "id": "wn_b6fccf65",
+      "kind": "test",
+      "label": "cards render in the queue: a pending statement shows its provenance, what each answer entails (strike warning computed live), and grounds fields on strike and amend; the confirm never lands without the breakage in view",
+      "props": {
+        "grounds": "CDP suite 7/7 against a /tmp copy on :8013 \u2014 card renders, why-line present, warn line names the anchored open work, strike opens form with grounds + consequences before the red button, decision recorded as operator-via-the-viewer",
+        "roles": {
+          "execute": "machine",
+          "judge": "machine",
+          "propose": "machine"
+        },
+        "verdict": "pass",
+        "work": "w_39da22a7"
+      }
+    },
+    {
       "created_at": "2026-06-10T12:38:50.415457",
       "id": "wn_b87321a1",
       "kind": "gather",
@@ -800,6 +844,22 @@
           "propose": "machine"
         },
         "work": "w_423ff83b"
+      }
+    },
+    {
+      "created_at": "2026-06-10T15:26:04.129561",
+      "id": "wn_c988f5b1",
+      "kind": "test",
+      "label": "the blast radius is computed before any answer lands: strike/amend/endorse record grounds in a decisions table that survives the statement and the snapshot round-trip; strike reports open anchors, orphaned folded records, lost links",
+      "props": {
+        "grounds": "CLI checked on a /tmp copy: strike s_7c4763c0 listed w_39da22a7 as an open anchor before deletion; endorse/amend/strike each wrote a decision row with grounds and actor; load --replace kept the record",
+        "roles": {
+          "execute": "machine",
+          "judge": "machine",
+          "propose": "machine"
+        },
+        "verdict": "pass",
+        "work": "w_39da22a7"
       }
     },
     {
@@ -1044,6 +1104,14 @@
       "type": "contains"
     },
     {
+      "created_at": "2026-06-10T15:26:20.084246",
+      "dst": "wn_34a0217b",
+      "id": "r_1754872b",
+      "props": {},
+      "src": "wn_96296798",
+      "type": "tests"
+    },
+    {
       "created_at": "2026-06-10T12:45:30.139293",
       "dst": "wn_817645e0",
       "id": "r_1864d01d",
@@ -1212,6 +1280,14 @@
       "type": "contains"
     },
     {
+      "created_at": "2026-06-10T15:26:04.134377",
+      "dst": "wn_c988f5b1",
+      "id": "r_49f0c7af",
+      "props": {},
+      "src": "w_39da22a7",
+      "type": "contains"
+    },
+    {
       "created_at": "2026-06-10T03:41:33.455920",
       "dst": "wn_92d11a1e",
       "id": "r_4a378b07",
@@ -1356,6 +1432,14 @@
       "type": "tests"
     },
     {
+      "created_at": "2026-06-10T15:08:04.033221",
+      "dst": "wn_55eb6516",
+      "id": "r_700c45aa",
+      "props": {},
+      "src": "w_39da22a7",
+      "type": "contains"
+    },
+    {
       "created_at": "2026-06-10T02:35:33.399459",
       "dst": "wn_b91eab58",
       "id": "r_71acdf52",
@@ -1388,6 +1472,14 @@
       "type": "contains"
     },
     {
+      "created_at": "2026-06-10T15:26:17.610713",
+      "dst": "wn_34a0217b",
+      "id": "r_7686d8b7",
+      "props": {},
+      "src": "wn_b6fccf65",
+      "type": "tests"
+    },
+    {
       "created_at": "2026-06-10T13:14:51.710840",
       "dst": "wn_41d436f8",
       "id": "r_7896f1e6",
@@ -1417,6 +1509,14 @@
       "id": "r_82bd63bc",
       "props": {},
       "src": "w_55b5404b",
+      "type": "contains"
+    },
+    {
+      "created_at": "2026-06-10T15:26:20.078239",
+      "dst": "wn_96296798",
+      "id": "r_833146c0",
+      "props": {},
+      "src": "w_39da22a7",
       "type": "contains"
     },
     {
@@ -1556,6 +1656,14 @@
       "type": "tests"
     },
     {
+      "created_at": "2026-06-10T15:26:04.139340",
+      "dst": "wn_b288d1af",
+      "id": "r_ae03bc0f",
+      "props": {},
+      "src": "wn_c988f5b1",
+      "type": "tests"
+    },
+    {
       "created_at": "2026-06-10T11:17:54.184313",
       "dst": "wn_9d25b35d",
       "id": "r_b07b8967",
@@ -1689,6 +1797,14 @@
       "id": "r_de041a3f",
       "props": {},
       "src": "w_1baf8df3",
+      "type": "contains"
+    },
+    {
+      "created_at": "2026-06-10T15:26:17.606459",
+      "dst": "wn_b6fccf65",
+      "id": "r_e2db5d7b",
+      "props": {},
+      "src": "w_39da22a7",
       "type": "contains"
     },
     {

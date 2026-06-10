@@ -59,6 +59,20 @@ CREATE TABLE IF NOT EXISTS statements (
   created_at TIMESTAMP DEFAULT current_timestamp
 );
 
+-- The decision record (seed of wn_89444a47): one row per answer rendered on a
+-- statement — endorse, amend, or strike — with grounds captured at the moment
+-- of deciding (s_565ca729). Verdicts and folds keep their grounds on the nodes
+-- themselves; a struck statement loses its row, so its decision lives here.
+CREATE TABLE IF NOT EXISTS decisions (
+  id         VARCHAR PRIMARY KEY,
+  action     VARCHAR NOT NULL,   -- 'endorse' | 'amend' | 'strike'
+  target     VARCHAR NOT NULL,   -- statements.id (may no longer exist)
+  text       VARCHAR,            -- the statement's text when the decision fell
+  grounds    VARCHAR,            -- why, in the decider's words
+  actor      VARCHAR NOT NULL,   -- 'operator' | 'operator, via the viewer' | 'machine'
+  created_at TIMESTAMP DEFAULT current_timestamp
+);
+
 -- Material is a document or output (code, script, ...) attached to a node.
 -- Either inline (body) or by reference (path).
 CREATE TABLE IF NOT EXISTS material (

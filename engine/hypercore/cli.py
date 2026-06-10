@@ -244,6 +244,10 @@ def build_parser() -> argparse.ArgumentParser:
         default="machine",
         help="Who is amending. Amending takes ownership. Default: machine.",
     )
+    amend.add_argument(
+        "--grounds",
+        help="Why, in the decider's words — recorded with the decision.",
+    )
     amend.set_defaults(func=cmd_amend)
 
     strike = subparsers.add_parser(
@@ -257,6 +261,10 @@ def build_parser() -> argparse.ArgumentParser:
         default="machine",
         help="Who is striking. The machine never strikes operator-owned intent.",
     )
+    strike.add_argument(
+        "--grounds",
+        help="Why, in the decider's words — recorded with the decision.",
+    )
     strike.set_defaults(func=cmd_strike)
 
     endorse = subparsers.add_parser(
@@ -264,6 +272,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="Take machine-owned statements on as the operator.",
     )
     endorse.add_argument("ids", nargs="+", help="Statement ids.")
+    endorse.add_argument(
+        "--grounds",
+        help="The operator's why, recorded with the decision.",
+    )
     endorse.set_defaults(func=cmd_endorse)
 
     work_open = subparsers.add_parser(
@@ -942,6 +954,13 @@ def cmd_amend(args) -> int:
         statement = fetch_statement(store, args.id)
         previous_owner = statement["owner"]
         store.update_statement(args.id, text=args.text, owner=args.by)
+        store.record_decision(
+            "amend",
+            args.id,
+            text=statement["text"],
+            grounds=args.grounds,
+            actor=args.by,
+        )
         views = write_views(store)
     out = {"id": args.id, "owner": args.by, **views}
     if args.by == "machine" and previous_owner == "operator":
@@ -961,9 +980,19 @@ def cmd_strike(args) -> int:
                 "the machine never strikes operator-owned intent; "
                 "re-run with --by operator if this is the operator's decision"
             )
-        references = store.statement_references(args.id)
+        # The blast radius, computed before the strike lands: the machine
+        # surfaces this to the operator as part of the decision, not after
+        # it (s_070617cf).
+        consequences = store.statement_consequences(args.id)
         removed = store.delete_statement(args.id)
         renumber_segment(store, statement["segment"])
+        store.record_decision(
+            "strike",
+            args.id,
+            text=statement["text"],
+            grounds=args.grounds,
+            actor=args.by,
+        )
         views = write_views(store)
     print_json(
         {
@@ -971,11 +1000,22 @@ def cmd_strike(args) -> int:
             "text": statement["text"],
             "links_lost": removed["links"],
             "linked_by_lost": removed["linked_by"],
-            "referencing_nodes": [
-                node["id"]
-                for nodes in references.values()
-                for node in nodes
-            ],
+            "breaks": {
+                "open_work_loses_its_anchor": [
+                    f"{n['id']} {n['label']}"
+                    for n in consequences["anchors_open"]
+                ],
+                "folded_record_points_at_nothing": [
+                    f"{n['id']} {n['label']}"
+                    for n in (
+                        consequences["anchors_folded"]
+                        + consequences["produced"]
+                    )
+                ],
+                "statements_lose_their_link_target": [
+                    s["id"] for s in consequences["linked_by"]
+                ],
+            },
             **views,
         }
     )
@@ -992,6 +1032,15 @@ def cmd_endorse(args) -> int:
                 already.append(sid)
             else:
                 store.update_statement(sid, owner="operator")
+                # The verb records the operator's word from conversation;
+                # the decision is theirs either way (endorsement.md).
+                store.record_decision(
+                    "endorse",
+                    sid,
+                    text=statement["text"],
+                    grounds=args.grounds,
+                    actor="operator",
+                )
                 endorsed.append(sid)
         views = write_views(store)
     print_json({"endorsed": endorsed, "already_operator_owned": already, **views})

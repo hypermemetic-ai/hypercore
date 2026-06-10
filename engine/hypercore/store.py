@@ -225,6 +225,76 @@ class Store:
                 produced.append(node)
         return {"bound": bound, "produced": produced}
 
+    def statement_consequences(self, id: str) -> dict:
+        """A statement's blast radius: what striking it would touch.
+
+        Computed *before* any answer is rendered, so the decision is made
+        with the breakage in view (s_070617cf): open work anchored on it
+        loses its intent; folded work that produced it is left pointing at
+        nothing; statements linking to it lose their target.
+        """
+        refs = self.statement_references(id)
+        anchors_open = [
+            n for n in refs["bound"]
+            if (n.get("props") or {}).get("status") != "folded"
+        ]
+        anchors_folded = [
+            n for n in refs["bound"]
+            if (n.get("props") or {}).get("status") == "folded"
+        ]
+        linked_by = [
+            s for s in self.statements()
+            if any(link.get("to") == id for link in s["links"])
+        ]
+        return {
+            "anchors_open": anchors_open,
+            "anchors_folded": anchors_folded,
+            "produced": refs["produced"],
+            "linked_by": linked_by,
+        }
+
+    def record_decision(
+        self,
+        action: str,
+        target: str,
+        text: str | None = None,
+        grounds: str | None = None,
+        actor: str = "operator",
+    ) -> str:
+        """One row in the decision record: the answer, its grounds, its
+        moment (s_565ca729). Written by endorse/amend/strike everywhere —
+        the decision must survive the statement it answered."""
+        decision_id = self._new_id("d_", "decisions")
+        self.con.execute(
+            """
+            INSERT INTO decisions (id, action, target, text, grounds, actor)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            [decision_id, action, target, text, grounds, actor],
+        )
+        return decision_id
+
+    def decisions(self) -> list[dict]:
+        """The decision record, oldest first."""
+        rows = self.con.execute(
+            """
+            SELECT id, action, target, text, grounds, actor, created_at
+            FROM decisions ORDER BY created_at, id
+            """
+        ).fetchall()
+        return [
+            {
+                "id": r[0],
+                "action": r[1],
+                "target": r[2],
+                "text": r[3],
+                "grounds": r[4],
+                "actor": r[5],
+                "created_at": r[6].isoformat() if r[6] is not None else None,
+            }
+            for r in rows
+        ]
+
     def dump_statements(self) -> dict:
         """The statement store as one JSON-ready dict: its durable form."""
         rows = self.con.execute(
@@ -354,6 +424,12 @@ class Store:
                 FROM material ORDER BY id
                 """
             ),
+            "decisions": rows(
+                """
+                SELECT id, action, target, text, grounds, actor, created_at
+                FROM decisions ORDER BY created_at, id
+                """
+            ),
         }
         for table in data.values():
             for row in table:
@@ -413,6 +489,23 @@ class Store:
                     row.get("lang"),
                     row.get("body"),
                     row.get("path"),
+                    row.get("created_at"),
+                ],
+            )
+        # Older snapshots predate the decision record; absence loads as empty.
+        for row in data.get("decisions", []):
+            self.con.execute(
+                """
+                INSERT INTO decisions (id, action, target, text, grounds, actor, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    row["id"],
+                    row["action"],
+                    row["target"],
+                    row.get("text"),
+                    row.get("grounds"),
+                    row.get("actor", "operator"),
                     row.get("created_at"),
                 ],
             )
@@ -671,6 +764,7 @@ class Store:
                 "relations",
                 "nodes",
                 "statements",
+                "decisions",
             ):
                 self.con.execute(f"DROP TABLE IF EXISTS {table}")
             self.con.execute(SCHEMA_PATH.read_text(encoding="utf-8"))
