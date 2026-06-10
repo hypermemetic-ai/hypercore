@@ -14,8 +14,9 @@ the live queue state at every session start; this file carries the rules.
    machine never touches an unmarked statement. Surface what a strike
    breaks before the decision, not after.
 4. **Ratification protocol:** bring pending statements in small batches,
-   in document order (foundations, structure, statements, endorsement,
-   work). Each batch goes through the option picker (AskUserQuestion) —
+   in section order through intent.md (foundations, structure,
+   statements, endorsement, work). Each batch goes through the option
+   picker (AskUserQuestion) —
    one question per statement, at most four to a batch, options
    endorse / amend / strike, with what each answer entails (what a strike
    breaks above all) shown before the pick. Apply the answers; commit

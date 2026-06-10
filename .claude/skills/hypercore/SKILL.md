@@ -1,18 +1,20 @@
 ---
 name: hypercore
-description: Ground rules for the hypercore repository in epoch 2 — intent lives in five root markdown files, everything else burned on the operator's reset. Operator legibility rules; ownership markers and operator-only decisions still bind. Use whenever working in this repository.
+description: Ground rules for the hypercore repository in epoch 2 — intent lives in intent.md at the root, everything else burned on the operator's reset. Operator legibility rules; ownership markers and operator-only decisions still bind. Use whenever working in this repository.
 ---
 
 # hypercore, epoch 2
 
 On 2026-06-10 the operator reset the project: the engine, viewer, database,
 snapshots, and all work graphs were deleted. Git history holds the first
-epoch. There is no engine and no derived views — the five root markdown
-files (foundations, structure, statements, endorsement, work) ARE the
-system, edited directly, every change committed to git with plain-words
-messages.
+epoch. There is no engine and no derived views — one root intent
+document, intent.md (sections: foundations, structure, statements,
+endorsement, work), IS the system, edited directly, every change
+committed to git with plain-words messages. The merge from five files
+into one was the operator's call, on their own sworn words: a work
+graph's intent document is singular, and this repo is hypercore's folder.
 
-## The three ruling statements (operator-owned, head of foundations.md)
+## The three ruling statements (operator-owned, head of foundations)
 
 1. Operator legibility is king; when any concern competes with it, it wins.
 2. Work on the system, above all other work, is transparent.
