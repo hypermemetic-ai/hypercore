@@ -1,12 +1,12 @@
 # work
 
-Work happens as a graph. A node expresses an intent, and carrying it out grows a graph of further nodes: the steps, the candidates, the checks, the result. [machine]
+Work happens as a graph. A node expresses intent, and carrying it out grows a graph of further nodes: the steps, the candidates, the checks, the result.
 
-That growing graph is an execution graph. It is a dynamically composed workflow, not a fixed template. [machine]
+That growing graph is an execution graph. It is a dynamically composed workflow, not a fixed template.
 
-A folder holds one execution graph. The unit on disk is the execution graph, not the single node. [machine]
+A folder holds one execution graph. The unit on disk is the execution graph, not the single node.
 
-When the work is done, the execution graph folds into the node whose intent spawned it. The result becomes that node's material, and the steps become its history. [machine]
+When the work is done, the execution graph folds into the node whose intent spawned it. The result becomes that node's material, and the steps become its history.
 
 Folding preserves relations. A folded graph keeps its nodes and the relations between them, so the history reads as the graph it was, not a flat log. [machine]
 
