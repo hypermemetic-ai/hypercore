@@ -25,22 +25,18 @@
 
       .app {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 320px;
-        min-height: 100vh;
-      }
-
-      .stage {
-        display: grid;
+        grid-template-columns: 360px minmax(0, 1fr) 340px;
         grid-template-rows: auto minmax(0, 1fr);
-        min-width: 0;
+        height: 100vh;
       }
 
       .toolbar {
+        grid-column: 1 / -1;
         display: flex;
         align-items: center;
-        gap: 12px;
-        min-height: 60px;
-        padding: 12px 16px;
+        gap: 14px;
+        min-height: 54px;
+        padding: 10px 16px;
         border-bottom: 1px solid #d9d6cc;
         background: #fffdf8;
       }
@@ -51,35 +47,200 @@
         font-weight: 700;
       }
 
-      label {
-        font-size: 13px;
-        font-weight: 700;
+      .toolbar .spacer {
+        flex: 1;
       }
 
-      select {
-        min-width: 220px;
-        max-width: 100%;
-        padding: 8px 10px;
+      .zoom {
+        display: flex;
+        gap: 6px;
+      }
+
+      .zoom button {
+        min-width: 34px;
+        padding: 6px 10px;
         border: 1px solid #b9b5aa;
         border-radius: 6px;
         background: white;
         color: #202124;
+        font-size: 14px;
+        cursor: pointer;
       }
+
+      .zoom button:hover {
+        background: #f0ede4;
+      }
+
+      /* ---- left: intent ---- */
+
+      .intent {
+        border-right: 1px solid #d9d6cc;
+        background: #ffffff;
+        overflow: auto;
+        padding: 14px;
+        min-height: 0;
+      }
+
+      .intent h3,
+      .panel h3 {
+        margin: 18px 0 8px;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #64675f;
+      }
+
+      .intent h3:first-child {
+        margin-top: 0;
+      }
+
+      .row {
+        display: block;
+        width: 100%;
+        text-align: left;
+        border: 0;
+        border-top: 1px solid #ece9df;
+        background: none;
+        font: inherit;
+        color: inherit;
+        padding: 8px 6px;
+        font-size: 13px;
+        line-height: 1.4;
+        cursor: pointer;
+        border-radius: 4px;
+      }
+
+      .row:hover {
+        background: #f6f4ec;
+      }
+
+      .row.selected {
+        background: #eef2fb;
+      }
+
+      .row .meta {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 2px;
+      }
+
+      .row .id {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
+        color: #64675f;
+      }
+
+      .badge {
+        display: inline-block;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        padding: 1px 6px;
+        border-radius: 9px;
+        border: 1px solid transparent;
+      }
+
+      .badge.machine {
+        color: #7a5410;
+        background: #fdf0d4;
+        border-color: #e0a23c;
+      }
+
+      .badge.open {
+        color: #8a3417;
+        background: #fbe3d8;
+        border-color: #c05a36;
+      }
+
+      .badge.folded {
+        color: #1f5446;
+        background: #ddeee9;
+        border-color: #2f7d6d;
+      }
+
+      .badge.abandoned {
+        color: #5b5e63;
+        background: #e9eaec;
+        border-color: #9aa0a6;
+      }
+
+      .badge.kind {
+        color: #3c4043;
+        background: #eef0f2;
+        border-color: #c5c9ce;
+      }
+
+      .row.machine {
+        border-left: 3px solid #e0a23c;
+        background: #fffaf0;
+      }
+
+      .row.machine:hover {
+        background: #fdf3dd;
+      }
+
+      .endorse {
+        float: right;
+        margin-left: 8px;
+        padding: 2px 9px;
+        font-size: 11px;
+        font-weight: 700;
+        border: 1px solid #2f7d6d;
+        border-radius: 11px;
+        background: #ffffff;
+        color: #2f7d6d;
+        cursor: pointer;
+      }
+
+      .endorse:hover {
+        background: #ddeee9;
+      }
+
+      .endorse.confirm {
+        background: #2f7d6d;
+        color: #ffffff;
+      }
+
+      details.segment {
+        border-top: 1px solid #ece9df;
+        padding: 4px 0;
+      }
+
+      details.segment summary {
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 700;
+        padding: 6px;
+        color: #3c4043;
+      }
+
+      details.segment summary .muted {
+        font-weight: 400;
+      }
+
+      /* ---- center: graph ---- */
 
       #cy {
         min-height: 0;
+        min-width: 0;
       }
+
+      /* ---- right: details ---- */
 
       .panel {
         border-left: 1px solid #d9d6cc;
         background: #ffffff;
-        padding: 18px;
+        padding: 16px;
         overflow: auto;
+        min-height: 0;
       }
 
       .panel h2 {
         margin: 0 0 4px;
-        font-size: 18px;
+        font-size: 16px;
+        line-height: 1.35;
       }
 
       .muted {
@@ -87,16 +248,15 @@
         font-size: 13px;
       }
 
-      .section {
-        margin-top: 18px;
+      .roles {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 8px 0;
       }
 
-      .section h3 {
-        margin: 0 0 8px;
-        font-size: 13px;
-        text-transform: uppercase;
-        letter-spacing: 0;
-        color: #64675f;
+      .roles .badge {
+        font-size: 10px;
       }
 
       pre {
@@ -122,40 +282,52 @@
         font-size: 13px;
       }
 
-      @media (max-width: 780px) {
+      li.link,
+      .panel .row {
+        cursor: pointer;
+      }
+
+      li.link:hover {
+        background: #f6f4ec;
+      }
+
+      .section {
+        margin-top: 18px;
+      }
+
+      @media (max-width: 1100px) {
         .app {
-          grid-template-columns: 1fr;
-          grid-template-rows: minmax(58vh, 1fr) auto;
+          grid-template-columns: 320px minmax(0, 1fr);
         }
 
         .panel {
+          grid-column: 1 / -1;
           border-left: 0;
           border-top: 1px solid #d9d6cc;
-          max-height: 42vh;
-        }
-
-        .toolbar {
-          flex-wrap: wrap;
+          max-height: 38vh;
         }
       }
     </style>
   </head>
   <body>
     <main class="app">
-      <section class="stage" aria-label="Graph">
-        <div class="toolbar">
-          <h1>hypercore</h1>
-          <label for="clusterSelect">Cluster</label>
-          <select id="clusterSelect">
-            <option value="">All relations</option>
-          </select>
-          <span id="summary" class="muted"></span>
-        </div>
-        <div id="cy"></div>
-      </section>
+      <div class="toolbar">
+        <h1>hypercore</h1>
+        <span id="summary" class="muted"></span>
+        <span class="spacer"></span>
+        <span class="zoom" aria-label="Graph navigation">
+          <button id="zoomOut" title="Zoom out">−</button>
+          <button id="zoomFit" title="Fit graph">fit</button>
+          <button id="zoomIn" title="Zoom in">+</button>
+        </span>
+      </div>
+      <aside class="intent" id="intent" aria-label="Intent and work"></aside>
+      <section id="cy" aria-label="Graph"></section>
       <aside class="panel" id="details">
-        <h2>No node selected</h2>
-        <p class="muted">Click a node to inspect it.</p>
+        <h2>Nothing selected</h2>
+        <p class="muted">
+          Pick a statement or work on the left, or tap a node in the graph.
+        </p>
       </aside>
     </main>
     <script src="app.js"></script>

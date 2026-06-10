@@ -13,6 +13,16 @@
       "path": "engine"
     },
     {
+      "body": "# viewer v2\n\nThree zones. Left: the intent panel \u2014 pending endorsements first (amber, with\nan endorse button that asks once before spending judgment), then open work,\nall statements grouped by segment in canonical order, recent folds. Center:\nthe graph \u2014 each work is a box containing its operations (membership is\nnesting; contains edges are not drawn), only combinators draw as labeled\nedges, layout is deterministic so the mental map survives a reload, zoom is\nbuttons plus a gentle wheel. Right: details \u2014 statements show owner, links,\nand the reverse index (bound by / produced by); operations show roles,\nverdicts with grounds, and material, with inline bodies fetched on demand.\n\nThe server gained GET /api/material/ID and POST /api/endorse. Endorse is the\noperator acting (endorsement.md): the machine never calls it.\n",
+      "created_at": "2026-06-10T03:41:34.106556",
+      "id": "m_3e9a2028",
+      "kind": "document",
+      "label": "viewer v2 design",
+      "lang": "markdown",
+      "node_id": "wn_7c513a68",
+      "path": null
+    },
+    {
       "body": null,
       "created_at": "2026-06-10T02:35:17.967739",
       "id": "m_cca715e7",
@@ -190,6 +200,38 @@
       }
     },
     {
+      "created_at": "2026-06-10T03:41:34.809905",
+      "id": "wn_543659fb",
+      "kind": "test",
+      "label": "works render as boxes of their operations; membership is nesting; only combinators draw as edges; layout is deterministic",
+      "props": {
+        "grounds": "headless screenshots of the sandbox viewer, 2026-06-10",
+        "roles": {
+          "execute": "machine",
+          "judge": "machine",
+          "propose": "machine"
+        },
+        "verdict": "pass",
+        "work": "w_55b5404b"
+      }
+    },
+    {
+      "created_at": "2026-06-10T03:41:34.458210",
+      "id": "wn_627539fe",
+      "kind": "test",
+      "label": "endorse endpoint takes statements on and rewrites the views; bad ids and empty payloads are refused",
+      "props": {
+        "grounds": "curl against a sandbox server: endorsed, already-owned, missing id, and empty payload paths all answered correctly; work.md re-rendered",
+        "roles": {
+          "execute": "machine",
+          "judge": "machine",
+          "propose": "machine"
+        },
+        "verdict": "pass",
+        "work": "w_55b5404b"
+      }
+    },
+    {
       "created_at": "2026-06-10T02:35:34.435325",
       "id": "wn_6a9e4db2",
       "kind": "generate",
@@ -245,6 +287,19 @@
       "id": "wn_7bfef8fe",
       "kind": "generate",
       "label": "style: machine-owned statements amber and dashed; work nodes diamonds, dimmed once folded",
+      "props": {
+        "roles": {
+          "execute": "machine",
+          "propose": "machine"
+        },
+        "work": "w_55b5404b"
+      }
+    },
+    {
+      "created_at": "2026-06-10T03:41:33.435408",
+      "id": "wn_7c513a68",
+      "kind": "generate",
+      "label": "viewer v2: intent panel with endorse buttons, works as boxes containing their operations, deterministic layout, zoom controls, statement and operation detail panes",
       "props": {
         "roles": {
           "execute": "machine",
@@ -345,6 +400,22 @@
           "propose": "machine"
         },
         "work": "w_423ff83b"
+      }
+    },
+    {
+      "created_at": "2026-06-10T03:41:35.144401",
+      "id": "wn_cc8f3249",
+      "kind": "test",
+      "label": "navigation has explicit zoom controls and a gentler wheel",
+      "props": {
+        "grounds": "headless screenshots; wheelSensitivity 0.2 plus toolbar buttons",
+        "roles": {
+          "execute": "machine",
+          "judge": "machine",
+          "propose": "machine"
+        },
+        "verdict": "pass",
+        "work": "w_55b5404b"
       }
     },
     {
@@ -484,12 +555,36 @@
       "type": "contains"
     },
     {
+      "created_at": "2026-06-10T03:41:34.825025",
+      "dst": "wn_7c513a68",
+      "id": "r_3407d368",
+      "props": {},
+      "src": "wn_543659fb",
+      "type": "tests"
+    },
+    {
       "created_at": "2026-06-10T02:59:32.895020",
       "dst": "wn_b62bb2c0",
       "id": "r_432b728a",
       "props": {},
       "src": "w_bdc90a28",
       "type": "contains"
+    },
+    {
+      "created_at": "2026-06-10T03:41:33.455920",
+      "dst": "wn_92d11a1e",
+      "id": "r_4a378b07",
+      "props": {},
+      "src": "wn_7c513a68",
+      "type": "depends-on"
+    },
+    {
+      "created_at": "2026-06-10T03:41:35.170969",
+      "dst": "wn_7c513a68",
+      "id": "r_4a5f1876",
+      "props": {},
+      "src": "wn_cc8f3249",
+      "type": "tests"
     },
     {
       "created_at": "2026-06-10T02:59:33.540942",
@@ -514,6 +609,14 @@
       "props": {},
       "src": "w_55b5404b",
       "type": "depends-on"
+    },
+    {
+      "created_at": "2026-06-10T03:41:34.467793",
+      "dst": "wn_627539fe",
+      "id": "r_56139faa",
+      "props": {},
+      "src": "w_55b5404b",
+      "type": "contains"
     },
     {
       "created_at": "2026-06-10T02:35:34.093904",
@@ -548,6 +651,14 @@
       "type": "contains"
     },
     {
+      "created_at": "2026-06-10T03:41:33.445330",
+      "dst": "wn_7c513a68",
+      "id": "r_82a6898c",
+      "props": {},
+      "src": "w_55b5404b",
+      "type": "contains"
+    },
+    {
       "created_at": "2026-06-10T03:10:27.044560",
       "dst": "wn_92d11a1e",
       "id": "r_82bd63bc",
@@ -556,11 +667,35 @@
       "type": "contains"
     },
     {
+      "created_at": "2026-06-10T03:41:34.817751",
+      "dst": "wn_543659fb",
+      "id": "r_86aab70c",
+      "props": {},
+      "src": "w_55b5404b",
+      "type": "contains"
+    },
+    {
+      "created_at": "2026-06-10T03:41:33.464875",
+      "dst": "wn_7bfef8fe",
+      "id": "r_8e31bd6e",
+      "props": {},
+      "src": "wn_7c513a68",
+      "type": "depends-on"
+    },
+    {
       "created_at": "2026-06-10T03:28:39.049373",
       "dst": "wn_8d5935e3",
       "id": "r_95dbabd2",
       "props": {},
       "src": "wn_44b27c3f",
+      "type": "tests"
+    },
+    {
+      "created_at": "2026-06-10T03:41:34.478325",
+      "dst": "wn_7c513a68",
+      "id": "r_9eabf539",
+      "props": {},
+      "src": "wn_627539fe",
       "type": "tests"
     },
     {
@@ -604,6 +739,14 @@
       "type": "contains"
     },
     {
+      "created_at": "2026-06-10T03:41:33.827707",
+      "dst": "wn_7c513a68",
+      "id": "r_c34f9a97",
+      "props": {},
+      "src": "wn_39247829",
+      "type": "tests"
+    },
+    {
       "created_at": "2026-06-10T03:28:16.239725",
       "dst": "wn_6d4117df",
       "id": "r_d7e3417e",
@@ -631,6 +774,14 @@
       "created_at": "2026-06-10T02:21:35.665541",
       "dst": "wn_39247829",
       "id": "r_f0456d16",
+      "props": {},
+      "src": "w_55b5404b",
+      "type": "contains"
+    },
+    {
+      "created_at": "2026-06-10T03:41:35.158136",
+      "dst": "wn_cc8f3249",
+      "id": "r_fb176d96",
       "props": {},
       "src": "w_55b5404b",
       "type": "contains"

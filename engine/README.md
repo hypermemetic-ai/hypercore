@@ -39,8 +39,9 @@ store), the durable, git-tracked forms; the `.duckdb` file is ignored by git
 and rebuilt from them with `load`. `ingest` only bootstraps an empty database
 from the files.
 
-The viewer opens the database **read-only**. Change the graph with the CLI, then
-refresh the browser.
+The viewer reads the database per request, so a running server never goes
+stale. Its one write is `POST /api/endorse` — the endorse button, which is the
+operator acting (endorsement.md); everything else changes through the CLI.
 
 ## Environment — do not change, do not re-derive
 
