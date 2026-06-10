@@ -1,12 +1,12 @@
 # endorsement
 
-Endorsement names who stands behind a statement. [machine]
+Endorsement names who stands behind a statement.
 
-An endorsed statement is operator-owned. [machine]
+When an operator endorses a statement, they own that statement.
 
-An unendorsed statement is machine-owned until an operator takes it on. [machine]
+An unendorsed statement is machine-owned until an operator endorses it.
 
-The machine never endorses for the operator. [machine]
+The machine never endorses for the operator.
 
 Ownership and truth are separate. Ownership says who may responsibly change a statement; evidence says whether it still holds. [machine]
 
