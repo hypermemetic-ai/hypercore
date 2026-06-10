@@ -1,12 +1,12 @@
 # statements
 
-A segment's intent document is that segment's current intended reality. [machine]
+A work graph's intent document is that graph's current intended reality.
 
-A statement is declarative and strong enough to be wrong. [machine]
+A statement is declarative and strong enough to be wrong.
 
-Statements are written plainly. [machine]
+Statements are written plainly.
 
-Within an execution graph, one name means one concept. [machine]
+Within an execution graph, one name means one concept.
 
 Every statement should be ownable. [machine]
 
