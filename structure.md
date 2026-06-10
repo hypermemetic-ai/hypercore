@@ -1,12 +1,10 @@
 # structure
 
-A node is a thing in the graph. [machine]
+A node is a thing in the graph.
 
-Intent is the written model of what the node is meant to be. Material is what the node actually made, the thing reality can contradict. [machine]
+Intent starts work; material is what the work makes. Finished material must provably map back onto the intent that started it. [machine]
 
-A relation is a directed, typed link from one node to another. [machine]
-
-A cluster is a named set of relations: a subgraph that stands for a repeatable operation. [machine]
+A relation links one node to another and says what the link means. [machine]
 
 The intent lives at the root, as the markdown files there. Everything else in the repository is material. [machine]
 
