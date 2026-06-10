@@ -4,6 +4,16 @@
   "material": [
     {
       "body": null,
+      "created_at": "2026-06-10T03:45:27.929319",
+      "id": "m_247d76d7",
+      "kind": "document",
+      "label": "the hypercore skill: compound moves over the verbs",
+      "lang": "markdown",
+      "node_id": "hypercore",
+      "path": ".claude/skills/hypercore/SKILL.md"
+    },
+    {
+      "body": null,
       "created_at": "2026-06-10T01:59:22.532659",
       "id": "m_30ed73a1",
       "kind": "code",
@@ -20,6 +30,26 @@
       "label": "viewer v2 design",
       "lang": "markdown",
       "node_id": "wn_7c513a68",
+      "path": null
+    },
+    {
+      "body": "# the settlement\n\nThe operator decided on 2026-06-10, in conversation, to bind the alphabet\ndesign: work nodes are operations (frame, gather, derive, generate, test,\ncommit); products are material on operation nodes; relations carry the\ncombinators (depends-on, tests, commits, reframes, decomposes-into);\nroles live in props, and a commit's decide is the operator's,\nnon-delegable. Implementation landed as git commit 10b54ab; tests\nwn_44b27c3f, wn_4559dcbf, wn_7aca437d, wn_ddb2f58c all pass.\n\nHeld open by design: synthesize/repair stay out (wn_6a9e4db2); test may\nsplit into challenge/verdict (wn_efd59a7c). Decide from practice.\n",
+      "created_at": "2026-06-10T03:49:39.462096",
+      "id": "m_b2bc67b2",
+      "kind": "document",
+      "label": "the settlement",
+      "lang": "markdown",
+      "node_id": "wn_666eca0f",
+      "path": null
+    },
+    {
+      "body": "# the work loop speaks the operation alphabet\n\nfolded: 2026-06-10T08:49:39+00:00\nfold when: work nodes are operations (frame, gather, derive, generate, test, commit), their products are material on those nodes, relations carry the combinators, and roles live in props\n\n## commits\n- the work loop speaks the alphabet: six operation kinds, combinators as relations, roles in props  (material: m_b2bc67b2)\n\n## tests\n- pass: roles land in props with kind defaults; a commit's decide cannot be delegated to the machine\n- pass: work-add accepts only the six operations; legacy kinds are refused\n- pass: work-fold's machine gate reads test verdicts and requires a commit as settlement; render and load round-trip survive\n- pass: combinators wire as relations: tests, commits binds a generate only, reframes a frame only, depends-on, decomposes-into; path traverses them\n\n## history\n- generate: test may want to split into challenge and verdict; decide from practice, not theory\n- generate: roles as props on each operation (propose, execute, judge, decide); decide on a commit is the operator's and cannot be delegated\n- generate: work-fold's machine check reads test operations' verdicts instead of check nodes\n- generate: relation types carry the combinators: depends-on as causal link, tests, commits, reframes, decomposes-into\n- generate: synthesize and repair stay out until the primitive-vs-compound contest resolves; adopt only if real work keeps wanting them\n- generate: replace work-add kinds step/candidate/check/result with the six operations; products become material on operation nodes, not node kinds\n",
+      "created_at": "2026-06-10T03:49:39.774907",
+      "id": "m_b6be8d2e",
+      "kind": "result",
+      "label": "the work loop speaks the operation alphabet",
+      "lang": "markdown",
+      "node_id": "w_423ff83b",
       "path": null
     },
     {
@@ -66,12 +96,14 @@
       "props": {
         "check": "operator",
         "fold_when": "work nodes are operations (frame, gather, derive, generate, test, commit), their products are material on those nodes, relations carry the combinators, and roles live in props",
+        "folded_at": "2026-06-10T08:49:39+00:00",
         "on": "s_3729cb59",
+        "operator_confirmed": true,
         "produces": [
           "s_d4bd1b45",
           "s_5365a11a"
         ],
-        "status": "open"
+        "status": "folded"
       }
     },
     {
@@ -229,6 +261,23 @@
         },
         "verdict": "pass",
         "work": "w_55b5404b"
+      }
+    },
+    {
+      "created_at": "2026-06-10T03:49:39.076776",
+      "id": "wn_666eca0f",
+      "kind": "commit",
+      "label": "the work loop speaks the alphabet: six operation kinds, combinators as relations, roles in props",
+      "props": {
+        "decided_at": "2026-06-10",
+        "decided_by": "operator",
+        "roles": {
+          "decide": "operator",
+          "execute": "machine",
+          "propose": "machine"
+        },
+        "warrant": "operator chose Fold it in conversation, 2026-06-10",
+        "work": "w_423ff83b"
       }
     },
     {
@@ -483,6 +532,14 @@
       "type": "contains"
     },
     {
+      "created_at": "2026-06-10T03:49:39.104964",
+      "dst": "wn_b91eab58",
+      "id": "r_1069767e",
+      "props": {},
+      "src": "wn_666eca0f",
+      "type": "depends-on"
+    },
+    {
       "created_at": "2026-06-10T02:59:34.167487",
       "dst": "wn_d15d98dc",
       "id": "r_13211063",
@@ -531,6 +588,14 @@
       "type": "contains"
     },
     {
+      "created_at": "2026-06-10T03:49:39.118093",
+      "dst": "wn_8302514e",
+      "id": "r_28f03794",
+      "props": {},
+      "src": "wn_666eca0f",
+      "type": "depends-on"
+    },
+    {
       "created_at": "2026-06-10T03:28:39.042460",
       "dst": "wn_44b27c3f",
       "id": "r_29f21829",
@@ -545,6 +610,14 @@
       "props": {},
       "src": "w_bdc90a28",
       "type": "contains"
+    },
+    {
+      "created_at": "2026-06-10T03:49:39.111449",
+      "dst": "wn_c9884850",
+      "id": "r_2b45a585",
+      "props": {},
+      "src": "wn_666eca0f",
+      "type": "depends-on"
     },
     {
       "created_at": "2026-06-10T03:28:40.062802",
@@ -691,6 +764,14 @@
       "type": "tests"
     },
     {
+      "created_at": "2026-06-10T03:49:39.098076",
+      "dst": "wn_8d5935e3",
+      "id": "r_9b9f067c",
+      "props": {},
+      "src": "wn_666eca0f",
+      "type": "commits"
+    },
+    {
       "created_at": "2026-06-10T03:41:34.478325",
       "dst": "wn_7c513a68",
       "id": "r_9eabf539",
@@ -776,6 +857,14 @@
       "id": "r_f0456d16",
       "props": {},
       "src": "w_55b5404b",
+      "type": "contains"
+    },
+    {
+      "created_at": "2026-06-10T03:49:39.089226",
+      "dst": "wn_666eca0f",
+      "id": "r_f61500a7",
+      "props": {},
+      "src": "w_423ff83b",
       "type": "contains"
     },
     {
