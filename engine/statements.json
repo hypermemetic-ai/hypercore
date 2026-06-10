@@ -154,10 +154,19 @@
       "text": "The operator can read the system's state at a glance: the viewer shows who owns each statement and which work is open, without asking the machine."
     },
     {
+      "created_at": "2026-06-10T12:44:09.930466",
+      "id": "s_a6ea7c7a",
+      "links": [],
+      "ord": 10,
+      "owner": "machine",
+      "segment": "foundations",
+      "text": "The viewer is where the operator acts, not only reads: the loop is visible live as operations land, whatever awaits operator judgment is summoned front and center, and endorsing, judging, and folding can be done there directly."
+    },
+    {
       "created_at": "2026-06-10T04:04:29.180631",
       "id": "s_7b70bab7",
       "links": [],
-      "ord": 10,
+      "ord": 11,
       "owner": "operator",
       "segment": "foundations",
       "text": "The viewer is comfortable to live in: dark by default and easy on the eyes, readable, and live \u2014 changes to the graph appear as they are made, without the operator refreshing."
@@ -166,7 +175,7 @@
       "created_at": "2026-06-10T11:18:28.733198",
       "id": "s_cb9d5e78",
       "links": [],
-      "ord": 11,
+      "ord": 12,
       "owner": "machine",
       "segment": "foundations",
       "text": "The viewer keeps itself current: it watches a cheap fingerprint of the store and re-derives the whole view when the graph moves. Staleness is the machine's to notice, never the operator's to manage."

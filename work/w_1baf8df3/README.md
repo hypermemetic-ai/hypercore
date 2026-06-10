@@ -26,7 +26,7 @@ produces:
   - verdict: **pass** — CDP against a sandbox serve: add-statement from the CLI moved the toolbar count 9→10 within two 3s poll ticks; a window marker survived, so the page re-derived rather than reloaded; read-only verbs leave /api/version unchanged
   - tests -> `wn_4290f510` "live updates: GET /api/version fingerprints the store; the …"
 - `wn_6afe45a5` the operator works in the dark viewer comfortably and watches a change land without refreshing  (execute: machine, judge: operator, propose: machine)
-  - verdict: **open**
+  - verdict: **fail** — operator, 2026-06-10, in conversation: the viewer as seen is not yet comfortable to work in — nodes read as undifferentiated colored shapes. No complaint named against the dark theme or live updates specifically; the fail lands on the readability clause.
   - tests -> `wn_4290f510` "live updates: GET /api/version fingerprints the store; the …"
   - tests -> `wn_4d2d491d` "theme as CSS variables: dark by default (system- and toggle…"
   - tests -> `wn_125be890` "readability pass: larger and higher-contrast graph labels, …"

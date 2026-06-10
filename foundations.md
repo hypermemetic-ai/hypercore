@@ -18,6 +18,8 @@ The operator never performs graph maintenance. The machine files, links, and ren
 
 The operator can read the system's state at a glance: the viewer shows who owns each statement and which work is open, without asking the machine.
 
+The viewer is where the operator acts, not only reads: the loop is visible live as operations land, whatever awaits operator judgment is summoned front and center, and endorsing, judging, and folding can be done there directly. [machine]
+
 The viewer is comfortable to live in: dark by default and easy on the eyes, readable, and live — changes to the graph appear as they are made, without the operator refreshing.
 
 The viewer keeps itself current: it watches a cheap fingerprint of the store and re-derives the whole view when the graph moves. Staleness is the machine's to notice, never the operator's to manage. [machine]

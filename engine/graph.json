@@ -134,6 +134,18 @@
       }
     },
     {
+      "created_at": "2026-06-10T12:44:28.564534",
+      "id": "w_b41a3744",
+      "kind": "work",
+      "label": "viewer as workbench: live loop, judgment queue, act in place",
+      "props": {
+        "check": "operator",
+        "fold_when": "the operator watches an operation land live, sees the queue of what awaits their judgment, and records a verdict or endorsement in the viewer without touching the CLI",
+        "on": "s_a6ea7c7a",
+        "status": "open"
+      }
+    },
+    {
       "created_at": "2026-06-10T02:48:19.480560",
       "id": "w_bdc90a28",
       "kind": "work",
@@ -170,6 +182,19 @@
           "propose": "machine"
         },
         "work": "w_1baf8df3"
+      }
+    },
+    {
+      "created_at": "2026-06-10T12:45:43.442243",
+      "id": "wn_13992fe3",
+      "kind": "generate",
+      "label": "nodes carry their meaning: statement text and operation labels readable on the node itself, loud state (verdict glyphs, pending endorsement, open vs folded), and the causal story readable from the picture \u2014 layout follows dependency flow",
+      "props": {
+        "roles": {
+          "execute": "machine",
+          "propose": "machine"
+        },
+        "work": "w_55b5404b"
       }
     },
     {
@@ -214,10 +239,12 @@
       "kind": "test",
       "label": "operator opens the viewer and can tell machine-owned statements and open work apart at a glance",
       "props": {
+        "grounds": "operator, 2026-06-10, in conversation: the nodes are still not very useful to see \u2014 they're just different colors. At-a-glance legibility not reached; shape and color encode ownership but a node's meaning still takes a click.",
         "roles": {
           "judge": "operator",
           "propose": "machine"
         },
+        "verdict": "fail",
         "work": "w_55b5404b"
       }
     },
@@ -391,11 +418,13 @@
       "kind": "test",
       "label": "the operator works in the dark viewer comfortably and watches a change land without refreshing",
       "props": {
+        "grounds": "operator, 2026-06-10, in conversation: the viewer as seen is not yet comfortable to work in \u2014 nodes read as undifferentiated colored shapes. No complaint named against the dark theme or live updates specifically; the fail lands on the readability clause.",
         "roles": {
           "execute": "machine",
           "judge": "operator",
           "propose": "machine"
         },
+        "verdict": "fail",
         "work": "w_1baf8df3"
       }
     },
@@ -404,6 +433,19 @@
       "id": "wn_6d4117df",
       "kind": "generate",
       "label": "viewer: machine-owned statements amber and dashed, work nodes diamonds dimmed by status, toolbar counts pending endorsement and open work, details panel names owner and folding condition",
+      "props": {
+        "roles": {
+          "execute": "machine",
+          "propose": "machine"
+        },
+        "work": "w_55b5404b"
+      }
+    },
+    {
+      "created_at": "2026-06-10T12:45:44.836395",
+      "id": "wn_71475355",
+      "kind": "generate",
+      "label": "less, not more: progressive disclosure \u2014 works collapsed by default and expanded on focus, focus-plus-context navigation instead of the whole graph at once",
       "props": {
         "roles": {
           "execute": "machine",
@@ -452,6 +494,32 @@
           "propose": "machine"
         },
         "work": "w_55b5404b"
+      }
+    },
+    {
+      "created_at": "2026-06-10T12:45:07.521891",
+      "id": "wn_7e6f90c0",
+      "kind": "gather",
+      "label": "operator chose the three modes of interaction: watch the loop live (operations landing visibly in real time), be summoned to judge (a front-and-center queue of everything awaiting operator judgment), and act in the viewer (verdicts, endorsements, amendments, folds in place). Authoring intent directly in the viewer was offered and not chosen",
+      "props": {
+        "roles": {
+          "execute": "machine",
+          "propose": "operator"
+        },
+        "work": "w_b41a3744"
+      }
+    },
+    {
+      "created_at": "2026-06-10T12:45:30.130803",
+      "id": "wn_817645e0",
+      "kind": "generate",
+      "label": "live loop feed: the existing store fingerprint already re-derives the view; surface what changed \u2014 nodes that arrived since the last tick flash and a small feed names the recent moves",
+      "props": {
+        "roles": {
+          "execute": "machine",
+          "propose": "machine"
+        },
+        "work": "w_b41a3744"
       }
     },
     {
@@ -517,6 +585,19 @@
       "props": {
         "outcome": "pass",
         "work": "w_bdc90a28"
+      }
+    },
+    {
+      "created_at": "2026-06-10T12:38:50.415457",
+      "id": "wn_b87321a1",
+      "kind": "gather",
+      "label": "operator judged the at-a-glance test failed: nodes are still not very useful to see, they are just different colors \u2014 a node should carry its meaning visibly, not only its category",
+      "props": {
+        "roles": {
+          "execute": "machine",
+          "propose": "operator"
+        },
+        "work": "w_55b5404b"
       }
     },
     {
@@ -590,6 +671,32 @@
       }
     },
     {
+      "created_at": "2026-06-10T12:45:31.455458",
+      "id": "wn_d4038543",
+      "kind": "generate",
+      "label": "judgment queue: a front-and-center panel listing exactly what awaits the operator \u2014 pending endorsements, open operator-judged tests, folds awaiting confirmation \u2014 each item jumps to its node and offers the action",
+      "props": {
+        "roles": {
+          "execute": "machine",
+          "propose": "machine"
+        },
+        "work": "w_b41a3744"
+      }
+    },
+    {
+      "created_at": "2026-06-10T12:45:32.817434",
+      "id": "wn_d43648b0",
+      "kind": "generate",
+      "label": "act in place: verdict buttons on operator-judged tests, amend and strike on statements, fold confirmation on works \u2014 POST endpoints mapping one-to-one onto the verbs, every action recorded with the operator as warrant",
+      "props": {
+        "roles": {
+          "execute": "machine",
+          "propose": "machine"
+        },
+        "work": "w_b41a3744"
+      }
+    },
+    {
       "created_at": "2026-06-10T03:28:40.051693",
       "id": "wn_ddb2f58c",
       "kind": "test",
@@ -606,6 +713,19 @@
       }
     },
     {
+      "created_at": "2026-06-10T12:44:51.765728",
+      "id": "wn_e0b7ab0e",
+      "kind": "frame",
+      "label": "the viewer today is read-mostly: one endorse button; every other verb \u2014 verdicts, amending, opening and folding work \u2014 flows through conversation with the machine. The operator wants to act on the system where they see it",
+      "props": {
+        "roles": {
+          "execute": "machine",
+          "propose": "machine"
+        },
+        "work": "w_b41a3744"
+      }
+    },
+    {
       "created_at": "2026-06-10T02:35:34.803758",
       "id": "wn_efd59a7c",
       "kind": "generate",
@@ -616,6 +736,19 @@
           "propose": "machine"
         },
         "work": "w_423ff83b"
+      }
+    },
+    {
+      "created_at": "2026-06-10T12:44:11.968216",
+      "id": "wn_f390fcd5",
+      "kind": "gather",
+      "label": "operator named what a node must show at a glance: its words (text readable on the node), its state (verdict, endorsement, open/folded \u2014 loud), its place in the story (the causal narrative readable from the picture), and less, not more (progressive disclosure over the whole graph at once)",
+      "props": {
+        "roles": {
+          "execute": "machine",
+          "propose": "operator"
+        },
+        "work": "w_55b5404b"
       }
     }
   ],
@@ -642,6 +775,14 @@
       "id": "r_058eab28",
       "props": {},
       "src": "w_423ff83b",
+      "type": "contains"
+    },
+    {
+      "created_at": "2026-06-10T12:45:32.830346",
+      "dst": "wn_d43648b0",
+      "id": "r_08035e0d",
+      "props": {},
+      "src": "w_b41a3744",
       "type": "contains"
     },
     {
@@ -677,6 +818,14 @@
       "type": "depends-on"
     },
     {
+      "created_at": "2026-06-10T12:44:51.776078",
+      "dst": "wn_e0b7ab0e",
+      "id": "r_12388fed",
+      "props": {},
+      "src": "w_b41a3744",
+      "type": "contains"
+    },
+    {
       "created_at": "2026-06-10T02:59:34.167487",
       "dst": "wn_d15d98dc",
       "id": "r_13211063",
@@ -709,12 +858,28 @@
       "type": "contains"
     },
     {
+      "created_at": "2026-06-10T12:45:30.139293",
+      "dst": "wn_817645e0",
+      "id": "r_1864d01d",
+      "props": {},
+      "src": "w_b41a3744",
+      "type": "contains"
+    },
+    {
       "created_at": "2026-06-10T03:28:40.071567",
       "dst": "wn_8302514e",
       "id": "r_1974dc36",
       "props": {},
       "src": "wn_ddb2f58c",
       "type": "tests"
+    },
+    {
+      "created_at": "2026-06-10T12:45:07.531038",
+      "dst": "wn_7e6f90c0",
+      "id": "r_1e920d44",
+      "props": {},
+      "src": "w_b41a3744",
+      "type": "contains"
     },
     {
       "created_at": "2026-06-10T04:04:52.968219",
@@ -773,6 +938,30 @@
       "type": "depends-on"
     },
     {
+      "created_at": "2026-06-10T12:45:31.468904",
+      "dst": "wn_7e6f90c0",
+      "id": "r_2c071458",
+      "props": {},
+      "src": "wn_d4038543",
+      "type": "depends-on"
+    },
+    {
+      "created_at": "2026-06-10T12:38:50.423311",
+      "dst": "wn_b87321a1",
+      "id": "r_2d40e638",
+      "props": {},
+      "src": "w_55b5404b",
+      "type": "contains"
+    },
+    {
+      "created_at": "2026-06-10T12:45:54.069182",
+      "dst": "wn_13992fe3",
+      "id": "r_31caf48b",
+      "props": {},
+      "src": "wn_39247829",
+      "type": "tests"
+    },
+    {
       "created_at": "2026-06-10T03:28:40.062802",
       "dst": "wn_ddb2f58c",
       "id": "r_32995b58",
@@ -794,6 +983,14 @@
       "id": "r_38a0c860",
       "props": {},
       "src": "wn_4290f510",
+      "type": "depends-on"
+    },
+    {
+      "created_at": "2026-06-10T12:45:43.472019",
+      "dst": "wn_f390fcd5",
+      "id": "r_3bff8f65",
+      "props": {},
+      "src": "wn_13992fe3",
       "type": "depends-on"
     },
     {
@@ -827,6 +1024,14 @@
       "props": {},
       "src": "w_bdc90a28",
       "type": "contains"
+    },
+    {
+      "created_at": "2026-06-10T12:45:44.854229",
+      "dst": "wn_b87321a1",
+      "id": "r_4ac1ccef",
+      "props": {},
+      "src": "wn_71475355",
+      "type": "depends-on"
     },
     {
       "created_at": "2026-06-10T03:28:39.746860",
@@ -877,6 +1082,14 @@
       "type": "depends-on"
     },
     {
+      "created_at": "2026-06-10T12:45:31.461743",
+      "dst": "wn_d4038543",
+      "id": "r_5916cfe0",
+      "props": {},
+      "src": "w_b41a3744",
+      "type": "contains"
+    },
+    {
       "created_at": "2026-06-10T02:35:34.093904",
       "dst": "wn_8302514e",
       "id": "r_61f75270",
@@ -893,6 +1106,14 @@
       "type": "contains"
     },
     {
+      "created_at": "2026-06-10T12:44:28.604653",
+      "dst": "hypercore",
+      "id": "r_671a146d",
+      "props": {},
+      "src": "w_b41a3744",
+      "type": "depends-on"
+    },
+    {
       "created_at": "2026-06-10T03:28:39.417250",
       "dst": "wn_4559dcbf",
       "id": "r_6ceee818",
@@ -906,6 +1127,14 @@
       "id": "r_71acdf52",
       "props": {},
       "src": "w_423ff83b",
+      "type": "contains"
+    },
+    {
+      "created_at": "2026-06-10T12:44:11.979869",
+      "dst": "wn_f390fcd5",
+      "id": "r_754ab639",
+      "props": {},
+      "src": "w_55b5404b",
       "type": "contains"
     },
     {
@@ -941,6 +1170,14 @@
       "type": "contains"
     },
     {
+      "created_at": "2026-06-10T12:45:43.462574",
+      "dst": "wn_b87321a1",
+      "id": "r_884f305b",
+      "props": {},
+      "src": "wn_13992fe3",
+      "type": "depends-on"
+    },
+    {
       "created_at": "2026-06-10T03:41:33.464875",
       "dst": "wn_7bfef8fe",
       "id": "r_8e31bd6e",
@@ -955,6 +1192,22 @@
       "props": {},
       "src": "wn_6afe45a5",
       "type": "tests"
+    },
+    {
+      "created_at": "2026-06-10T12:45:30.146126",
+      "dst": "wn_7e6f90c0",
+      "id": "r_8eca5c50",
+      "props": {},
+      "src": "wn_817645e0",
+      "type": "depends-on"
+    },
+    {
+      "created_at": "2026-06-10T12:45:32.843620",
+      "dst": "wn_7e6f90c0",
+      "id": "r_8f720762",
+      "props": {},
+      "src": "wn_d43648b0",
+      "type": "depends-on"
     },
     {
       "created_at": "2026-06-10T03:28:39.049373",
@@ -981,6 +1234,14 @@
       "type": "tests"
     },
     {
+      "created_at": "2026-06-10T12:45:44.861349",
+      "dst": "wn_f390fcd5",
+      "id": "r_a2140221",
+      "props": {},
+      "src": "wn_71475355",
+      "type": "depends-on"
+    },
+    {
       "created_at": "2026-06-10T02:35:34.449055",
       "dst": "wn_6a9e4db2",
       "id": "r_a4c07352",
@@ -995,6 +1256,14 @@
       "props": {},
       "src": "w_423ff83b",
       "type": "depends-on"
+    },
+    {
+      "created_at": "2026-06-10T12:45:55.407304",
+      "dst": "wn_71475355",
+      "id": "r_a9aca86e",
+      "props": {},
+      "src": "wn_39247829",
+      "type": "tests"
     },
     {
       "created_at": "2026-06-10T11:17:54.184313",
@@ -1042,6 +1311,14 @@
       "id": "r_cd68effb",
       "props": {},
       "src": "w_1baf8df3",
+      "type": "contains"
+    },
+    {
+      "created_at": "2026-06-10T12:45:43.452310",
+      "dst": "wn_13992fe3",
+      "id": "r_ce8c49ee",
+      "props": {},
+      "src": "w_55b5404b",
       "type": "contains"
     },
     {
@@ -1096,6 +1373,14 @@
       "created_at": "2026-06-10T02:21:35.665541",
       "dst": "wn_39247829",
       "id": "r_f0456d16",
+      "props": {},
+      "src": "w_55b5404b",
+      "type": "contains"
+    },
+    {
+      "created_at": "2026-06-10T12:45:44.845950",
+      "dst": "wn_71475355",
+      "id": "r_f4dd3171",
       "props": {},
       "src": "w_55b5404b",
       "type": "contains"
