@@ -24,6 +24,14 @@
     segment: "#496cba",
     statement: "#6f767d",
     work: "#c05a36",
+    // the operation alphabet (work: s_3729cb59)
+    frame: "#1f2a44",
+    gather: "#496cba",
+    derive: "#5d7480",
+    generate: "#9aa0a6",
+    test: "#7a4f9f",
+    commit: "#2f7d6d",
+    // pre-alphabet kinds, kept so folded history reads as the graph it was
     step: "#9aa0a6",
     candidate: "#9aa0a6",
     check: "#7a4f9f",

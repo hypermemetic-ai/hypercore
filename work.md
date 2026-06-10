@@ -26,4 +26,6 @@ The alphabet of operations never grows. Named clusters of operations are the com
 
 Who proposes, executes, judges, and decides is a property on each operation, not an operation of its own. The decision to commit belongs to whoever owns the consequences and cannot be delegated. [machine]
 
-Execution graphs and folding are built in their first form. The operation alphabet is named before its machinery is, so the language exists before the machinery does. [machine]
+Relations between operations carry the combinators. depends-on is the causal link from a consumer to what it consumes; tests, commits, and reframes bind a test, commit, or frame to what it acts on; decomposes-into expands a compound into its parts. Work membership stays contains, which is bookkeeping, not a combinator. [machine]
+
+Execution graphs and folding were built in their first form, and the operation alphabet was named before its machinery, so the language existed before the machinery did. The work loop now speaks the alphabet: operations as nodes, combinators as relations, roles as props. [machine]

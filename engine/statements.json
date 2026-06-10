@@ -460,13 +460,22 @@
       "text": "Who proposes, executes, judges, and decides is a property on each operation, not an operation of its own. The decision to commit belongs to whoever owns the consequences and cannot be delegated."
     },
     {
-      "created_at": "2026-06-10T01:59:23.028759",
-      "id": "work-11",
+      "created_at": "2026-06-10T03:29:05.823141",
+      "id": "s_5365a11a",
       "links": [],
       "ord": 14,
       "owner": "machine",
       "segment": "work",
-      "text": "Execution graphs and folding are built in their first form. The operation alphabet is named before its machinery is, so the language exists before the machinery does."
+      "text": "Relations between operations carry the combinators. depends-on is the causal link from a consumer to what it consumes; tests, commits, and reframes bind a test, commit, or frame to what it acts on; decomposes-into expands a compound into its parts. Work membership stays contains, which is bookkeeping, not a combinator."
+    },
+    {
+      "created_at": "2026-06-10T01:59:23.028759",
+      "id": "work-11",
+      "links": [],
+      "ord": 15,
+      "owner": "machine",
+      "segment": "work",
+      "text": "Execution graphs and folding were built in their first form, and the operation alphabet was named before its machinery, so the language existed before the machinery did. The work loop now speaks the alphabet: operations as nodes, combinators as relations, roles as props."
     }
   ]
 }

@@ -21,7 +21,15 @@ new id. `--db PATH` chooses the database file (default `hypercore.duckdb`).
 
 Intent and work have their own verbs: `add-statement` / `amend` / `strike` /
 `endorse` for statements, `work-open` / `work-add` / `work-check` / `work-fold`
-for execution graphs, `status` / `show` to navigate. Statements are **not
+for execution graphs, `status` / `show` to navigate. A member of an execution
+graph is one **operation** of six kinds — `frame`, `gather`, `derive`,
+`generate`, `test`, `commit` (work: s_3729cb59); its products are material on
+the operation node. Relations carry the combinators (`depends-on`, `tests`,
+`commits`, `reframes`, `decomposes-into`; `contains` is work membership), and
+`roles` in props say who proposes / executes / judges / decides — a commit's
+decide is the operator's and cannot be delegated (s_81c38173). `work-check`
+records a test's verdict; `work-fold`'s machine gate reads those verdicts and
+folds the settlement a commit operation binds. Statements are **not
 nodes** (structure: s_d4bd1b45): they live in their own store with their own
 index, and graph nodes reference them by id — `on` for the statement a node is
 bound by, `produces` for statements it produced. `show <statement-id>` answers

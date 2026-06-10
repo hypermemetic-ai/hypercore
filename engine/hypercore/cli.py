@@ -33,6 +33,35 @@ OWNER_MARKER = " [machine]"
 GRAPH_SNAPSHOT = INTENT_ROOT / "engine" / "graph.json"
 STATEMENTS_SNAPSHOT = INTENT_ROOT / "engine" / "statements.json"
 
+# The operation alphabet (work: s_3729cb59). A member of an execution graph is
+# one operation of these six kinds; its products are material on the operation
+# node, never a node kind of their own. The alphabet does not grow — named
+# clusters of operations are the compounds that do (s_e4f503c9).
+OPERATIONS = ("frame", "gather", "derive", "generate", "test", "commit")
+
+# Relations carry the combinators. `--on` wires an operation to what it acts
+# on with its kind's own combinator; every other kind consumes its target
+# through the causal link, depends-on. `contains` is work membership — which
+# folder an operation belongs to — not a combinator.
+COMBINATORS = {
+    "frame": "reframes",
+    "test": "tests",
+    "commit": "commits",
+}
+
+
+def role_defaults(kind: str) -> dict:
+    """Who proposes, executes, judges, and decides — a property on each
+    operation, not an operation of its own (s_81c38173). The machine drives
+    the verbs, so it proposes and executes by default; only a test carries a
+    judge, and a commit's decide belongs to the operator, non-delegably."""
+    roles = {"propose": "machine", "execute": "machine"}
+    if kind == "test":
+        roles["judge"] = "machine"
+    if kind == "commit":
+        roles["decide"] = "operator"
+    return roles
+
 
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
@@ -260,27 +289,52 @@ def build_parser() -> argparse.ArgumentParser:
 
     work_add = subparsers.add_parser(
         "work-add",
-        help="Add a step, candidate, check, or result to open work.",
+        help="Add one operation to open work.",
     )
     work_add.add_argument("work", help="Work id.")
     work_add.add_argument(
         "--kind",
         required=True,
-        choices=("step", "candidate", "check", "result"),
-        help="What kind of work node this is.",
+        choices=OPERATIONS,
+        help="Which of the six operations this is.",
     )
     work_add.add_argument("--label", required=True, help="What it is.")
+    work_add.add_argument(
+        "--on",
+        dest="target",
+        help="The operation this one acts on: a test tests it, a commit "
+        "commits it (must be a generate), a frame reframes it (must be a "
+        "frame); any other kind depends on it.",
+    )
+    work_add.add_argument(
+        "--needs",
+        action="append",
+        default=[],
+        help="Operation whose product this one consumes: a depends-on "
+        "causal link. Use more than once for more.",
+    )
+    work_add.add_argument(
+        "--under",
+        help="Parent operation this one decomposes from (decomposes-into).",
+    )
+    work_add.add_argument(
+        "--roles",
+        type=json_object,
+        help="Who proposes/executes/judges/decides, merged over the "
+        "kind's defaults. A commit's decide is the operator's, always.",
+    )
     work_add.add_argument("--props", type=json_object, help="JSON object.")
     work_add.set_defaults(func=cmd_work_add)
 
     work_check = subparsers.add_parser(
         "work-check",
-        help="Record a check's outcome.",
+        help="Record a test operation's verdict.",
     )
-    work_check.add_argument("check", help="Check node id.")
+    work_check.add_argument("test", help="Test operation id.")
     work_check.add_argument(
-        "--outcome", required=True, choices=("pass", "fail"), help="The outcome."
+        "--verdict", required=True, choices=("pass", "fail"), help="The verdict."
     )
+    work_check.add_argument("--grounds", help="What the verdict rests on.")
     work_check.set_defaults(func=cmd_work_check)
 
     work_fold = subparsers.add_parser(
@@ -825,6 +879,12 @@ def cmd_work_open(args) -> int:
                 "check": args.check,
             },
         )
+        # Every work happens inside the standing frame: the root's product is
+        # the problem space, every work's precondition. The causal link keeps
+        # the root in the graph rather than an island beside it.
+        root = root_node(store)
+        if root is not None:
+            store.add_relation(wid, root["id"], "depends-on")
         views = write_views(store)
     print_json(
         {
@@ -838,8 +898,7 @@ def cmd_work_open(args) -> int:
     return 0
 
 
-def work_members(store: Store, work_id: str) -> list[dict]:
-    graph = store.graph()
+def work_members(graph: dict, work_id: str) -> list[dict]:
     by_id = {node["id"]: node for node in graph["nodes"]}
     return [
         by_id[relation["dst"]]
@@ -850,6 +909,13 @@ def work_members(store: Store, work_id: str) -> list[dict]:
     ]
 
 
+def root_node(store: Store) -> dict | None:
+    for node in store.graph()["nodes"]:
+        if node["props"].get("role") == "root":
+            return node
+    return None
+
+
 def cmd_work_add(args) -> int:
     with Store(args.db) as store:
         work = fetch_node(store, args.work, kind="work")
@@ -857,21 +923,69 @@ def cmd_work_add(args) -> int:
             raise ValueError(
                 f"work '{args.work}' is {work['props'].get('status')}, not open"
             )
+        roles = role_defaults(args.kind)
+        roles.update(args.roles or {})
+        if args.kind == "commit" and roles.get("decide") != "operator":
+            raise ValueError(
+                "the decision to commit belongs to the operator and cannot "
+                "be delegated (s_81c38173)"
+            )
+        # Resolve the combinators before creating anything, so a refused
+        # relation never leaves a half-wired operation behind.
+        relations: list[tuple[str, str, str]] = []  # (src or "", type, dst)
+        if args.target:
+            target = fetch_node(store, args.target)
+            combinator = COMBINATORS.get(args.kind, "depends-on")
+            if combinator == "commits" and target["kind"] != "generate":
+                raise ValueError(
+                    "a commit binds the candidate a generate put forward; "
+                    f"'{args.target}' is a {target['kind']}, not a generate"
+                )
+            if combinator == "reframes" and target["kind"] != "frame":
+                raise ValueError(
+                    "a frame reframes a prior frame; "
+                    f"'{args.target}' is a {target['kind']}, not a frame"
+                )
+            relations.append(("", combinator, args.target))
+        for needed in args.needs:
+            fetch_node(store, needed)
+            relations.append(("", "depends-on", needed))
+        if args.under:
+            fetch_node(store, args.under)
+            relations.append((args.under, "decomposes-into", ""))
+
         props = dict(args.props or {})
         props["work"] = args.work
+        props["roles"] = roles
         nid = store.add_node(args.kind, args.label, id_prefix="wn_", props=props)
         store.add_relation(args.work, nid, "contains")
+        wired = []
+        for src, type_, dst in relations:
+            store.add_relation(src or nid, dst or nid, type_)
+            wired.append({"src": src or nid, "type": type_, "dst": dst or nid})
         views = write_views(store)
-    print_json({"id": nid, "kind": args.kind, "work": args.work, **views})
+    print_json(
+        {
+            "id": nid,
+            "kind": args.kind,
+            "work": args.work,
+            "roles": roles,
+            "relations": wired,
+            **views,
+        }
+    )
     return 0
 
 
 def cmd_work_check(args) -> int:
     with Store(args.db) as store:
-        fetch_node(store, args.check, kind="check")
-        store.update_node(args.check, props_patch={"outcome": args.outcome})
+        fetch_node(store, args.test, kind="test")
+        patch: dict = {"verdict": args.verdict}
+        if args.grounds:
+            patch["grounds"] = args.grounds
+        store.update_node(args.test, props_patch=patch)
         views = write_views(store)
-    print_json({"id": args.check, "outcome": args.outcome, **views})
+    print_json({"id": args.test, "verdict": args.verdict, **views})
     return 0
 
 
@@ -893,27 +1007,32 @@ def cmd_work_fold(args) -> int:
             print_json({"id": args.work, "status": "abandoned", **views})
             return 0
 
-        members = work_members(store, args.work)
-        checks = [m for m in members if m["kind"] == "check"]
-        results = [m for m in members if m["kind"] == "result"]
+        graph = store.graph()
+        members = work_members(graph, args.work)
+        tests = [m for m in members if m["kind"] == "test"]
+        commits = [m for m in members if m["kind"] == "commit"]
         if props.get("check") == "machine":
-            if not checks:
+            if not tests:
                 raise ValueError(
-                    "no checks recorded: an unchecked fold is a hope, not a result"
+                    "no test operations: an unchecked fold is a hope, not a result"
                 )
-            unpassed = [c["id"] for c in checks if c["props"].get("outcome") != "pass"]
+            unpassed = [t["id"] for t in tests if t["props"].get("verdict") != "pass"]
             if unpassed:
-                raise ValueError(f"checks not passing: {', '.join(unpassed)}")
+                raise ValueError(f"tests without a pass verdict: {', '.join(unpassed)}")
         elif not args.operator_confirms:
             raise ValueError(
                 "this folding condition spends operator judgment; "
                 "re-run with --operator-confirms to record it"
             )
-        if not results:
+        if not commits:
             raise ValueError(
-                "no result node: fold needs a result to become material, "
-                "or fold with --abandoned"
+                "no commit operation: fold needs a settlement to become "
+                "material, or fold with --abandoned"
             )
+
+        def with_material(node: dict) -> str:
+            ids = [m["id"] for m in graph["material"].get(node["id"], [])]
+            return node["label"] + (f"  (material: {', '.join(ids)})" if ids else "")
 
         lines = [
             f"# {work['label']}",
@@ -921,16 +1040,18 @@ def cmd_work_fold(args) -> int:
             f"folded: {folded_at}",
             f"fold when: {props.get('fold_when')}",
             "",
-            "## results",
+            "## commits",
         ]
-        lines.extend(f"- {r['label']}" for r in results)
-        if checks:
-            lines.extend(["", "## checks"])
+        lines.extend(f"- {with_material(c)}" for c in commits)
+        if tests:
+            lines.extend(["", "## tests"])
             lines.extend(
-                f"- {c['props'].get('outcome', 'pending')}: {c['label']}"
-                for c in checks
+                f"- {t['props'].get('verdict', 'open')}: {t['label']}"
+                for t in tests
             )
-        history = [m for m in members if m["kind"] in ("step", "candidate")]
+        # Everything else is the history: the frames, gathers, derives, and
+        # generates the work moved through (and any pre-alphabet kinds).
+        history = [m for m in members if m["kind"] not in ("test", "commit")]
         if history:
             lines.extend(["", "## history"])
             lines.extend(f"- {m['kind']}: {m['label']}" for m in history)

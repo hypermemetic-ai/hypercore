@@ -37,11 +37,15 @@
     {
       "created_at": "2026-06-10T01:59:22.527354",
       "id": "hypercore",
-      "kind": "node",
+      "kind": "frame",
       "label": "hypercore",
       "props": {
         "intent": "organizing-document.md",
-        "role": "root"
+        "role": "root",
+        "roles": {
+          "decide": "operator",
+          "propose": "operator"
+        }
       }
     },
     {
@@ -54,7 +58,8 @@
         "fold_when": "work nodes are operations (frame, gather, derive, generate, test, commit), their products are material on those nodes, relations carry the combinators, and roles live in props",
         "on": "s_3729cb59",
         "produces": [
-          "s_d4bd1b45"
+          "s_d4bd1b45",
+          "s_5365a11a"
         ],
         "status": "open"
       }
@@ -87,9 +92,13 @@
     {
       "created_at": "2026-06-10T02:20:33.137876",
       "id": "wn_11774d3c",
-      "kind": "step",
+      "kind": "generate",
       "label": "toolbar summary: counts of statements pending endorsement and open work",
       "props": {
+        "roles": {
+          "execute": "machine",
+          "propose": "machine"
+        },
         "work": "w_55b5404b"
       }
     },
@@ -116,18 +125,58 @@
     {
       "created_at": "2026-06-10T02:21:35.651278",
       "id": "wn_39247829",
-      "kind": "check",
+      "kind": "test",
       "label": "operator opens the viewer and can tell machine-owned statements and open work apart at a glance",
       "props": {
+        "roles": {
+          "judge": "operator",
+          "propose": "machine"
+        },
         "work": "w_55b5404b"
+      }
+    },
+    {
+      "created_at": "2026-06-10T03:28:39.035562",
+      "id": "wn_44b27c3f",
+      "kind": "test",
+      "label": "work-add accepts only the six operations; legacy kinds are refused",
+      "props": {
+        "grounds": "exercised on a sandbox copy of the repo, 2026-06-10: all refusal paths and the full gauntlet ran",
+        "roles": {
+          "execute": "machine",
+          "judge": "machine",
+          "propose": "machine"
+        },
+        "verdict": "pass",
+        "work": "w_423ff83b"
+      }
+    },
+    {
+      "created_at": "2026-06-10T03:28:39.409834",
+      "id": "wn_4559dcbf",
+      "kind": "test",
+      "label": "combinators wire as relations: tests, commits binds a generate only, reframes a frame only, depends-on, decomposes-into; path traverses them",
+      "props": {
+        "grounds": "exercised on a sandbox copy of the repo, 2026-06-10: all refusal paths and the full gauntlet ran",
+        "roles": {
+          "execute": "machine",
+          "judge": "machine",
+          "propose": "machine"
+        },
+        "verdict": "pass",
+        "work": "w_423ff83b"
       }
     },
     {
       "created_at": "2026-06-10T02:20:32.475990",
       "id": "wn_4e9bde2c",
-      "kind": "step",
+      "kind": "generate",
       "label": "carry owner and status from node props into viewer data so styles can select on them",
       "props": {
+        "roles": {
+          "execute": "machine",
+          "propose": "machine"
+        },
         "work": "w_55b5404b"
       }
     },
@@ -143,9 +192,13 @@
     {
       "created_at": "2026-06-10T02:35:34.435325",
       "id": "wn_6a9e4db2",
-      "kind": "candidate",
+      "kind": "generate",
       "label": "synthesize and repair stay out until the primitive-vs-compound contest resolves; adopt only if real work keeps wanting them",
       "props": {
+        "roles": {
+          "execute": "machine",
+          "propose": "machine"
+        },
         "work": "w_423ff83b"
       }
     },
@@ -161,45 +214,81 @@
     {
       "created_at": "2026-06-10T02:21:35.321140",
       "id": "wn_6d4117df",
-      "kind": "result",
+      "kind": "generate",
       "label": "viewer: machine-owned statements amber and dashed, work nodes diamonds dimmed by status, toolbar counts pending endorsement and open work, details panel names owner and folding condition",
       "props": {
+        "roles": {
+          "execute": "machine",
+          "propose": "machine"
+        },
         "work": "w_55b5404b"
+      }
+    },
+    {
+      "created_at": "2026-06-10T03:28:39.731359",
+      "id": "wn_7aca437d",
+      "kind": "test",
+      "label": "roles land in props with kind defaults; a commit's decide cannot be delegated to the machine",
+      "props": {
+        "grounds": "exercised on a sandbox copy of the repo, 2026-06-10: all refusal paths and the full gauntlet ran",
+        "roles": {
+          "execute": "machine",
+          "judge": "machine",
+          "propose": "machine"
+        },
+        "verdict": "pass",
+        "work": "w_423ff83b"
       }
     },
     {
       "created_at": "2026-06-10T02:20:32.819319",
       "id": "wn_7bfef8fe",
-      "kind": "step",
+      "kind": "generate",
       "label": "style: machine-owned statements amber and dashed; work nodes diamonds, dimmed once folded",
       "props": {
+        "roles": {
+          "execute": "machine",
+          "propose": "machine"
+        },
         "work": "w_55b5404b"
       }
     },
     {
       "created_at": "2026-06-10T02:35:34.086538",
       "id": "wn_8302514e",
-      "kind": "step",
+      "kind": "generate",
       "label": "work-fold's machine check reads test operations' verdicts instead of check nodes",
       "props": {
+        "roles": {
+          "execute": "machine",
+          "propose": "machine"
+        },
         "work": "w_423ff83b"
       }
     },
     {
       "created_at": "2026-06-10T02:35:33.038744",
       "id": "wn_8d5935e3",
-      "kind": "step",
+      "kind": "generate",
       "label": "replace work-add kinds step/candidate/check/result with the six operations; products become material on operation nodes, not node kinds",
       "props": {
+        "roles": {
+          "execute": "machine",
+          "propose": "machine"
+        },
         "work": "w_423ff83b"
       }
     },
     {
       "created_at": "2026-06-10T03:10:27.037035",
       "id": "wn_92d11a1e",
-      "kind": "step",
+      "kind": "gather",
       "label": "operator named the failures to fix: two-finger zoom is annoying to navigate, and the screen is a wall of node text, unreadable; statements now arrive beside the graph and need their own panel",
       "props": {
+        "roles": {
+          "execute": "machine",
+          "propose": "operator"
+        },
         "work": "w_55b5404b"
       }
     },
@@ -216,9 +305,13 @@
     {
       "created_at": "2026-06-10T02:35:33.393520",
       "id": "wn_b91eab58",
-      "kind": "step",
+      "kind": "generate",
       "label": "relation types carry the combinators: depends-on as causal link, tests, commits, reframes, decomposes-into",
       "props": {
+        "roles": {
+          "execute": "machine",
+          "propose": "machine"
+        },
         "work": "w_423ff83b"
       }
     },
@@ -244,9 +337,13 @@
     {
       "created_at": "2026-06-10T02:35:33.705998",
       "id": "wn_c9884850",
-      "kind": "step",
+      "kind": "generate",
       "label": "roles as props on each operation (propose, execute, judge, decide); decide on a commit is the operator's and cannot be delegated",
       "props": {
+        "roles": {
+          "execute": "machine",
+          "propose": "machine"
+        },
         "work": "w_423ff83b"
       }
     },
@@ -260,11 +357,31 @@
       }
     },
     {
+      "created_at": "2026-06-10T03:28:40.051693",
+      "id": "wn_ddb2f58c",
+      "kind": "test",
+      "label": "work-fold's machine gate reads test verdicts and requires a commit as settlement; render and load round-trip survive",
+      "props": {
+        "grounds": "exercised on a sandbox copy of the repo, 2026-06-10: all refusal paths and the full gauntlet ran",
+        "roles": {
+          "execute": "machine",
+          "judge": "machine",
+          "propose": "machine"
+        },
+        "verdict": "pass",
+        "work": "w_423ff83b"
+      }
+    },
+    {
       "created_at": "2026-06-10T02:35:34.803758",
       "id": "wn_efd59a7c",
-      "kind": "candidate",
+      "kind": "generate",
       "label": "test may want to split into challenge and verdict; decide from practice, not theory",
       "props": {
+        "roles": {
+          "execute": "machine",
+          "propose": "machine"
+        },
         "work": "w_423ff83b"
       }
     }
@@ -303,12 +420,28 @@
       "type": "contains"
     },
     {
+      "created_at": "2026-06-10T03:28:39.739989",
+      "dst": "wn_7aca437d",
+      "id": "r_16109311",
+      "props": {},
+      "src": "w_423ff83b",
+      "type": "contains"
+    },
+    {
       "created_at": "2026-06-10T02:59:31.564899",
       "dst": "wn_19ef184c",
       "id": "r_16dedf5c",
       "props": {},
       "src": "w_bdc90a28",
       "type": "contains"
+    },
+    {
+      "created_at": "2026-06-10T03:28:40.071567",
+      "dst": "wn_8302514e",
+      "id": "r_1974dc36",
+      "props": {},
+      "src": "wn_ddb2f58c",
+      "type": "tests"
     },
     {
       "created_at": "2026-06-10T02:35:33.713886",
@@ -327,11 +460,27 @@
       "type": "contains"
     },
     {
+      "created_at": "2026-06-10T03:28:39.042460",
+      "dst": "wn_44b27c3f",
+      "id": "r_29f21829",
+      "props": {},
+      "src": "w_423ff83b",
+      "type": "contains"
+    },
+    {
       "created_at": "2026-06-10T02:59:30.906151",
       "dst": "wn_6aa98a1d",
       "id": "r_2b192e34",
       "props": {},
       "src": "w_bdc90a28",
+      "type": "contains"
+    },
+    {
+      "created_at": "2026-06-10T03:28:40.062802",
+      "dst": "wn_ddb2f58c",
+      "id": "r_32995b58",
+      "props": {},
+      "src": "w_423ff83b",
       "type": "contains"
     },
     {
@@ -351,6 +500,22 @@
       "type": "contains"
     },
     {
+      "created_at": "2026-06-10T03:28:39.746860",
+      "dst": "wn_c9884850",
+      "id": "r_4e7c72d5",
+      "props": {},
+      "src": "wn_7aca437d",
+      "type": "tests"
+    },
+    {
+      "created_at": "2026-06-10T03:28:16.094154",
+      "dst": "hypercore",
+      "id": "r_52668ef8",
+      "props": {},
+      "src": "w_55b5404b",
+      "type": "depends-on"
+    },
+    {
       "created_at": "2026-06-10T02:35:34.093904",
       "dst": "wn_8302514e",
       "id": "r_61f75270",
@@ -364,6 +529,14 @@
       "id": "r_64ce40fd",
       "props": {},
       "src": "w_bdc90a28",
+      "type": "contains"
+    },
+    {
+      "created_at": "2026-06-10T03:28:39.417250",
+      "dst": "wn_4559dcbf",
+      "id": "r_6ceee818",
+      "props": {},
+      "src": "w_423ff83b",
       "type": "contains"
     },
     {
@@ -383,12 +556,28 @@
       "type": "contains"
     },
     {
+      "created_at": "2026-06-10T03:28:39.049373",
+      "dst": "wn_8d5935e3",
+      "id": "r_95dbabd2",
+      "props": {},
+      "src": "wn_44b27c3f",
+      "type": "tests"
+    },
+    {
       "created_at": "2026-06-10T02:35:34.449055",
       "dst": "wn_6a9e4db2",
       "id": "r_a4c07352",
       "props": {},
       "src": "w_423ff83b",
       "type": "contains"
+    },
+    {
+      "created_at": "2026-06-10T03:28:16.086214",
+      "dst": "hypercore",
+      "id": "r_a8f0a484",
+      "props": {},
+      "src": "w_423ff83b",
+      "type": "depends-on"
     },
     {
       "created_at": "2026-06-10T02:20:32.830622",
@@ -415,6 +604,14 @@
       "type": "contains"
     },
     {
+      "created_at": "2026-06-10T03:28:16.239725",
+      "dst": "wn_6d4117df",
+      "id": "r_d7e3417e",
+      "props": {},
+      "src": "wn_39247829",
+      "type": "tests"
+    },
+    {
       "created_at": "2026-06-10T02:21:35.333545",
       "dst": "wn_6d4117df",
       "id": "r_d9ac7c4e",
@@ -423,12 +620,36 @@
       "type": "contains"
     },
     {
+      "created_at": "2026-06-10T03:28:39.423037",
+      "dst": "wn_b91eab58",
+      "id": "r_e90c0c06",
+      "props": {},
+      "src": "wn_4559dcbf",
+      "type": "tests"
+    },
+    {
       "created_at": "2026-06-10T02:21:35.665541",
       "dst": "wn_39247829",
       "id": "r_f0456d16",
       "props": {},
       "src": "w_55b5404b",
       "type": "contains"
+    },
+    {
+      "created_at": "2026-06-10T03:28:16.166680",
+      "dst": "wn_8d5935e3",
+      "id": "r_fca2b774",
+      "props": {},
+      "src": "wn_8302514e",
+      "type": "depends-on"
+    },
+    {
+      "created_at": "2026-06-10T03:28:16.076395",
+      "dst": "hypercore",
+      "id": "r_ff6cb959",
+      "props": {},
+      "src": "w_bdc90a28",
+      "type": "depends-on"
     }
   ]
 }

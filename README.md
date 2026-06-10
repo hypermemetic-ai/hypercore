@@ -44,11 +44,13 @@ cd engine
 ../.venv/bin/python -m hypercore amend ID --text "..." [--by operator]
 ../.venv/bin/python -m hypercore strike ID [--by operator]
 
-# work runs as execution graphs that fold back into the node that spawned them
+# work runs as execution graphs that fold back into the node that spawned them;
+# their members are operations of the six kinds, wired by combinator relations
 ../.venv/bin/python -m hypercore work-open --on ID --label "..." \
     --fold-when "..." --check machine|operator
-../.venv/bin/python -m hypercore work-add WID --kind step|candidate|check|result --label "..."
-../.venv/bin/python -m hypercore work-check CID --outcome pass|fail
+../.venv/bin/python -m hypercore work-add WID --kind frame|gather|derive|generate|test|commit \
+    --label "..." [--on ID] [--needs ID] [--under ID] [--roles JSON]
+../.venv/bin/python -m hypercore work-check TID --verdict pass|fail [--grounds "..."]
 ../.venv/bin/python -m hypercore work-fold WID [--operator-confirms | --abandoned]
 
 ../.venv/bin/python -m hypercore load     # rebuild a local db from engine/graph.json
