@@ -22,8 +22,6 @@ The operator can read the system's state at a glance, without asking the machine
 
 The operator's interface is a queue of decisions. A decision arrives with the context to decide it, the options on the table, and what each option entails: what it unblocks, what it breaks, what keeps running unbacked, and what reversing it later would cost.
 
-Conversation produces decisions. Conversation around an open decision brings information to that decision; it is not itself the decision. [machine]
-
 The machine never silently commits the operator's resources: scope calls that change what the operator must later judge, build machinery, or decline their intent are theirs to make; within endorsed intent the machine scopes freely and visibly. Every decision records its grounds at the moment it is made.
 
 Staleness is the machine's to notice, never the operator's to manage.
