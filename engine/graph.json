@@ -19,207 +19,21 @@
       "kind": "document",
       "label": "operation set \u2014 research panel findings",
       "lang": "markdown",
-      "node_id": "s_3729cb59",
+      "node_id": "w_423ff83b",
       "path": "research/operation-set-findings.md"
+    },
+    {
+      "body": "# statements leave the graph\n\nfolded: 2026-06-10T07:59:34+00:00\nfold when: graph.json holds no statement or segment nodes; statements live in a git-tracked store with envelope (id, text, owner, segment, order); operations and work reference statements by id, and show answers the reverse direction (statement to referencing nodes); every existing verb, render, load, and the viewer work unchanged\n\n## results\n- statements live beside the graph: statements table + statements.json, nodes reference them via on/produces props, show answers the reverse index, all verbs and views unchanged\n\n## checks\n- pass: graph.json holds no statement or segment nodes (kinds: node, work, step, check, candidate, result)\n- pass: show on a statement answers the reverse direction: bound work, producing work, links both ways, material via the bound work\n- pass: verbs, render, load, ingest, traversals, and viewer verified in a throwaway copy: statement cycle round-trips byte-identical; work cycle folds with material on the work node; /api/graph serves graph plus store\n- pass: statements.json holds all 51 statements with envelope: id, text, owner, segment, ord, links, created_at\n\n## history\n- step: one-time migration: 51 statements moved with envelope and 2 depends-on links; spawned-by relations became on/produces props; m_cca715e7 rehomed to w_423ff83b; statement and segment nodes deleted\n- step: verbs rewired: statement verbs speak to the store; work-open binds by id; work-fold attaches material to the work node; render reads the store; load reads both snapshots\n- step: statements table added to schema; store grows statement CRUD, dump/load, and the reverse index (statement_references)\n",
+      "created_at": "2026-06-10T02:59:34.481445",
+      "id": "m_d318801f",
+      "kind": "result",
+      "label": "statements leave the graph",
+      "lang": "markdown",
+      "node_id": "w_bdc90a28",
+      "path": null
     }
   ],
   "nodes": [
-    {
-      "created_at": "2026-06-10T01:59:22.850010",
-      "id": "endorsement",
-      "kind": "segment",
-      "label": "endorsement",
-      "props": {
-        "renders_to": "endorsement.md",
-        "title": "endorsement"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.858570",
-      "id": "endorsement-1",
-      "kind": "statement",
-      "label": "Endorsement names who stands behind a statement.",
-      "props": {
-        "ord": 1,
-        "owner": "operator",
-        "segment": "endorsement"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.867746",
-      "id": "endorsement-2",
-      "kind": "statement",
-      "label": "An endorsed statement is operator-owned.",
-      "props": {
-        "ord": 2,
-        "owner": "operator",
-        "segment": "endorsement"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.880074",
-      "id": "endorsement-3",
-      "kind": "statement",
-      "label": "An unendorsed statement is machine-owned until an operator takes it on.",
-      "props": {
-        "ord": 3,
-        "owner": "operator",
-        "segment": "endorsement"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.889168",
-      "id": "endorsement-4",
-      "kind": "statement",
-      "label": "The machine never endorses for the operator.",
-      "props": {
-        "ord": 4,
-        "owner": "operator",
-        "segment": "endorsement"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.897839",
-      "id": "endorsement-5",
-      "kind": "statement",
-      "label": "Ownership and truth are separate. Ownership says who may responsibly change a statement; evidence says whether it still holds.",
-      "props": {
-        "ord": 5,
-        "owner": "operator",
-        "segment": "endorsement"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.905727",
-      "id": "endorsement-6",
-      "kind": "statement",
-      "label": "An intent is operator-owned or machine-owned. The material that corresponds to it answers to whichever stands behind it.",
-      "props": {
-        "ord": 6,
-        "owner": "operator",
-        "segment": "endorsement"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.914827",
-      "id": "endorsement-7",
-      "kind": "statement",
-      "label": "Ownership is visible in the derived view: a machine-owned statement ends with the marker [machine]. Endorsement is the endorse verb; render then drops the marker. Amending or striking are the operator's other two answers.",
-      "props": {
-        "ord": 7,
-        "owner": "machine",
-        "segment": "endorsement"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.922659",
-      "id": "endorsement-8",
-      "kind": "statement",
-      "label": "The record of endorsements is what earns autonomy. Where the machine's settlements keep being taken on unchanged, its reach grows; where they keep being struck, it shrinks.",
-      "props": {
-        "ord": 8,
-        "owner": "machine",
-        "segment": "endorsement"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.536543",
-      "id": "foundations",
-      "kind": "segment",
-      "label": "foundations",
-      "props": {
-        "renders_to": "foundations.md",
-        "title": "foundations"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.544891",
-      "id": "foundations-1",
-      "kind": "statement",
-      "label": "hypercore is a small graph for a human and an agent to think with together.",
-      "props": {
-        "ord": 1,
-        "owner": "operator",
-        "segment": "foundations"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.553202",
-      "id": "foundations-2",
-      "kind": "statement",
-      "label": "The graph is the model: nodes, relations between them, clusters of relations, and material attached to nodes.",
-      "props": {
-        "ord": 2,
-        "owner": "operator",
-        "segment": "foundations"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.561541",
-      "id": "foundations-3",
-      "kind": "statement",
-      "label": "The machine carries no memory between episodes of work. hypercore holds that memory outside the machine: the graph, not the running conversation, is the durable shared state.",
-      "props": {
-        "ord": 3,
-        "owner": "machine",
-        "segment": "foundations"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.571442",
-      "id": "foundations-4",
-      "kind": "statement",
-      "label": "The database is the source of truth.",
-      "props": {
-        "ord": 4,
-        "owner": "operator",
-        "segment": "foundations"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.580897",
-      "id": "foundations-5",
-      "kind": "statement",
-      "label": "The files on disk are a derived view of the database. They exist so a human can read the graph and git can track how it changes.",
-      "props": {
-        "ord": 5,
-        "owner": "operator",
-        "segment": "foundations"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.589885",
-      "id": "foundations-6",
-      "kind": "statement",
-      "label": "Intent is authored through the statement verbs; render is the files' only writer. The snapshot in git is the durable form of both the graph and the statement store; the database file is a local working copy rebuilt from it with load.",
-      "props": {
-        "ord": 6,
-        "owner": "machine",
-        "segment": "foundations"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.598525",
-      "id": "foundations-7",
-      "kind": "statement",
-      "label": "The operator's attention is the scarcest resource in the system. The system spends it on judgment, never on filing.",
-      "props": {
-        "ord": 7,
-        "owner": "machine",
-        "segment": "foundations"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.606499",
-      "id": "foundations-8",
-      "kind": "statement",
-      "label": "The operator never performs graph maintenance. The machine files, links, and renders; the operator ratifies, vetoes, and redirects. An operator hand-tending the graph's bookkeeping is the earliest signal that ceremony has won.",
-      "props": {
-        "ord": 8,
-        "owner": "machine",
-        "segment": "foundations"
-      }
-    },
     {
       "created_at": "2026-06-10T01:59:22.527354",
       "id": "hypercore",
@@ -231,290 +45,6 @@
       }
     },
     {
-      "created_at": "2026-06-10T02:35:16.413872",
-      "id": "s_3729cb59",
-      "kind": "statement",
-      "label": "An operation is one move on the problem state, of six kinds: frame, gather, derive, generate, test, commit. Work is made of operations.",
-      "props": {
-        "ord": 11,
-        "owner": "machine",
-        "segment": "work"
-      }
-    },
-    {
-      "created_at": "2026-06-10T02:35:17.192347",
-      "id": "s_81c38173",
-      "kind": "statement",
-      "label": "Who proposes, executes, judges, and decides is a property on each operation, not an operation of its own. The decision to commit belongs to whoever owns the consequences and cannot be delegated.",
-      "props": {
-        "ord": 13,
-        "owner": "machine",
-        "segment": "work"
-      }
-    },
-    {
-      "created_at": "2026-06-10T02:43:50.554150",
-      "id": "s_d4bd1b45",
-      "kind": "statement",
-      "label": "Nodes are operations. Intent statements are not nodes: they live in their own store with their own index. An operation points to the statements it produces and is bound by the statements it acts under; both are references the operation carries, not edges to statement nodes.",
-      "props": {
-        "ord": 8,
-        "owner": "operator",
-        "segment": "structure"
-      }
-    },
-    {
-      "created_at": "2026-06-10T02:35:16.747171",
-      "id": "s_e4f503c9",
-      "kind": "statement",
-      "label": "The alphabet of operations never grows. Named clusters of operations are the compounds that grow freely; decomposition is how a compound expands, not a primitive.",
-      "props": {
-        "ord": 12,
-        "owner": "machine",
-        "segment": "work"
-      }
-    },
-    {
-      "created_at": "2026-06-10T02:20:31.770138",
-      "id": "s_f35147a3",
-      "kind": "statement",
-      "label": "The operator can read the system's state at a glance: the viewer shows who owns each statement and which work is open, without asking the machine.",
-      "props": {
-        "ord": 9,
-        "owner": "machine",
-        "segment": "foundations"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.701990",
-      "id": "statements",
-      "kind": "segment",
-      "label": "statements",
-      "props": {
-        "renders_to": "statements.md",
-        "title": "statements"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.718433",
-      "id": "statements-1",
-      "kind": "statement",
-      "label": "A segment's intent document is that segment's current intended reality.",
-      "props": {
-        "ord": 1,
-        "owner": "operator",
-        "segment": "statements"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.821070",
-      "id": "statements-10",
-      "kind": "statement",
-      "label": "Intent is discovered through work more than collected in advance. Revising a statement must stay cheap, or intent hardens into a spec the work quietly ignores.",
-      "props": {
-        "ord": 10,
-        "owner": "machine",
-        "segment": "statements"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.832085",
-      "id": "statements-11",
-      "kind": "statement",
-      "label": "The default motion is ratification: the machine drafts concrete statements and the operator endorses, amends, or strikes them. The operator is rarely asked to author from nothing.",
-      "props": {
-        "ord": 11,
-        "owner": "machine",
-        "segment": "statements"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.840598",
-      "id": "statements-12",
-      "kind": "statement",
-      "label": "A statement's body is plain prose. The formal part is the envelope: its id, segment, owner, and relations. Formalize the envelope, never the prose.",
-      "props": {
-        "ord": 12,
-        "owner": "machine",
-        "segment": "statements"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.731290",
-      "id": "statements-2",
-      "kind": "statement",
-      "label": "A statement is declarative and strong enough to be wrong.",
-      "props": {
-        "ord": 2,
-        "owner": "operator",
-        "segment": "statements"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.741784",
-      "id": "statements-3",
-      "kind": "statement",
-      "label": "Statements are written plainly.",
-      "props": {
-        "ord": 3,
-        "owner": "operator",
-        "segment": "statements"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.752792",
-      "id": "statements-4",
-      "kind": "statement",
-      "label": "Within an execution graph, one name means one concept.",
-      "props": {
-        "ord": 4,
-        "owner": "operator",
-        "segment": "statements"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.761983",
-      "id": "statements-5",
-      "kind": "statement",
-      "label": "Every statement should be ownable.",
-      "props": {
-        "ord": 5,
-        "owner": "operator",
-        "segment": "statements"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.773336",
-      "id": "statements-6",
-      "kind": "statement",
-      "label": "Every statement should be falsifiable against material, evidence, or later judgment.",
-      "props": {
-        "ord": 6,
-        "owner": "operator",
-        "segment": "statements"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.785541",
-      "id": "statements-7",
-      "kind": "statement",
-      "label": "A statement that is neither ownable nor falsifiable is not ready for intent.",
-      "props": {
-        "ord": 7,
-        "owner": "operator",
-        "segment": "statements"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.798068",
-      "id": "statements-8",
-      "kind": "statement",
-      "label": "The operator and the machine are both bound by coherence.",
-      "props": {
-        "ord": 8,
-        "owner": "operator",
-        "segment": "statements"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.809985",
-      "id": "statements-9",
-      "kind": "statement",
-      "label": "When the operator leaves a meaningful choice open and the machine settles it, that settlement is visible as machine-owned intent until the operator takes it on. The operator must be informed of this.",
-      "props": {
-        "ord": 9,
-        "owner": "operator",
-        "segment": "statements"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.614972",
-      "id": "structure",
-      "kind": "segment",
-      "label": "structure",
-      "props": {
-        "renders_to": "structure.md",
-        "title": "structure"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.622410",
-      "id": "structure-1",
-      "kind": "statement",
-      "label": "A node is a thing in the graph.",
-      "props": {
-        "ord": 1,
-        "owner": "operator",
-        "segment": "structure"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.634370",
-      "id": "structure-2",
-      "kind": "statement",
-      "label": "A node points to its material; its intent is the statements that bind it.",
-      "props": {
-        "ord": 2,
-        "owner": "machine",
-        "segment": "structure"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.642543",
-      "id": "structure-3",
-      "kind": "statement",
-      "label": "Intent is the written model of what the node is meant to be. Material is what the node actually made, the thing reality can contradict.",
-      "props": {
-        "ord": 3,
-        "owner": "operator",
-        "segment": "structure"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.653216",
-      "id": "structure-4",
-      "kind": "statement",
-      "label": "A relation is a directed, typed link from one node to another.",
-      "props": {
-        "ord": 4,
-        "owner": "operator",
-        "segment": "structure"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.662037",
-      "id": "structure-5",
-      "kind": "statement",
-      "label": "A cluster is a named set of relations: a subgraph that stands for a repeatable operation.",
-      "props": {
-        "ord": 5,
-        "owner": "operator",
-        "segment": "structure"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.672373",
-      "id": "structure-6",
-      "kind": "statement",
-      "label": "The intent lives at the root, as the markdown files there. Everything else in the repository is material.",
-      "props": {
-        "ord": 6,
-        "owner": "operator",
-        "segment": "structure"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.687331",
-      "id": "structure-7",
-      "kind": "statement",
-      "label": "The engine is material. It is the implementation that stores and serves the graph.",
-      "props": {
-        "ord": 7,
-        "owner": "operator",
-        "segment": "structure"
-      }
-    },
-    {
       "created_at": "2026-06-10T02:35:32.730665",
       "id": "w_423ff83b",
       "kind": "work",
@@ -523,6 +53,9 @@
         "check": "operator",
         "fold_when": "work nodes are operations (frame, gather, derive, generate, test, commit), their products are material on those nodes, relations carry the combinators, and roles live in props",
         "on": "s_3729cb59",
+        "produces": [
+          "s_d4bd1b45"
+        ],
         "status": "open"
       }
     },
@@ -546,8 +79,9 @@
       "props": {
         "check": "machine",
         "fold_when": "graph.json holds no statement or segment nodes; statements live in a git-tracked store with envelope (id, text, owner, segment, order); operations and work reference statements by id, and show answers the reverse direction (statement to referencing nodes); every existing verb, render, load, and the viewer work unchanged",
+        "folded_at": "2026-06-10T07:59:34+00:00",
         "on": "s_d4bd1b45",
-        "status": "open"
+        "status": "folded"
       }
     },
     {
@@ -557,6 +91,26 @@
       "label": "toolbar summary: counts of statements pending endorsement and open work",
       "props": {
         "work": "w_55b5404b"
+      }
+    },
+    {
+      "created_at": "2026-06-10T02:59:31.554128",
+      "id": "wn_19ef184c",
+      "kind": "check",
+      "label": "graph.json holds no statement or segment nodes (kinds: node, work, step, check, candidate, result)",
+      "props": {
+        "outcome": "pass",
+        "work": "w_bdc90a28"
+      }
+    },
+    {
+      "created_at": "2026-06-10T02:59:33.532879",
+      "id": "wn_37f527f7",
+      "kind": "check",
+      "label": "verbs, render, load, ingest, traversals, and viewer verified in a throwaway copy: statement cycle round-trips byte-identical; work cycle folds with material on the work node; /api/graph serves graph plus store",
+      "props": {
+        "outcome": "pass",
+        "work": "w_bdc90a28"
       }
     },
     {
@@ -578,12 +132,30 @@
       }
     },
     {
+      "created_at": "2026-06-10T02:59:30.593649",
+      "id": "wn_4f3f1afd",
+      "kind": "step",
+      "label": "statements table added to schema; store grows statement CRUD, dump/load, and the reverse index (statement_references)",
+      "props": {
+        "work": "w_bdc90a28"
+      }
+    },
+    {
       "created_at": "2026-06-10T02:35:34.435325",
       "id": "wn_6a9e4db2",
       "kind": "candidate",
       "label": "synthesize and repair stay out until the primitive-vs-compound contest resolves; adopt only if real work keeps wanting them",
       "props": {
         "work": "w_423ff83b"
+      }
+    },
+    {
+      "created_at": "2026-06-10T02:59:30.900325",
+      "id": "wn_6aa98a1d",
+      "kind": "step",
+      "label": "verbs rewired: statement verbs speak to the store; work-open binds by id; work-fold attaches material to the work node; render reads the store; load reads both snapshots",
+      "props": {
+        "work": "w_bdc90a28"
       }
     },
     {
@@ -623,12 +195,41 @@
       }
     },
     {
+      "created_at": "2026-06-10T02:59:32.884730",
+      "id": "wn_b62bb2c0",
+      "kind": "check",
+      "label": "show on a statement answers the reverse direction: bound work, producing work, links both ways, material via the bound work",
+      "props": {
+        "outcome": "pass",
+        "work": "w_bdc90a28"
+      }
+    },
+    {
       "created_at": "2026-06-10T02:35:33.393520",
       "id": "wn_b91eab58",
       "kind": "step",
       "label": "relation types carry the combinators: depends-on as causal link, tests, commits, reframes, decomposes-into",
       "props": {
         "work": "w_423ff83b"
+      }
+    },
+    {
+      "created_at": "2026-06-10T02:59:32.179044",
+      "id": "wn_bace3a36",
+      "kind": "check",
+      "label": "statements.json holds all 51 statements with envelope: id, text, owner, segment, ord, links, created_at",
+      "props": {
+        "outcome": "pass",
+        "work": "w_bdc90a28"
+      }
+    },
+    {
+      "created_at": "2026-06-10T02:59:31.203565",
+      "id": "wn_c8557eb8",
+      "kind": "step",
+      "label": "one-time migration: 51 statements moved with envelope and 2 depends-on links; spawned-by relations became on/produces props; m_cca715e7 rehomed to w_423ff83b; statement and segment nodes deleted",
+      "props": {
+        "work": "w_bdc90a28"
       }
     },
     {
@@ -641,6 +242,15 @@
       }
     },
     {
+      "created_at": "2026-06-10T02:59:34.159013",
+      "id": "wn_d15d98dc",
+      "kind": "result",
+      "label": "statements live beside the graph: statements table + statements.json, nodes reference them via on/produces props, show answers the reverse index, all verbs and views unchanged",
+      "props": {
+        "work": "w_bdc90a28"
+      }
+    },
+    {
       "created_at": "2026-06-10T02:35:34.803758",
       "id": "wn_efd59a7c",
       "kind": "candidate",
@@ -648,306 +258,15 @@
       "props": {
         "work": "w_423ff83b"
       }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.932883",
-      "id": "work",
-      "kind": "segment",
-      "label": "work",
-      "props": {
-        "renders_to": "work.md",
-        "title": "work"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.941248",
-      "id": "work-1",
-      "kind": "statement",
-      "label": "Work happens as a graph. A node expresses an intent, and carrying it out grows a graph of further nodes: the steps, the candidates, the checks, the result.",
-      "props": {
-        "ord": 1,
-        "owner": "operator",
-        "segment": "work"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:23.018847",
-      "id": "work-10",
-      "kind": "statement",
-      "label": "Folding is reflected in both places. The database records the fold, and the filesystem view follows it.",
-      "props": {
-        "ord": 10,
-        "owner": "operator",
-        "segment": "work"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:23.028759",
-      "id": "work-11",
-      "kind": "statement",
-      "label": "Execution graphs and folding are built in their first form. The operation alphabet is named before its machinery is, so the language exists before the machinery does.",
-      "props": {
-        "ord": 14,
-        "owner": "machine",
-        "segment": "work"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.950534",
-      "id": "work-2",
-      "kind": "statement",
-      "label": "That growing graph is an execution graph. It is a dynamically composed workflow, not a fixed template.",
-      "props": {
-        "ord": 2,
-        "owner": "operator",
-        "segment": "work"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.958907",
-      "id": "work-3",
-      "kind": "statement",
-      "label": "A folder holds one execution graph. The unit on disk is the execution graph, not the single node.",
-      "props": {
-        "ord": 3,
-        "owner": "operator",
-        "segment": "work"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.968081",
-      "id": "work-4",
-      "kind": "statement",
-      "label": "When the work is done, the execution graph folds into the node whose intent spawned it. The result becomes that node's material, and the steps become its history.",
-      "props": {
-        "ord": 4,
-        "owner": "operator",
-        "segment": "work"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.974997",
-      "id": "work-5",
-      "kind": "statement",
-      "label": "Folding preserves relations. A folded graph keeps its nodes and the relations between them, so the history reads as the graph it was, not a flat log.",
-      "props": {
-        "ord": 5,
-        "owner": "operator",
-        "segment": "work"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.983699",
-      "id": "work-6",
-      "kind": "statement",
-      "label": "A folding condition is what makes a graph ready to fold. Its intent is met, or it is abandoned. Until then the graph stays open.",
-      "props": {
-        "ord": 6,
-        "owner": "operator",
-        "segment": "work"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.993648",
-      "id": "work-7",
-      "kind": "statement",
-      "label": "A folding condition is machine-checkable or it spends operator judgment. Which of the two it is must be declared when the graph opens.",
-      "props": {
-        "ord": 7,
-        "owner": "machine",
-        "segment": "work"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:23.001834",
-      "id": "work-8",
-      "kind": "statement",
-      "label": "Trust in a folded graph comes from the checks at its boundary, not from the competence of whatever ran inside. An unchecked fold is a hope, not a result.",
-      "props": {
-        "ord": 8,
-        "owner": "machine",
-        "segment": "work"
-      }
-    },
-    {
-      "created_at": "2026-06-10T01:59:23.010057",
-      "id": "work-9",
-      "kind": "statement",
-      "label": "Error compounds through composition. The weaker a graph's checks, the shallower it must stay before folding.",
-      "props": {
-        "ord": 9,
-        "owner": "machine",
-        "segment": "work"
-      }
     }
   ],
   "relations": [
     {
-      "created_at": "2026-06-10T01:59:22.863756",
-      "dst": "endorsement-1",
-      "id": "endorsement-contains-1",
+      "created_at": "2026-06-10T02:59:31.210709",
+      "dst": "wn_c8557eb8",
+      "id": "r_02ca30c0",
       "props": {},
-      "src": "endorsement",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.874927",
-      "dst": "endorsement-2",
-      "id": "endorsement-contains-2",
-      "props": {},
-      "src": "endorsement",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.885758",
-      "dst": "endorsement-3",
-      "id": "endorsement-contains-3",
-      "props": {},
-      "src": "endorsement",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.893868",
-      "dst": "endorsement-4",
-      "id": "endorsement-contains-4",
-      "props": {},
-      "src": "endorsement",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.902616",
-      "dst": "endorsement-5",
-      "id": "endorsement-contains-5",
-      "props": {},
-      "src": "endorsement",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.910619",
-      "dst": "endorsement-6",
-      "id": "endorsement-contains-6",
-      "props": {},
-      "src": "endorsement",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.919495",
-      "dst": "endorsement-7",
-      "id": "endorsement-contains-7",
-      "props": {},
-      "src": "endorsement",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.927795",
-      "dst": "endorsement-8",
-      "id": "endorsement-contains-8",
-      "props": {},
-      "src": "endorsement",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.549520",
-      "dst": "foundations-1",
-      "id": "foundations-contains-1",
-      "props": {},
-      "src": "foundations",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.558067",
-      "dst": "foundations-2",
-      "id": "foundations-contains-2",
-      "props": {},
-      "src": "foundations",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.566157",
-      "dst": "foundations-3",
-      "id": "foundations-contains-3",
-      "props": {},
-      "src": "foundations",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.576530",
-      "dst": "foundations-4",
-      "id": "foundations-contains-4",
-      "props": {},
-      "src": "foundations",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.585620",
-      "dst": "foundations-5",
-      "id": "foundations-contains-5",
-      "props": {},
-      "src": "foundations",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.594771",
-      "dst": "foundations-6",
-      "id": "foundations-contains-6",
-      "props": {},
-      "src": "foundations",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.603238",
-      "dst": "foundations-7",
-      "id": "foundations-contains-7",
-      "props": {},
-      "src": "foundations",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.610941",
-      "dst": "foundations-8",
-      "id": "foundations-contains-8",
-      "props": {},
-      "src": "foundations",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.854938",
-      "dst": "endorsement",
-      "id": "hypercore-contains-endorsement",
-      "props": {},
-      "src": "hypercore",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.541059",
-      "dst": "foundations",
-      "id": "hypercore-contains-foundations",
-      "props": {},
-      "src": "hypercore",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.711965",
-      "dst": "statements",
-      "id": "hypercore-contains-statements",
-      "props": {},
-      "src": "hypercore",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.619513",
-      "dst": "structure",
-      "id": "hypercore-contains-structure",
-      "props": {},
-      "src": "hypercore",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.937590",
-      "dst": "work",
-      "id": "hypercore-contains-work",
-      "props": {},
-      "src": "hypercore",
+      "src": "w_bdc90a28",
       "type": "contains"
     },
     {
@@ -967,11 +286,19 @@
       "type": "contains"
     },
     {
-      "created_at": "2026-06-10T02:35:16.420848",
-      "dst": "s_3729cb59",
-      "id": "r_22619038",
+      "created_at": "2026-06-10T02:59:34.167487",
+      "dst": "wn_d15d98dc",
+      "id": "r_13211063",
       "props": {},
-      "src": "work",
+      "src": "w_bdc90a28",
+      "type": "contains"
+    },
+    {
+      "created_at": "2026-06-10T02:59:31.564899",
+      "dst": "wn_19ef184c",
+      "id": "r_16dedf5c",
+      "props": {},
+      "src": "w_bdc90a28",
       "type": "contains"
     },
     {
@@ -991,28 +318,28 @@
       "type": "contains"
     },
     {
-      "created_at": "2026-06-10T02:48:19.489026",
-      "dst": "s_d4bd1b45",
-      "id": "r_2eae57e7",
+      "created_at": "2026-06-10T02:59:30.906151",
+      "dst": "wn_6aa98a1d",
+      "id": "r_2b192e34",
       "props": {},
       "src": "w_bdc90a28",
-      "type": "spawned-by"
+      "type": "contains"
     },
     {
-      "created_at": "2026-06-10T02:20:32.093760",
-      "dst": "s_f35147a3",
-      "id": "r_37cc4bb3",
+      "created_at": "2026-06-10T02:59:32.895020",
+      "dst": "wn_b62bb2c0",
+      "id": "r_432b728a",
       "props": {},
-      "src": "w_55b5404b",
-      "type": "spawned-by"
+      "src": "w_bdc90a28",
+      "type": "contains"
     },
     {
-      "created_at": "2026-06-10T02:35:32.740305",
-      "dst": "s_3729cb59",
-      "id": "r_5fbf29df",
+      "created_at": "2026-06-10T02:59:33.540942",
+      "dst": "wn_37f527f7",
+      "id": "r_4a9be73e",
       "props": {},
-      "src": "w_423ff83b",
-      "type": "spawned-by"
+      "src": "w_bdc90a28",
+      "type": "contains"
     },
     {
       "created_at": "2026-06-10T02:35:34.093904",
@@ -1023,12 +350,12 @@
       "type": "contains"
     },
     {
-      "created_at": "2026-06-10T02:44:04.407570",
-      "dst": "s_d4bd1b45",
-      "id": "r_6fad1847",
+      "created_at": "2026-06-10T02:59:30.601267",
+      "dst": "wn_4f3f1afd",
+      "id": "r_64ce40fd",
       "props": {},
-      "src": "w_423ff83b",
-      "type": "spawned-by"
+      "src": "w_bdc90a28",
+      "type": "contains"
     },
     {
       "created_at": "2026-06-10T02:35:33.399459",
@@ -1036,30 +363,6 @@
       "id": "r_71acdf52",
       "props": {},
       "src": "w_423ff83b",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:23.334223",
-      "dst": "statements-5",
-      "id": "r_8815de74",
-      "props": {},
-      "src": "statements-7",
-      "type": "depends-on"
-    },
-    {
-      "created_at": "2026-06-10T01:59:23.343171",
-      "dst": "statements-6",
-      "id": "r_8a0c1132",
-      "props": {},
-      "src": "statements-7",
-      "type": "depends-on"
-    },
-    {
-      "created_at": "2026-06-10T02:35:17.200775",
-      "dst": "s_81c38173",
-      "id": "r_97456edb",
-      "props": {},
-      "src": "work",
       "type": "contains"
     },
     {
@@ -1079,11 +382,11 @@
       "type": "contains"
     },
     {
-      "created_at": "2026-06-10T02:43:50.561763",
-      "dst": "s_d4bd1b45",
-      "id": "r_b7a5fb67",
+      "created_at": "2026-06-10T02:59:32.191453",
+      "dst": "wn_bace3a36",
+      "id": "r_b94412a8",
       "props": {},
-      "src": "structure",
+      "src": "w_bdc90a28",
       "type": "contains"
     },
     {
@@ -1103,267 +406,11 @@
       "type": "contains"
     },
     {
-      "created_at": "2026-06-10T02:20:31.779725",
-      "dst": "s_f35147a3",
-      "id": "r_de45ce24",
-      "props": {},
-      "src": "foundations",
-      "type": "contains"
-    },
-    {
       "created_at": "2026-06-10T02:21:35.665541",
       "dst": "wn_39247829",
       "id": "r_f0456d16",
       "props": {},
       "src": "w_55b5404b",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T02:35:16.755417",
-      "dst": "s_e4f503c9",
-      "id": "r_fbd6448c",
-      "props": {},
-      "src": "work",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.725730",
-      "dst": "statements-1",
-      "id": "statements-contains-1",
-      "props": {},
-      "src": "statements",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.827227",
-      "dst": "statements-10",
-      "id": "statements-contains-10",
-      "props": {},
-      "src": "statements",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.837084",
-      "dst": "statements-11",
-      "id": "statements-contains-11",
-      "props": {},
-      "src": "statements",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.845742",
-      "dst": "statements-12",
-      "id": "statements-contains-12",
-      "props": {},
-      "src": "statements",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.737752",
-      "dst": "statements-2",
-      "id": "statements-contains-2",
-      "props": {},
-      "src": "statements",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.748017",
-      "dst": "statements-3",
-      "id": "statements-contains-3",
-      "props": {},
-      "src": "statements",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.758159",
-      "dst": "statements-4",
-      "id": "statements-contains-4",
-      "props": {},
-      "src": "statements",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.769169",
-      "dst": "statements-5",
-      "id": "statements-contains-5",
-      "props": {},
-      "src": "statements",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.780103",
-      "dst": "statements-6",
-      "id": "statements-contains-6",
-      "props": {},
-      "src": "statements",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.792003",
-      "dst": "statements-7",
-      "id": "statements-contains-7",
-      "props": {},
-      "src": "statements",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.804743",
-      "dst": "statements-8",
-      "id": "statements-contains-8",
-      "props": {},
-      "src": "statements",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.816775",
-      "dst": "statements-9",
-      "id": "statements-contains-9",
-      "props": {},
-      "src": "statements",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.628247",
-      "dst": "structure-1",
-      "id": "structure-contains-1",
-      "props": {},
-      "src": "structure",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.639068",
-      "dst": "structure-2",
-      "id": "structure-contains-2",
-      "props": {},
-      "src": "structure",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.649116",
-      "dst": "structure-3",
-      "id": "structure-contains-3",
-      "props": {},
-      "src": "structure",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.657817",
-      "dst": "structure-4",
-      "id": "structure-contains-4",
-      "props": {},
-      "src": "structure",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.668188",
-      "dst": "structure-5",
-      "id": "structure-contains-5",
-      "props": {},
-      "src": "structure",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.680784",
-      "dst": "structure-6",
-      "id": "structure-contains-6",
-      "props": {},
-      "src": "structure",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.695919",
-      "dst": "structure-7",
-      "id": "structure-contains-7",
-      "props": {},
-      "src": "structure",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.946367",
-      "dst": "work-1",
-      "id": "work-contains-1",
-      "props": {},
-      "src": "work",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:23.024342",
-      "dst": "work-10",
-      "id": "work-contains-10",
-      "props": {},
-      "src": "work",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:23.034903",
-      "dst": "work-11",
-      "id": "work-contains-11",
-      "props": {},
-      "src": "work",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.955308",
-      "dst": "work-2",
-      "id": "work-contains-2",
-      "props": {},
-      "src": "work",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.964812",
-      "dst": "work-3",
-      "id": "work-contains-3",
-      "props": {},
-      "src": "work",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.972062",
-      "dst": "work-4",
-      "id": "work-contains-4",
-      "props": {},
-      "src": "work",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.979888",
-      "dst": "work-5",
-      "id": "work-contains-5",
-      "props": {},
-      "src": "work",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.989800",
-      "dst": "work-6",
-      "id": "work-contains-6",
-      "props": {},
-      "src": "work",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:22.998612",
-      "dst": "work-7",
-      "id": "work-contains-7",
-      "props": {},
-      "src": "work",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:23.006590",
-      "dst": "work-8",
-      "id": "work-contains-8",
-      "props": {},
-      "src": "work",
-      "type": "contains"
-    },
-    {
-      "created_at": "2026-06-10T01:59:23.015288",
-      "dst": "work-9",
-      "id": "work-contains-9",
-      "props": {},
-      "src": "work",
       "type": "contains"
     }
   ]

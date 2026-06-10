@@ -1,0 +1,472 @@
+{
+  "statements": [
+    {
+      "created_at": "2026-06-10T01:59:22.858570",
+      "id": "endorsement-1",
+      "links": [],
+      "ord": 1,
+      "owner": "operator",
+      "segment": "endorsement",
+      "text": "Endorsement names who stands behind a statement."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.867746",
+      "id": "endorsement-2",
+      "links": [],
+      "ord": 2,
+      "owner": "operator",
+      "segment": "endorsement",
+      "text": "An endorsed statement is operator-owned."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.880074",
+      "id": "endorsement-3",
+      "links": [],
+      "ord": 3,
+      "owner": "operator",
+      "segment": "endorsement",
+      "text": "An unendorsed statement is machine-owned until an operator takes it on."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.889168",
+      "id": "endorsement-4",
+      "links": [],
+      "ord": 4,
+      "owner": "operator",
+      "segment": "endorsement",
+      "text": "The machine never endorses for the operator."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.897839",
+      "id": "endorsement-5",
+      "links": [],
+      "ord": 5,
+      "owner": "operator",
+      "segment": "endorsement",
+      "text": "Ownership and truth are separate. Ownership says who may responsibly change a statement; evidence says whether it still holds."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.905727",
+      "id": "endorsement-6",
+      "links": [],
+      "ord": 6,
+      "owner": "operator",
+      "segment": "endorsement",
+      "text": "An intent is operator-owned or machine-owned. The material that corresponds to it answers to whichever stands behind it."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.914827",
+      "id": "endorsement-7",
+      "links": [],
+      "ord": 7,
+      "owner": "machine",
+      "segment": "endorsement",
+      "text": "Ownership is visible in the derived view: a machine-owned statement ends with the marker [machine]. Endorsement is the endorse verb; render then drops the marker. Amending or striking are the operator's other two answers."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.922659",
+      "id": "endorsement-8",
+      "links": [],
+      "ord": 8,
+      "owner": "machine",
+      "segment": "endorsement",
+      "text": "The record of endorsements is what earns autonomy. Where the machine's settlements keep being taken on unchanged, its reach grows; where they keep being struck, it shrinks."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.544891",
+      "id": "foundations-1",
+      "links": [],
+      "ord": 1,
+      "owner": "operator",
+      "segment": "foundations",
+      "text": "hypercore is a small graph for a human and an agent to think with together."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.553202",
+      "id": "foundations-2",
+      "links": [],
+      "ord": 2,
+      "owner": "operator",
+      "segment": "foundations",
+      "text": "The graph is the model: nodes, relations between them, clusters of relations, and material attached to nodes."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.561541",
+      "id": "foundations-3",
+      "links": [],
+      "ord": 3,
+      "owner": "machine",
+      "segment": "foundations",
+      "text": "The machine carries no memory between episodes of work. hypercore holds that memory outside the machine: the graph, not the running conversation, is the durable shared state."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.571442",
+      "id": "foundations-4",
+      "links": [],
+      "ord": 4,
+      "owner": "operator",
+      "segment": "foundations",
+      "text": "The database is the source of truth."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.580897",
+      "id": "foundations-5",
+      "links": [],
+      "ord": 5,
+      "owner": "operator",
+      "segment": "foundations",
+      "text": "The files on disk are a derived view of the database. They exist so a human can read the graph and git can track how it changes."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.589885",
+      "id": "foundations-6",
+      "links": [],
+      "ord": 6,
+      "owner": "machine",
+      "segment": "foundations",
+      "text": "Intent is authored through the statement verbs; render is the files' only writer. The snapshot in git is the durable form of both the graph and the statement store; the database file is a local working copy rebuilt from it with load."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.598525",
+      "id": "foundations-7",
+      "links": [],
+      "ord": 7,
+      "owner": "machine",
+      "segment": "foundations",
+      "text": "The operator's attention is the scarcest resource in the system. The system spends it on judgment, never on filing."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.606499",
+      "id": "foundations-8",
+      "links": [],
+      "ord": 8,
+      "owner": "machine",
+      "segment": "foundations",
+      "text": "The operator never performs graph maintenance. The machine files, links, and renders; the operator ratifies, vetoes, and redirects. An operator hand-tending the graph's bookkeeping is the earliest signal that ceremony has won."
+    },
+    {
+      "created_at": "2026-06-10T02:20:31.770138",
+      "id": "s_f35147a3",
+      "links": [],
+      "ord": 9,
+      "owner": "machine",
+      "segment": "foundations",
+      "text": "The operator can read the system's state at a glance: the viewer shows who owns each statement and which work is open, without asking the machine."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.718433",
+      "id": "statements-1",
+      "links": [],
+      "ord": 1,
+      "owner": "operator",
+      "segment": "statements",
+      "text": "A segment's intent document is that segment's current intended reality."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.731290",
+      "id": "statements-2",
+      "links": [],
+      "ord": 2,
+      "owner": "operator",
+      "segment": "statements",
+      "text": "A statement is declarative and strong enough to be wrong."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.741784",
+      "id": "statements-3",
+      "links": [],
+      "ord": 3,
+      "owner": "operator",
+      "segment": "statements",
+      "text": "Statements are written plainly."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.752792",
+      "id": "statements-4",
+      "links": [],
+      "ord": 4,
+      "owner": "operator",
+      "segment": "statements",
+      "text": "Within an execution graph, one name means one concept."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.761983",
+      "id": "statements-5",
+      "links": [],
+      "ord": 5,
+      "owner": "operator",
+      "segment": "statements",
+      "text": "Every statement should be ownable."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.773336",
+      "id": "statements-6",
+      "links": [],
+      "ord": 6,
+      "owner": "operator",
+      "segment": "statements",
+      "text": "Every statement should be falsifiable against material, evidence, or later judgment."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.785541",
+      "id": "statements-7",
+      "links": [
+        {
+          "to": "statements-5",
+          "type": "depends-on"
+        },
+        {
+          "to": "statements-6",
+          "type": "depends-on"
+        }
+      ],
+      "ord": 7,
+      "owner": "operator",
+      "segment": "statements",
+      "text": "A statement that is neither ownable nor falsifiable is not ready for intent."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.798068",
+      "id": "statements-8",
+      "links": [],
+      "ord": 8,
+      "owner": "operator",
+      "segment": "statements",
+      "text": "The operator and the machine are both bound by coherence."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.809985",
+      "id": "statements-9",
+      "links": [],
+      "ord": 9,
+      "owner": "operator",
+      "segment": "statements",
+      "text": "When the operator leaves a meaningful choice open and the machine settles it, that settlement is visible as machine-owned intent until the operator takes it on. The operator must be informed of this."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.821070",
+      "id": "statements-10",
+      "links": [],
+      "ord": 10,
+      "owner": "machine",
+      "segment": "statements",
+      "text": "Intent is discovered through work more than collected in advance. Revising a statement must stay cheap, or intent hardens into a spec the work quietly ignores."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.832085",
+      "id": "statements-11",
+      "links": [],
+      "ord": 11,
+      "owner": "machine",
+      "segment": "statements",
+      "text": "The default motion is ratification: the machine drafts concrete statements and the operator endorses, amends, or strikes them. The operator is rarely asked to author from nothing."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.840598",
+      "id": "statements-12",
+      "links": [],
+      "ord": 12,
+      "owner": "machine",
+      "segment": "statements",
+      "text": "A statement's body is plain prose. The formal part is the envelope: its id, segment, owner, and relations. Formalize the envelope, never the prose."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.622410",
+      "id": "structure-1",
+      "links": [],
+      "ord": 1,
+      "owner": "operator",
+      "segment": "structure",
+      "text": "A node is a thing in the graph."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.634370",
+      "id": "structure-2",
+      "links": [],
+      "ord": 2,
+      "owner": "machine",
+      "segment": "structure",
+      "text": "A node points to its material; its intent is the statements that bind it."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.642543",
+      "id": "structure-3",
+      "links": [],
+      "ord": 3,
+      "owner": "operator",
+      "segment": "structure",
+      "text": "Intent is the written model of what the node is meant to be. Material is what the node actually made, the thing reality can contradict."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.653216",
+      "id": "structure-4",
+      "links": [],
+      "ord": 4,
+      "owner": "operator",
+      "segment": "structure",
+      "text": "A relation is a directed, typed link from one node to another."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.662037",
+      "id": "structure-5",
+      "links": [],
+      "ord": 5,
+      "owner": "operator",
+      "segment": "structure",
+      "text": "A cluster is a named set of relations: a subgraph that stands for a repeatable operation."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.672373",
+      "id": "structure-6",
+      "links": [],
+      "ord": 6,
+      "owner": "operator",
+      "segment": "structure",
+      "text": "The intent lives at the root, as the markdown files there. Everything else in the repository is material."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.687331",
+      "id": "structure-7",
+      "links": [],
+      "ord": 7,
+      "owner": "operator",
+      "segment": "structure",
+      "text": "The engine is material. It is the implementation that stores and serves the graph."
+    },
+    {
+      "created_at": "2026-06-10T02:43:50.554150",
+      "id": "s_d4bd1b45",
+      "links": [],
+      "ord": 8,
+      "owner": "operator",
+      "segment": "structure",
+      "text": "Nodes are operations. Intent statements are not nodes: they live in their own store with their own index. An operation points to the statements it produces and is bound by the statements it acts under; both are references the operation carries, not edges to statement nodes."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.941248",
+      "id": "work-1",
+      "links": [],
+      "ord": 1,
+      "owner": "operator",
+      "segment": "work",
+      "text": "Work happens as a graph. A node expresses an intent, and carrying it out grows a graph of further nodes: the steps, the candidates, the checks, the result."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.950534",
+      "id": "work-2",
+      "links": [],
+      "ord": 2,
+      "owner": "operator",
+      "segment": "work",
+      "text": "That growing graph is an execution graph. It is a dynamically composed workflow, not a fixed template."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.958907",
+      "id": "work-3",
+      "links": [],
+      "ord": 3,
+      "owner": "operator",
+      "segment": "work",
+      "text": "A folder holds one execution graph. The unit on disk is the execution graph, not the single node."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.968081",
+      "id": "work-4",
+      "links": [],
+      "ord": 4,
+      "owner": "operator",
+      "segment": "work",
+      "text": "When the work is done, the execution graph folds into the node whose intent spawned it. The result becomes that node's material, and the steps become its history."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.974997",
+      "id": "work-5",
+      "links": [],
+      "ord": 5,
+      "owner": "operator",
+      "segment": "work",
+      "text": "Folding preserves relations. A folded graph keeps its nodes and the relations between them, so the history reads as the graph it was, not a flat log."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.983699",
+      "id": "work-6",
+      "links": [],
+      "ord": 6,
+      "owner": "operator",
+      "segment": "work",
+      "text": "A folding condition is what makes a graph ready to fold. Its intent is met, or it is abandoned. Until then the graph stays open."
+    },
+    {
+      "created_at": "2026-06-10T01:59:22.993648",
+      "id": "work-7",
+      "links": [],
+      "ord": 7,
+      "owner": "machine",
+      "segment": "work",
+      "text": "A folding condition is machine-checkable or it spends operator judgment. Which of the two it is must be declared when the graph opens."
+    },
+    {
+      "created_at": "2026-06-10T01:59:23.001834",
+      "id": "work-8",
+      "links": [],
+      "ord": 8,
+      "owner": "machine",
+      "segment": "work",
+      "text": "Trust in a folded graph comes from the checks at its boundary, not from the competence of whatever ran inside. An unchecked fold is a hope, not a result."
+    },
+    {
+      "created_at": "2026-06-10T01:59:23.010057",
+      "id": "work-9",
+      "links": [],
+      "ord": 9,
+      "owner": "machine",
+      "segment": "work",
+      "text": "Error compounds through composition. The weaker a graph's checks, the shallower it must stay before folding."
+    },
+    {
+      "created_at": "2026-06-10T01:59:23.018847",
+      "id": "work-10",
+      "links": [],
+      "ord": 10,
+      "owner": "operator",
+      "segment": "work",
+      "text": "Folding is reflected in both places. The database records the fold, and the filesystem view follows it."
+    },
+    {
+      "created_at": "2026-06-10T02:35:16.413872",
+      "id": "s_3729cb59",
+      "links": [],
+      "ord": 11,
+      "owner": "machine",
+      "segment": "work",
+      "text": "An operation is one move on the problem state, of six kinds: frame, gather, derive, generate, test, commit. Work is made of operations."
+    },
+    {
+      "created_at": "2026-06-10T02:35:16.747171",
+      "id": "s_e4f503c9",
+      "links": [],
+      "ord": 12,
+      "owner": "machine",
+      "segment": "work",
+      "text": "The alphabet of operations never grows. Named clusters of operations are the compounds that grow freely; decomposition is how a compound expands, not a primitive."
+    },
+    {
+      "created_at": "2026-06-10T02:35:17.192347",
+      "id": "s_81c38173",
+      "links": [],
+      "ord": 13,
+      "owner": "machine",
+      "segment": "work",
+      "text": "Who proposes, executes, judges, and decides is a property on each operation, not an operation of its own. The decision to commit belongs to whoever owns the consequences and cannot be delegated."
+    },
+    {
+      "created_at": "2026-06-10T01:59:23.028759",
+      "id": "work-11",
+      "links": [],
+      "ord": 14,
+      "owner": "machine",
+      "segment": "work",
+      "text": "Execution graphs and folding are built in their first form. The operation alphabet is named before its machinery is, so the language exists before the machinery does."
+    }
+  ]
+}

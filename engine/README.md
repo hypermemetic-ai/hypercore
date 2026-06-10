@@ -21,10 +21,15 @@ new id. `--db PATH` chooses the database file (default `hypercore.duckdb`).
 
 Intent and work have their own verbs: `add-statement` / `amend` / `strike` /
 `endorse` for statements, `work-open` / `work-add` / `work-check` / `work-fold`
-for execution graphs, `status` / `show` to navigate. Every mutating verb
-rewrites the root markdown and `graph.json` (the durable, git-tracked form of
-the graph; the `.duckdb` file is ignored by git and rebuilt with `load`).
-`ingest` only bootstraps an empty database from the files.
+for execution graphs, `status` / `show` to navigate. Statements are **not
+nodes** (structure: s_d4bd1b45): they live in their own store with their own
+index, and graph nodes reference them by id — `on` for the statement a node is
+bound by, `produces` for statements it produced. `show <statement-id>` answers
+the reverse direction. Every mutating verb rewrites the root markdown and both
+snapshots — `graph.json` (the graph) and `statements.json` (the statement
+store), the durable, git-tracked forms; the `.duckdb` file is ignored by git
+and rebuilt from them with `load`. `ingest` only bootstraps an empty database
+from the files.
 
 The viewer opens the database **read-only**. Change the graph with the CLI, then
 refresh the browser.

@@ -128,6 +128,140 @@ class Store:
         )
         return material_id
 
+    def add_statement(
+        self,
+        text: str,
+        segment: str,
+        ord: int,
+        owner: str = "machine",
+        links: list[dict] | None = None,
+        id: str | None = None,
+    ) -> str:
+        """Add one statement to the statement store. Statements are not nodes."""
+        statement_id = id or self._new_id("s_", "statements")
+        self._ensure_new("statements", statement_id)
+        self.con.execute(
+            """
+            INSERT INTO statements (id, text, owner, segment, ord, links)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            [statement_id, text, owner, segment, ord, self._json_list(links)],
+        )
+        return statement_id
+
+    def update_statement(
+        self,
+        id: str,
+        text: str | None = None,
+        owner: str | None = None,
+        ord: int | None = None,
+        links: list[dict] | None = None,
+    ) -> None:
+        self._ensure_exists("statements", id, "statement")
+        sets, params = [], []
+        for column, value in (
+            ("text", text),
+            ("owner", owner),
+            ("ord", ord),
+            ("links", self._json_list(links) if links is not None else None),
+        ):
+            if value is not None:
+                sets.append(f"{column} = ?")
+                params.append(value)
+        if sets:
+            self.con.execute(
+                f"UPDATE statements SET {', '.join(sets)} WHERE id = ?",
+                params + [id],
+            )
+
+    def delete_statement(self, id: str) -> dict:
+        """Delete a statement; returns its envelope so the caller can report
+        the loss, including any links other statements held to it."""
+        statement = self.statement(id)
+        if statement is None:
+            raise ValueError(f"statement '{id}' does not exist")
+        linked_by = [
+            s["id"]
+            for s in self.statements()
+            if any(link.get("to") == id for link in s["links"])
+        ]
+        self.con.execute("DELETE FROM statements WHERE id = ?", [id])
+        statement["linked_by"] = linked_by
+        return statement
+
+    def statement(self, id: str) -> dict | None:
+        row = self.con.execute(
+            "SELECT id, text, owner, segment, ord, links FROM statements WHERE id = ?",
+            [id],
+        ).fetchone()
+        return self._statement_dict(row) if row else None
+
+    def statements(self, segment: str | None = None) -> list[dict]:
+        """The statement store, ordered. The statements' own index."""
+        sql = "SELECT id, text, owner, segment, ord, links FROM statements"
+        params: list = []
+        if segment is not None:
+            sql += " WHERE segment = ?"
+            params.append(segment)
+        sql += " ORDER BY segment, ord, id"
+        return [
+            self._statement_dict(row)
+            for row in self.con.execute(sql, params).fetchall()
+        ]
+
+    def statement_references(self, id: str) -> dict:
+        """The reverse index: graph nodes that reference this statement.
+
+        A node is `bound` by the statement when its props carry `on: id`, and
+        `produced` it when `produces` contains the id. Statements left the
+        graph (s_d4bd1b45), so this query answers what edges used to.
+        """
+        bound, produced = [], []
+        for node in self.graph()["nodes"]:
+            props = node.get("props", {})
+            if props.get("on") == id:
+                bound.append(node)
+            if id in (props.get("produces") or []):
+                produced.append(node)
+        return {"bound": bound, "produced": produced}
+
+    def dump_statements(self) -> dict:
+        """The statement store as one JSON-ready dict: its durable form."""
+        rows = self.con.execute(
+            """
+            SELECT id, text, owner, segment, ord, links, created_at
+            FROM statements ORDER BY segment, ord, id
+            """
+        ).fetchall()
+        statements = []
+        for row in rows:
+            statement = self._statement_dict(row)
+            statement["created_at"] = (
+                row[6].isoformat() if row[6] is not None else None
+            )
+            statements.append(statement)
+        return {"statements": statements}
+
+    def load_statements(self, data: dict) -> None:
+        """Replace the statement store's contents with a dumped snapshot."""
+        self.con.execute("DELETE FROM statements")
+        for row in data.get("statements", []):
+            self.con.execute(
+                """
+                INSERT INTO statements (id, text, owner, segment, ord, links, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    row["id"],
+                    row["text"],
+                    row["owner"],
+                    row["segment"],
+                    row["ord"],
+                    self._json_list(row.get("links")),
+                    row.get("created_at"),
+                ],
+            )
+
     def update_node(
         self,
         id: str,
@@ -536,6 +670,7 @@ class Store:
                 "clusters",
                 "relations",
                 "nodes",
+                "statements",
             ):
                 self.con.execute(f"DROP TABLE IF EXISTS {table}")
             self.con.execute(SCHEMA_PATH.read_text(encoding="utf-8"))
@@ -585,6 +720,26 @@ class Store:
         if isinstance(value, (dict, list)):
             return value
         return json.loads(value)
+
+    def _json_list(self, value: list | None) -> str:
+        if value is None:
+            value = []
+        if not isinstance(value, list):
+            raise ValueError("links must be a JSON list")
+        return json.dumps(value, sort_keys=True, separators=(",", ":"))
+
+    def _statement_dict(self, row) -> dict:
+        links = row[5]
+        if not isinstance(links, list):
+            links = json.loads(links) if links else []
+        return {
+            "id": row[0],
+            "text": row[1],
+            "owner": row[2],
+            "segment": row[3],
+            "ord": row[4],
+            "links": links,
+        }
 
     def _sql_literal(self, value: str) -> str:
         return "'" + value.replace("'", "''") + "'"

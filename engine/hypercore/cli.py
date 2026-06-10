@@ -15,8 +15,9 @@ from .store import Store
 # The intent files live at the repository root; the engine is one level down.
 INTENT_ROOT = Path(__file__).resolve().parents[2]
 
-# The segments whose intent is a list of statements, and so is graph-native:
-# ingested from these files into statement nodes, then rendered back out.
+# The segments whose intent is a list of statements: ingested from these files
+# into the statement store, then rendered back out. Statements are not nodes
+# (structure: s_d4bd1b45); they live beside the graph, not in it.
 SEGMENTS = ("foundations", "structure", "statements", "endorsement", "work")
 
 # A machine-owned statement carries this marker at its end in the derived view
@@ -25,10 +26,12 @@ SEGMENTS = ("foundations", "structure", "statements", "endorsement", "work")
 # endorse verb; render then drops the marker.
 OWNER_MARKER = " [machine]"
 
-# The graph's durable, git-tracked form. The DuckDB file is ignored by git, so
-# every mutating verb rewrites this snapshot alongside the markdown views;
-# `load` rebuilds a local database from it without loss.
+# The durable, git-tracked forms: the graph and the statement store, each its
+# own snapshot. The DuckDB file is ignored by git, so every mutating verb
+# rewrites both snapshots alongside the markdown views; `load` rebuilds a local
+# database from them without loss.
 GRAPH_SNAPSHOT = INTENT_ROOT / "engine" / "graph.json"
+STATEMENTS_SNAPSHOT = INTENT_ROOT / "engine" / "statements.json"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -539,23 +542,23 @@ def parse_intent(path: Path) -> tuple[str, list[tuple[str, str]]]:
 def cmd_ingest(args) -> int:
     """Bootstrap an empty database from the intent files.
 
-    Builds hypercore's own node, a node per segment, and a node per statement.
-    Once statements exist, the graph is authored with the statement verbs and
-    ingest refuses to run: re-reading the derived view would erase ids and
-    semantic relations. A local database is rebuilt from the snapshot instead.
+    Builds hypercore's own node and fills the statement store, one statement
+    per paragraph. Once statements exist, intent is authored with the statement
+    verbs and ingest refuses to run: re-reading the derived view would erase
+    ids and links. A local database is rebuilt from the snapshots instead.
     """
     loaded: dict[str, list[str]] = {}
     machine_owned: list[str] = []
     with Store(args.db) as store:
         existing = store.con.execute(
-            "SELECT count(*) FROM nodes WHERE kind = 'statement'"
+            "SELECT count(*) FROM statements"
         ).fetchone()[0]
         if existing:
             print(
-                f"{existing} statement nodes already exist. The graph is "
-                "authored with the statement verbs now (add-statement, amend, "
-                "strike, endorse); ingest only bootstraps an empty database. "
-                "To rebuild a local database from the snapshot, run: "
+                f"{existing} statements already exist. Intent is authored with "
+                "the statement verbs now (add-statement, amend, strike, "
+                "endorse); ingest only bootstraps an empty database. To "
+                "rebuild a local database from the snapshots, run: "
                 "python -m hypercore load",
                 file=sys.stderr,
             )
@@ -571,21 +574,11 @@ def cmd_ingest(args) -> int:
             "hypercore", "code", label="the engine", lang="python", path="engine"
         )
         for seg in SEGMENTS:
-            title, statements = parse_intent(INTENT_ROOT / f"{seg}.md")
-            store.add_node(
-                "segment", title, id=seg, props={"title": title, "renders_to": f"{seg}.md"}
-            )
-            store.add_relation("hypercore", seg, "contains", id=f"hypercore-contains-{seg}")
+            _, statements = parse_intent(INTENT_ROOT / f"{seg}.md")
             ids: list[str] = []
             for ordinal, (text, owner) in enumerate(statements, start=1):
                 sid = f"{seg}-{ordinal}"
-                store.add_node(
-                    "statement",
-                    text,
-                    id=sid,
-                    props={"ord": ordinal, "segment": seg, "owner": owner},
-                )
-                store.add_relation(seg, sid, "contains", id=f"{seg}-contains-{ordinal}")
+                store.add_statement(text, seg, ordinal, owner=owner, id=sid)
                 ids.append(sid)
                 if owner == "machine":
                     machine_owned.append(sid)
@@ -605,35 +598,26 @@ def cmd_ingest(args) -> int:
     return 0
 
 
-def render_files(graph: dict) -> list[str]:
-    """Write the intent files from the graph: the derived, human-legible view.
+def render_files(statements: list[dict]) -> list[str]:
+    """Write the intent files from the statement store: the derived,
+    human-legible view.
 
-    Source of truth is the graph. A wrong rendering is fixed here, never by
+    Source of truth is the store. A wrong rendering is fixed here, never by
     editing the file on disk.
     """
-    by_id = {node["id"]: node for node in graph["nodes"]}
-    contained = defaultdict(list)
-    for relation in graph["relations"]:
-        if relation["type"] == "contains":
-            contained[relation["src"]].append(relation["dst"])
+    by_segment = defaultdict(list)
+    for statement in statements:
+        by_segment[statement["segment"]].append(statement)
 
     written: list[str] = []
     for seg in SEGMENTS:
-        segment = by_id.get(seg)
-        if segment is None:
-            continue
-        statements = [
-            by_id[dst]
-            for dst in contained.get(seg, [])
-            if by_id.get(dst, {}).get("kind") == "statement"
-        ]
-        statements.sort(key=lambda node: node["props"].get("ord", 0))
-        lines = [f"# {segment['props'].get('title', seg)}", ""]
-        for statement in statements:
-            label = statement["label"]
-            if statement["props"].get("owner") == "machine":
-                label += OWNER_MARKER
-            lines.append(label)
+        segment_statements = sorted(by_segment[seg], key=lambda s: s["ord"])
+        lines = [f"# {seg}", ""]
+        for statement in segment_statements:
+            text = statement["text"]
+            if statement["owner"] == "machine":
+                text += OWNER_MARKER
+            lines.append(text)
             lines.append("")
         text = "\n".join(lines).rstrip() + "\n"
         (INTENT_ROOT / f"{seg}.md").write_text(text, encoding="utf-8")
@@ -642,17 +626,23 @@ def render_files(graph: dict) -> list[str]:
 
 
 def write_views(store: Store) -> dict:
-    """Rewrite everything derived from the graph: intent files and snapshot.
+    """Rewrite everything derived: intent files and both snapshots.
 
-    Every mutating verb ends here, so the views never lag the graph and git
-    always tracks the graph's durable form.
+    Every mutating verb ends here, so the views never lag and git always
+    tracks the durable forms of the graph and the statement store.
     """
-    rendered = render_files(store.graph())
-    snapshot = store.dump()
+    rendered = render_files(store.statements())
     GRAPH_SNAPSHOT.write_text(
-        json.dumps(snapshot, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        json.dumps(store.dump(), indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
-    return {"rendered": rendered, "snapshot": "engine/graph.json"}
+    STATEMENTS_SNAPSHOT.write_text(
+        json.dumps(store.dump_statements(), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return {
+        "rendered": rendered,
+        "snapshot": ["engine/graph.json", "engine/statements.json"],
+    }
 
 
 def cmd_render(args) -> int:
@@ -665,19 +655,32 @@ def cmd_render(args) -> int:
 def cmd_load(args) -> int:
     if not GRAPH_SNAPSHOT.exists():
         raise ValueError(f"no snapshot at {GRAPH_SNAPSHOT}")
+    if not STATEMENTS_SNAPSHOT.exists():
+        raise ValueError(
+            f"no statement store at {STATEMENTS_SNAPSHOT}; statements left "
+            "the graph (s_d4bd1b45) and load needs both snapshots"
+        )
     data = json.loads(GRAPH_SNAPSHOT.read_text(encoding="utf-8"))
+    statement_data = json.loads(STATEMENTS_SNAPSHOT.read_text(encoding="utf-8"))
     with Store(args.db) as store:
         existing = store.con.execute("SELECT count(*) FROM nodes").fetchone()[0]
+        existing += store.con.execute(
+            "SELECT count(*) FROM statements"
+        ).fetchone()[0]
         if existing and not args.replace:
             raise ValueError(
-                f"database has {existing} nodes; re-run with --replace to "
-                "rebuild it from the snapshot"
+                f"database has {existing} nodes and statements; re-run with "
+                "--replace to rebuild it from the snapshots"
             )
         store.load(data)
+        store.load_statements(statement_data)
     print_json(
         {
             "database": args.db,
-            "loaded": {table: len(rows) for table, rows in data.items()},
+            "loaded": {
+                **{table: len(rows) for table, rows in data.items()},
+                "statements": len(statement_data.get("statements", [])),
+            },
         }
     )
     return 0
@@ -701,46 +704,43 @@ def fetch_node(store: Store, id: str, kind: str | None = None) -> dict:
     return node
 
 
-def segment_statements(store: Store, seg: str) -> list[dict]:
-    statements = [
-        node
-        for node in store.graph()["nodes"]
-        if node["kind"] == "statement" and node["props"].get("segment") == seg
-    ]
-    statements.sort(key=lambda node: node["props"].get("ord", 0))
-    return statements
+def fetch_statement(store: Store, id: str) -> dict:
+    statement = store.statement(id)
+    if statement is None:
+        raise ValueError(f"statement '{id}' does not exist")
+    return statement
 
 
 def renumber_segment(store: Store, seg: str) -> None:
     """Make a segment's ords 1..n again. Ids never change; only the ordering
-    prop is the machine's bookkeeping to keep tidy."""
-    for ordinal, statement in enumerate(segment_statements(store, seg), start=1):
-        if statement["props"].get("ord") != ordinal:
-            store.update_node(statement["id"], props_patch={"ord": ordinal})
+    is the machine's bookkeeping to keep tidy."""
+    for ordinal, statement in enumerate(store.statements(segment=seg), start=1):
+        if statement["ord"] != ordinal:
+            store.update_statement(statement["id"], ord=ordinal)
 
 
 def cmd_add_statement(args) -> int:
     with Store(args.db) as store:
-        fetch_node(store, args.segment, kind="segment")
-        statements = segment_statements(store, args.segment)
+        statements = store.statements(segment=args.segment)
         if args.after:
-            ords = {s["id"]: s["props"].get("ord", 0) for s in statements}
+            ords = {s["id"]: s["ord"] for s in statements}
             if args.after not in ords:
                 raise ValueError(
                     f"'{args.after}' is not a statement in segment '{args.segment}'"
                 )
-            ord_value = ords[args.after] + 0.5
+            ord_value = ords[args.after] + 1
+            for statement in statements:
+                if statement["ord"] >= ord_value:
+                    store.update_statement(
+                        statement["id"], ord=statement["ord"] + 1
+                    )
         elif statements:
-            ord_value = statements[-1]["props"].get("ord", 0) + 1
+            ord_value = statements[-1]["ord"] + 1
         else:
             ord_value = 1
-        sid = store.add_node(
-            "statement",
-            args.text,
-            id_prefix="s_",
-            props={"segment": args.segment, "ord": ord_value, "owner": args.owner},
+        sid = store.add_statement(
+            args.text, args.segment, ord_value, owner=args.owner
         )
-        store.add_relation(args.segment, sid, "contains")
         renumber_segment(store, args.segment)
         views = write_views(store)
     print_json({"id": sid, "segment": args.segment, "owner": args.owner, **views})
@@ -749,9 +749,9 @@ def cmd_add_statement(args) -> int:
 
 def cmd_amend(args) -> int:
     with Store(args.db) as store:
-        node = fetch_node(store, args.id, kind="statement")
-        previous_owner = node["props"].get("owner", "operator")
-        store.update_node(args.id, label=args.text, props_patch={"owner": args.by})
+        statement = fetch_statement(store, args.id)
+        previous_owner = statement["owner"]
+        store.update_statement(args.id, text=args.text, owner=args.by)
         views = write_views(store)
     out = {"id": args.id, "owner": args.by, **views}
     if args.by == "machine" and previous_owner == "operator":
@@ -765,22 +765,27 @@ def cmd_amend(args) -> int:
 
 def cmd_strike(args) -> int:
     with Store(args.db) as store:
-        node = fetch_node(store, args.id, kind="statement")
-        owner = node["props"].get("owner", "operator")
-        if owner == "operator" and args.by != "operator":
+        statement = fetch_statement(store, args.id)
+        if statement["owner"] == "operator" and args.by != "operator":
             raise ValueError(
                 "the machine never strikes operator-owned intent; "
                 "re-run with --by operator if this is the operator's decision"
             )
-        removed = store.delete_node(args.id)
-        renumber_segment(store, node["props"].get("segment", ""))
+        references = store.statement_references(args.id)
+        removed = store.delete_statement(args.id)
+        renumber_segment(store, statement["segment"])
         views = write_views(store)
-    semantic = [r for r in removed["relations"] if r["type"] != "contains"]
     print_json(
         {
             "struck": args.id,
-            "label": node["label"],
-            "semantic_relations_lost": semantic,
+            "text": statement["text"],
+            "links_lost": removed["links"],
+            "linked_by_lost": removed["linked_by"],
+            "referencing_nodes": [
+                node["id"]
+                for nodes in references.values()
+                for node in nodes
+            ],
             **views,
         }
     )
@@ -792,11 +797,11 @@ def cmd_endorse(args) -> int:
     already: list[str] = []
     with Store(args.db) as store:
         for sid in args.ids:
-            node = fetch_node(store, sid, kind="statement")
-            if node["props"].get("owner") == "operator":
+            statement = fetch_statement(store, sid)
+            if statement["owner"] == "operator":
                 already.append(sid)
             else:
-                store.update_node(sid, props_patch={"owner": "operator"})
+                store.update_statement(sid, owner="operator")
                 endorsed.append(sid)
         views = write_views(store)
     print_json({"endorsed": endorsed, "already_operator_owned": already, **views})
@@ -805,7 +810,10 @@ def cmd_endorse(args) -> int:
 
 def cmd_work_open(args) -> int:
     with Store(args.db) as store:
-        fetch_node(store, args.on)
+        # Work is usually bound by a statement (its `on` is the bound-by
+        # reference of s_d4bd1b45), but a node's intent can spawn work too.
+        if store.statement(args.on) is None:
+            fetch_node(store, args.on)
         wid = store.add_node(
             "work",
             args.label,
@@ -817,7 +825,6 @@ def cmd_work_open(args) -> int:
                 "check": args.check,
             },
         )
-        store.add_relation(wid, args.on, "spawned-by")
         views = write_views(store)
     print_json(
         {
@@ -927,8 +934,11 @@ def cmd_work_fold(args) -> int:
         if history:
             lines.extend(["", "## history"])
             lines.extend(f"- {m['kind']}: {m['label']}" for m in history)
+        # The fold's material lives on the work node itself: statements are
+        # not nodes and cannot carry material. `show` on the spawning
+        # statement finds this work — and its material — by reverse reference.
         material_id = store.add_material(
-            props["on"],
+            args.work,
             "result",
             label=work["label"],
             lang="markdown",
@@ -958,21 +968,19 @@ def clip(text: str, width: int) -> str:
 def cmd_status(args) -> int:
     with Store(args.db, read_only=True) as store:
         graph = store.graph()
+        statements = store.statements()
     nodes = graph["nodes"]
-    pending = [
-        n
-        for n in nodes
-        if n["kind"] == "statement" and n["props"].get("owner") == "machine"
-    ]
-    pending.sort(key=lambda n: (n["props"].get("segment", ""), n["props"].get("ord", 0)))
+    segment_order = {seg: index for index, seg in enumerate(SEGMENTS)}
+    pending = [s for s in statements if s["owner"] == "machine"]
+    pending.sort(key=lambda s: (segment_order.get(s["segment"], 99), s["ord"]))
     works = [n for n in nodes if n["kind"] == "work"]
     open_work = [w for w in works if w["props"].get("status") == "open"]
     folded = [w for w in works if w["props"].get("status") in ("folded", "abandoned")]
     folded.sort(key=lambda w: w["props"].get("folded_at", ""), reverse=True)
 
     print(f"pending endorsement ({len(pending)}):")
-    for n in pending:
-        print(f"  {n['id']:<16} {clip(n['label'], 72)}")
+    for s in pending:
+        print(f"  {s['id']:<16} {clip(s['text'], 72)}")
     if not pending:
         print("  (none)")
     print()
@@ -995,13 +1003,73 @@ def cmd_status(args) -> int:
     return 0
 
 
+def show_statement(
+    statement: dict, statements: list[dict], references: dict, graph: dict
+) -> int:
+    """One statement, human-legible: envelope, links, and the reverse index —
+    the graph nodes that reference it (s_d4bd1b45)."""
+    by_id = {s["id"]: s for s in statements}
+
+    print(f"{statement['id']}  statement  ({statement['owner']}-owned)")
+    print(f"  \"{statement['text']}\"")
+    print(f"  ord: {statement['ord']}  segment: {statement['segment']}")
+
+    print("  links:")
+    shown = False
+    for link in statement["links"]:
+        other = by_id.get(link.get("to"))
+        text = f" \"{clip(other['text'], 56)}\"" if other else ""
+        print(f"    {link.get('type')} -> {link.get('to')}{text}")
+        shown = True
+    for other in statements:
+        for link in other["links"]:
+            if link.get("to") == statement["id"]:
+                print(
+                    f"    {link.get('type')} <- {other['id']} "
+                    f"\"{clip(other['text'], 56)}\""
+                )
+                shown = True
+    if not shown:
+        print("    (none)")
+
+    def node_line(node: dict) -> str:
+        line = f"{node['id']} \"{clip(node['label'], 56)}\""
+        status = node["props"].get("status")
+        if status:
+            line += f"  ({node['kind']}, {status})"
+        material = graph["material"].get(node["id"], [])
+        if material:
+            line += "  material: " + ", ".join(m["id"] for m in material)
+        return line
+
+    print("  bound:")
+    for node in references["bound"]:
+        print(f"    {node_line(node)}")
+    if not references["bound"]:
+        print("    (none)")
+    print("  produced by:")
+    for node in references["produced"]:
+        print(f"    {node_line(node)}")
+    if not references["produced"]:
+        print("    (none)")
+    return 0
+
+
 def cmd_show(args) -> int:
     with Store(args.db, read_only=True) as store:
         graph = store.graph()
+        statement = store.statement(args.node)
+        if statement is not None:
+            return show_statement(
+                statement,
+                store.statements(),
+                store.statement_references(args.node),
+                graph,
+            )
     by_id = {node["id"]: node for node in graph["nodes"]}
     node = by_id.get(args.node)
     if node is None:
-        raise ValueError(f"node '{args.node}' does not exist")
+        raise ValueError(f"'{args.node}' is neither a node nor a statement")
 
     def name(node_id: str) -> str:
         other = by_id.get(node_id)

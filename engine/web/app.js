@@ -194,8 +194,9 @@ function highlightCluster(cy, graph, clusterId) {
 }
 
 function renderSummary(graph) {
-  const pending = graph.nodes.filter(
-    (node) => node.kind === "statement" && (node.props || {}).owner === "machine",
+  // Statements are not nodes; they arrive beside the graph as a store.
+  const pending = (graph.statements || []).filter(
+    (statement) => statement.owner === "machine",
   ).length;
   const openWork = graph.nodes.filter(
     (node) => node.kind === "work" && (node.props || {}).status === "open",

@@ -1,8 +1,11 @@
 -- hypercore graph store (DuckDB)
 --
--- Five things live here: nodes, relations between nodes, clusters of relations
--- (a named subgraph that stands for a repeatable meta-operation), and material
--- (documents / code / scripts) attached to a node.
+-- Six things live here: nodes, relations between nodes, clusters of relations
+-- (a named subgraph that stands for a repeatable meta-operation), material
+-- (documents / code / scripts) attached to a node, and statements — which are
+-- NOT nodes (structure: s_d4bd1b45). Statements are intent; they live in their
+-- own store with their own index. Nodes reference them by id in props: `on`
+-- (the statement a node is bound by) and `produces` (statements it produced).
 --
 -- Referential integrity is enforced in the Python layer (store.py), not by
 -- foreign-key constraints, so inserts are order-independent and we avoid
@@ -40,6 +43,20 @@ CREATE TABLE IF NOT EXISTS cluster_relations (
   cluster_id  VARCHAR NOT NULL,   -- clusters.id
   relation_id VARCHAR NOT NULL,   -- relations.id
   PRIMARY KEY (cluster_id, relation_id)
+);
+
+-- A statement is one unit of intent: plain prose in the body, everything formal
+-- in the envelope (statements-12). Statements are not nodes; the graph's nodes
+-- reference them by id. Inter-statement structure (depends-on, ...) lives in
+-- `links`, not in the relations table.
+CREATE TABLE IF NOT EXISTS statements (
+  id         VARCHAR PRIMARY KEY,
+  text       VARCHAR NOT NULL,    -- the statement, plain prose
+  owner      VARCHAR NOT NULL,    -- 'operator' | 'machine' (pending endorsement)
+  segment    VARCHAR NOT NULL,    -- which intent file it renders into
+  ord        INTEGER NOT NULL,    -- position within the segment
+  links      JSON DEFAULT '[]',   -- [{"type": ..., "to": statements.id}]
+  created_at TIMESTAMP DEFAULT current_timestamp
 );
 
 -- Material is a document or output (code, script, ...) attached to a node.

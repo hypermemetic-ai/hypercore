@@ -27,7 +27,9 @@ class HypercoreHandler(SimpleHTTPRequestHandler):
     def send_graph(self) -> None:
         try:
             with Store(self.db_path, read_only=True) as store:
-                payload = store.graph()
+                # Statements are not nodes (s_d4bd1b45): the store rides
+                # beside the graph so the viewer can still show intent state.
+                payload = {**store.graph(), "statements": store.statements()}
             self.send_json(200, payload)
         except Exception as exc:
             self.send_json(500, {"error": str(exc)})
