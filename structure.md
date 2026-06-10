@@ -2,8 +2,6 @@
 
 A node is a thing in the graph.
 
-A node points to its material; its intent is the statements that bind it. [machine]
-
 Intent is the written model of what the node is meant to be. Material is what the node actually made, the thing reality can contradict.
 
 A relation is a directed, typed link from one node to another.

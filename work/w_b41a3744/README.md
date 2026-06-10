@@ -31,7 +31,7 @@ fold when: the operator watches an operation land live, sees the queue of what a
   - verdict: **pass** — CDP, 2026-06-10: endpoint- and poll-driven reloads both produced named feed entries within two 3s ticks (test pass / statement amended / operator endorsed), each clickable to its node; arrivals flash via the visible stand-in when their work is closed
   - tests -> `wn_817645e0` "live loop feed: the existing store fingerprint already re-d…"
 - `wn_41d436f8` the operator watches an operation land live, sees the queue of what awaits their judgment, and records a verdict or endorsement in the viewer without touching the CLI  (execute: machine, judge: operator, propose: machine)
-  - verdict: **open**
+  - verdict: **pass** — operator, via the viewer
   - tests -> `wn_d4038543` "judgment queue: a front-and-center panel listing exactly wh…"
   - tests -> `wn_d43648b0` "act in place: verdict buttons on operator-judged tests, ame…"
   - tests -> `wn_817645e0` "live loop feed: the existing store fingerprint already re-d…"

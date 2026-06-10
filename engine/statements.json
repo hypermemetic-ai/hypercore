@@ -64,15 +64,6 @@
       "text": "Ownership is visible in the derived view: a machine-owned statement ends with the marker [machine]. Endorsement is the endorse verb; render then drops the marker. Amending or striking are the operator's other two answers."
     },
     {
-      "created_at": "2026-06-10T01:59:22.922659",
-      "id": "endorsement-8",
-      "links": [],
-      "ord": 8,
-      "owner": "machine",
-      "segment": "endorsement",
-      "text": "The record of endorsements is what earns autonomy. Where the machine's settlements keep being taken on unchanged, its reach grows; where they keep being struck, it shrinks."
-    },
-    {
       "created_at": "2026-06-10T01:59:22.544891",
       "id": "foundations-1",
       "links": [],
@@ -289,15 +280,6 @@
       "text": "The default motion is ratification: the machine drafts concrete statements and the operator endorses, amends, or strikes them. The operator is rarely asked to author from nothing."
     },
     {
-      "created_at": "2026-06-10T01:59:22.840598",
-      "id": "statements-12",
-      "links": [],
-      "ord": 12,
-      "owner": "machine",
-      "segment": "statements",
-      "text": "A statement's body is plain prose. The formal part is the envelope: its id, segment, owner, and relations. Formalize the envelope, never the prose."
-    },
-    {
       "created_at": "2026-06-10T01:59:22.622410",
       "id": "structure-1",
       "links": [],
@@ -307,19 +289,10 @@
       "text": "A node is a thing in the graph."
     },
     {
-      "created_at": "2026-06-10T01:59:22.634370",
-      "id": "structure-2",
-      "links": [],
-      "ord": 2,
-      "owner": "machine",
-      "segment": "structure",
-      "text": "A node points to its material; its intent is the statements that bind it."
-    },
-    {
       "created_at": "2026-06-10T01:59:22.642543",
       "id": "structure-3",
       "links": [],
-      "ord": 3,
+      "ord": 2,
       "owner": "operator",
       "segment": "structure",
       "text": "Intent is the written model of what the node is meant to be. Material is what the node actually made, the thing reality can contradict."
@@ -328,7 +301,7 @@
       "created_at": "2026-06-10T01:59:22.653216",
       "id": "structure-4",
       "links": [],
-      "ord": 4,
+      "ord": 3,
       "owner": "operator",
       "segment": "structure",
       "text": "A relation is a directed, typed link from one node to another."
@@ -337,7 +310,7 @@
       "created_at": "2026-06-10T01:59:22.662037",
       "id": "structure-5",
       "links": [],
-      "ord": 5,
+      "ord": 4,
       "owner": "operator",
       "segment": "structure",
       "text": "A cluster is a named set of relations: a subgraph that stands for a repeatable operation."
@@ -346,7 +319,7 @@
       "created_at": "2026-06-10T01:59:22.672373",
       "id": "structure-6",
       "links": [],
-      "ord": 6,
+      "ord": 5,
       "owner": "operator",
       "segment": "structure",
       "text": "The intent lives at the root, as the markdown files there. Everything else in the repository is material."
@@ -355,7 +328,7 @@
       "created_at": "2026-06-10T01:59:22.687331",
       "id": "structure-7",
       "links": [],
-      "ord": 7,
+      "ord": 6,
       "owner": "operator",
       "segment": "structure",
       "text": "The engine is material. It is the implementation that stores and serves the graph."
@@ -364,7 +337,7 @@
       "created_at": "2026-06-10T02:43:50.554150",
       "id": "s_d4bd1b45",
       "links": [],
-      "ord": 8,
+      "ord": 7,
       "owner": "operator",
       "segment": "structure",
       "text": "Nodes are operations. Intent statements are not nodes: they live in their own store with their own index. An operation points to the statements it produces and is bound by the statements it acts under; both are references the operation carries, not edges to statement nodes."
@@ -424,20 +397,11 @@
       "text": "A folding condition is what makes a graph ready to fold. Its intent is met, or it is abandoned. Until then the graph stays open."
     },
     {
-      "created_at": "2026-06-10T01:59:22.993648",
-      "id": "work-7",
-      "links": [],
-      "ord": 7,
-      "owner": "machine",
-      "segment": "work",
-      "text": "A folding condition is machine-checkable or it spends operator judgment. Which of the two it is must be declared when the graph opens."
-    },
-    {
       "created_at": "2026-06-10T01:59:23.001834",
       "id": "work-8",
       "links": [],
-      "ord": 8,
-      "owner": "machine",
+      "ord": 7,
+      "owner": "operator",
       "segment": "work",
       "text": "Trust in a folded graph comes from the checks at its boundary, not from the competence of whatever ran inside. An unchecked fold is a hope, not a result."
     },
@@ -445,8 +409,8 @@
       "created_at": "2026-06-10T01:59:23.010057",
       "id": "work-9",
       "links": [],
-      "ord": 9,
-      "owner": "machine",
+      "ord": 8,
+      "owner": "operator",
       "segment": "work",
       "text": "Error compounds through composition. The weaker a graph's checks, the shallower it must stay before folding."
     },
@@ -454,7 +418,7 @@
       "created_at": "2026-06-10T01:59:23.018847",
       "id": "work-10",
       "links": [],
-      "ord": 10,
+      "ord": 9,
       "owner": "operator",
       "segment": "work",
       "text": "Folding is reflected in both places. The database records the fold, and the filesystem view follows it."
@@ -463,7 +427,7 @@
       "created_at": "2026-06-10T02:35:16.413872",
       "id": "s_3729cb59",
       "links": [],
-      "ord": 11,
+      "ord": 10,
       "owner": "operator",
       "segment": "work",
       "text": "An operation is one move on the problem state, of six kinds: frame, gather, derive, generate, test, commit. Work is made of operations."
@@ -472,37 +436,10 @@
       "created_at": "2026-06-10T02:35:16.747171",
       "id": "s_e4f503c9",
       "links": [],
-      "ord": 12,
+      "ord": 11,
       "owner": "operator",
       "segment": "work",
       "text": "The alphabet of operations never grows. Named clusters of operations are the compounds that grow freely; decomposition is how a compound expands, not a primitive."
-    },
-    {
-      "created_at": "2026-06-10T02:35:17.192347",
-      "id": "s_81c38173",
-      "links": [],
-      "ord": 13,
-      "owner": "machine",
-      "segment": "work",
-      "text": "Who proposes, executes, judges, and decides is a property on each operation, not an operation of its own. The decision to commit belongs to whoever owns the consequences and cannot be delegated."
-    },
-    {
-      "created_at": "2026-06-10T03:29:05.823141",
-      "id": "s_5365a11a",
-      "links": [],
-      "ord": 14,
-      "owner": "machine",
-      "segment": "work",
-      "text": "Relations between operations carry the combinators. depends-on is the causal link from a consumer to what it consumes; tests, commits, and reframes bind a test, commit, or frame to what it acts on; decomposes-into expands a compound into its parts. Work membership stays contains, which is bookkeeping, not a combinator."
-    },
-    {
-      "created_at": "2026-06-10T01:59:23.028759",
-      "id": "work-11",
-      "links": [],
-      "ord": 15,
-      "owner": "machine",
-      "segment": "work",
-      "text": "Execution graphs and folding were built in their first form, and the operation alphabet was named before its machinery, so the language existed before the machinery did. The work loop now speaks the alphabet: operations as nodes, combinators as relations, roles as props."
     }
   ]
 }

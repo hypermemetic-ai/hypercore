@@ -286,11 +286,13 @@
       "kind": "test",
       "label": "the operator watches an operation land live, sees the queue of what awaits their judgment, and records a verdict or endorsement in the viewer without touching the CLI",
       "props": {
+        "grounds": "operator, via the viewer",
         "roles": {
           "execute": "machine",
           "judge": "operator",
           "propose": "machine"
         },
+        "verdict": "pass",
         "work": "w_b41a3744"
       }
     },

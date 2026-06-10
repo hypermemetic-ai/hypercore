@@ -7,7 +7,7 @@ fold when: work nodes are operations (frame, gather, derive, generate, test, com
 folded: 2026-06-10T08:49:39+00:00
 produces:
 - `s_d4bd1b45` — "Nodes are operations. Intent statements are not nodes: they live in their own store with …"
-- `s_5365a11a` — "Relations between operations carry the combinators. depends-on is the causal link from a …"
+- `s_5365a11a`
 
 ## generate
 
