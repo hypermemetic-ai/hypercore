@@ -679,13 +679,147 @@ def render_files(statements: list[dict]) -> list[str]:
     return written
 
 
+# A folder holds one execution graph; the unit on disk is the graph, not the
+# single node (work.md). The whole tree is derived: rebuilt on every verb,
+# never hand-edited, and the fold is reflected here as it is in the database.
+WORK_ROOT = INTENT_ROOT / "work"
+
+MATERIAL_EXT = {"markdown": "md", "python": "py", "json": "json"}
+
+
+def render_work_folders(store: Store) -> list[str]:
+    """Write the execution graphs as browsable folders: one per work, an
+    index over them, and every inline material body as its own file."""
+    import shutil
+
+    graph = store.graph()
+    statements_by_id = {s["id"]: s for s in store.statements()}
+    works = [n for n in graph["nodes"] if n["kind"] == "work"]
+    works.sort(
+        key=lambda w: (
+            w["props"].get("status") != "open",
+            w["props"].get("folded_at", ""),
+            w["id"],
+        )
+    )
+
+    if WORK_ROOT.exists():
+        shutil.rmtree(WORK_ROOT)
+    WORK_ROOT.mkdir()
+
+    def statement_line(sid: str) -> str:
+        statement = statements_by_id.get(sid)
+        if statement is None:
+            return f"`{sid}`"
+        return f"`{sid}` — \"{clip(statement['text'], 90)}\""
+
+    index = ["# work — the execution graphs", ""]
+    written = ["work/README.md"]
+    for work in works:
+        props = work["props"]
+        status = props.get("status", "open")
+        index.append(
+            f"- [`{work['id']}`]({work['id']}/README.md) **{status}** — "
+            f"{work['label']}"
+        )
+        written.append(f"work/{work['id']}/README.md")
+        folder = WORK_ROOT / work["id"]
+        folder.mkdir()
+
+        members = work_members(graph, work["id"])
+        by_id = {node["id"]: node for node in graph["nodes"]}
+        lines = [
+            f"# {work['label']}",
+            "",
+            f"`{work['id']}` · **{status}** · check: {props.get('check')}",
+            "",
+            f"on: {statement_line(props.get('on', ''))}",
+            f"fold when: {props.get('fold_when')}",
+        ]
+        if props.get("folded_at"):
+            lines.append(f"folded: {props['folded_at']}")
+        produces = props.get("produces") or []
+        if produces:
+            lines.append("produces:")
+            lines.extend(f"- {statement_line(sid)}" for sid in produces)
+
+        # Operations in alphabet order, the graph each work is made of.
+        kind_order = {kind: i for i, kind in enumerate(OPERATIONS)}
+        members.sort(
+            key=lambda m: (kind_order.get(m["kind"], 99), m["kind"], m["id"])
+        )
+        current_kind = None
+        for member in members:
+            if member["kind"] != current_kind:
+                current_kind = member["kind"]
+                lines.extend(["", f"## {current_kind}", ""])
+            mprops = member["props"]
+            roles = mprops.get("roles") or {}
+            role_text = ", ".join(f"{k}: {v}" for k, v in sorted(roles.items()))
+            line = f"- `{member['id']}` {member['label']}"
+            if role_text:
+                line += f"  ({role_text})"
+            lines.append(line)
+            if member["kind"] == "test":
+                verdict = mprops.get("verdict", "open")
+                grounds = mprops.get("grounds")
+                lines.append(
+                    f"  - verdict: **{verdict}**"
+                    + (f" — {grounds}" if grounds else "")
+                )
+            for relation in graph["relations"]:
+                if relation["src"] == member["id"] and relation["type"] != "contains":
+                    other = by_id.get(relation["dst"])
+                    label = f" \"{clip(other['label'], 60)}\"" if other else ""
+                    lines.append(
+                        f"  - {relation['type']} -> `{relation['dst']}`{label}"
+                    )
+
+        # Material: the products. Inline bodies become files in the folder.
+        material_lines = []
+        for node in [work] + members:
+            for item in graph["material"].get(node["id"], []):
+                where = node["id"] if node is not work else "the work"
+                detail = item.get("label") or item.get("path") or item["id"]
+                if item.get("has_body"):
+                    ext = MATERIAL_EXT.get(item.get("lang"), "txt")
+                    filename = f"{item['id']}.{ext}"
+                    (folder / filename).write_text(
+                        store.material_body(item["id"]) or "", encoding="utf-8"
+                    )
+                    written.append(f"work/{work['id']}/{filename}")
+                    material_lines.append(
+                        f"- [{detail}]({filename}) ({item['kind']}) — on {where}"
+                    )
+                else:
+                    target = item.get("path")
+                    link = f" → `{target}`" if target else ""
+                    material_lines.append(
+                        f"- {detail} ({item['kind']}){link} — on {where}"
+                    )
+        if material_lines:
+            lines.extend(["", "## material", ""])
+            lines.extend(material_lines)
+
+        (folder / "README.md").write_text(
+            "\n".join(lines).rstrip() + "\n", encoding="utf-8"
+        )
+
+    (WORK_ROOT / "README.md").write_text(
+        "\n".join(index).rstrip() + "\n", encoding="utf-8"
+    )
+    return written
+
+
 def write_views(store: Store) -> dict:
-    """Rewrite everything derived: intent files and both snapshots.
+    """Rewrite everything derived: intent files, work folders, and both
+    snapshots.
 
     Every mutating verb ends here, so the views never lag and git always
     tracks the durable forms of the graph and the statement store.
     """
     rendered = render_files(store.statements())
+    rendered.extend(render_work_folders(store))
     GRAPH_SNAPSHOT.write_text(
         json.dumps(store.dump(), indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
