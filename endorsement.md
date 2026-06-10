@@ -10,7 +10,7 @@ The machine never endorses for the operator.
 
 Ownership and truth are separate. Ownership says who may responsibly change a statement; evidence says whether it still holds. [machine]
 
-An intent is operator-owned or machine-owned. The material that corresponds to it answers to whichever stands behind it. [machine]
+An intent is operator-owned or machine-owned. The material that corresponds to it answers to whichever stands behind it.
 
 Ownership is visible in the file itself: a machine-owned statement ends with the marker [machine]. Endorsing drops the marker; amending and striking are the operator's other two answers.
 
