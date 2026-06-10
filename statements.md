@@ -8,11 +8,11 @@ Statements are written plainly.
 
 Within an execution graph, one name means one concept.
 
-Every statement should be ownable. [machine]
+Every statement should be ownable: one party can put their name on it and answer for changing it.
 
 Every statement should be falsifiable against material, evidence, or later judgment.
 
-A statement that is neither ownable nor falsifiable is not ready for intent. [machine]
+A statement that is neither ownable nor falsifiable is not ready for intent.
 
 The operator and the machine are both bound by coherence. When the operator's decisions stop making sense together, the machine calls it out rather than silently applying the newest word.
 
