@@ -60,6 +60,10 @@
 
         --pre-bg: #14161a;
 
+        --fail: #d9646a;
+        --fail-bg: #3a1d20;
+
+        --card-bg: #20242c;
         --graph-label: #d8dce2;
         --graph-node-border: #15171c;
         --graph-edge: #5d646e;
@@ -111,6 +115,10 @@
 
         --pre-bg: #f5f7fa;
 
+        --fail: #b3362e;
+        --fail-bg: #fbdddb;
+
+        --card-bg: #ffffff;
         --graph-label: #202124;
         --graph-node-border: #ffffff;
         --graph-edge: #8d939a;
@@ -333,6 +341,139 @@
         color: #ffffff;
       }
 
+      /* ---- the judgment queue and the operator's controls ---- */
+
+      .queue {
+        border: 1px solid var(--border);
+        border-left: 3px solid var(--accent);
+        border-radius: 8px;
+        padding: 10px 12px;
+        margin-bottom: 16px;
+        background: var(--raised);
+      }
+
+      .queue h3:first-child {
+        margin-top: 0;
+      }
+
+      .row.task {
+        cursor: default;
+      }
+
+      .task-text {
+        margin: 2px 0 6px;
+      }
+
+      .task-text.link {
+        cursor: pointer;
+      }
+
+      .task-text.link:hover {
+        color: var(--accent);
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+        margin: 6px 0;
+      }
+
+      .verdict,
+      .quiet {
+        padding: 3px 10px;
+        font-size: 11px;
+        font-weight: 700;
+        border-radius: 11px;
+        background: transparent;
+        cursor: pointer;
+        font-family: inherit;
+      }
+
+      .verdict.pass {
+        border: 1px solid var(--endorse);
+        color: var(--endorse);
+      }
+
+      .verdict.pass:hover,
+      .verdict.pass.confirm {
+        background: var(--endorse-hover-bg);
+      }
+
+      .verdict.fail {
+        border: 1px solid var(--fail);
+        color: var(--fail);
+      }
+
+      .verdict.fail:hover {
+        background: var(--fail-bg);
+      }
+
+      .quiet {
+        border: 1px solid var(--border);
+        color: var(--muted);
+      }
+
+      .quiet:hover {
+        background: var(--hover);
+      }
+
+      .quiet.danger {
+        color: var(--fail);
+        border-color: var(--fail);
+      }
+
+      .quiet.danger:hover,
+      .quiet.danger.confirm {
+        background: var(--fail-bg);
+      }
+
+      .inline-form {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+        width: 100%;
+        margin: 4px 0;
+      }
+
+      .inline-form.column {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .inline-form .grounds {
+        flex: 1;
+        min-width: 140px;
+        padding: 5px 8px;
+        font: inherit;
+        font-size: 12px;
+        color: var(--text);
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+      }
+
+      textarea.grounds {
+        width: 100%;
+        min-height: 90px;
+        resize: vertical;
+      }
+
+      /* ---- the feed: recent moves ---- */
+
+      ul.feed li {
+        padding: 5px 0;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      ul.feed li.link:hover {
+        color: var(--text);
+        background: var(--hover);
+      }
+
       details.segment {
         border-top: 1px solid var(--border-soft);
         padding: 4px 0;
@@ -458,6 +599,7 @@
         <span class="spacer"></span>
         <span class="zoom" aria-label="View controls">
           <button id="themeToggle" title="Switch theme">☀</button>
+          <button id="collapseAll" title="Close every work box">⊟</button>
           <button id="zoomOut" title="Zoom out">−</button>
           <button id="zoomFit" title="Fit graph">fit</button>
           <button id="zoomIn" title="Zoom in">+</button>

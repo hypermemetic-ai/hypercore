@@ -31,10 +31,28 @@ class HypercoreHandler(SimpleHTTPRequestHandler):
         super().do_GET()
 
     def do_POST(self):
-        if self.path == "/api/endorse":
-            self.endorse()
+        # Every POST is the operator acting in the viewer (s_a6ea7c7a); the
+        # machine drives the CLI verbs instead and never calls these. Each
+        # endpoint maps one-to-one onto a verb and spends the same checks.
+        routes = {
+            "/api/endorse": self.endorse,
+            "/api/verdict": self.verdict,
+            "/api/amend": self.amend,
+            "/api/strike": self.strike,
+            "/api/fold": self.fold,
+        }
+        handler = routes.get(self.path)
+        if handler is None:
+            self.send_json(404, {"error": "unknown endpoint"})
             return
-        self.send_json(404, {"error": "unknown endpoint"})
+        handler()
+
+    def read_payload(self) -> dict:
+        length = int(self.headers.get("Content-Length") or 0)
+        payload = json.loads(self.rfile.read(length) or b"{}")
+        if not isinstance(payload, dict):
+            raise ValueError("the request body must be a JSON object")
+        return payload
 
     def send_graph(self) -> None:
         try:
@@ -85,8 +103,7 @@ class HypercoreHandler(SimpleHTTPRequestHandler):
         from .cli import write_views
 
         try:
-            length = int(self.headers.get("Content-Length") or 0)
-            payload = json.loads(self.rfile.read(length) or b"{}")
+            payload = self.read_payload()
             ids = payload.get("ids")
             if not isinstance(ids, list) or not ids:
                 raise ValueError("ids: a non-empty list of statement ids")
@@ -105,6 +122,98 @@ class HypercoreHandler(SimpleHTTPRequestHandler):
             self.send_json(
                 200, {"endorsed": endorsed, "already_operator_owned": already}
             )
+        except ValueError as exc:
+            self.send_json(400, {"error": str(exc)})
+        except Exception as exc:
+            self.send_json(500, {"error": str(exc)})
+
+    def verdict(self) -> None:
+        """Record the operator's verdict on a test operation.
+
+        The click is the judgment being spent (s_81c38173): the grounds are
+        recorded with the operator named as their warrant."""
+        from .cli import fetch_node, write_views
+
+        try:
+            payload = self.read_payload()
+            test_id = payload.get("id")
+            verdict = payload.get("verdict")
+            if not test_id or verdict not in ("pass", "fail"):
+                raise ValueError("id and a verdict of pass|fail are required")
+            grounds = (payload.get("grounds") or "").strip()
+            grounds = (
+                f"operator, via the viewer: {grounds}"
+                if grounds
+                else "operator, via the viewer"
+            )
+            with Store(self.db_path) as store:
+                fetch_node(store, test_id, kind="test")
+                store.update_node(
+                    test_id, props_patch={"verdict": verdict, "grounds": grounds}
+                )
+                write_views(store)
+            self.send_json(200, {"id": test_id, "verdict": verdict})
+        except ValueError as exc:
+            self.send_json(400, {"error": str(exc)})
+        except Exception as exc:
+            self.send_json(500, {"error": str(exc)})
+
+    def amend(self) -> None:
+        """Rewrite a statement in the operator's words — one of the
+        operator's three answers to a statement (endorsement.md)."""
+        from .cli import fetch_statement, write_views
+
+        try:
+            payload = self.read_payload()
+            sid = payload.get("id")
+            text = (payload.get("text") or "").strip()
+            if not sid or not text:
+                raise ValueError("id and text are required")
+            with Store(self.db_path) as store:
+                fetch_statement(store, sid)
+                store.update_statement(sid, text=text, owner="operator")
+                write_views(store)
+            self.send_json(200, {"id": sid, "owner": "operator"})
+        except ValueError as exc:
+            self.send_json(400, {"error": str(exc)})
+        except Exception as exc:
+            self.send_json(500, {"error": str(exc)})
+
+    def strike(self) -> None:
+        """Remove a statement — the operator's third answer. The machine
+        never strikes operator-owned intent; the operator may strike any."""
+        from .cli import fetch_statement, renumber_segment, write_views
+
+        try:
+            payload = self.read_payload()
+            sid = payload.get("id")
+            if not sid:
+                raise ValueError("id is required")
+            with Store(self.db_path) as store:
+                statement = fetch_statement(store, sid)
+                store.delete_statement(sid)
+                renumber_segment(store, statement["segment"])
+                write_views(store)
+            self.send_json(200, {"struck": sid, "text": statement["text"]})
+        except ValueError as exc:
+            self.send_json(400, {"error": str(exc)})
+        except Exception as exc:
+            self.send_json(500, {"error": str(exc)})
+
+    def fold(self) -> None:
+        """Fold an open work: the click is the operator confirming the
+        settlement, so the operator-judgment gate is satisfied by it."""
+        from .cli import fold_work, write_views
+
+        try:
+            payload = self.read_payload()
+            work_id = payload.get("id")
+            if not work_id:
+                raise ValueError("id is required")
+            with Store(self.db_path) as store:
+                result = fold_work(store, work_id, operator_confirms=True)
+                write_views(store)
+            self.send_json(200, result)
         except ValueError as exc:
             self.send_json(400, {"error": str(exc)})
         except Exception as exc:

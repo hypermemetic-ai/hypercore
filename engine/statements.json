@@ -158,7 +158,7 @@
       "id": "s_a6ea7c7a",
       "links": [],
       "ord": 10,
-      "owner": "machine",
+      "owner": "operator",
       "segment": "foundations",
       "text": "The viewer is where the operator acts, not only reads: the loop is visible live as operations land, whatever awaits operator judgment is summoned front and center, and endorsing, judging, and folding can be done there directly."
     },
@@ -176,7 +176,7 @@
       "id": "s_cb9d5e78",
       "links": [],
       "ord": 12,
-      "owner": "machine",
+      "owner": "operator",
       "segment": "foundations",
       "text": "The viewer keeps itself current: it watches a cheap fingerprint of the store and re-derives the whole view when the graph moves. Staleness is the machine's to notice, never the operator's to manage."
     },

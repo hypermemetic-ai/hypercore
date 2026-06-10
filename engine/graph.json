@@ -159,6 +159,22 @@
       }
     },
     {
+      "created_at": "2026-06-10T13:14:36.891212",
+      "id": "wn_01ba37d4",
+      "kind": "test",
+      "label": "the judgment queue lists exactly what awaits the operator and drains as they act",
+      "props": {
+        "grounds": "CDP, 2026-06-10: the queue rendered 'awaiting your judgment (11)' with endorse rows; an operator-judged scratch test appeared in it and the recorded verdict drained the queue from 1 to 0",
+        "roles": {
+          "execute": "machine",
+          "judge": "machine",
+          "propose": "machine"
+        },
+        "verdict": "pass",
+        "work": "w_b41a3744"
+      }
+    },
+    {
       "created_at": "2026-06-10T02:20:33.137876",
       "id": "wn_11774d3c",
       "kind": "generate",
@@ -208,6 +224,22 @@
       }
     },
     {
+      "created_at": "2026-06-10T13:14:39.789135",
+      "id": "wn_294f80af",
+      "kind": "test",
+      "label": "moves land in the open viewer as named feed entries and a flash, without a refresh",
+      "props": {
+        "grounds": "CDP, 2026-06-10: endpoint- and poll-driven reloads both produced named feed entries within two 3s ticks (test pass / statement amended / operator endorsed), each clickable to its node; arrivals flash via the visible stand-in when their work is closed",
+        "roles": {
+          "execute": "machine",
+          "judge": "machine",
+          "propose": "machine"
+        },
+        "verdict": "pass",
+        "work": "w_b41a3744"
+      }
+    },
+    {
       "created_at": "2026-06-10T11:18:01.432004",
       "id": "wn_29a709f4",
       "kind": "test",
@@ -246,6 +278,20 @@
         },
         "verdict": "fail",
         "work": "w_55b5404b"
+      }
+    },
+    {
+      "created_at": "2026-06-10T13:14:51.697843",
+      "id": "wn_41d436f8",
+      "kind": "test",
+      "label": "the operator watches an operation land live, sees the queue of what awaits their judgment, and records a verdict or endorsement in the viewer without touching the CLI",
+      "props": {
+        "roles": {
+          "execute": "machine",
+          "judge": "operator",
+          "propose": "machine"
+        },
+        "work": "w_b41a3744"
       }
     },
     {
@@ -562,6 +608,22 @@
       }
     },
     {
+      "created_at": "2026-06-10T13:14:38.364736",
+      "id": "wn_9b596c72",
+      "kind": "test",
+      "label": "the act-in-place endpoints map one-to-one onto the verbs and the gates hold",
+      "props": {
+        "grounds": "CDP + curl, 2026-06-10: /api/verdict recorded pass with grounds prefixed 'operator, via the viewer'; /api/amend rewrote the text and took ownership for the operator; /api/strike removed and renumbered; /api/fold without a commit refused with the gate's own words \u2014 re-verified against the live server",
+        "roles": {
+          "execute": "machine",
+          "judge": "machine",
+          "propose": "machine"
+        },
+        "verdict": "pass",
+        "work": "w_b41a3744"
+      }
+    },
+    {
       "created_at": "2026-06-10T11:17:54.175093",
       "id": "wn_9d25b35d",
       "kind": "test",
@@ -575,6 +637,22 @@
         },
         "verdict": "pass",
         "work": "w_1baf8df3"
+      }
+    },
+    {
+      "created_at": "2026-06-10T13:14:35.407200",
+      "id": "wn_a37d1177",
+      "kind": "test",
+      "label": "nodes carry kind, words, and verdict state on the card; works collapse to closed boxes and expand on focus; rows follow the alphabet so the story reads top-down",
+      "props": {
+        "grounds": "CDP suite against a sandbox serve, 2026-06-10: 14/14 \u2014 collapsed by default (0 operations drawn), focus expands the work, the card label opens with its kind and carries its words, the failed operator test reads '\u2715 fail' on the card; screenshots of expanded works coherent in both themes",
+        "roles": {
+          "execute": "machine",
+          "judge": "machine",
+          "propose": "machine"
+        },
+        "verdict": "pass",
+        "work": "w_55b5404b"
       }
     },
     {
@@ -762,6 +840,14 @@
       "type": "contains"
     },
     {
+      "created_at": "2026-06-10T13:14:39.796063",
+      "dst": "wn_294f80af",
+      "id": "r_03b1524f",
+      "props": {},
+      "src": "w_b41a3744",
+      "type": "contains"
+    },
+    {
       "created_at": "2026-06-10T02:20:32.485465",
       "dst": "wn_4e9bde2c",
       "id": "r_05353137",
@@ -816,6 +902,14 @@
       "props": {},
       "src": "wn_666eca0f",
       "type": "depends-on"
+    },
+    {
+      "created_at": "2026-06-10T13:14:38.377011",
+      "dst": "wn_d43648b0",
+      "id": "r_11412ca6",
+      "props": {},
+      "src": "wn_9b596c72",
+      "type": "tests"
     },
     {
       "created_at": "2026-06-10T12:44:51.776078",
@@ -970,6 +1064,14 @@
       "type": "contains"
     },
     {
+      "created_at": "2026-06-10T13:14:35.415037",
+      "dst": "wn_a37d1177",
+      "id": "r_33474f2e",
+      "props": {},
+      "src": "w_55b5404b",
+      "type": "contains"
+    },
+    {
       "created_at": "2026-06-10T03:41:34.825025",
       "dst": "wn_7c513a68",
       "id": "r_3407d368",
@@ -999,6 +1101,14 @@
       "id": "r_432b728a",
       "props": {},
       "src": "w_bdc90a28",
+      "type": "contains"
+    },
+    {
+      "created_at": "2026-06-10T13:14:36.902529",
+      "dst": "wn_01ba37d4",
+      "id": "r_48a8a080",
+      "props": {},
+      "src": "w_b41a3744",
       "type": "contains"
     },
     {
@@ -1039,6 +1149,14 @@
       "id": "r_4e7c72d5",
       "props": {},
       "src": "wn_7aca437d",
+      "type": "tests"
+    },
+    {
+      "created_at": "2026-06-10T13:14:39.802992",
+      "dst": "wn_817645e0",
+      "id": "r_51dc2739",
+      "props": {},
+      "src": "wn_294f80af",
       "type": "tests"
     },
     {
@@ -1122,6 +1240,14 @@
       "type": "contains"
     },
     {
+      "created_at": "2026-06-10T13:15:00.254428",
+      "dst": "wn_d4038543",
+      "id": "r_6e3381c6",
+      "props": {},
+      "src": "wn_41d436f8",
+      "type": "tests"
+    },
+    {
       "created_at": "2026-06-10T02:35:33.399459",
       "dst": "wn_b91eab58",
       "id": "r_71acdf52",
@@ -1130,11 +1256,27 @@
       "type": "contains"
     },
     {
+      "created_at": "2026-06-10T13:14:38.371305",
+      "dst": "wn_9b596c72",
+      "id": "r_71fc46b6",
+      "props": {},
+      "src": "w_b41a3744",
+      "type": "contains"
+    },
+    {
       "created_at": "2026-06-10T12:44:11.979869",
       "dst": "wn_f390fcd5",
       "id": "r_754ab639",
       "props": {},
       "src": "w_55b5404b",
+      "type": "contains"
+    },
+    {
+      "created_at": "2026-06-10T13:14:51.710840",
+      "dst": "wn_41d436f8",
+      "id": "r_7896f1e6",
+      "props": {},
+      "src": "w_b41a3744",
       "type": "contains"
     },
     {
@@ -1226,6 +1368,14 @@
       "type": "commits"
     },
     {
+      "created_at": "2026-06-10T13:15:01.588126",
+      "dst": "wn_d43648b0",
+      "id": "r_9d585a92",
+      "props": {},
+      "src": "wn_41d436f8",
+      "type": "tests"
+    },
+    {
       "created_at": "2026-06-10T03:41:34.478325",
       "dst": "wn_7c513a68",
       "id": "r_9eabf539",
@@ -1282,6 +1432,14 @@
       "type": "contains"
     },
     {
+      "created_at": "2026-06-10T13:14:50.351474",
+      "dst": "wn_71475355",
+      "id": "r_b5ce1a1e",
+      "props": {},
+      "src": "wn_a37d1177",
+      "type": "tests"
+    },
+    {
       "created_at": "2026-06-10T02:59:32.191453",
       "dst": "wn_bace3a36",
       "id": "r_b94412a8",
@@ -1296,6 +1454,14 @@
       "props": {},
       "src": "w_423ff83b",
       "type": "contains"
+    },
+    {
+      "created_at": "2026-06-10T13:14:36.909682",
+      "dst": "wn_d4038543",
+      "id": "r_c2cbe6ef",
+      "props": {},
+      "src": "wn_01ba37d4",
+      "type": "tests"
     },
     {
       "created_at": "2026-06-10T03:41:33.827707",
@@ -1392,6 +1558,22 @@
       "props": {},
       "src": "w_423ff83b",
       "type": "contains"
+    },
+    {
+      "created_at": "2026-06-10T13:14:35.421754",
+      "dst": "wn_13992fe3",
+      "id": "r_f7b30ae1",
+      "props": {},
+      "src": "wn_a37d1177",
+      "type": "tests"
+    },
+    {
+      "created_at": "2026-06-10T13:14:51.720243",
+      "dst": "wn_817645e0",
+      "id": "r_f9bbb6f5",
+      "props": {},
+      "src": "wn_41d436f8",
+      "type": "tests"
     },
     {
       "created_at": "2026-06-10T03:41:35.158136",

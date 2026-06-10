@@ -41,6 +41,10 @@ fold when: the operator opens the viewer and can tell machine-owned statements a
 - `wn_627539fe` endorse endpoint takes statements on and rewrites the views; bad ids and empty payloads are refused  (execute: machine, judge: machine, propose: machine)
   - verdict: **pass** — curl against a sandbox server: endorsed, already-owned, missing id, and empty payload paths all answered correctly; work.md re-rendered
   - tests -> `wn_7c513a68` "viewer v2: intent panel with endorse buttons, works as boxe…"
+- `wn_a37d1177` nodes carry kind, words, and verdict state on the card; works collapse to closed boxes and expand on focus; rows follow the alphabet so the story reads top-down  (execute: machine, judge: machine, propose: machine)
+  - verdict: **pass** — CDP suite against a sandbox serve, 2026-06-10: 14/14 — collapsed by default (0 operations drawn), focus expands the work, the card label opens with its kind and carries its words, the failed operator test reads '✕ fail' on the card; screenshots of expanded works coherent in both themes
+  - tests -> `wn_71475355` "less, not more: progressive disclosure — works collapsed by…"
+  - tests -> `wn_13992fe3` "nodes carry their meaning: statement text and operation lab…"
 - `wn_cc8f3249` navigation has explicit zoom controls and a gentler wheel  (execute: machine, judge: machine, propose: machine)
   - verdict: **pass** — headless screenshots; wheelSensitivity 0.2 plus toolbar buttons
   - tests -> `wn_7c513a68` "viewer v2: intent panel with endorse buttons, works as boxe…"

@@ -1123,96 +1123,109 @@ def cmd_work_check(args) -> int:
     return 0
 
 
+def fold_work(
+    store: Store,
+    work_id: str,
+    *,
+    operator_confirms: bool = False,
+    abandoned: bool = False,
+) -> dict:
+    """Fold one open work; the gate and the settlement live here so the CLI
+    and the viewer's /api/fold spend the same checks."""
+    work = fetch_node(store, work_id, kind="work")
+    props = work["props"]
+    if props.get("status") != "open":
+        raise ValueError(
+            f"work '{work_id}' is {props.get('status')}, not open"
+        )
+    folded_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    if abandoned:
+        store.update_node(
+            work_id,
+            props_patch={"status": "abandoned", "folded_at": folded_at},
+        )
+        return {"id": work_id, "status": "abandoned"}
+
+    graph = store.graph()
+    members = work_members(graph, work_id)
+    tests = [m for m in members if m["kind"] == "test"]
+    commits = [m for m in members if m["kind"] == "commit"]
+    if props.get("check") == "machine":
+        if not tests:
+            raise ValueError(
+                "no test operations: an unchecked fold is a hope, not a result"
+            )
+        unpassed = [t["id"] for t in tests if t["props"].get("verdict") != "pass"]
+        if unpassed:
+            raise ValueError(f"tests without a pass verdict: {', '.join(unpassed)}")
+    elif not operator_confirms:
+        raise ValueError(
+            "this folding condition spends operator judgment; "
+            "re-run with --operator-confirms to record it"
+        )
+    if not commits:
+        raise ValueError(
+            "no commit operation: fold needs a settlement to become "
+            "material, or fold with --abandoned"
+        )
+
+    def with_material(node: dict) -> str:
+        ids = [m["id"] for m in graph["material"].get(node["id"], [])]
+        return node["label"] + (f"  (material: {', '.join(ids)})" if ids else "")
+
+    lines = [
+        f"# {work['label']}",
+        "",
+        f"folded: {folded_at}",
+        f"fold when: {props.get('fold_when')}",
+        "",
+        "## commits",
+    ]
+    lines.extend(f"- {with_material(c)}" for c in commits)
+    if tests:
+        lines.extend(["", "## tests"])
+        lines.extend(
+            f"- {t['props'].get('verdict', 'open')}: {t['label']}"
+            for t in tests
+        )
+    # Everything else is the history: the frames, gathers, derives, and
+    # generates the work moved through (and any pre-alphabet kinds).
+    history = [m for m in members if m["kind"] not in ("test", "commit")]
+    if history:
+        lines.extend(["", "## history"])
+        lines.extend(f"- {m['kind']}: {m['label']}" for m in history)
+    # The fold's material lives on the work node itself: statements are
+    # not nodes and cannot carry material. `show` on the spawning
+    # statement finds this work — and its material — by reverse reference.
+    material_id = store.add_material(
+        work_id,
+        "result",
+        label=work["label"],
+        lang="markdown",
+        body="\n".join(lines) + "\n",
+    )
+    patch: dict = {"status": "folded", "folded_at": folded_at}
+    if props.get("check") == "operator":
+        patch["operator_confirmed"] = True
+    store.update_node(work_id, props_patch=patch)
+    return {
+        "id": work_id,
+        "status": "folded",
+        "on": props["on"],
+        "material": material_id,
+    }
+
+
 def cmd_work_fold(args) -> int:
     with Store(args.db) as store:
-        work = fetch_node(store, args.work, kind="work")
-        props = work["props"]
-        if props.get("status") != "open":
-            raise ValueError(
-                f"work '{args.work}' is {props.get('status')}, not open"
-            )
-        folded_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
-        if args.abandoned:
-            store.update_node(
-                args.work,
-                props_patch={"status": "abandoned", "folded_at": folded_at},
-            )
-            views = write_views(store)
-            print_json({"id": args.work, "status": "abandoned", **views})
-            return 0
-
-        graph = store.graph()
-        members = work_members(graph, args.work)
-        tests = [m for m in members if m["kind"] == "test"]
-        commits = [m for m in members if m["kind"] == "commit"]
-        if props.get("check") == "machine":
-            if not tests:
-                raise ValueError(
-                    "no test operations: an unchecked fold is a hope, not a result"
-                )
-            unpassed = [t["id"] for t in tests if t["props"].get("verdict") != "pass"]
-            if unpassed:
-                raise ValueError(f"tests without a pass verdict: {', '.join(unpassed)}")
-        elif not args.operator_confirms:
-            raise ValueError(
-                "this folding condition spends operator judgment; "
-                "re-run with --operator-confirms to record it"
-            )
-        if not commits:
-            raise ValueError(
-                "no commit operation: fold needs a settlement to become "
-                "material, or fold with --abandoned"
-            )
-
-        def with_material(node: dict) -> str:
-            ids = [m["id"] for m in graph["material"].get(node["id"], [])]
-            return node["label"] + (f"  (material: {', '.join(ids)})" if ids else "")
-
-        lines = [
-            f"# {work['label']}",
-            "",
-            f"folded: {folded_at}",
-            f"fold when: {props.get('fold_when')}",
-            "",
-            "## commits",
-        ]
-        lines.extend(f"- {with_material(c)}" for c in commits)
-        if tests:
-            lines.extend(["", "## tests"])
-            lines.extend(
-                f"- {t['props'].get('verdict', 'open')}: {t['label']}"
-                for t in tests
-            )
-        # Everything else is the history: the frames, gathers, derives, and
-        # generates the work moved through (and any pre-alphabet kinds).
-        history = [m for m in members if m["kind"] not in ("test", "commit")]
-        if history:
-            lines.extend(["", "## history"])
-            lines.extend(f"- {m['kind']}: {m['label']}" for m in history)
-        # The fold's material lives on the work node itself: statements are
-        # not nodes and cannot carry material. `show` on the spawning
-        # statement finds this work — and its material — by reverse reference.
-        material_id = store.add_material(
+        result = fold_work(
+            store,
             args.work,
-            "result",
-            label=work["label"],
-            lang="markdown",
-            body="\n".join(lines) + "\n",
+            operator_confirms=args.operator_confirms,
+            abandoned=args.abandoned,
         )
-        patch: dict = {"status": "folded", "folded_at": folded_at}
-        if props.get("check") == "operator":
-            patch["operator_confirmed"] = True
-        store.update_node(args.work, props_patch=patch)
         views = write_views(store)
-    print_json(
-        {
-            "id": args.work,
-            "status": "folded",
-            "on": props["on"],
-            "material": material_id,
-            **views,
-        }
-    )
+    print_json({**result, **views})
     return 0
 
 

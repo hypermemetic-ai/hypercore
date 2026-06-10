@@ -1,17 +1,25 @@
-// The viewer is a derived view of the graph and the statement store. It reads
-// /api/graph per load and polls /api/version to stay live; its one write is
-// /api/endorse, which is the operator acting (endorsement.md): the click
-// takes a machine-owned statement on.
+// The viewer is a derived view of the graph and the statement store — and the
+// operator's workbench (s_a6ea7c7a). It reads /api/graph per load and polls
+// /api/version to stay live. Its writes are the operator acting, never the
+// machine: /api/endorse takes a statement on, /api/verdict spends judgment on
+// a test, /api/amend and /api/strike answer a statement, /api/fold confirms a
+// settlement. Every write maps one-to-one onto a verb.
 
 const state = {
   graph: null,
   cy: null,
   selected: null, // {type: "node"|"statement", id}
   version: null, // /api/version fingerprint the poll compares against
+  expanded: loadExpanded(), // work ids whose operations are shown (less, not more)
+  snapshot: null, // previous view of the store, diffed into the feed
+  feed: [], // recent moves, newest first: {time, text, target}
 };
 
 const THEME_KEY = "hypercore-theme";
+const EXPANDED_KEY = "hypercore-expanded";
 const POLL_MS = 3000;
+const FEED_LIMIT = 30;
+const FEED_SHOWN = 12;
 
 // One palette per theme: the dark canvas needs lighter inks for the same
 // kinds, or the frame's navy vanishes into the background.
@@ -83,6 +91,23 @@ function cssVar(name) {
 // label on the edge.
 const MEMBERSHIP = "contains";
 
+// The alphabet in its causal order: a work's operations lay out as rows in
+// this order, so the story reads top-down — what was gathered, what was
+// generated from it, what tested it, what settled it.
+const ALPHABET_ORDER = [
+  "frame",
+  "gather",
+  "derive",
+  "generate",
+  "test",
+  "commit",
+  // pre-alphabet kinds keep their own rows below, so folded history reads
+  "step",
+  "candidate",
+  "check",
+  "result",
+];
+
 // The segments in their canonical order (cli.py SEGMENTS); the payload sorts
 // them alphabetically, which is not how the intent reads.
 const SEGMENTS = ["foundations", "structure", "statements", "endorsement", "work"];
@@ -90,6 +115,18 @@ const SEGMENTS = ["foundations", "structure", "statements", "endorsement", "work
 function segmentRank(segment) {
   const index = SEGMENTS.indexOf(segment);
   return index === -1 ? SEGMENTS.length : index;
+}
+
+function loadExpanded() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(EXPANDED_KEY)) || []);
+  } catch {
+    return new Set();
+  }
+}
+
+function persistExpanded() {
+  localStorage.setItem(EXPANDED_KEY, JSON.stringify([...state.expanded]));
 }
 
 main();
@@ -106,6 +143,7 @@ async function main() {
   }
   state.graph = graph;
   state.version = version;
+  state.snapshot = snapshotOf(graph);
   renderSummary();
   renderIntent();
   buildGraph();
@@ -115,9 +153,10 @@ async function main() {
 }
 
 async function reload() {
-  // The store changed (an endorsement here, or a verb elsewhere noticed by
-  // the poll); re-derive the whole view but keep the operator's place:
-  // selection and viewport survive the rebuild.
+  // The store changed (an action here, or a verb elsewhere noticed by the
+  // poll); re-derive the whole view but keep the operator's place: selection
+  // and viewport survive the rebuild. The diff against the previous view
+  // becomes the feed — the loop is watched, not refreshed.
   const response = await fetch("/api/graph");
   const graph = await response.json();
   if (graph.error) {
@@ -125,10 +164,15 @@ async function reload() {
     return;
   }
   state.graph = graph;
+  const next = snapshotOf(graph);
+  const moves = diffMoves(state.snapshot, next);
+  state.snapshot = next;
+  state.feed = [...moves.entries, ...state.feed].slice(0, FEED_LIMIT);
   renderSummary();
   renderIntent();
   rebuildGraph({ keepViewport: true });
   restoreSelection();
+  flash(moves.touched);
 }
 
 function rebuildGraph({ keepViewport } = {}) {
@@ -185,6 +229,105 @@ function startPolling() {
   });
 }
 
+/* ---------- the feed: the loop, watched ---------- */
+
+// A flat, diffable picture of the store: enough to name what moved.
+function snapshotOf(graph) {
+  const stmts = new Map(
+    (graph.statements || []).map((s) => [s.id, { owner: s.owner, text: s.text }]),
+  );
+  const nodes = new Map(
+    graph.nodes.map((n) => {
+      const props = n.props || {};
+      return [
+        n.id,
+        {
+          kind: n.kind,
+          label: n.label,
+          verdict: props.verdict || "",
+          status: props.status || "",
+          work: props.work || "",
+        },
+      ];
+    }),
+  );
+  return { stmts, nodes };
+}
+
+function diffMoves(prev, next) {
+  const entries = [];
+  const touched = [];
+  if (!prev) return { entries, touched };
+  const time = new Date().toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  const move = (text, target) => entries.push({ time, text, target });
+
+  for (const [id, node] of next.nodes) {
+    const before = prev.nodes.get(id);
+    const home = node.work && next.nodes.get(node.work);
+    if (!before) {
+      move(
+        `${node.kind} arrived${home ? ` in “${clip(home.label, 34)}”` : ""}: ${clip(node.label, 60)}`,
+        { type: "node", id },
+      );
+      touched.push(id);
+      continue;
+    }
+    if (node.verdict !== before.verdict && node.verdict) {
+      move(`test ${node.verdict}: ${clip(node.label, 60)}`, { type: "node", id });
+      touched.push(id);
+    }
+    if (node.status !== before.status && node.kind === "work") {
+      move(`work ${node.status}: ${clip(node.label, 60)}`, { type: "node", id });
+      touched.push(id);
+    }
+  }
+  for (const [id, node] of prev.nodes) {
+    if (!next.nodes.has(id)) move(`${node.kind} left the graph: ${clip(node.label, 60)}`);
+  }
+  for (const [id, s] of next.stmts) {
+    const before = prev.stmts.get(id);
+    if (!before) {
+      move(`new statement ${id} awaits endorsement: ${clip(s.text, 60)}`, {
+        type: "statement",
+        id,
+      });
+      continue;
+    }
+    if (before.owner === "machine" && s.owner === "operator") {
+      move(`operator endorsed ${id}: ${clip(s.text, 60)}`, { type: "statement", id });
+    }
+    if (before.text !== s.text) {
+      move(`statement amended ${id}: ${clip(s.text, 60)}`, { type: "statement", id });
+    }
+  }
+  for (const [id, s] of prev.stmts) {
+    if (!next.stmts.has(id)) move(`statement struck ${id}: ${clip(s.text, 60)}`);
+  }
+  return { entries, touched };
+}
+
+// A change that just landed glows for a few seconds, where it lives — or on
+// the closed work box that holds it.
+function flash(ids) {
+  if (!state.cy) return;
+  for (const id of ids) {
+    const visible = visibleStandIn(id);
+    if (!visible) continue;
+    const el = state.cy.getElementById(visible);
+    if (el.empty()) continue;
+    el.addClass("arrived");
+    setTimeout(() => {
+      if (!state.cy) return;
+      const later = state.cy.getElementById(visible);
+      if (!later.empty()) later.removeClass("arrived");
+    }, 6000);
+  }
+}
+
 /* ---------- helpers over the payload ---------- */
 
 function clip(text, width) {
@@ -211,6 +354,10 @@ function works() {
   return state.graph.nodes.filter((n) => n.kind === "work");
 }
 
+function membersOf(workId) {
+  return state.graph.nodes.filter((n) => (n.props || {}).work === workId);
+}
+
 // The reverse index a statement carries implicitly: the nodes bound by it
 // (props.on) and the nodes that produced it (props.produces).
 function statementReferences(sid) {
@@ -222,6 +369,68 @@ function statementReferences(sid) {
     if ((props.produces || []).includes(sid)) produced.push(node);
   }
   return { bound, produced };
+}
+
+// Open tests whose judge is the operator: their verdicts are judgment the
+// machine cannot spend (s_81c38173).
+function operatorTestsOpen() {
+  const openWorks = new Set(
+    works()
+      .filter((w) => (w.props || {}).status === "open")
+      .map((w) => w.id),
+  );
+  return state.graph.nodes.filter((n) => {
+    const props = n.props || {};
+    return (
+      n.kind === "test" &&
+      (props.roles || {}).judge === "operator" &&
+      !props.verdict &&
+      openWorks.has(props.work)
+    );
+  });
+}
+
+// A work is ready for the operator's fold once a commit operation records the
+// settlement; for machine-checked works every test must also pass.
+function foldReadiness(work) {
+  const props = work.props || {};
+  if (props.status !== "open") return { ready: false, why: "not open" };
+  const members = membersOf(work.id);
+  const commits = members.filter((m) => m.kind === "commit");
+  if (commits.length === 0) {
+    return {
+      ready: false,
+      why: "no settlement yet: a commit operation must record the decision",
+    };
+  }
+  const tests = members.filter((m) => m.kind === "test");
+  const unpassed = tests.filter((t) => (t.props || {}).verdict !== "pass");
+  if (props.check === "machine" && unpassed.length > 0) {
+    return { ready: false, why: `${unpassed.length} test(s) without a pass verdict` };
+  }
+  return { ready: true, why: "" };
+}
+
+/* ---------- acting: every write is the operator ---------- */
+
+async function act(path, payload) {
+  const response = await fetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  let result;
+  try {
+    result = await response.json();
+  } catch {
+    result = { error: `the server answered ${response.status}` };
+  }
+  if (result.error) {
+    renderError(result.error);
+    return null;
+  }
+  await reload();
+  return result;
 }
 
 /* ---------- toolbar ---------- */
@@ -264,22 +473,23 @@ function wireToolbar() {
   document.getElementById("zoomFit").addEventListener("click", () => {
     state.cy.fit(undefined, 40);
   });
+  // Less, not more: one motion back to the overview of closed boxes.
+  document.getElementById("collapseAll").addEventListener("click", () => {
+    state.expanded.clear();
+    persistExpanded();
+    rebuildGraph();
+    restoreSelection();
+  });
 }
 
-/* ---------- left: intent panel ---------- */
+/* ---------- left: the judgment queue, the feed, the intent ---------- */
 
 function renderIntent() {
   const panel = document.getElementById("intent");
   panel.innerHTML = "";
 
-  const pending = statements().filter((s) => s.owner === "machine");
-  panel.appendChild(heading(`pending endorsement (${pending.length})`));
-  if (pending.length === 0) {
-    panel.appendChild(mutedLine("nothing awaits the operator"));
-  }
-  for (const s of pending) {
-    panel.appendChild(statementRow(s, { endorsable: true }));
-  }
+  renderQueue(panel);
+  renderFeed(panel);
 
   const open = works().filter((w) => (w.props || {}).status === "open");
   panel.appendChild(heading(`open work (${open.length})`));
@@ -323,6 +533,104 @@ function renderIntent() {
   for (const w of folded.slice(0, 5)) {
     panel.appendChild(workRow(w));
   }
+}
+
+// Everything that awaits the operator, in one place: verdicts only they may
+// give, folds only they may confirm, statements to endorse. The machine
+// fills this queue; only the operator drains it.
+function renderQueue(panel) {
+  const pending = statements().filter((s) => s.owner === "machine");
+  const tests = operatorTestsOpen();
+  const foldable = works().filter((w) => foldReadiness(w).ready);
+  const count = pending.length + tests.length + foldable.length;
+
+  const box = document.createElement("div");
+  box.className = "queue";
+  box.appendChild(heading(`awaiting your judgment (${count})`));
+  if (count === 0) {
+    box.appendChild(mutedLine("nothing awaits the operator"));
+    panel.appendChild(box);
+    return;
+  }
+
+  for (const test of tests) {
+    const home = nodeById((test.props || {}).work);
+    const row = document.createElement("div");
+    row.className = "row task";
+    row.dataset.node = test.id;
+    const meta = document.createElement("span");
+    meta.className = "meta";
+    meta.appendChild(badge("verdict", "open"));
+    const where = document.createElement("span");
+    where.className = "id";
+    where.textContent = home ? clip(home.label, 38) : test.id;
+    meta.appendChild(where);
+    row.appendChild(meta);
+    const text = document.createElement("div");
+    text.className = "task-text link";
+    text.textContent = clip(test.label, 110);
+    text.addEventListener("click", () => selectNode(test.id));
+    row.appendChild(text);
+    row.appendChild(verdictControls(test));
+    box.appendChild(row);
+  }
+
+  for (const work of foldable) {
+    const row = document.createElement("div");
+    row.className = "row task";
+    row.dataset.node = work.id;
+    const meta = document.createElement("span");
+    meta.className = "meta";
+    meta.appendChild(badge("fold", "folded"));
+    const id = document.createElement("span");
+    id.className = "id";
+    id.textContent = work.id;
+    meta.appendChild(id);
+    row.appendChild(meta);
+    const text = document.createElement("div");
+    text.className = "task-text link";
+    text.textContent = clip(work.label, 110);
+    text.addEventListener("click", () => selectNode(work.id));
+    row.appendChild(text);
+    const actions = document.createElement("div");
+    actions.className = "actions";
+    actions.appendChild(foldButton(work));
+    row.appendChild(actions);
+    box.appendChild(row);
+  }
+
+  for (const s of pending) {
+    box.appendChild(statementRow(s, { endorsable: true }));
+  }
+  panel.appendChild(box);
+}
+
+function renderFeed(panel) {
+  panel.appendChild(heading("recent moves"));
+  if (state.feed.length === 0) {
+    panel.appendChild(mutedLine("the loop is quiet — moves land here live"));
+    return;
+  }
+  const list = document.createElement("ul");
+  list.className = "feed";
+  for (const entry of state.feed.slice(0, FEED_SHOWN)) {
+    const li = document.createElement("li");
+    const time = document.createElement("span");
+    time.className = "id";
+    time.textContent = entry.time;
+    li.appendChild(time);
+    li.appendChild(document.createTextNode(" " + entry.text));
+    if (entry.target) {
+      li.className = "link";
+      li.addEventListener("click", () =>
+        entry.target.type === "statement"
+          ? selectStatement(entry.target.id)
+          : selectNode(entry.target.id),
+      );
+    }
+    list.appendChild(li);
+  }
+  panel.appendChild(list);
 }
 
 function heading(text) {
@@ -392,7 +700,7 @@ function badge(text, flavor) {
   return span;
 }
 
-/* ---------- endorsement: the operator's click ---------- */
+/* ---------- the operator's controls ---------- */
 
 function endorseButton(sid) {
   const button = document.createElement("span");
@@ -412,85 +720,234 @@ function endorseButton(sid) {
       return;
     }
     button.textContent = "…";
-    const response = await fetch("/api/endorse", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids: [sid] }),
+    await act("/api/endorse", { ids: [sid] });
+  });
+  return button;
+}
+
+// Pass or fail, with grounds: the operator's verdict on a test. The buttons
+// open a small inline form so the grounds travel with the judgment.
+function verdictControls(test) {
+  const wrap = document.createElement("div");
+  wrap.className = "actions";
+  const form = document.createElement("div");
+  form.className = "inline-form";
+  form.hidden = true;
+
+  const open = (verdict) => {
+    form.hidden = false;
+    form.innerHTML = "";
+    const input = document.createElement("input");
+    input.className = "grounds";
+    input.placeholder = "grounds — what this verdict rests on";
+    const record = document.createElement("button");
+    record.type = "button";
+    record.className = `verdict ${verdict}`;
+    record.textContent = `record ${verdict}`;
+    record.addEventListener("click", async () => {
+      record.textContent = "…";
+      await act("/api/verdict", {
+        id: test.id,
+        verdict,
+        grounds: input.value.trim(),
+      });
     });
-    const result = await response.json();
-    if (result.error) {
-      renderError(result.error);
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.className = "quiet";
+    cancel.textContent = "cancel";
+    cancel.addEventListener("click", () => {
+      form.hidden = true;
+    });
+    form.append(input, record, cancel);
+    input.focus();
+  };
+
+  const pass = document.createElement("button");
+  pass.type = "button";
+  pass.className = "verdict pass";
+  pass.textContent = "✓ pass";
+  pass.addEventListener("click", (event) => {
+    event.stopPropagation();
+    open("pass");
+  });
+  const fail = document.createElement("button");
+  fail.type = "button";
+  fail.className = "verdict fail";
+  fail.textContent = "✕ fail";
+  fail.addEventListener("click", (event) => {
+    event.stopPropagation();
+    open("fail");
+  });
+  wrap.append(pass, fail, form);
+  return wrap;
+}
+
+function foldButton(work) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "verdict pass";
+  button.textContent = "fold";
+  button.title = "Confirm the fold: the settlement stands";
+  button.addEventListener("click", async (event) => {
+    event.stopPropagation();
+    if (!button.classList.contains("confirm")) {
+      button.classList.add("confirm");
+      button.textContent = "sure?";
+      setTimeout(() => {
+        button.classList.remove("confirm");
+        button.textContent = "fold";
+      }, 2500);
       return;
     }
-    await reload();
+    button.textContent = "…";
+    await act("/api/fold", { id: work.id });
   });
   return button;
 }
 
 /* ---------- center: the graph ---------- */
 
+// A node draws as a card that carries its words: a head line naming the kind
+// and its state, then the label itself. The border carries the kind's color;
+// state overrides it where state matters more (verdicts, ownership, folds).
+const CARD_W = 210;
+const CARD_CHARS = 30; // ~chars per wrapped line at font 11 inside the card
+
+function verdictGlyph(verdict) {
+  return verdict === "pass" ? "✓" : verdict === "fail" ? "✕" : "○";
+}
+
+function nodeDisplay(node, { collapsed } = {}) {
+  const props = node.props || {};
+  if (node.kind === "work") {
+    const status = props.status || "open";
+    if (!collapsed) return `${node.label} — ${status}`;
+    const members = membersOf(node.id);
+    const tests = members.filter((m) => m.kind === "test");
+    const tally = { pass: 0, fail: 0, open: 0 };
+    for (const t of tests) {
+      tally[(t.props || {}).verdict || "open"] += 1;
+    }
+    const counts =
+      `${members.length} operation${members.length === 1 ? "" : "s"}` +
+      (tests.length ? ` · ${tally.pass}✓ ${tally.fail}✕ ${tally.open}○` : "") +
+      " · tap to open";
+    return `work · ${status}\n${clip(node.label, 90)}\n${counts}`;
+  }
+  if (props.role === "root") {
+    return `frame · root\n${clip(node.label, 90)}`;
+  }
+  let head = node.kind;
+  if (node.kind === "test") {
+    const verdict = props.verdict || "open";
+    head += ` · ${verdictGlyph(props.verdict)} ${verdict}`;
+    if (!props.verdict && (props.roles || {}).judge === "operator") {
+      head += " · yours to judge";
+    }
+  }
+  return `${head}\n${clip(node.label, 130)}`;
+}
+
+function cardHeight(display) {
+  const lines = display
+    .split("\n")
+    .reduce((n, seg) => n + Math.max(1, Math.ceil(seg.length / CARD_CHARS)), 0);
+  return lines * 15 + 22;
+}
+
+// Less, not more: a work's operations render only while the work is
+// expanded. Everything inside a closed work stands in as the closed box.
+function visibleStandIn(id) {
+  const node = nodeById(id);
+  if (!node) return null;
+  const wid = (node.props || {}).work;
+  if (!wid) return id;
+  return state.expanded.has(wid) ? id : wid;
+}
+
 function buildGraph() {
   const graph = state.graph;
-  const root = graph.nodes.find((n) => (n.props || {}).role === "root");
-  const ids = new Set(graph.nodes.map((n) => n.id));
+  const visible = graph.nodes.filter((n) => {
+    const wid = (n.props || {}).work;
+    return !wid || state.expanded.has(wid);
+  });
+  const visibleIds = new Set(visible.map((n) => n.id));
+
+  const nodeElements = visible.map((node) => {
+    const props = node.props || {};
+    const collapsed = node.kind === "work" && !state.expanded.has(node.id);
+    const display = nodeDisplay(node, { collapsed });
+    return {
+      data: {
+        id: node.id,
+        display,
+        cardH: cardHeight(display),
+        kind: node.kind,
+        // Membership becomes nesting: an operation sits inside the work
+        // that contains it, so the execution graph reads as a folder and
+        // only the combinators are drawn as edges.
+        parent:
+          props.work && visibleIds.has(props.work) ? props.work : undefined,
+        // Lifted out of props so style selectors can reach them: ownership,
+        // verdicts, and the state of work are what the operator reads at a
+        // glance.
+        owner: props.owner || "",
+        status: props.status || "",
+        verdict: node.kind === "test" ? props.verdict || "open" : "",
+        judge: (props.roles || {}).judge || "",
+        props: node.props,
+      },
+    };
+  });
+
+  // An edge into a closed work lands on the closed box, so causality
+  // between works stays visible while the detail stays put away.
+  const seen = new Set();
+  const edgeElements = [];
+  for (const relation of graph.relations) {
+    if (relation.type === MEMBERSHIP) continue;
+    const src = visibleStandIn(relation.src);
+    const dst = visibleStandIn(relation.dst);
+    if (!src || !dst || src === dst) continue;
+    if (!visibleIds.has(src) || !visibleIds.has(dst)) continue;
+    const key = `${src}->${dst}:${relation.type}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    edgeElements.push({
+      data: {
+        id: relation.id,
+        source: src,
+        target: dst,
+        label: relation.type,
+        type: relation.type,
+        props: relation.props,
+      },
+    });
+  }
+
   state.cy = cytoscape({
     container: document.getElementById("cy"),
     wheelSensitivity: 0.2,
-    elements: [
-      ...graph.nodes.map((node) => ({
-        data: {
-          id: node.id,
-          label: clip(node.label, 42),
-          kind: node.kind,
-          // Membership becomes nesting: an operation sits inside the work
-          // that contains it, so the execution graph reads as a folder and
-          // only the combinators are drawn as edges.
-          parent:
-            (node.props || {}).work && ids.has(node.props.work)
-              ? node.props.work
-              : undefined,
-          // Lifted out of props so style selectors can reach them: ownership
-          // and the state of work are what the operator reads at a glance.
-          owner: (node.props || {}).owner || "",
-          status: (node.props || {}).status || "",
-          props: node.props,
-        },
-      })),
-      ...graph.relations
-        .filter((relation) => relation.type !== MEMBERSHIP)
-        .map((relation) => ({
-          data: {
-            id: relation.id,
-            source: relation.src,
-            target: relation.dst,
-            label: relation.type,
-            type: relation.type,
-            props: relation.props,
-          },
-        })),
-    ],
+    elements: [...nodeElements, ...edgeElements],
     style: [
       {
         selector: "node",
         style: {
-          "background-color": (el) => kindColor(el.data("kind")),
-          label: "data(label)",
-          color: cssVar("--graph-label"),
-          "font-size": 11.5,
-          "text-wrap": "wrap",
-          "text-max-width": 150,
-          "text-valign": "bottom",
-          "text-halign": "center",
-          "text-margin-y": 7,
-          // A halo of the background keeps labels readable where they
-          // cross edges or each other.
-          "text-outline-color": cssVar("--bg"),
-          "text-outline-width": 2,
-          "text-outline-opacity": 0.85,
+          shape: "round-rectangle",
+          width: CARD_W,
+          height: (el) => el.data("cardH"),
+          "background-color": cssVar("--card-bg"),
           "border-width": 2,
-          "border-color": cssVar("--graph-node-border"),
-          width: 28,
-          height: 28,
+          "border-color": (el) => kindColor(el.data("kind")),
+          label: "data(display)",
+          color: cssVar("--text"),
+          "font-size": 11,
+          "line-height": 1.35,
+          "text-wrap": "wrap",
+          "text-max-width": CARD_W - 18,
+          "text-valign": "center",
+          "text-halign": "center",
         },
       },
       {
@@ -513,49 +970,65 @@ function buildGraph() {
       {
         selector: 'node[owner = "machine"]',
         style: {
-          "background-color": cssVar("--machine-accent"),
-          "border-color": cssVar("--machine-border"),
+          "border-color": cssVar("--machine-accent"),
           "border-style": "dashed",
         },
       },
       {
-        // a work with members renders as the box around them; the diamond
-        // only shows while it has none
-        selector: 'node[kind = "work"]',
-        style: { shape: "diamond", width: 40, height: 40 },
-      },
-      {
+        // the expanded work is the box around its operations
         selector: ":parent",
         style: {
-          shape: "round-rectangle",
           "background-color": cssVar("--graph-parent-bg"),
           "background-opacity": 0.6,
           "border-width": 2,
           "border-color": cssVar("--graph-parent-border"),
-          label: "data(label)",
           "text-valign": "top",
           "text-halign": "center",
-          "text-margin-y": -6,
+          "text-margin-y": -8,
           "font-size": 13,
           "font-weight": 700,
-          padding: 18,
+          padding: 20,
+        },
+      },
+      // Verdicts are loud: green settles, red demands attention, amber waits.
+      {
+        selector: 'node[verdict = "pass"]',
+        style: { "border-color": cssVar("--folded-border"), "border-width": 3 },
+      },
+      {
+        selector: 'node[verdict = "fail"]',
+        style: { "border-color": cssVar("--fail"), "border-width": 4 },
+      },
+      {
+        selector: 'node[verdict = "open"]',
+        style: {
+          "border-color": cssVar("--machine-accent"),
+          "border-style": "dashed",
         },
       },
       {
-        selector: 'node[kind = "frame"]',
-        style: { shape: "round-rectangle", width: 40, height: 40 },
+        selector: 'node[verdict = "open"][judge = "operator"]',
+        style: { "border-width": 4, "border-style": "double" },
       },
       {
         selector: 'node[kind = "work"][status = "open"]',
-        style: { "border-width": 4, "border-color": cssVar("--open-strong") },
+        style: { "border-width": 3, "border-color": cssVar("--open-strong") },
       },
       {
         selector: 'node[kind = "work"][status = "folded"]',
-        style: { opacity: 0.55 },
+        style: { "border-color": cssVar("--folded-border"), opacity: 0.7 },
       },
       {
         selector: 'node[kind = "work"][status = "abandoned"]',
-        style: { opacity: 0.35 },
+        style: { opacity: 0.4 },
+      },
+      {
+        selector: "node.arrived",
+        style: {
+          "overlay-color": cssVar("--accent"),
+          "overlay-opacity": 0.18,
+          "overlay-padding": 8,
+        },
       },
       {
         selector: "node:selected",
@@ -566,7 +1039,7 @@ function buildGraph() {
       // Deterministic: the same graph always lands in the same place, so
       // the operator keeps a stable mental map between visits.
       name: "preset",
-      positions: presetPositions(graph),
+      positions: presetPositions(graph, visibleIds),
       fit: true,
       padding: 30,
       animate: false,
@@ -574,72 +1047,87 @@ function buildGraph() {
   });
 
   state.cy.on("tap", "node", (event) => {
-    selectNode(event.target.id(), { fromGraph: true });
+    const id = event.target.id();
+    const node = nodeById(id);
+    if (node && node.kind === "work") {
+      // The first tap opens (and selects) the box; a tap on the already-
+      // selected work closes it again. Detail on demand, in both directions.
+      if (!state.expanded.has(id)) {
+        state.expanded.add(id);
+        persistExpanded();
+        rebuildGraph({ keepViewport: true });
+      } else if (state.selected && state.selected.id === id) {
+        state.expanded.delete(id);
+        persistExpanded();
+        rebuildGraph({ keepViewport: true });
+      }
+    }
+    selectNode(id, { fromGraph: true });
   });
 }
 
-// Lay the graph out by hand: the founding frame on top, each work a box of
-// its operations below, members in alphabet-then-id order inside a grid.
-function presetPositions(graph) {
-  const ALPHABET_ORDER = [
-    "frame",
-    "gather",
-    "derive",
-    "generate",
-    "test",
-    "commit",
-  ];
-  const CELL_W = 200;
-  const CELL_H = 110;
-  const GAP = 110;
-  const TOP = 140;
+// Lay the graph out by hand: the founding frame on top, each work below —
+// a closed card while collapsed, a box of rows while expanded. Rows follow
+// the alphabet's causal order, so the story reads top-down: what was
+// gathered, what was generated, what tested it, what settled it.
+function presetPositions(graph, visibleIds) {
+  const CELL_W = CARD_W + 40;
+  const ROW_H = 150;
+  const GAP = 130;
+  const TOP = 200;
 
   const positions = {};
-  const works = graph.nodes
+  const workNodes = graph.nodes
     .filter((n) => n.kind === "work")
     .sort((a, b) => {
       const open = (w) => ((w.props || {}).status === "open" ? 0 : 1);
       return open(a) - open(b) || a.id.localeCompare(b.id);
     });
-  const byWork = new Map(works.map((w) => [w.id, []]));
-  for (const node of graph.nodes) {
-    const wid = (node.props || {}).work;
-    if (wid && byWork.has(wid)) byWork.get(wid).push(node);
-  }
 
   let x = 0;
-  for (const work of works) {
-    const members = byWork
-      .get(work.id)
-      .sort(
-        (a, b) =>
-          ALPHABET_ORDER.indexOf(a.kind) - ALPHABET_ORDER.indexOf(b.kind) ||
-          a.id.localeCompare(b.id),
-      );
+  for (const work of workNodes) {
+    if (!state.expanded.has(work.id)) {
+      positions[work.id] = { x, y: TOP };
+      x += CELL_W + GAP;
+      continue;
+    }
+    const members = membersOf(work.id).sort(
+      (a, b) =>
+        ALPHABET_ORDER.indexOf(a.kind) - ALPHABET_ORDER.indexOf(b.kind) ||
+        a.id.localeCompare(b.id),
+    );
     if (members.length === 0) {
       positions[work.id] = { x, y: TOP };
       x += CELL_W + GAP;
       continue;
     }
-    const cols = Math.max(1, Math.round(Math.sqrt(members.length)));
-    members.forEach((member, index) => {
-      positions[member.id] = {
-        x: x + (index % cols) * CELL_W,
-        y: TOP + Math.floor(index / cols) * CELL_H,
-      };
+    const kindsPresent = [...new Set(members.map((m) => m.kind))].sort(
+      (a, b) => ALPHABET_ORDER.indexOf(a) - ALPHABET_ORDER.indexOf(b),
+    );
+    let widest = 1;
+    kindsPresent.forEach((kind, rowIndex) => {
+      const row = members.filter((m) => m.kind === kind);
+      widest = Math.max(widest, row.length);
+      row.forEach((member, col) => {
+        positions[member.id] = {
+          x: x + col * CELL_W,
+          y: TOP + rowIndex * ROW_H,
+        };
+      });
     });
-    x += cols * CELL_W + GAP;
+    x += widest * CELL_W + GAP;
   }
 
   const width = Math.max(x - GAP, CELL_W);
   const root = graph.nodes.find((n) => (n.props || {}).role === "root");
   if (root) {
-    positions[root.id] = { x: width / 2 - CELL_W / 2, y: -60 };
+    positions[root.id] = { x: width / 2 - CELL_W / 2, y: -80 };
   }
   let spare = 0;
   for (const node of graph.nodes) {
+    if (!visibleIds.has(node.id)) continue;
     if (!positions[node.id] && node.kind !== "work") {
-      positions[node.id] = { x: spare++ * CELL_W, y: -220 };
+      positions[node.id] = { x: spare++ * CELL_W, y: -260 };
     }
   }
   return positions;
@@ -665,6 +1153,10 @@ function restoreSelection() {
   if (state.selected.type === "statement") {
     const statement = statementById(state.selected.id);
     if (statement) selectStatement(statement.id);
+    else {
+      state.selected = null;
+      markSelectedRow();
+    }
     return;
   }
   // quiet: re-select without re-centering, so a live reload does not yank
@@ -684,6 +1176,14 @@ function selectStatement(sid) {
 function selectNode(id, { fromGraph, quiet } = {}) {
   const node = nodeById(id);
   if (!node) return;
+  // Focus opens the box: selecting an operation expands the work around it —
+  // but a quiet restore after a rebuild must not reopen what was just closed.
+  const wid = (node.props || {}).work;
+  if (wid && !state.expanded.has(wid) && !quiet) {
+    state.expanded.add(wid);
+    persistExpanded();
+    rebuildGraph({ keepViewport: true });
+  }
   state.selected = { type: "node", id };
   markSelectedRow();
   if (!fromGraph) {
@@ -719,6 +1219,9 @@ function renderStatementDetails(statement) {
   }
   details.appendChild(owner);
 
+  // The operator's other two answers (endorsement.md): amend and strike.
+  details.appendChild(statementActions(statement));
+
   const links = statement.links || [];
   if (links.length) {
     const linkSection = section("Links");
@@ -739,6 +1242,84 @@ function renderStatementDetails(statement) {
   const { bound, produced } = statementReferences(statement.id);
   appendNodeList(details, "Bound by it", bound);
   appendNodeList(details, "Produced by", produced);
+}
+
+function statementActions(statement) {
+  const wrap = document.createElement("div");
+  wrap.className = "actions";
+
+  const amend = document.createElement("button");
+  amend.type = "button";
+  amend.className = "quiet";
+  amend.textContent = "amend";
+  amend.title = "Rewrite this statement in your words";
+  const strike = document.createElement("button");
+  strike.type = "button";
+  strike.className = "quiet danger";
+  strike.textContent = "strike";
+  strike.title = "Remove this statement";
+
+  const form = document.createElement("div");
+  form.className = "inline-form column";
+  form.hidden = true;
+
+  amend.addEventListener("click", () => {
+    form.hidden = false;
+    form.innerHTML = "";
+    const input = document.createElement("textarea");
+    input.className = "grounds";
+    input.value = statement.text;
+    const save = document.createElement("button");
+    save.type = "button";
+    save.className = "verdict pass";
+    save.textContent = "save amendment";
+    save.addEventListener("click", async () => {
+      const text = input.value.trim();
+      if (!text) return;
+      save.textContent = "…";
+      const result = await act("/api/amend", { id: statement.id, text });
+      if (result) selectStatement(statement.id);
+    });
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.className = "quiet";
+    cancel.textContent = "cancel";
+    cancel.addEventListener("click", () => {
+      form.hidden = true;
+    });
+    const buttons = document.createElement("div");
+    buttons.className = "inline-form";
+    buttons.append(save, cancel);
+    form.append(input, buttons);
+    input.focus();
+  });
+
+  strike.addEventListener("click", async () => {
+    if (!strike.classList.contains("confirm")) {
+      strike.classList.add("confirm");
+      strike.textContent = "strike — sure?";
+      setTimeout(() => {
+        strike.classList.remove("confirm");
+        strike.textContent = "strike";
+      }, 2500);
+      return;
+    }
+    strike.textContent = "…";
+    const result = await act("/api/strike", { id: statement.id });
+    if (result) {
+      state.selected = null;
+      markSelectedRow();
+      const details = document.getElementById("details");
+      details.innerHTML = "";
+      details.appendChild(titleEl("Statement struck"));
+      details.appendChild(
+        mutedLine(`${statement.id} removed: ${clip(statement.text, 90)}`),
+      );
+    }
+  });
+
+  wrap.append(amend, strike, form);
+  return wrap;
 }
 
 function appendNodeList(details, title, nodes) {
@@ -786,6 +1367,20 @@ function renderNodeDetails(node) {
       wrap.appendChild(row);
       details.appendChild(wrap);
     }
+    if (props.status === "open") {
+      const readiness = foldReadiness(node);
+      const wrap = section("Folding");
+      if (readiness.ready) {
+        const line = document.createElement("p");
+        line.className = "muted";
+        line.append("the settlement is recorded — the fold is yours ");
+        line.appendChild(foldButton(node));
+        wrap.appendChild(line);
+      } else {
+        wrap.appendChild(mutedLine(readiness.why));
+      }
+      details.appendChild(wrap);
+    }
   }
 
   // Who proposes / executes / judges / decides (s_81c38173).
@@ -808,6 +1403,10 @@ function renderNodeDetails(node) {
         (props.grounds ? ` — ${props.grounds}` : "")
       : "verdict: open";
     details.appendChild(verdict);
+    // An open verdict that is the operator's to give is actionable here.
+    if (!props.verdict && (props.roles || {}).judge === "operator") {
+      details.appendChild(verdictControls(node));
+    }
   }
 
   const extras = Object.fromEntries(
@@ -862,7 +1461,7 @@ function renderError(message) {
   const details = document.getElementById("details");
   details.innerHTML = "";
   const title = document.createElement("h2");
-  title.textContent = "Something went wrong";
+  title.textContent = "The verb refused";
   const body = document.createElement("pre");
   body.textContent = message;
   details.appendChild(title);
