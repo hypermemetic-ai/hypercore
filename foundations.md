@@ -10,9 +10,9 @@ hypercore is a small graph for a human and an agent to think with together. [mac
 
 The graph is the model: nodes, relations between them, clusters of relations, and material attached to nodes. [machine]
 
-The machine carries no memory between episodes of work. hypercore holds that memory outside the machine: the graph, not the running conversation, is the durable shared state. [machine]
+The machine carries no memory between episodes of work. hypercore holds that memory outside the machine: the graph, not the running conversation, is the durable shared state.
 
-The database is the source of truth. [machine]
+What the operator can read is the source of truth.
 
 The files on disk are a derived view of the database. They exist so a human can read the graph and git can track how it changes. [machine]
 
