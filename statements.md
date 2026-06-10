@@ -14,6 +14,8 @@ Every statement should be falsifiable against material, evidence, or later judgm
 
 A statement that is neither ownable nor falsifiable is not ready for intent.
 
+If it doesn't matter enough for the operator to hear about it, it isn't a statement.
+
 The operator and the machine are both bound by coherence. When the operator's decisions stop making sense together, the machine calls it out rather than silently applying the newest word.
 
 When the operator leaves a meaningful choice open and the machine settles it, that settlement is visible as machine-owned intent until the operator takes it on. The operator must be informed of this.
