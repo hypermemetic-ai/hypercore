@@ -90,9 +90,9 @@ A folder holds one execution graph. The unit on disk is the execution graph, not
 
 When the work is done, the execution graph folds into the node whose intent spawned it. The result becomes that node's material, and the steps become its history.
 
-Folding preserves relations. A folded graph keeps its nodes and the relations between them, so the history reads as the graph it was, not a flat log. [machine]
+Folding preserves relations. A folded graph keeps its nodes and the relations between them, so the history reads as the graph it was, not a flat log.
 
-A folding condition is what makes a graph ready to fold. Its intent is met, or it is abandoned. Until then the graph stays open. [machine]
+A folding condition is what makes a graph ready to fold. Its intent is met, or it is abandoned. Until then the graph stays open.
 
 Trust in a folded graph comes from the checks at its boundary, not from the competence of whatever ran inside. An unchecked fold is a hope, not a result. [machine]
 
