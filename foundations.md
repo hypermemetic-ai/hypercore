@@ -20,6 +20,12 @@ The operator can read the system's state at a glance: the viewer shows who owns 
 
 The viewer is where the operator acts, not only reads: the loop is visible live as operations land, whatever awaits operator judgment is summoned front and center, and endorsing, judging, and folding can be done there directly.
 
+The operator's interface is a queue of decisions. A decision arrives with the context to decide it, the options on the table, and what each option entails: what it unblocks, what it breaks, what keeps running unbacked, and what reversing it later would cost. [machine]
+
+Conversation and structured decisions are one channel: every decision accepts a free-form answer, free words land in the same ledger, and the machine's moves between decisions read back as a digest. [machine]
+
+Whether work is done now, decomposed into subgraphs, deferred, or declined is itself a queued decision, and every decision records its grounds at the moment it is made. [machine]
+
 The viewer is comfortable to live in: dark by default and easy on the eyes, readable, and live — changes to the graph appear as they are made, without the operator refreshing.
 
 The viewer keeps itself current: it watches a cheap fingerprint of the store and re-derives the whole view when the graph moves. Staleness is the machine's to notice, never the operator's to manage.

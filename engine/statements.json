@@ -64,6 +64,15 @@
       "text": "Ownership is visible in the derived view: a machine-owned statement ends with the marker [machine]. Endorsement is the endorse verb; render then drops the marker. Amending or striking are the operator's other two answers."
     },
     {
+      "created_at": "2026-06-10T14:52:41.779742",
+      "id": "s_070617cf",
+      "links": [],
+      "ord": 8,
+      "owner": "machine",
+      "segment": "endorsement",
+      "text": "A strike can be informed disagreement or a refusal to incorporate what is not understood; either way the words leave intent. What a strike breaks \u2014 references left dangling, machinery left running with no statement behind it \u2014 is put before the operator as part of the decision, not discovered after it."
+    },
+    {
       "created_at": "2026-06-10T01:59:22.544891",
       "id": "foundations-1",
       "links": [],
@@ -154,10 +163,37 @@
       "text": "The viewer is where the operator acts, not only reads: the loop is visible live as operations land, whatever awaits operator judgment is summoned front and center, and endorsing, judging, and folding can be done there directly."
     },
     {
+      "created_at": "2026-06-10T14:52:43.021083",
+      "id": "s_7c4763c0",
+      "links": [],
+      "ord": 11,
+      "owner": "machine",
+      "segment": "foundations",
+      "text": "The operator's interface is a queue of decisions. A decision arrives with the context to decide it, the options on the table, and what each option entails: what it unblocks, what it breaks, what keeps running unbacked, and what reversing it later would cost."
+    },
+    {
+      "created_at": "2026-06-10T14:54:31.858620",
+      "id": "s_b418f1ab",
+      "links": [],
+      "ord": 12,
+      "owner": "machine",
+      "segment": "foundations",
+      "text": "Conversation and structured decisions are one channel: every decision accepts a free-form answer, free words land in the same ledger, and the machine's moves between decisions read back as a digest."
+    },
+    {
+      "created_at": "2026-06-10T14:54:45.463656",
+      "id": "s_565ca729",
+      "links": [],
+      "ord": 13,
+      "owner": "machine",
+      "segment": "foundations",
+      "text": "Whether work is done now, decomposed into subgraphs, deferred, or declined is itself a queued decision, and every decision records its grounds at the moment it is made."
+    },
+    {
       "created_at": "2026-06-10T04:04:29.180631",
       "id": "s_7b70bab7",
       "links": [],
-      "ord": 11,
+      "ord": 14,
       "owner": "operator",
       "segment": "foundations",
       "text": "The viewer is comfortable to live in: dark by default and easy on the eyes, readable, and live \u2014 changes to the graph appear as they are made, without the operator refreshing."
@@ -166,7 +202,7 @@
       "created_at": "2026-06-10T11:18:28.733198",
       "id": "s_cb9d5e78",
       "links": [],
-      "ord": 12,
+      "ord": 15,
       "owner": "operator",
       "segment": "foundations",
       "text": "The viewer keeps itself current: it watches a cheap fingerprint of the store and re-derives the whole view when the graph moves. Staleness is the machine's to notice, never the operator's to manage."
@@ -428,9 +464,9 @@
       "id": "s_3729cb59",
       "links": [],
       "ord": 10,
-      "owner": "operator",
+      "owner": "machine",
       "segment": "work",
-      "text": "An operation is one move on the problem state, of six kinds: frame, gather, derive, generate, test, commit. Work is made of operations."
+      "text": "An operation is one move on the problem state, of five kinds: frame, gather, generate, test, commit. Work is made of operations."
     },
     {
       "created_at": "2026-06-10T02:35:16.747171",
@@ -455,9 +491,9 @@
       "id": "s_88dc042e",
       "links": [],
       "ord": 13,
-      "owner": "machine",
+      "owner": "operator",
       "segment": "work",
-      "text": "Derive is on probation: as of 2026-06-10 no derive operation has been recorded. A multi-step projection worth checking independently of the verdict it feeds is a derive and is recorded as one. If derive stays unused through inference-heavy work, the operator decides whether it folds into test and gather."
+      "text": "Let's just cut derive until we understand what it's supposed to do"
     }
   ]
 }

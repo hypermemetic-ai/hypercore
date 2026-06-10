@@ -37,11 +37,12 @@ const KIND_COLORS = {
     // the operation alphabet (work: s_3729cb59)
     frame: "#1f2a44",
     gather: "#496cba",
-    derive: "#5d7480",
     generate: "#9aa0a6",
     test: "#7a4f9f",
     commit: "#2f7d6d",
-    // pre-alphabet kinds, kept so folded history reads as the graph it was
+    // retired kinds, kept so folded history reads as the graph it was
+    // (derive cut 2026-06-10, s_88dc042e; never used in any graph)
+    derive: "#5d7480",
     step: "#9aa0a6",
     candidate: "#9aa0a6",
     check: "#7a4f9f",
@@ -59,10 +60,10 @@ const KIND_COLORS = {
     work: "#d97a55",
     frame: "#8fa7d9",
     gather: "#7d9be0",
-    derive: "#8aa0ad",
     generate: "#aab0b6",
     test: "#a47fd0",
     commit: "#3fa08c",
+    derive: "#8aa0ad",
     step: "#aab0b6",
     candidate: "#aab0b6",
     check: "#a47fd0",
@@ -97,11 +98,12 @@ const MEMBERSHIP = "contains";
 const ALPHABET_ORDER = [
   "frame",
   "gather",
-  "derive",
   "generate",
   "test",
   "commit",
-  // pre-alphabet kinds keep their own rows below, so folded history reads
+  // retired kinds (derive, cut 2026-06-10) and pre-alphabet kinds keep
+  // their own rows below, so folded history reads
+  "derive",
   "step",
   "candidate",
   "check",

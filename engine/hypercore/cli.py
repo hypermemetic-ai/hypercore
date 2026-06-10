@@ -34,10 +34,12 @@ GRAPH_SNAPSHOT = INTENT_ROOT / "engine" / "graph.json"
 STATEMENTS_SNAPSHOT = INTENT_ROOT / "engine" / "statements.json"
 
 # The operation alphabet (work: s_3729cb59). A member of an execution graph is
-# one operation of these six kinds; its products are material on the operation
+# one operation of these five kinds; its products are material on the operation
 # node, never a node kind of their own. The alphabet does not grow — named
 # clusters of operations are the compounds that do (s_e4f503c9).
-OPERATIONS = ("frame", "gather", "derive", "generate", "test", "commit")
+# derive was cut 2026-06-10 (s_88dc042e) until its purpose is understood;
+# it never appeared in any graph, so nothing renders it.
+OPERATIONS = ("frame", "gather", "generate", "test", "commit")
 
 # Relations carry the combinators. `--on` wires an operation to what it acts
 # on with its kind's own combinator; every other kind consumes its target
@@ -296,7 +298,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--kind",
         required=True,
         choices=OPERATIONS,
-        help="Which of the six operations this is.",
+        help="Which of the five operations this is.",
     )
     work_add.add_argument("--label", required=True, help="What it is.")
     work_add.add_argument(
@@ -1188,8 +1190,8 @@ def fold_work(
             f"- {t['props'].get('verdict', 'open')}: {t['label']}"
             for t in tests
         )
-    # Everything else is the history: the frames, gathers, derives, and
-    # generates the work moved through (and any pre-alphabet kinds).
+    # Everything else is the history: the frames, gathers, and generates
+    # the work moved through (and any pre-alphabet kinds).
     history = [m for m in members if m["kind"] not in ("test", "commit")]
     if history:
         lines.extend(["", "## history"])

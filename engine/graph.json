@@ -104,6 +104,18 @@
       }
     },
     {
+      "created_at": "2026-06-10T14:54:46.690441",
+      "id": "w_39da22a7",
+      "kind": "work",
+      "label": "the command center: a queue of decisions with consequences",
+      "props": {
+        "check": "operator",
+        "fold_when": "the operator runs one real piece of work end to end from the queue \u2014 scopes it, decides with consequences in view, answers in place \u2014 without the terminal or the raw graph",
+        "on": "s_7c4763c0",
+        "status": "open"
+      }
+    },
+    {
       "created_at": "2026-06-10T02:35:32.730665",
       "id": "w_423ff83b",
       "kind": "work",
@@ -224,6 +236,19 @@
       }
     },
     {
+      "created_at": "2026-06-10T14:54:53.504111",
+      "id": "wn_265cec2f",
+      "kind": "frame",
+      "label": "the workbench inverted: the queue stops being a panel on the graph and becomes the interface; graph, statements, and material become the context a decision card draws on",
+      "props": {
+        "roles": {
+          "execute": "machine",
+          "propose": "machine"
+        },
+        "work": "w_39da22a7"
+      }
+    },
+    {
       "created_at": "2026-06-10T13:14:39.789135",
       "id": "wn_294f80af",
       "kind": "test",
@@ -253,6 +278,19 @@
         },
         "verdict": "pass",
         "work": "w_1baf8df3"
+      }
+    },
+    {
+      "created_at": "2026-06-10T14:57:14.109479",
+      "id": "wn_34a0217b",
+      "kind": "generate",
+      "label": "decision cards: every unfilled operator role slot \u2014 ratify, judge, settle, fold, scope \u2014 rendered as one card: the question, why now, a context brief, options with consequences, the machine's recommendation, a grounds field, a free-text override",
+      "props": {
+        "roles": {
+          "execute": "machine",
+          "propose": "machine"
+        },
+        "work": "w_39da22a7"
       }
     },
     {
@@ -503,6 +541,19 @@
       }
     },
     {
+      "created_at": "2026-06-10T14:57:15.346146",
+      "id": "wn_7a96b083",
+      "kind": "generate",
+      "label": "triage: machine-proposed work enters as candidates awaiting a scope decision \u2014 now, decompose, defer, decline \u2014 sized against the error-compounding rule",
+      "props": {
+        "roles": {
+          "execute": "machine",
+          "propose": "machine"
+        },
+        "work": "w_39da22a7"
+      }
+    },
+    {
       "created_at": "2026-06-10T03:28:39.731359",
       "id": "wn_7aca437d",
       "kind": "test",
@@ -584,6 +635,19 @@
       }
     },
     {
+      "created_at": "2026-06-10T14:57:17.833505",
+      "id": "wn_89444a47",
+      "kind": "generate",
+      "label": "the decision record: endorse, amend, strike, verdict, and fold each carry grounds and a timestamp, so why-did-we-decide-this is answerable from the history \u2014 the sweep's strikes carried no grounds and had to be explained in chat",
+      "props": {
+        "roles": {
+          "execute": "machine",
+          "propose": "machine"
+        },
+        "work": "w_39da22a7"
+      }
+    },
+    {
       "created_at": "2026-06-10T02:35:33.038744",
       "id": "wn_8d5935e3",
       "kind": "generate",
@@ -655,6 +719,19 @@
         },
         "verdict": "pass",
         "work": "w_55b5404b"
+      }
+    },
+    {
+      "created_at": "2026-06-10T14:57:12.876907",
+      "id": "wn_b288d1af",
+      "kind": "generate",
+      "label": "consequence engine: reverse references and downstream depends-on cones computed per option, shown on the card before deciding \u2014 strike's after-the-fact referencing_nodes report inverted in time and pointed at the operator",
+      "props": {
+        "roles": {
+          "execute": "machine",
+          "propose": "machine"
+        },
+        "work": "w_39da22a7"
       }
     },
     {
@@ -803,6 +880,19 @@
           "propose": "machine"
         },
         "work": "w_b41a3744"
+      }
+    },
+    {
+      "created_at": "2026-06-10T14:57:16.588951",
+      "id": "wn_ed747d80",
+      "kind": "generate",
+      "label": "the machine behind the interface: free text on any card reaches the machine as a boundary crossing; replies and in-between moves return as the pulse, a digest rather than a raw feed",
+      "props": {
+        "roles": {
+          "execute": "machine",
+          "propose": "machine"
+        },
+        "work": "w_39da22a7"
       }
     },
     {
@@ -968,6 +1058,14 @@
       "props": {},
       "src": "wn_ddb2f58c",
       "type": "tests"
+    },
+    {
+      "created_at": "2026-06-10T14:57:15.351318",
+      "dst": "wn_7a96b083",
+      "id": "r_1b565295",
+      "props": {},
+      "src": "w_39da22a7",
+      "type": "contains"
     },
     {
       "created_at": "2026-06-10T12:45:07.531038",
@@ -1234,6 +1332,14 @@
       "type": "depends-on"
     },
     {
+      "created_at": "2026-06-10T14:57:12.881475",
+      "dst": "wn_b288d1af",
+      "id": "r_69fabc10",
+      "props": {},
+      "src": "w_39da22a7",
+      "type": "contains"
+    },
+    {
       "created_at": "2026-06-10T03:28:39.417250",
       "dst": "wn_4559dcbf",
       "id": "r_6ceee818",
@@ -1264,6 +1370,14 @@
       "props": {},
       "src": "w_b41a3744",
       "type": "contains"
+    },
+    {
+      "created_at": "2026-06-10T14:57:17.843957",
+      "dst": "wn_265cec2f",
+      "id": "r_733cc4e6",
+      "props": {},
+      "src": "wn_89444a47",
+      "type": "depends-on"
     },
     {
       "created_at": "2026-06-10T12:44:11.979869",
@@ -1303,6 +1417,14 @@
       "id": "r_82bd63bc",
       "props": {},
       "src": "w_55b5404b",
+      "type": "contains"
+    },
+    {
+      "created_at": "2026-06-10T14:57:17.837980",
+      "dst": "wn_89444a47",
+      "id": "r_83986b8a",
+      "props": {},
+      "src": "w_39da22a7",
       "type": "contains"
     },
     {
@@ -1354,6 +1476,14 @@
       "type": "depends-on"
     },
     {
+      "created_at": "2026-06-10T14:57:15.355927",
+      "dst": "wn_265cec2f",
+      "id": "r_91dd7c8c",
+      "props": {},
+      "src": "wn_7a96b083",
+      "type": "depends-on"
+    },
+    {
       "created_at": "2026-06-10T03:28:39.049373",
       "dst": "wn_8d5935e3",
       "id": "r_95dbabd2",
@@ -1391,6 +1521,14 @@
       "id": "r_a2140221",
       "props": {},
       "src": "wn_71475355",
+      "type": "depends-on"
+    },
+    {
+      "created_at": "2026-06-10T14:57:14.119355",
+      "dst": "wn_265cec2f",
+      "id": "r_a3528163",
+      "props": {},
+      "src": "wn_34a0217b",
       "type": "depends-on"
     },
     {
@@ -1458,6 +1596,14 @@
       "type": "contains"
     },
     {
+      "created_at": "2026-06-10T14:54:46.710724",
+      "dst": "hypercore",
+      "id": "r_c28047af",
+      "props": {},
+      "src": "w_39da22a7",
+      "type": "depends-on"
+    },
+    {
       "created_at": "2026-06-10T13:14:36.909682",
       "dst": "wn_d4038543",
       "id": "r_c2cbe6ef",
@@ -1474,6 +1620,14 @@
       "type": "tests"
     },
     {
+      "created_at": "2026-06-10T14:57:14.114412",
+      "dst": "wn_34a0217b",
+      "id": "r_c982af13",
+      "props": {},
+      "src": "w_39da22a7",
+      "type": "contains"
+    },
+    {
       "created_at": "2026-06-10T04:04:43.932316",
       "dst": "wn_4be9c36a",
       "id": "r_cd68effb",
@@ -1487,6 +1641,14 @@
       "id": "r_ce8c49ee",
       "props": {},
       "src": "w_55b5404b",
+      "type": "contains"
+    },
+    {
+      "created_at": "2026-06-10T14:54:53.511288",
+      "dst": "wn_265cec2f",
+      "id": "r_d28aef6c",
+      "props": {},
+      "src": "w_39da22a7",
       "type": "contains"
     },
     {
@@ -1514,6 +1676,14 @@
       "type": "contains"
     },
     {
+      "created_at": "2026-06-10T14:57:12.886076",
+      "dst": "wn_265cec2f",
+      "id": "r_dc77bdb7",
+      "props": {},
+      "src": "wn_b288d1af",
+      "type": "depends-on"
+    },
+    {
       "created_at": "2026-06-10T11:18:09.618147",
       "dst": "wn_6afe45a5",
       "id": "r_de041a3f",
@@ -1530,6 +1700,14 @@
       "type": "tests"
     },
     {
+      "created_at": "2026-06-10T14:57:16.593838",
+      "dst": "wn_ed747d80",
+      "id": "r_ea01295d",
+      "props": {},
+      "src": "w_39da22a7",
+      "type": "contains"
+    },
+    {
       "created_at": "2026-06-10T04:04:52.308544",
       "dst": "wn_4d2d491d",
       "id": "r_ed3d4d5f",
@@ -1544,6 +1722,14 @@
       "props": {},
       "src": "w_55b5404b",
       "type": "contains"
+    },
+    {
+      "created_at": "2026-06-10T14:57:16.598573",
+      "dst": "wn_265cec2f",
+      "id": "r_f48b5406",
+      "props": {},
+      "src": "wn_ed747d80",
+      "type": "depends-on"
     },
     {
       "created_at": "2026-06-10T12:45:44.845950",

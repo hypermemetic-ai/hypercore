@@ -1,6 +1,6 @@
 ---
 name: hypercore
-description: Drive the hypercore graph — status first, statement verbs, execution graphs in the operation alphabet (frame/gather/derive/generate/test/commit), folding, and what only the operator may decide. Use whenever working in this repository.
+description: Drive the hypercore graph — status first, statement verbs, execution graphs in the operation alphabet (frame/gather/generate/test/commit), folding, and what only the operator may decide. Use whenever working in this repository.
 ---
 
 # Driving hypercore
@@ -32,14 +32,23 @@ enters in exactly three ways — never assume it:
   machine never removes one. The machine never strikes operator-owned
   intent.
 
-A commit operation's `decide` role is the operator's and cannot be
-delegated (s_81c38173) — create the commit only once the decision exists.
+The engine forces a commit operation's `decide` role to the operator —
+create the commit only once the decision exists. (Its statement was
+struck in the 2026-06-10 sweep; the enforcement stands until the
+operator says otherwise.)
+
+A strike can be informed disagreement or a refusal to incorporate what
+the operator does not understand. Either way: before relaying or running
+a strike, compute and surface what it breaks — dangling `produces`
+references, machinery left running with no statement behind it.
 
 ## The alphabet (s_3729cb59)
 
-A member of an execution graph is one operation: **frame · gather · derive ·
-generate · test · commit**. Products are material on the operation node,
-never a node kind. Relations carry the combinators (s_5365a11a):
+A member of an execution graph is one operation: **frame · gather ·
+generate · test · commit**. (`derive` was cut 2026-06-10, s_88dc042e,
+until its purpose is understood; it never appeared in any graph.)
+Products are material on the operation node, never a node kind.
+Relations carry the combinators:
 `depends-on` (causal link), `tests`, `commits` (binds a generate),
 `reframes` (frame→frame), `decomposes-into`; `contains` is membership
 bookkeeping. Roles (propose/execute/judge/decide) live in props. The
@@ -53,9 +62,9 @@ alphabet never grows — name compound moves instead (s_e4f503c9).
 frame if the problem needs instituting, and generates for candidate moves.
 
 **run-the-loop** — the engine inside open work:
-gather what's unknown → generate candidates → derive consequences (`--on`
-the generate) → test (`--on` the candidate) → `work-check T --verdict
-pass|fail --grounds "..."`. Re-generate while verdicts fail.
+gather what's unknown → generate candidates → test (`--on` the
+candidate) → `work-check T --verdict pass|fail --grounds "..."`.
+Re-generate while verdicts fail.
 
 **settle-and-fold** — close it out:
 the operator's word arrives → `work-add` a commit `--on` the winning

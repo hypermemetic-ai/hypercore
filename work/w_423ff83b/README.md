@@ -2,7 +2,7 @@
 
 `w_423ff83b` · **folded** · check: operator
 
-on: `s_3729cb59` — "An operation is one move on the problem state, of six kinds: frame, gather, derive, gener…"
+on: `s_3729cb59` — "An operation is one move on the problem state, of five kinds: frame, gather, generate, te…"
 fold when: work nodes are operations (frame, gather, derive, generate, test, commit), their products are material on those nodes, relations carry the combinators, and roles live in props
 folded: 2026-06-10T08:49:39+00:00
 produces:
