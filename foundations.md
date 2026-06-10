@@ -24,6 +24,6 @@ The operator's interface is a queue of decisions. A decision arrives with the co
 
 Conversation produces decisions. Conversation around an open decision brings information to that decision; it is not itself the decision. [machine]
 
-Whether work is done now, decomposed into subgraphs, deferred, or declined is itself a queued decision, and every decision records its grounds at the moment it is made. [machine]
+The machine never silently commits the operator's resources: scope calls that change what the operator must later judge, build machinery, or decline their intent are theirs to make; within endorsed intent the machine scopes freely and visibly. Every decision records its grounds at the moment it is made.
 
 Staleness is the machine's to notice, never the operator's to manage.
