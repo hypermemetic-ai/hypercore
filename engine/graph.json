@@ -474,6 +474,19 @@
       }
     },
     {
+      "created_at": "2026-06-10T15:32:29.201172",
+      "id": "wn_63d267ae",
+      "kind": "gather",
+      "label": "operator judged the card slice failed: the interface looks unchanged; the test's own wording (grounds they type) was machine-speak they could not parse; zoom-and-pan to a card is good but the relation between a question and its context is still not clear. Machine diagnosis: the ratify queue was empty when they looked \u2014 zero pending statements means zero decision cards existed to render \u2014 and the judgment was queued before anything visible could exercise it",
+      "props": {
+        "roles": {
+          "execute": "machine",
+          "propose": "machine"
+        },
+        "work": "w_39da22a7"
+      }
+    },
+    {
       "created_at": "2026-06-10T03:49:39.076776",
       "id": "wn_666eca0f",
       "kind": "commit",
@@ -693,11 +706,13 @@
       "kind": "test",
       "label": "the operator ratifies from cards: context and consequences are in view at the moment of deciding, and the grounds they type survive the statement they answer",
       "props": {
+        "grounds": "operator, via the viewer: \"the grounds they type\"? not sure what that means. also if the goal is for the realtion between the question and its context to be clear, it isn't. I see the zoom and panning to a card which is good, but that alone doesn't make the system much clearer to me.",
         "roles": {
           "execute": "machine",
           "judge": "operator",
           "propose": "machine"
         },
+        "verdict": "fail",
         "work": "w_39da22a7"
       }
     },
@@ -1558,6 +1573,14 @@
       "props": {},
       "src": "wn_6afe45a5",
       "type": "tests"
+    },
+    {
+      "created_at": "2026-06-10T15:32:29.207520",
+      "dst": "wn_63d267ae",
+      "id": "r_8eb3e9e4",
+      "props": {},
+      "src": "w_39da22a7",
+      "type": "contains"
     },
     {
       "created_at": "2026-06-10T12:45:30.146126",
