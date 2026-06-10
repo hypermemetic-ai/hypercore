@@ -31,6 +31,18 @@ messages.
 - Operator judgment is never assumed; their words in conversation are the
   only warrant.
 
+## Ratification mechanics
+
+- Batches go to the operator through the option picker (the
+  AskUserQuestion tool), never as plain prose to answer freehand: one
+  question per statement, at most four to a batch, options Endorse /
+  Amend / Strike.
+- What each answer entails lives in the option descriptions; what a
+  strike breaks is spelled out before the pick, never after.
+- An Amend pick still needs the operator's wording: take it from the
+  pick's note, or ask as a follow-up. The operator's plain words always
+  override the picker.
+
 ## Rebuild discipline
 
 - Every statement carried from epoch 1 awaits re-ratification: the

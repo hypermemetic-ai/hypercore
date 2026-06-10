@@ -15,8 +15,11 @@ the live queue state at every session start; this file carries the rules.
    breaks before the decision, not after.
 4. **Ratification protocol:** bring pending statements in small batches,
    in document order (foundations, structure, statements, endorsement,
-   work). Each batch: present each statement with what each answer
-   entails; apply the answers; commit with grounds in the message.
+   work). Each batch goes through the option picker (AskUserQuestion) —
+   one question per statement, at most four to a batch, options
+   endorse / amend / strike, with what each answer entails (what a strike
+   breaks above all) shown before the pick. Apply the answers; commit
+   with grounds in the message.
 5. **Rebuild discipline:** no machinery before its absence has blocked
    work twice. Every new slice lands with a plain-words explanation and an
    acceptance question for the operator.
