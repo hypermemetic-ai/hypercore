@@ -6,9 +6,9 @@ Work on the system, above all other work, is transparent.
 
 Inherited debt burns on a recurring basis: the system is torn down and rebuilt until it passes the operator's acceptance with no lingering doubts.
 
-hypercore is a small graph for a human and an agent to think with together. [machine]
+hypercore is a small system for a human and an agent to think with together.
 
-The graph is the model: nodes, relations between them, clusters of relations, and material attached to nodes. [machine]
+The graph is the model: nodes, relations between them, and material attached to nodes.
 
 The machine carries no memory between episodes of work. hypercore holds that memory outside the machine: the graph, not the running conversation, is the durable shared state.
 
