@@ -89,6 +89,21 @@
       }
     },
     {
+      "created_at": "2026-06-10T04:04:36.537741",
+      "id": "w_1baf8df3",
+      "kind": "work",
+      "label": "viewer comfort: dark mode, readability, live updates",
+      "props": {
+        "check": "operator",
+        "fold_when": "the operator works in the dark viewer comfortably and watches a change land without refreshing",
+        "on": "s_7b70bab7",
+        "produces": [
+          "s_cb9d5e78"
+        ],
+        "status": "open"
+      }
+    },
+    {
       "created_at": "2026-06-10T02:35:32.730665",
       "id": "w_423ff83b",
       "kind": "work",
@@ -145,6 +160,19 @@
       }
     },
     {
+      "created_at": "2026-06-10T04:04:52.952153",
+      "id": "wn_125be890",
+      "kind": "generate",
+      "label": "readability pass: larger and higher-contrast graph labels, calmer edge labels, panel typography and spacing tuned for reading",
+      "props": {
+        "roles": {
+          "execute": "machine",
+          "propose": "machine"
+        },
+        "work": "w_1baf8df3"
+      }
+    },
+    {
       "created_at": "2026-06-10T02:59:31.554128",
       "id": "wn_19ef184c",
       "kind": "check",
@@ -152,6 +180,22 @@
       "props": {
         "outcome": "pass",
         "work": "w_bdc90a28"
+      }
+    },
+    {
+      "created_at": "2026-06-10T11:18:01.432004",
+      "id": "wn_29a709f4",
+      "kind": "test",
+      "label": "a verb run outside the page shows up in the open viewer without a refresh",
+      "props": {
+        "grounds": "CDP against a sandbox serve: add-statement from the CLI moved the toolbar count 9\u219210 within two 3s poll ticks; a window marker survived, so the page re-derived rather than reloaded; read-only verbs leave /api/version unchanged",
+        "roles": {
+          "execute": "machine",
+          "judge": "machine",
+          "propose": "machine"
+        },
+        "verdict": "pass",
+        "work": "w_1baf8df3"
       }
     },
     {
@@ -175,6 +219,19 @@
           "propose": "machine"
         },
         "work": "w_55b5404b"
+      }
+    },
+    {
+      "created_at": "2026-06-10T04:04:52.621924",
+      "id": "wn_4290f510",
+      "kind": "generate",
+      "label": "live updates: GET /api/version fingerprints the store; the client polls it every few seconds and re-derives the whole view when it moves, preserving selection and viewport",
+      "props": {
+        "roles": {
+          "execute": "machine",
+          "propose": "machine"
+        },
+        "work": "w_1baf8df3"
       }
     },
     {
@@ -207,6 +264,32 @@
         },
         "verdict": "pass",
         "work": "w_423ff83b"
+      }
+    },
+    {
+      "created_at": "2026-06-10T04:04:43.920491",
+      "id": "wn_4be9c36a",
+      "kind": "gather",
+      "label": "operator named the failures: the white background is hard on the eyes (wants dark mode), the UI needs further readability and UX work, and the view goes stale \u2014 changes require a manual refresh",
+      "props": {
+        "roles": {
+          "execute": "machine",
+          "propose": "operator"
+        },
+        "work": "w_1baf8df3"
+      }
+    },
+    {
+      "created_at": "2026-06-10T04:04:52.301173",
+      "id": "wn_4d2d491d",
+      "kind": "generate",
+      "label": "theme as CSS variables: dark by default (system- and toggle-overridable, persisted), every hardcoded color in index.html and the cytoscape style mapped through the palette",
+      "props": {
+        "roles": {
+          "execute": "machine",
+          "propose": "machine"
+        },
+        "work": "w_1baf8df3"
       }
     },
     {
@@ -303,6 +386,20 @@
       }
     },
     {
+      "created_at": "2026-06-10T11:18:09.608029",
+      "id": "wn_6afe45a5",
+      "kind": "test",
+      "label": "the operator works in the dark viewer comfortably and watches a change land without refreshing",
+      "props": {
+        "roles": {
+          "execute": "machine",
+          "judge": "operator",
+          "propose": "machine"
+        },
+        "work": "w_1baf8df3"
+      }
+    },
+    {
       "created_at": "2026-06-10T02:21:35.321140",
       "id": "wn_6d4117df",
       "kind": "generate",
@@ -394,6 +491,22 @@
           "propose": "operator"
         },
         "work": "w_55b5404b"
+      }
+    },
+    {
+      "created_at": "2026-06-10T11:17:54.175093",
+      "id": "wn_9d25b35d",
+      "kind": "test",
+      "label": "dark by default, light by toggle: both themes render coherently; the toggle persists and keeps the viewport",
+      "props": {
+        "grounds": "headless screenshots of a sandbox serve in both themes, 2026-06-10; CDP toggle test: dark\u2192light flips data-theme, persists to localStorage, zoom unchanged to 1e-9",
+        "roles": {
+          "execute": "machine",
+          "judge": "machine",
+          "propose": "machine"
+        },
+        "verdict": "pass",
+        "work": "w_1baf8df3"
       }
     },
     {
@@ -532,6 +645,30 @@
       "type": "contains"
     },
     {
+      "created_at": "2026-06-10T04:04:52.960004",
+      "dst": "wn_125be890",
+      "id": "r_09c99266",
+      "props": {},
+      "src": "w_1baf8df3",
+      "type": "contains"
+    },
+    {
+      "created_at": "2026-06-10T11:18:01.445097",
+      "dst": "wn_4290f510",
+      "id": "r_0df33db5",
+      "props": {},
+      "src": "wn_29a709f4",
+      "type": "tests"
+    },
+    {
+      "created_at": "2026-06-10T04:04:52.630380",
+      "dst": "wn_4290f510",
+      "id": "r_0f8dbbe9",
+      "props": {},
+      "src": "w_1baf8df3",
+      "type": "contains"
+    },
+    {
       "created_at": "2026-06-10T03:49:39.104964",
       "dst": "wn_b91eab58",
       "id": "r_1069767e",
@@ -545,6 +682,14 @@
       "id": "r_13211063",
       "props": {},
       "src": "w_bdc90a28",
+      "type": "contains"
+    },
+    {
+      "created_at": "2026-06-10T11:18:01.438212",
+      "dst": "wn_29a709f4",
+      "id": "r_13daaf37",
+      "props": {},
+      "src": "w_1baf8df3",
       "type": "contains"
     },
     {
@@ -570,6 +715,14 @@
       "props": {},
       "src": "wn_ddb2f58c",
       "type": "tests"
+    },
+    {
+      "created_at": "2026-06-10T04:04:52.968219",
+      "dst": "wn_4be9c36a",
+      "id": "r_26451974",
+      "props": {},
+      "src": "wn_125be890",
+      "type": "depends-on"
     },
     {
       "created_at": "2026-06-10T02:35:33.713886",
@@ -636,6 +789,14 @@
       "type": "tests"
     },
     {
+      "created_at": "2026-06-10T04:04:52.637265",
+      "dst": "wn_4be9c36a",
+      "id": "r_38a0c860",
+      "props": {},
+      "src": "wn_4290f510",
+      "type": "depends-on"
+    },
+    {
       "created_at": "2026-06-10T02:59:32.895020",
       "dst": "wn_b62bb2c0",
       "id": "r_432b728a",
@@ -684,12 +845,36 @@
       "type": "depends-on"
     },
     {
+      "created_at": "2026-06-10T04:04:52.315165",
+      "dst": "wn_4be9c36a",
+      "id": "r_53e82313",
+      "props": {},
+      "src": "wn_4d2d491d",
+      "type": "depends-on"
+    },
+    {
       "created_at": "2026-06-10T03:41:34.467793",
       "dst": "wn_627539fe",
       "id": "r_56139faa",
       "props": {},
       "src": "w_55b5404b",
       "type": "contains"
+    },
+    {
+      "created_at": "2026-06-10T11:18:16.670838",
+      "dst": "wn_4290f510",
+      "id": "r_5797b894",
+      "props": {},
+      "src": "wn_6afe45a5",
+      "type": "tests"
+    },
+    {
+      "created_at": "2026-06-10T04:04:36.551799",
+      "dst": "hypercore",
+      "id": "r_5797ea0e",
+      "props": {},
+      "src": "w_1baf8df3",
+      "type": "depends-on"
     },
     {
       "created_at": "2026-06-10T02:35:34.093904",
@@ -724,6 +909,14 @@
       "type": "contains"
     },
     {
+      "created_at": "2026-06-10T11:17:54.190972",
+      "dst": "wn_4d2d491d",
+      "id": "r_7e279807",
+      "props": {},
+      "src": "wn_9d25b35d",
+      "type": "tests"
+    },
+    {
       "created_at": "2026-06-10T03:41:33.445330",
       "dst": "wn_7c513a68",
       "id": "r_82a6898c",
@@ -754,6 +947,14 @@
       "props": {},
       "src": "wn_7c513a68",
       "type": "depends-on"
+    },
+    {
+      "created_at": "2026-06-10T11:18:09.626922",
+      "dst": "wn_4d2d491d",
+      "id": "r_8e4fa6b0",
+      "props": {},
+      "src": "wn_6afe45a5",
+      "type": "tests"
     },
     {
       "created_at": "2026-06-10T03:28:39.049373",
@@ -796,6 +997,14 @@
       "type": "depends-on"
     },
     {
+      "created_at": "2026-06-10T11:17:54.184313",
+      "dst": "wn_9d25b35d",
+      "id": "r_b07b8967",
+      "props": {},
+      "src": "w_1baf8df3",
+      "type": "contains"
+    },
+    {
       "created_at": "2026-06-10T02:20:32.830622",
       "dst": "wn_7bfef8fe",
       "id": "r_b128b032",
@@ -828,6 +1037,22 @@
       "type": "tests"
     },
     {
+      "created_at": "2026-06-10T04:04:43.932316",
+      "dst": "wn_4be9c36a",
+      "id": "r_cd68effb",
+      "props": {},
+      "src": "w_1baf8df3",
+      "type": "contains"
+    },
+    {
+      "created_at": "2026-06-10T11:18:16.957544",
+      "dst": "wn_125be890",
+      "id": "r_d7084997",
+      "props": {},
+      "src": "wn_6afe45a5",
+      "type": "tests"
+    },
+    {
       "created_at": "2026-06-10T03:28:16.239725",
       "dst": "wn_6d4117df",
       "id": "r_d7e3417e",
@@ -844,12 +1069,28 @@
       "type": "contains"
     },
     {
+      "created_at": "2026-06-10T11:18:09.618147",
+      "dst": "wn_6afe45a5",
+      "id": "r_de041a3f",
+      "props": {},
+      "src": "w_1baf8df3",
+      "type": "contains"
+    },
+    {
       "created_at": "2026-06-10T03:28:39.423037",
       "dst": "wn_b91eab58",
       "id": "r_e90c0c06",
       "props": {},
       "src": "wn_4559dcbf",
       "type": "tests"
+    },
+    {
+      "created_at": "2026-06-10T04:04:52.308544",
+      "dst": "wn_4d2d491d",
+      "id": "r_ed3d4d5f",
+      "props": {},
+      "src": "w_1baf8df3",
+      "type": "contains"
     },
     {
       "created_at": "2026-06-10T02:21:35.665541",

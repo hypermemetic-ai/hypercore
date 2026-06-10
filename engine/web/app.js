@@ -1,36 +1,83 @@
 // The viewer is a derived view of the graph and the statement store. It reads
-// /api/graph per load; its one write is /api/endorse, which is the operator
-// acting (endorsement.md): the click takes a machine-owned statement on.
+// /api/graph per load and polls /api/version to stay live; its one write is
+// /api/endorse, which is the operator acting (endorsement.md): the click
+// takes a machine-owned statement on.
 
 const state = {
   graph: null,
   cy: null,
   selected: null, // {type: "node"|"statement", id}
+  version: null, // /api/version fingerprint the poll compares against
 };
 
+const THEME_KEY = "hypercore-theme";
+const POLL_MS = 3000;
+
+// One palette per theme: the dark canvas needs lighter inks for the same
+// kinds, or the frame's navy vanishes into the background.
 const KIND_COLORS = {
-  dataset: "#2f7d6d",
-  process: "#7a4f9f",
-  spec: "#c05a36",
-  document: "#496cba",
-  code: "#5d7480",
-  node: "#1f2a44",
-  segment: "#496cba",
-  statement: "#6f767d",
-  work: "#c05a36",
-  // the operation alphabet (work: s_3729cb59)
-  frame: "#1f2a44",
-  gather: "#496cba",
-  derive: "#5d7480",
-  generate: "#9aa0a6",
-  test: "#7a4f9f",
-  commit: "#2f7d6d",
-  // pre-alphabet kinds, kept so folded history reads as the graph it was
-  step: "#9aa0a6",
-  candidate: "#9aa0a6",
-  check: "#7a4f9f",
-  result: "#2f7d6d",
+  light: {
+    dataset: "#2f7d6d",
+    process: "#7a4f9f",
+    spec: "#c05a36",
+    document: "#496cba",
+    code: "#5d7480",
+    node: "#1f2a44",
+    segment: "#496cba",
+    statement: "#6f767d",
+    work: "#c05a36",
+    // the operation alphabet (work: s_3729cb59)
+    frame: "#1f2a44",
+    gather: "#496cba",
+    derive: "#5d7480",
+    generate: "#9aa0a6",
+    test: "#7a4f9f",
+    commit: "#2f7d6d",
+    // pre-alphabet kinds, kept so folded history reads as the graph it was
+    step: "#9aa0a6",
+    candidate: "#9aa0a6",
+    check: "#7a4f9f",
+    result: "#2f7d6d",
+  },
+  dark: {
+    dataset: "#3fa08c",
+    process: "#a47fd0",
+    spec: "#d97a55",
+    document: "#7d9be0",
+    code: "#8aa0ad",
+    node: "#8fa7d9",
+    segment: "#7d9be0",
+    statement: "#8d949b",
+    work: "#d97a55",
+    frame: "#8fa7d9",
+    gather: "#7d9be0",
+    derive: "#8aa0ad",
+    generate: "#aab0b6",
+    test: "#a47fd0",
+    commit: "#3fa08c",
+    step: "#aab0b6",
+    candidate: "#aab0b6",
+    check: "#a47fd0",
+    result: "#3fa08c",
+  },
 };
+
+function currentTheme() {
+  return document.documentElement.dataset.theme === "light" ? "light" : "dark";
+}
+
+function kindColor(kind) {
+  const palette = KIND_COLORS[currentTheme()];
+  return palette[kind] || (currentTheme() === "dark" ? "#8d949b" : "#6f767d");
+}
+
+// The canvas follows the stylesheet: cytoscape colors come from the same
+// CSS variables the panels use, read at build time.
+function cssVar(name) {
+  return getComputedStyle(document.documentElement)
+    .getPropertyValue(name)
+    .trim();
+}
 
 // Work membership; every other relation type is a combinator and keeps its
 // label on the edge.
@@ -48,22 +95,29 @@ function segmentRank(segment) {
 main();
 
 async function main() {
-  const response = await fetch("/api/graph");
+  const [response, version] = await Promise.all([
+    fetch("/api/graph"),
+    fetchVersion(),
+  ]);
   const graph = await response.json();
   if (graph.error) {
     renderError(graph.error);
     return;
   }
   state.graph = graph;
+  state.version = version;
   renderSummary();
   renderIntent();
   buildGraph();
   wireToolbar();
   restoreSelection();
+  startPolling();
 }
 
 async function reload() {
-  // After an endorsement the store changed; re-derive the whole view.
+  // The store changed (an endorsement here, or a verb elsewhere noticed by
+  // the poll); re-derive the whole view but keep the operator's place:
+  // selection and viewport survive the rebuild.
   const response = await fetch("/api/graph");
   const graph = await response.json();
   if (graph.error) {
@@ -73,9 +127,62 @@ async function reload() {
   state.graph = graph;
   renderSummary();
   renderIntent();
-  state.cy.destroy();
-  buildGraph();
+  rebuildGraph({ keepViewport: true });
   restoreSelection();
+}
+
+function rebuildGraph({ keepViewport } = {}) {
+  const viewport =
+    keepViewport && state.cy
+      ? { zoom: state.cy.zoom(), pan: state.cy.pan() }
+      : null;
+  if (state.cy) state.cy.destroy();
+  buildGraph();
+  if (viewport) state.cy.viewport(viewport);
+}
+
+/* ---------- staying live: the version poll ---------- */
+
+async function fetchVersion() {
+  try {
+    const response = await fetch("/api/version");
+    const payload = await response.json();
+    return payload.version || null;
+  } catch {
+    return null;
+  }
+}
+
+function setLive(mode) {
+  const live = document.getElementById("live");
+  live.className = "live" + (mode === "live" ? "" : ` ${mode}`);
+  live.textContent = { live: "live", syncing: "syncing", stale: "offline" }[
+    mode
+  ];
+}
+
+function startPolling() {
+  const tick = async () => {
+    if (document.hidden) return;
+    const version = await fetchVersion();
+    if (!version) {
+      setLive("stale");
+      return;
+    }
+    if (state.version !== null && version !== state.version) {
+      state.version = version;
+      setLive("syncing");
+      await reload();
+    } else {
+      state.version = version;
+    }
+    setLive("live");
+  };
+  setInterval(tick, POLL_MS);
+  // Coming back to the tab checks immediately instead of waiting a tick.
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) tick();
+  });
 }
 
 /* ---------- helpers over the payload ---------- */
@@ -127,6 +234,21 @@ function renderSummary() {
 }
 
 function wireToolbar() {
+  const toggle = document.getElementById("themeToggle");
+  const face = () => {
+    toggle.textContent = currentTheme() === "dark" ? "☀" : "☾";
+    toggle.title = `Switch to ${currentTheme() === "dark" ? "light" : "dark"}`;
+  };
+  face();
+  toggle.addEventListener("click", () => {
+    const next = currentTheme() === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem(THEME_KEY, next);
+    face();
+    // The canvas colors were read at build time; rebuild it in place.
+    rebuildGraph({ keepViewport: true });
+    restoreSelection();
+  });
   document.getElementById("zoomIn").addEventListener("click", () => {
     state.cy.zoom({
       level: state.cy.zoom() * 1.3,
@@ -351,17 +473,22 @@ function buildGraph() {
       {
         selector: "node",
         style: {
-          "background-color": (el) => KIND_COLORS[el.data("kind")] || "#6f767d",
+          "background-color": (el) => kindColor(el.data("kind")),
           label: "data(label)",
-          color: "#202124",
-          "font-size": 11,
+          color: cssVar("--graph-label"),
+          "font-size": 11.5,
           "text-wrap": "wrap",
-          "text-max-width": 130,
+          "text-max-width": 150,
           "text-valign": "bottom",
           "text-halign": "center",
           "text-margin-y": 7,
+          // A halo of the background keeps labels readable where they
+          // cross edges or each other.
+          "text-outline-color": cssVar("--bg"),
+          "text-outline-width": 2,
+          "text-outline-opacity": 0.85,
           "border-width": 2,
-          "border-color": "#ffffff",
+          "border-color": cssVar("--graph-node-border"),
           width: 28,
           height: 28,
         },
@@ -370,15 +497,15 @@ function buildGraph() {
         selector: "edge",
         style: {
           width: 2,
-          "line-color": "#8d939a",
-          "target-arrow-color": "#8d939a",
+          "line-color": cssVar("--graph-edge"),
+          "target-arrow-color": cssVar("--graph-edge"),
           "target-arrow-shape": "triangle",
           "arrow-scale": 0.9,
           "curve-style": "bezier",
           label: "data(label)",
-          color: "#4f5357",
+          color: cssVar("--graph-edge-label"),
           "font-size": 10,
-          "text-background-color": "#f7f7f4",
+          "text-background-color": cssVar("--bg"),
           "text-background-opacity": 0.9,
           "text-background-padding": 2,
         },
@@ -386,8 +513,8 @@ function buildGraph() {
       {
         selector: 'node[owner = "machine"]',
         style: {
-          "background-color": "#e0a23c",
-          "border-color": "#a8741f",
+          "background-color": cssVar("--machine-accent"),
+          "border-color": cssVar("--machine-border"),
           "border-style": "dashed",
         },
       },
@@ -401,10 +528,10 @@ function buildGraph() {
         selector: ":parent",
         style: {
           shape: "round-rectangle",
-          "background-color": "#fffdf8",
+          "background-color": cssVar("--graph-parent-bg"),
           "background-opacity": 0.6,
           "border-width": 2,
-          "border-color": "#b9b5aa",
+          "border-color": cssVar("--graph-parent-border"),
           label: "data(label)",
           "text-valign": "top",
           "text-halign": "center",
@@ -420,7 +547,7 @@ function buildGraph() {
       },
       {
         selector: 'node[kind = "work"][status = "open"]',
-        style: { "border-width": 4, "border-color": "#c05a36" },
+        style: { "border-width": 4, "border-color": cssVar("--open-strong") },
       },
       {
         selector: 'node[kind = "work"][status = "folded"]',
@@ -432,7 +559,7 @@ function buildGraph() {
       },
       {
         selector: "node:selected",
-        style: { "border-width": 4, "border-color": "#1a73e8" },
+        style: { "border-width": 4, "border-color": cssVar("--accent") },
       },
     ],
     layout: {
@@ -540,7 +667,9 @@ function restoreSelection() {
     if (statement) selectStatement(statement.id);
     return;
   }
-  if (nodeById(state.selected.id)) selectNode(state.selected.id);
+  // quiet: re-select without re-centering, so a live reload does not yank
+  // the viewport back to the selection.
+  if (nodeById(state.selected.id)) selectNode(state.selected.id, { quiet: true });
 }
 
 function selectStatement(sid) {
@@ -552,7 +681,7 @@ function selectStatement(sid) {
   renderStatementDetails(statement);
 }
 
-function selectNode(id, { fromGraph } = {}) {
+function selectNode(id, { fromGraph, quiet } = {}) {
   const node = nodeById(id);
   if (!node) return;
   state.selected = { type: "node", id };
@@ -562,7 +691,9 @@ function selectNode(id, { fromGraph } = {}) {
     const target = state.cy.getElementById(id);
     if (!target.empty()) {
       target.select();
-      state.cy.animate({ center: { eles: target } }, { duration: 250 });
+      if (!quiet) {
+        state.cy.animate({ center: { eles: target } }, { duration: 250 });
+      }
     }
   }
   renderNodeDetails(node);

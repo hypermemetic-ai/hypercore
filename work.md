@@ -20,9 +20,9 @@ Error compounds through composition. The weaker a graph's checks, the shallower 
 
 Folding is reflected in both places. The database records the fold, and the filesystem view follows it.
 
-An operation is one move on the problem state, of six kinds: frame, gather, derive, generate, test, commit. Work is made of operations. [machine]
+An operation is one move on the problem state, of six kinds: frame, gather, derive, generate, test, commit. Work is made of operations.
 
-The alphabet of operations never grows. Named clusters of operations are the compounds that grow freely; decomposition is how a compound expands, not a primitive. [machine]
+The alphabet of operations never grows. Named clusters of operations are the compounds that grow freely; decomposition is how a compound expands, not a primitive.
 
 Who proposes, executes, judges, and decides is a property on each operation, not an operation of its own. The decision to commit belongs to whoever owns the consequences and cannot be delegated. [machine]
 

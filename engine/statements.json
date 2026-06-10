@@ -59,7 +59,7 @@
       "id": "endorsement-7",
       "links": [],
       "ord": 7,
-      "owner": "machine",
+      "owner": "operator",
       "segment": "endorsement",
       "text": "Ownership is visible in the derived view: a machine-owned statement ends with the marker [machine]. Endorsement is the endorse verb; render then drops the marker. Amending or striking are the operator's other two answers."
     },
@@ -95,7 +95,7 @@
       "id": "foundations-3",
       "links": [],
       "ord": 3,
-      "owner": "machine",
+      "owner": "operator",
       "segment": "foundations",
       "text": "The machine carries no memory between episodes of work. hypercore holds that memory outside the machine: the graph, not the running conversation, is the durable shared state."
     },
@@ -122,7 +122,7 @@
       "id": "foundations-6",
       "links": [],
       "ord": 6,
-      "owner": "machine",
+      "owner": "operator",
       "segment": "foundations",
       "text": "Intent is authored through the statement verbs; render is the files' only writer. The snapshot in git is the durable form of both the graph and the statement store; the database file is a local working copy rebuilt from it with load."
     },
@@ -131,7 +131,7 @@
       "id": "foundations-7",
       "links": [],
       "ord": 7,
-      "owner": "machine",
+      "owner": "operator",
       "segment": "foundations",
       "text": "The operator's attention is the scarcest resource in the system. The system spends it on judgment, never on filing."
     },
@@ -140,7 +140,7 @@
       "id": "foundations-8",
       "links": [],
       "ord": 8,
-      "owner": "machine",
+      "owner": "operator",
       "segment": "foundations",
       "text": "The operator never performs graph maintenance. The machine files, links, and renders; the operator ratifies, vetoes, and redirects. An operator hand-tending the graph's bookkeeping is the earliest signal that ceremony has won."
     },
@@ -149,9 +149,27 @@
       "id": "s_f35147a3",
       "links": [],
       "ord": 9,
-      "owner": "machine",
+      "owner": "operator",
       "segment": "foundations",
       "text": "The operator can read the system's state at a glance: the viewer shows who owns each statement and which work is open, without asking the machine."
+    },
+    {
+      "created_at": "2026-06-10T04:04:29.180631",
+      "id": "s_7b70bab7",
+      "links": [],
+      "ord": 10,
+      "owner": "operator",
+      "segment": "foundations",
+      "text": "The viewer is comfortable to live in: dark by default and easy on the eyes, readable, and live \u2014 changes to the graph appear as they are made, without the operator refreshing."
+    },
+    {
+      "created_at": "2026-06-10T11:18:28.733198",
+      "id": "s_cb9d5e78",
+      "links": [],
+      "ord": 11,
+      "owner": "machine",
+      "segment": "foundations",
+      "text": "The viewer keeps itself current: it watches a cheap fingerprint of the store and re-derives the whole view when the graph moves. Staleness is the machine's to notice, never the operator's to manage."
     },
     {
       "created_at": "2026-06-10T01:59:22.718433",
@@ -248,7 +266,7 @@
       "id": "statements-10",
       "links": [],
       "ord": 10,
-      "owner": "machine",
+      "owner": "operator",
       "segment": "statements",
       "text": "Intent is discovered through work more than collected in advance. Revising a statement must stay cheap, or intent hardens into a spec the work quietly ignores."
     },
@@ -257,7 +275,7 @@
       "id": "statements-11",
       "links": [],
       "ord": 11,
-      "owner": "machine",
+      "owner": "operator",
       "segment": "statements",
       "text": "The default motion is ratification: the machine drafts concrete statements and the operator endorses, amends, or strikes them. The operator is rarely asked to author from nothing."
     },
@@ -437,7 +455,7 @@
       "id": "s_3729cb59",
       "links": [],
       "ord": 11,
-      "owner": "machine",
+      "owner": "operator",
       "segment": "work",
       "text": "An operation is one move on the problem state, of six kinds: frame, gather, derive, generate, test, commit. Work is made of operations."
     },
@@ -446,7 +464,7 @@
       "id": "s_e4f503c9",
       "links": [],
       "ord": 12,
-      "owner": "machine",
+      "owner": "operator",
       "segment": "work",
       "text": "The alphabet of operations never grows. Named clusters of operations are the compounds that grow freely; decomposition is how a compound expands, not a primitive."
     },

@@ -22,6 +22,9 @@ class HypercoreHandler(SimpleHTTPRequestHandler):
         if self.path == "/api/graph":
             self.send_graph()
             return
+        if self.path == "/api/version":
+            self.send_version()
+            return
         if self.path.startswith("/api/material/"):
             self.send_material(self.path.removeprefix("/api/material/"))
             return
@@ -40,6 +43,24 @@ class HypercoreHandler(SimpleHTTPRequestHandler):
                 # beside the graph so the viewer can still show intent state.
                 payload = {**store.graph(), "statements": store.statements()}
             self.send_json(200, payload)
+        except Exception as exc:
+            self.send_json(500, {"error": str(exc)})
+
+    def send_version(self) -> None:
+        """A fingerprint of the store, cheap enough to poll.
+
+        Every verb and the endorse endpoint write the database file, so its
+        mtime and size move with the graph; the viewer polls this and
+        re-derives itself when it changes — the view stays live without the
+        operator refreshing."""
+        try:
+            parts = []
+            db = Path(self.db_path)
+            for path in (db, db.with_name(db.name + ".wal")):
+                if path.exists():
+                    stat = path.stat()
+                    parts.append(f"{stat.st_mtime_ns}:{stat.st_size}")
+            self.send_json(200, {"version": "|".join(parts) or "missing"})
         except Exception as exc:
             self.send_json(500, {"error": str(exc)})
 

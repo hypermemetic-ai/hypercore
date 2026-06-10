@@ -4,15 +4,119 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>hypercore</title>
+    <script>
+      // Before first paint, so the operator never sees the wrong theme flash.
+      // ?theme=light|dark overrides for this load without being remembered.
+      document.documentElement.dataset.theme =
+        new URLSearchParams(location.search).get("theme") ||
+        localStorage.getItem("hypercore-theme") ||
+        "dark";
+    </script>
     <script src="https://unpkg.com/cytoscape@3.31.2/dist/cytoscape.min.js"></script>
     <style>
+      /* The palette lives in variables; dark is the default, light is the
+         operator's opt-in. app.js reads the --graph-* values so the canvas
+         follows the same palette. */
       :root {
-        color-scheme: light;
+        color-scheme: dark;
         font-family:
           Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
           "Segoe UI", sans-serif;
-        background: #f7f7f4;
-        color: #202124;
+
+        --bg: #15171c;
+        --surface: #1b1e24;
+        --raised: #21252d;
+        --hover: #262b33;
+        --selected-row: #24304a;
+        --border: #353b46;
+        --border-soft: #2a2f38;
+        --text: #e7e9ee;
+        --muted: #9aa2ac;
+        --accent: #8ab4f8;
+
+        --machine-text: #e8b35a;
+        --machine-bg: #342a13;
+        --machine-border: #a8741f;
+        --machine-accent: #e0a23c;
+        --machine-row: #241f12;
+        --machine-row-hover: #2f2917;
+
+        --open-text: #e8916b;
+        --open-bg: #392318;
+        --open-border: #8a4a30;
+        --open-strong: #d97a55;
+
+        --folded-text: #6fc2ae;
+        --folded-bg: #15302a;
+        --folded-border: #2f7d6d;
+
+        --gray-text: #aab2bb;
+        --gray-bg: #272c33;
+        --gray-border: #49515c;
+
+        --endorse: #5fb89f;
+        --endorse-hover-bg: #15302a;
+        --endorse-confirm: #2f7d6d;
+
+        --pre-bg: #14161a;
+
+        --graph-label: #d8dce2;
+        --graph-node-border: #15171c;
+        --graph-edge: #5d646e;
+        --graph-edge-label: #97a0aa;
+        --graph-parent-bg: #1d2127;
+        --graph-parent-border: #454d5a;
+
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      :root[data-theme="light"] {
+        color-scheme: light;
+
+        --bg: #f7f7f4;
+        --surface: #ffffff;
+        --raised: #fffdf8;
+        --hover: #f6f4ec;
+        --selected-row: #eef2fb;
+        --border: #d9d6cc;
+        --border-soft: #ece9df;
+        --text: #202124;
+        --muted: #64675f;
+        --accent: #1a73e8;
+
+        --machine-text: #7a5410;
+        --machine-bg: #fdf0d4;
+        --machine-border: #e0a23c;
+        --machine-accent: #e0a23c;
+        --machine-row: #fffaf0;
+        --machine-row-hover: #fdf3dd;
+
+        --open-text: #8a3417;
+        --open-bg: #fbe3d8;
+        --open-border: #c05a36;
+        --open-strong: #c05a36;
+
+        --folded-text: #1f5446;
+        --folded-bg: #ddeee9;
+        --folded-border: #2f7d6d;
+
+        --gray-text: #3c4043;
+        --gray-bg: #eef0f2;
+        --gray-border: #c5c9ce;
+
+        --endorse: #2f7d6d;
+        --endorse-hover-bg: #ddeee9;
+        --endorse-confirm: #2f7d6d;
+
+        --pre-bg: #f5f7fa;
+
+        --graph-label: #202124;
+        --graph-node-border: #ffffff;
+        --graph-edge: #8d939a;
+        --graph-edge-label: #4f5357;
+        --graph-parent-bg: #fffdf8;
+        --graph-parent-border: #b9b5aa;
       }
 
       * {
@@ -21,6 +125,11 @@
 
       body {
         margin: 0;
+      }
+
+      button:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 1px;
       }
 
       .app {
@@ -37,8 +146,8 @@
         gap: 14px;
         min-height: 54px;
         padding: 10px 16px;
-        border-bottom: 1px solid #d9d6cc;
-        background: #fffdf8;
+        border-bottom: 1px solid var(--border);
+        background: var(--raised);
       }
 
       h1 {
@@ -51,6 +160,27 @@
         flex: 1;
       }
 
+      /* The live dot: green while the poll is healthy, amber mid-sync,
+         gray when the server stops answering. */
+      .live {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .live::before {
+        content: "●";
+        margin-right: 5px;
+        color: var(--folded-text);
+      }
+
+      .live.syncing::before {
+        color: var(--machine-accent);
+      }
+
+      .live.stale::before {
+        color: var(--gray-border);
+      }
+
       .zoom {
         display: flex;
         gap: 6px;
@@ -59,23 +189,23 @@
       .zoom button {
         min-width: 34px;
         padding: 6px 10px;
-        border: 1px solid #b9b5aa;
+        border: 1px solid var(--border);
         border-radius: 6px;
-        background: white;
-        color: #202124;
+        background: var(--surface);
+        color: var(--text);
         font-size: 14px;
         cursor: pointer;
       }
 
       .zoom button:hover {
-        background: #f0ede4;
+        background: var(--hover);
       }
 
       /* ---- left: intent ---- */
 
       .intent {
-        border-right: 1px solid #d9d6cc;
-        background: #ffffff;
+        border-right: 1px solid var(--border);
+        background: var(--surface);
         overflow: auto;
         padding: 14px;
         min-height: 0;
@@ -87,7 +217,7 @@
         font-size: 12px;
         text-transform: uppercase;
         letter-spacing: 0.04em;
-        color: #64675f;
+        color: var(--muted);
       }
 
       .intent h3:first-child {
@@ -99,23 +229,23 @@
         width: 100%;
         text-align: left;
         border: 0;
-        border-top: 1px solid #ece9df;
+        border-top: 1px solid var(--border-soft);
         background: none;
         font: inherit;
         color: inherit;
         padding: 8px 6px;
         font-size: 13px;
-        line-height: 1.4;
+        line-height: 1.45;
         cursor: pointer;
         border-radius: 4px;
       }
 
       .row:hover {
-        background: #f6f4ec;
+        background: var(--hover);
       }
 
       .row.selected {
-        background: #eef2fb;
+        background: var(--selected-row);
       }
 
       .row .meta {
@@ -128,7 +258,7 @@
       .row .id {
         font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
         font-size: 11px;
-        color: #64675f;
+        color: var(--muted);
       }
 
       .badge {
@@ -143,42 +273,42 @@
       }
 
       .badge.machine {
-        color: #7a5410;
-        background: #fdf0d4;
-        border-color: #e0a23c;
+        color: var(--machine-text);
+        background: var(--machine-bg);
+        border-color: var(--machine-border);
       }
 
       .badge.open {
-        color: #8a3417;
-        background: #fbe3d8;
-        border-color: #c05a36;
+        color: var(--open-text);
+        background: var(--open-bg);
+        border-color: var(--open-border);
       }
 
       .badge.folded {
-        color: #1f5446;
-        background: #ddeee9;
-        border-color: #2f7d6d;
+        color: var(--folded-text);
+        background: var(--folded-bg);
+        border-color: var(--folded-border);
       }
 
       .badge.abandoned {
-        color: #5b5e63;
-        background: #e9eaec;
-        border-color: #9aa0a6;
+        color: var(--gray-text);
+        background: var(--gray-bg);
+        border-color: var(--gray-border);
       }
 
       .badge.kind {
-        color: #3c4043;
-        background: #eef0f2;
-        border-color: #c5c9ce;
+        color: var(--gray-text);
+        background: var(--gray-bg);
+        border-color: var(--gray-border);
       }
 
       .row.machine {
-        border-left: 3px solid #e0a23c;
-        background: #fffaf0;
+        border-left: 3px solid var(--machine-accent);
+        background: var(--machine-row);
       }
 
       .row.machine:hover {
-        background: #fdf3dd;
+        background: var(--machine-row-hover);
       }
 
       .endorse {
@@ -187,24 +317,24 @@
         padding: 2px 9px;
         font-size: 11px;
         font-weight: 700;
-        border: 1px solid #2f7d6d;
+        border: 1px solid var(--endorse);
         border-radius: 11px;
-        background: #ffffff;
-        color: #2f7d6d;
+        background: transparent;
+        color: var(--endorse);
         cursor: pointer;
       }
 
       .endorse:hover {
-        background: #ddeee9;
+        background: var(--endorse-hover-bg);
       }
 
       .endorse.confirm {
-        background: #2f7d6d;
+        background: var(--endorse-confirm);
         color: #ffffff;
       }
 
       details.segment {
-        border-top: 1px solid #ece9df;
+        border-top: 1px solid var(--border-soft);
         padding: 4px 0;
       }
 
@@ -213,7 +343,12 @@
         font-size: 13px;
         font-weight: 700;
         padding: 6px;
-        color: #3c4043;
+        border-radius: 4px;
+        color: var(--text);
+      }
+
+      details.segment summary:hover {
+        background: var(--hover);
       }
 
       details.segment summary .muted {
@@ -230,8 +365,8 @@
       /* ---- right: details ---- */
 
       .panel {
-        border-left: 1px solid #d9d6cc;
-        background: #ffffff;
+        border-left: 1px solid var(--border);
+        background: var(--surface);
         padding: 16px;
         overflow: auto;
         min-height: 0;
@@ -240,12 +375,13 @@
       .panel h2 {
         margin: 0 0 4px;
         font-size: 16px;
-        line-height: 1.35;
+        line-height: 1.4;
       }
 
       .muted {
-        color: #64675f;
+        color: var(--muted);
         font-size: 13px;
+        line-height: 1.45;
       }
 
       .roles {
@@ -264,10 +400,11 @@
         overflow-wrap: anywhere;
         margin: 0;
         padding: 10px;
-        border: 1px solid #dadde2;
+        border: 1px solid var(--border-soft);
         border-radius: 6px;
-        background: #f5f7fa;
+        background: var(--pre-bg);
         font-size: 12px;
+        line-height: 1.5;
       }
 
       ul {
@@ -278,8 +415,9 @@
 
       li {
         padding: 8px 0;
-        border-top: 1px solid #ece9df;
+        border-top: 1px solid var(--border-soft);
         font-size: 13px;
+        line-height: 1.45;
       }
 
       li.link,
@@ -288,7 +426,7 @@
       }
 
       li.link:hover {
-        background: #f6f4ec;
+        background: var(--hover);
       }
 
       .section {
@@ -303,7 +441,7 @@
         .panel {
           grid-column: 1 / -1;
           border-left: 0;
-          border-top: 1px solid #d9d6cc;
+          border-top: 1px solid var(--border);
           max-height: 38vh;
         }
       }
@@ -314,8 +452,12 @@
       <div class="toolbar">
         <h1>hypercore</h1>
         <span id="summary" class="muted"></span>
+        <span id="live" class="live" title="The view re-derives itself when the graph changes"
+          >live</span
+        >
         <span class="spacer"></span>
-        <span class="zoom" aria-label="Graph navigation">
+        <span class="zoom" aria-label="View controls">
+          <button id="themeToggle" title="Switch theme">☀</button>
           <button id="zoomOut" title="Zoom out">−</button>
           <button id="zoomFit" title="Fit graph">fit</button>
           <button id="zoomIn" title="Zoom in">+</button>
