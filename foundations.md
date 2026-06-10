@@ -10,7 +10,7 @@ The database is the source of truth.
 
 The files on disk are a derived view of the database. They exist so a human can read the graph and git can track how it changes.
 
-Intent is authored in the graph through the statement verbs; render is the files' only writer. The snapshot in git is the graph's durable form; the database file is a local working copy rebuilt from it with load. [machine]
+Intent is authored through the statement verbs; render is the files' only writer. The snapshot in git is the durable form of both the graph and the statement store; the database file is a local working copy rebuilt from it with load. [machine]
 
 The operator's attention is the scarcest resource in the system. The system spends it on judgment, never on filing. [machine]
 

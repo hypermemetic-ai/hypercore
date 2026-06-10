@@ -191,7 +191,7 @@
       "created_at": "2026-06-10T01:59:22.589885",
       "id": "foundations-6",
       "kind": "statement",
-      "label": "Intent is authored in the graph through the statement verbs; render is the files' only writer. The snapshot in git is the graph's durable form; the database file is a local working copy rebuilt from it with load.",
+      "label": "Intent is authored through the statement verbs; render is the files' only writer. The snapshot in git is the durable form of both the graph and the statement store; the database file is a local working copy rebuilt from it with load.",
       "props": {
         "ord": 6,
         "owner": "machine",
@@ -250,6 +250,17 @@
         "ord": 13,
         "owner": "machine",
         "segment": "work"
+      }
+    },
+    {
+      "created_at": "2026-06-10T02:43:50.554150",
+      "id": "s_d4bd1b45",
+      "kind": "statement",
+      "label": "Nodes are operations. Intent statements are not nodes: they live in their own store with their own index. An operation points to the statements it produces and is bound by the statements it acts under; both are references the operation carries, not edges to statement nodes.",
+      "props": {
+        "ord": 8,
+        "owner": "operator",
+        "segment": "structure"
       }
     },
     {
@@ -441,10 +452,10 @@
       "created_at": "2026-06-10T01:59:22.634370",
       "id": "structure-2",
       "kind": "statement",
-      "label": "A node may contain its intent and point to its material.",
+      "label": "A node points to its material; its intent is the statements that bind it.",
       "props": {
         "ord": 2,
-        "owner": "operator",
+        "owner": "machine",
         "segment": "structure"
       }
     },
@@ -524,6 +535,18 @@
         "check": "operator",
         "fold_when": "the operator opens the viewer and can tell machine-owned statements and open work apart at a glance",
         "on": "s_f35147a3",
+        "status": "open"
+      }
+    },
+    {
+      "created_at": "2026-06-10T02:48:19.480560",
+      "id": "w_bdc90a28",
+      "kind": "work",
+      "label": "statements leave the graph",
+      "props": {
+        "check": "machine",
+        "fold_when": "graph.json holds no statement or segment nodes; statements live in a git-tracked store with envelope (id, text, owner, segment, order); operations and work reference statements by id, and show answers the reverse direction (statement to referencing nodes); every existing verb, render, load, and the viewer work unchanged",
+        "on": "s_d4bd1b45",
         "status": "open"
       }
     },
@@ -968,6 +991,14 @@
       "type": "contains"
     },
     {
+      "created_at": "2026-06-10T02:48:19.489026",
+      "dst": "s_d4bd1b45",
+      "id": "r_2eae57e7",
+      "props": {},
+      "src": "w_bdc90a28",
+      "type": "spawned-by"
+    },
+    {
       "created_at": "2026-06-10T02:20:32.093760",
       "dst": "s_f35147a3",
       "id": "r_37cc4bb3",
@@ -990,6 +1021,14 @@
       "props": {},
       "src": "w_423ff83b",
       "type": "contains"
+    },
+    {
+      "created_at": "2026-06-10T02:44:04.407570",
+      "dst": "s_d4bd1b45",
+      "id": "r_6fad1847",
+      "props": {},
+      "src": "w_423ff83b",
+      "type": "spawned-by"
     },
     {
       "created_at": "2026-06-10T02:35:33.399459",
@@ -1037,6 +1076,14 @@
       "id": "r_b128b032",
       "props": {},
       "src": "w_55b5404b",
+      "type": "contains"
+    },
+    {
+      "created_at": "2026-06-10T02:43:50.561763",
+      "dst": "s_d4bd1b45",
+      "id": "r_b7a5fb67",
+      "props": {},
+      "src": "structure",
       "type": "contains"
     },
     {
