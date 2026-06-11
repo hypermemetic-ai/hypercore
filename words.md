@@ -46,3 +46,5 @@ machine (2026-06-11): handled, and the path now lives inside. what happened: the
 
 operator (2026-06-11): same error, this time readable by you so we should be in a better place.
 
+machine (2026-06-11): we are — the log named it exactly: the installed xdotool is too old to know the windowstate command the request used. The request now goes through wmctrl, which is already installed and asks the window manager for precisely the state the confirmation check reads. Repair landed and committed; the next login is the test, same as before — fullscreen, or quotable words in .hyper.log.
+
