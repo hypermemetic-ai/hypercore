@@ -6,8 +6,3 @@
 - state: awaiting acceptance — built 2026-06-11 on your words from the queue
 - since: 2026-06-11
 
-## the menu entry stays in the menu
-- ask: the shortcut you never saw, found and fixed — every launch of any copy of hyper, test copies in /tmp included, re-pointed the menu symlink at itself; when the copy vanished the link dangled and the menu dropped it. test copies (machine overridden in the environment) now never touch the link, a healthy link to another live copy is left alone, only a dangling one is reclaimed, and the entry gained a category and icon so cinnamon files it under accessories
-- try: the menu, under accessories — hypercore is there now; the link points at the repo again
-- state: awaiting acceptance — built 2026-06-11 on your report from the queue
-- since: 2026-06-11
