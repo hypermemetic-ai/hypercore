@@ -406,8 +406,13 @@ def ensure_launcher():
     """The menu entry that launches hyper without a fresh login: a symlink
     in the applications directory to the repo's hyper.desktop, kept by
     hyper itself the way the autostart entry is — the repo stays the only
-    place the entry is written.  Returns a flash only when something is
-    wrong; the landing itself goes to the log."""
+    place the entry is written.  A test hyper (the machine overridden in
+    the environment) never touches it, and a healthy link to some other
+    live copy is left alone — only a dangling link is taken over; this is
+    how the entry once went missing.  Returns a flash only when something
+    is wrong; the landing itself goes to the log."""
+    if os.environ.get("HYPER_MACHINE") or os.environ.get("HYPER_MINI"):
+        return None
     target = os.path.join(ROOT, "hyper.desktop")
     link = os.path.join(os.path.expanduser("~"), ".local", "share",
                         "applications", "hyper.desktop")
@@ -415,6 +420,9 @@ def ensure_launcher():
         if os.path.islink(link):
             if os.readlink(link) == target:
                 return None
+            if os.path.exists(link):  # healthy, someone else's — not stolen
+                return note("the menu entry points at another live hyper: %s "
+                            "— left alone" % os.readlink(link))
             os.remove(link)
         elif os.path.exists(link):
             return note("a hyper.desktop that is not ours sits in the "
