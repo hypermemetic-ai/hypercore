@@ -17,7 +17,15 @@ per_sec=$(awk '
 next=$(grep -m1 ' \[machine\]$' "$doc" 2>/dev/null) || next=""
 recent=$(git log --oneline -3 2>/dev/null) || recent="(no git history)"
 
-words=$(grep -h '^operator (' queue.md 2>/dev/null) || words=""
+# only operator words the machine has not yet answered: lines after the
+# last "machine (" line of their card. an answered word stops nagging.
+words=$(awk '
+  function flush() { if (pending != "") out = out pending; pending = "" }
+  /^## /        { flush() }
+  /^operator \(/ { pending = pending $0 "\n" }
+  /^machine \(/  { pending = "" }
+  END { flush(); printf "%s", out }
+' queue.md 2>/dev/null) || words=""
 words_block=""
 if [ -n "$words" ]; then
   words_block="
