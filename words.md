@@ -16,3 +16,7 @@ operator (2026-06-11): two things I'll add. one, I want this chat feel we have h
 
 machine (2026-06-11): all of it landed. the chat feel lives inside now: speaking anywhere summons the machine on the spot, the screen re-reads disk every second, and the exchange opens pinned to the newest words and follows them as they land — no restart anywhere; m summons by hand when words wait; each summon spends one session's tokens, and the summoned machine only answers and records asks, it builds nothing. your words stopped binding you: the input line is an editor — everything typed stays visible, wrapped whole, arrows move the cursor anywhere, esc abandons. j/k are gone; arrows do what they look like — left/right across statements, up/down within the screen. fullscreen was an upstream ghostty bug (#11252) — ctrl+enter works because the toggle path works once mapped; on your pick, hyper now asks the window manager itself at launch, and it needs xdotool installed once. and your flow question became the rule and a statement: decisions that commit your resources or change what you must later judge are settled in the queue before the material exists — the fullscreen route was its first practice. three statements stand [machine] in your queue with cards.
 
+## from the work view, on "across is horizontal" . 2026-06-11
+
+operator (2026-06-11): I actually preferred j/k and space/b. it was something new I hadn't experienced. I simply critizised the mappings for j and k. I suggested their effect should be inverted.
+
