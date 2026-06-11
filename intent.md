@@ -66,13 +66,13 @@ Work happens as a graph. A node expresses an ask, and carrying it out grows a gr
 
 That growing graph is an execution graph. It is a dynamically composed workflow, not a fixed template.
 
-An ask splits only when it outruns what one episode can do or one check can vouch for; what can be done and checked whole stays whole. [machine]
+An ask splits only when it outruns what one episode can do or one check can vouch for; what can be done and checked whole stays whole.
 
-Decomposition is as-needed: a seam is cut when the work reaches it, never drawn ahead as a tree. [machine]
+Decomposition is as-needed: a seam is cut when the work reaches it, never drawn ahead as a tree.
 
-Cuts fall where checks can stand: open siblings meet only through folding conditions, and two graphs that must trade internals to proceed are one graph cut wrong. [machine]
+Cuts fall where checks can stand: open siblings meet only through folding conditions, and two graphs that must trade internals to proceed are one graph cut wrong.
 
-A child graph is born with its ask and its folding condition together; an ask whose check cannot be named is not ready to spawn. [machine]
+A child graph is born with its ask and its folding condition together; an ask whose check cannot be named is not ready to spawn.
 
 Within an execution graph, one name means one concept.
 
