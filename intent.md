@@ -38,6 +38,10 @@ The operator can speak from anywhere in the interface: their words land on disk 
 
 Reading the operator's words is machine work. Whether they are new intent, a new ask, an answer, or a redirect is the machine's call to make and answer for; what it made of them returns through the queue.
 
+The conversation is live: words spoken in the interface summon the machine on the spot, and the answer lands while the operator watches. An answer that waits for a restart is a defect. [machine]
+
+Until sent, words bind nothing: the operator sees everything they have typed and can change any of it before it crosses. [machine]
+
 The queue is a view, not a place: each decision lives where it arose — on a statement, on a node, on evidence — and showing the queue means reading all of those places fresh, every time. There is no list of its own to add to, remove from, or keep in sync, so nothing can be lost in motion and nothing can go stale.
 
 The order of the queue is the machine's claim about what the operator's attention is worth next, and it answers for that claim: every decision wears the cost of its own delay — what it blocks, what compounds while it waits. The operator's word overrides the order instantly and unconditionally — the word is the reorder, not a request for one — and whatever the machine learns from being overridden, it raises later, never in the moment.
@@ -45,6 +49,8 @@ The order of the queue is the machine's claim about what the operator's attentio
 Work in flight is readable from the interface: what exists, what state each piece is in, and what it waits on. Setting priorities takes nothing the interface does not show.
 
 The machine never silently commits the operator's resources: scope calls that change what the operator must later judge, build machinery, or decline their intent are theirs to make; within endorsed intent the machine scopes freely and visibly. Every decision records its grounds at the moment it is made.
+
+Decisions surface while the work is in flight: a call that commits the operator's resources or changes what they must later judge is settled in the queue before the material exists. Below that bar the machine scopes freely, visibly, and answers for the calls it kept. [machine]
 
 ## structure
 
