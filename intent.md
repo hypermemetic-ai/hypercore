@@ -14,13 +14,9 @@ The graph is the model: nodes, relations between them, and material attached to 
 
 The machine carries no memory between episodes of work. hypercore holds that memory outside the machine: the graph, not the running conversation, is the durable shared state.
 
-What the operator can read is the source of truth.
+The operator's attention is the scarcest resource in the system: the operator never performs graph maintenance. The machine files, links, and renders; the operator ratifies, vetoes, and redirects. An operator hand-tending the graph's bookkeeping is the earliest signal that ceremony has won.
 
-The operator's attention is the scarcest resource in the system. The system spends it on judgment, never on filing.
-
-The operator never performs graph maintenance. The machine files, links, and renders; the operator ratifies, vetoes, and redirects. An operator hand-tending the graph's bookkeeping is the earliest signal that ceremony has won.
-
-The operator can read the system's state at a glance, without asking the machine.
+The operator can read the system's state at a glance, without asking the machine; what they can read is the source of truth.
 
 The operator's interface is a queue of decisions. A decision arrives with the context to decide it, the options on the table, and what each option entails: what it unblocks, what it breaks, what keeps running unbacked, and what reversing it later would cost.
 
@@ -36,9 +32,7 @@ Intent lives relative to a work graph, folded or unfolded: the graph's folder co
 
 A work graph's intent document is that graph's current intended reality.
 
-A statement is declarative and strong enough to be wrong.
-
-Statements are written plainly.
+A statement is plain, declarative, and strong enough to be wrong.
 
 Within an execution graph, one name means one concept.
 
