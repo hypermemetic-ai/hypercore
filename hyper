@@ -54,6 +54,7 @@ LEDGERS = ("intent.md", "queue.md", "words.md", "work.md")
 GUARD = "the record is behind — m summons the machine to true it up"
 
 MACHINE_LOG = os.path.join(ROOT, ".hyper-machine.log")
+MACHINE_PID = os.path.join(ROOT, ".hyper-machine.pid")
 MACHINE_FILE = os.path.join(ROOT, "machine")
 MINI_FILE = os.path.join(ROOT, "mini")
 BRIEF = os.path.join(ROOT, "brief.md")
@@ -361,6 +362,44 @@ def machine_label():
     return model or name + " · the harness default model — none pinned"
 
 
+class Foreign:
+    """A machine another hyper summoned, known only by the pid in the lock
+    file.  poll mirrors Popen: None while it lives, 0 once gone — its real
+    exit code died with the hyper that summoned it, and the record check
+    catches anything it left behind."""
+
+    returncode = 0
+
+    def __init__(self, pid):
+        self.pid = pid
+
+    def poll(self):
+        try:
+            os.kill(self.pid, 0)
+            return None
+        except OSError:
+            return 0
+
+
+def locked_machine():
+    """The pid the lock file names, if that machine is still alive.  The
+    one-machine bar used to live in each hyper's memory and died with it —
+    every relaunch while words waited summoned another machine, and three
+    once ran at the same time on the same words.  A stale lock (its pid
+    gone) is cleared on sight."""
+    try:
+        with open(MACHINE_PID) as f:
+            pid = int(f.read().strip())
+        os.kill(pid, 0)
+        return pid
+    except (OSError, ValueError):
+        try:
+            os.remove(MACHINE_PID)
+        except OSError:
+            pass
+        return None
+
+
 def summon(kind="machine"):
     """A headless machine session in this repo: it trues up the record if
     it is behind, answers the operator's words onto the blocks that carry
@@ -387,12 +426,26 @@ def summon(kind="machine"):
 
 
 def start_machine(machine, kind="machine"):
-    """Summon unless one is already working (it reads from disk, so words
-    that land mid-answer wait visibly and m summons again)."""
+    """Summon unless one is already working — this hyper's own, or one
+    another hyper summoned, adopted from the lock file (it reads from
+    disk, so words that land mid-answer wait visibly and m summons
+    again).  Two hypers booting in the same instant can still double;
+    the lock shrinks the window from every relaunch to that blink."""
     if machine:
         return machine
+    pid = locked_machine()
+    if pid:
+        try:
+            started = os.path.getmtime(MACHINE_PID)
+        except OSError:
+            started = time.time()
+        return (Foreign(pid), started, "machine")
     p = summon(kind)
-    return (p, time.time(), kind) if p else None
+    if not p:
+        return None
+    with open(MACHINE_PID, "w") as f:
+        f.write(str(p.pid))
+    return (p, time.time(), kind)
 
 
 def note(msg):
@@ -596,6 +649,11 @@ def main(scr):
                   if b["words"] and b["words"][-1].startswith("operator (")]
         if machine and machine[0].poll() is not None:
             rc, kind = machine[0].returncode, machine[2]
+            if locked_machine() == machine[0].pid:
+                try:
+                    os.remove(MACHINE_PID)
+                except OSError:
+                    pass
             machine = None
             if kind == "mini" and (rc != 0 or dirty):
                 # the mini's bar: commit what is on disk, leave the rest —
@@ -628,7 +686,10 @@ def main(scr):
                         else "machine")
                 machine = start_machine(machine, kind)
                 if machine:
-                    flash = "the record called — the %s is summoned" % kind
+                    flash = (note("a machine another hyper summoned is "
+                                  "working — adopted, not doubled")
+                             if isinstance(machine[0], Foreign) else
+                             "the record called — the %s is summoned" % kind)
 
         accepts = [b for b in work
                    if "awaiting acceptance" in b["fields"].get("state", "")]
