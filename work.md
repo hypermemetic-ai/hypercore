@@ -24,9 +24,3 @@
 - state: awaiting acceptance — reworked to your words: top row, fable 5 pinned, model name alone
 - since: 2026-06-11
 
-## the work view hangs below its graph
-- ask: w opens folded to the graph line — hypercore, with how many entries it holds and how many await you — and enter unfolds it to the entries a level below, each with its state, ask, and what it waits on; esc folds back. presentation only, the per-project file seam stays in the open ask above until a second project forces it
-- try: press w — just hypercore, with the counts beside it; enter unfolds, esc folds, s speaks on the project when folded and on the entry when unfolded
-- state: awaiting acceptance — reworked to your words: folded by default, enter expands
-- since: 2026-06-11
-
