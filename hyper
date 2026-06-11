@@ -866,16 +866,33 @@ def main(scr):
                     room = width - GUT - (len(tag) + 2 if tag else 0)
                     if len(text) > room:
                         text = text[: max(1, room - 1)] + "…"
+                    # every decision wears the cost of its own delay: a
+                    # card filed with a blocks field carries it on the
+                    # queue line itself, dim after the title
+                    cost = (obj["fields"].get("blocks", "")
+                            if kind in ("settle", "accept") else "")
+                    crm = room - len(text) - 3
+                    if cost and crm >= 12:
+                        if len(cost) > crm:
+                            cost = cost[: max(1, crm - 1)] + "…"
+                    else:
+                        cost = ""
                     if i == sel:
                         put(scr, y, LM, " " * width, REV)
                         put(scr, y, LM, label, lattr | REV)
                         put(scr, y, LM + GUT, text, REV)
+                        if cost:
+                            put(scr, y, LM + GUT + len(text),
+                                " — " + cost, DIM | REV)
                         if tag:
                             put(scr, y, LM + width - len(tag), tag, REV)
                     else:
                         put(scr, y, LM, label, lattr)
                         put(scr, y, LM + GUT, text,
                             0 if kind in ("decide", "settle", "accept") else DIM)
+                        if cost:
+                            put(scr, y, LM + GUT + len(text),
+                                " — " + cost, DIM)
                         if tag:
                             put(scr, y, LM + width - len(tag), tag, DIM)
                     y += 1
@@ -947,7 +964,8 @@ def main(scr):
             rows.append([])
             opts = [o.strip() for o in blk["fields"].get("options", "").split(" . ")
                     if o.strip()]
-            for key, label in (("ask", "it asks"), ("options", None),
+            for key, label in (("ask", "it asks"), ("blocks", "blocks"),
+                               ("options", None),
                                ("state", "state"), ("since", "since")):
                 if key == "options":
                     # each option wears the number that picks it — the
@@ -1008,7 +1026,8 @@ def main(scr):
                 DIM)
             rows = [[(LM, ln, BOLD)] for ln in wrap(name, width)]
             rows.append([])
-            for key, label in (("ask", "it does"), ("try", "try it"),
+            for key, label in (("ask", "it does"), ("blocks", "blocks"),
+                               ("try", "try it"),
                                ("state", "state"), ("waits on", "waits")):
                 val = blk["fields"].get(key)
                 if key == "state" and blk["lines"][0] in spoken:
