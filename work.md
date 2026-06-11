@@ -1,12 +1,5 @@
 # work
 
-## the return path
-- ask: machine answers land on the card that asked, shown as the exchange so far; the session brief stops nagging once a word is answered
-- state: in use, awaiting acceptance
-- since: 2026-06-11
-- try: open any answered exchange from the queue — the machine's line sits on the block that asked
-- waits on: one act on its acceptance card
-
 ## work in flight, on disk and on screen
 - ask: the machine's work state leaves its session memory for this file, and the interface shows it — what exists, what state it is in, what it waits on (w from the queue)
 - state: awaiting acceptance
