@@ -120,3 +120,31 @@ graph's intent document is singular, and this repo is hypercore's folder.
 - Commit after every meaningful move — and after every file finished,
   not once at the end; a session can die mid-flight, and only what is
   committed survives it. The git history is the transparency record.
+
+## Execution graphs on disk (built 2026-06-11, on the operator's word)
+
+- A big ask runs as an execution graph: a folder work/<name>/ holding
+  graph.md. The doctrine is intent.md's work section; this is its
+  machinery — there is no engine, the machine grows and folds graphs by
+  editing graph.md and committing.
+- graph.md is a ledger of '## ' node blocks with '- key: value' fields,
+  the same shape hyper reads everywhere. The first block is the root
+  node: the ask that spawned the graph, born with its check (the folding
+  condition) — fields ask, check, state, since. An ask whose check
+  cannot be named is not ready to spawn.
+- Further blocks are nodes earned only the two ways doctrine names: the
+  operation crossed the operator–machine boundary, or the fold's trust
+  rests on it. Fields: op (ask / check / decide / do), ask, check,
+  result (when done), state, of (the parent node's head — relations live
+  here). Everything else is do, absorbed into the operation it served.
+- States are plain words: open, done, folded. A node waiting on an
+  operator act names the act, exactly as work.md entries do — but the
+  operator's cards stay in work.md; a graph never asks the operator
+  anything directly.
+- Folding is machine convention until the first graph reaches its fold
+  (the seam is cut when work reaches it): the result lands on the
+  spawning node, the root state becomes folded, hyper and the brief
+  stop showing it, git keeps it. A graph that cannot meet its check
+  never folds dirty — it returns as a decision card in work.md.
+- hyper's work view lists every open graph beside hypercore and unfolds
+  to its nodes; the session brief carries them to every summoned session.
