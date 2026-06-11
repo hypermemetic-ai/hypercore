@@ -24,3 +24,5 @@ operator (2026-06-11): I don't like open either. I'll leave this call to you. an
 
 operator (2026-06-11): model text shouldn't be central now that I'm looking at it. ruins the minimalism. maybe better to the right of the top bar.
 
+operator (2026-06-11): or bottom right? lots of ideas here.
+
