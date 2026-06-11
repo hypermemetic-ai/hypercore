@@ -30,7 +30,7 @@ The interface is keyboard-only.
 
 The interface opens fullscreen at login: the day starts where the decisions are. [machine]
 
-The interface is high contrast and set in deliberate type, with color spent only where it earns its place. [machine]
+The interface is high contrast and set in deliberate type, with color spent only where it earns its place.
 
 Everything that crosses the operator–machine boundary crosses through the interface and lands on disk; a crossing that left no record did not happen.
 

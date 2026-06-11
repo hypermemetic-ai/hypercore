@@ -11,15 +11,6 @@
 
 operator (2026-06-11): it did not start fullscreen. I had to hit ctrl+enter
 
-## The interface is high contrast and set in…
-
-> The interface is high contrast and set in deliberate type, with color spent only where it earns its place. [machine]
-
-- section: foundations
-- context: the operator's words, 2026-06-11 — "old school classy high contrast view, with well selected typography and sparse color use if any". The interface is now warm white on black, set in IBM Plex Mono, with one color left: red, meaning the record is behind.
-- approve: the restyle and the launcher typography stand on endorsed intent.
-- cut: no statement constrains the interface's look; the styling stays machine taste until something replaces it.
-
 ## Work in flight is readable from the interface:…
 
 > Work in flight is readable from the interface: what exists, what state each piece is in, and what it waits on. Setting priorities takes nothing the interface does not show. [machine]
