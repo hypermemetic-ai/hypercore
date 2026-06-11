@@ -26,8 +26,6 @@ The operator's interface is a queue of decisions. A decision arrives with the co
 
 The machine never silently commits the operator's resources: scope calls that change what the operator must later judge, build machinery, or decline their intent are theirs to make; within endorsed intent the machine scopes freely and visibly. Every decision records its grounds at the moment it is made.
 
-Staleness is the machine's to notice, never the operator's to manage.
-
 ## structure
 
 Intent starts work; material is what the work makes. Intent comes whole from the operator — rarely — or out of back-and-forth with the machine. It constrains the problem space; decisions along the way narrow it further. Finished material is validated against both. The point is operator knowledge: their model of the system matches what gets built and what reaches the real world.
@@ -63,10 +61,6 @@ The default motion is ratification: the machine drafts concrete statements and t
 ## endorsement
 
 Endorsement names who stands behind a statement.
-
-When an operator endorses a statement, they own that statement.
-
-An unendorsed statement is machine-owned until an operator endorses it.
 
 The machine never endorses for the operator.
 
