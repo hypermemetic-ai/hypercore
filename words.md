@@ -8,3 +8,5 @@ machine (2026-06-11): nothing waits — you already accepted it. the execution-g
 
 operator (2026-06-11): let's do it now, once is proof enough
 
+machine (2026-06-11): built (1a25eb1) — the fold now rides the acceptance: a graph's acceptance card carries `graph: <name>`, and your y lands one commit that both retires the card and folds the root. no fold can lag again. verified in a throwaway clone; plain cards accept exactly as before. the slice awaits your acceptance on the queue — and a running hyper executes its launch-time code, so relaunch to carry it.
+
