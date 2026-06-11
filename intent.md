@@ -38,7 +38,7 @@ The operator can speak from anywhere in the interface: their words land on disk 
 
 Reading the operator's words is machine work. Whether they are new intent, a new ask, an answer, or a redirect is the machine's call to make and answer for; what it made of them returns through the queue.
 
-The conversation is live: words spoken in the interface summon the machine on the spot, and the answer lands while the operator watches. An answer that waits for a restart is a defect. [machine]
+The conversation is live: words spoken in the interface summon the machine on the spot, and the answer lands while the operator watches. An answer that waits for a restart is a defect.
 
 Until sent, words bind nothing: the operator sees everything they have typed and can change any of it before it crosses. [machine]
 
