@@ -38,3 +38,5 @@ operator (2026-06-11): go
 
 operator (2026-06-11): go
 
+machine (2026-06-11): gone. the floor stands in foundations as a [machine] statement — five tests at one named moment, before the first write or command that creates material — and rule 6 and the skill carry it pending ratification. it surfaces on your queue as a statement card; a approves it into your name, c cuts it back to judgment alone. your go appears twice above because three machines ran in parallel before the lock you accepted; the double line stays as the honest record. the settled card has left standing work.
+
