@@ -19,7 +19,7 @@ Decide   a approve . c cut . e explain (words optional); a standing-work
 Accept   a then y on an acceptance card — confirmed like every
          other release; s speaks reservations
 Speak    s anywhere — words land verbatim, the place travels with them,
-         and the machine is summoned to answer while you watch
+         and the machine is summoned to work while you watch
 Machine  the record calling is the summons — at launch, a behind record
          or waiting words start the machine without m, and words landing
          mid-answer summon it once more when the run ends; m stays as
@@ -387,7 +387,7 @@ def summon(kind="machine"):
 
 
 def start_machine(machine, kind="machine"):
-    """Summon unless one is already answering (it reads from disk, so words
+    """Summon unless one is already working (it reads from disk, so words
     that land mid-answer wait visibly and m summons again)."""
     if machine:
         return machine
@@ -572,7 +572,7 @@ def main(scr):
     view, sel, ci, ai, si, wsel = "home", 0, 0, 0, 0, 0
     wexp = False  # the work view opens folded to the graph line
     scroll, flash, confirm, exkey = 0, "", None, None
-    machine = None  # (Popen, started, kind) while a summoned session is answering
+    machine = None  # (Popen, started, kind) while a summoned session is working
     escalate = False  # a mini left work behind — the next summon goes to the full machine
     boot = True  # the first frame summons the machine itself when the record calls
     resummon = False  # words landed mid-answer — one more summon when this one ends
@@ -609,7 +609,7 @@ def main(scr):
                              "holds the story; m retries" % rc)
             else:
                 flash = ("the mini trued up the record" if kind == "mini"
-                         else "the machine has answered")
+                         else "the machine has finished")
                 if resummon and awaits:
                     # words landed mid-answer — one more summon, and the flag
                     # is consumed: only a fresh operator act sets it again
@@ -691,7 +691,7 @@ def main(scr):
         put(scr, 1, LM, "─" * max(0, w - 2 * LM), DIM)
         mtxt = ""
         if machine:
-            mtxt = "the %s is answering · %ds" % (machine[2], time.time() - machine[1])
+            mtxt = "the %s is working · %ds" % (machine[2], time.time() - machine[1])
             put(scr, 2, max(LM, w - len(mtxt) - LM), mtxt, BOLD)
         elif awaits:
             mtxt = ("%d word%s the machine — m summons it"
@@ -1044,7 +1044,7 @@ def main(scr):
                     hsh = speak('the decision card, on "%s"' % payload, word)
                     resummon = resummon or machine is not None
                     machine = start_machine(machine)
-                    flash = ("%s . committed %s . the machine is answering" % (word, hsh)
+                    flash = ("%s . committed %s . the machine is working" % (word, hsh)
                              if machine else
                              "%s . committed %s . no machine to summon — the word waits" % (word, hsh))
                 elif kind == "fold":
@@ -1105,7 +1105,7 @@ def main(scr):
                         hsh = speak("the queue", wd)
                         resummon = resummon or machine is not None
                         machine = start_machine(machine)
-                        flash = ("on disk . committed %s . the machine is answering" % hsh
+                        flash = ("on disk . committed %s . the machine is working" % hsh
                                  if machine else
                                  "on disk . committed %s . no machine to summon — the words wait" % hsh)
                     elif wd is not None:
@@ -1137,7 +1137,7 @@ def main(scr):
                     hsh = explain(pend[ci], wd)
                     resummon = resummon or machine is not None
                     machine = start_machine(machine)
-                    flash = ("on disk . committed %s . the machine is answering" % hsh
+                    flash = ("on disk . committed %s . the machine is working" % hsh
                              if machine else
                              "on disk . committed %s . no machine to summon — the words wait" % hsh)
 
@@ -1172,7 +1172,7 @@ def main(scr):
                         hsh = speak('the decision card, on "%s"' % name, wd)
                         resummon = resummon or machine is not None
                         machine = start_machine(machine)
-                        flash = ("on disk . committed %s . the machine is answering" % hsh
+                        flash = ("on disk . committed %s . the machine is working" % hsh
                                  if machine else
                                  "on disk . committed %s . no machine to summon — the words wait" % hsh)
                     elif wd is not None:
@@ -1207,7 +1207,7 @@ def main(scr):
                         hsh = speak('the acceptance card, on "%s"' % name, wd)
                         resummon = resummon or machine is not None
                         machine = start_machine(machine)
-                        flash = ("on disk . committed %s . the machine is answering" % hsh
+                        flash = ("on disk . committed %s . the machine is working" % hsh
                                  if machine else
                                  "on disk . committed %s . no machine to summon — the words wait" % hsh)
                     elif wd is not None:
@@ -1243,7 +1243,7 @@ def main(scr):
                         resummon = resummon or machine is not None
                         machine = start_machine(machine)
                         scroll = -1
-                        flash = ("on disk . committed %s . the machine is answering" % hsh
+                        flash = ("on disk . committed %s . the machine is working" % hsh
                                  if machine else
                                  "on disk . committed %s . no machine to summon — the words wait" % hsh)
                     elif wd is not None:
@@ -1277,7 +1277,7 @@ def main(scr):
                         hsh = speak('the work view, on "%s"' % name, wd)
                         resummon = resummon or machine is not None
                         machine = start_machine(machine)
-                        flash = ("on disk . committed %s . the machine is answering" % hsh
+                        flash = ("on disk . committed %s . the machine is working" % hsh
                                  if machine else
                                  "on disk . committed %s . no machine to summon — the words wait" % hsh)
                     elif wd is not None:
@@ -1305,7 +1305,7 @@ def main(scr):
                         hsh = speak(place, wd)
                         resummon = resummon or machine is not None
                         machine = start_machine(machine)
-                        flash = ("on disk . committed %s . the machine is answering" % hsh
+                        flash = ("on disk . committed %s . the machine is working" % hsh
                                  if machine else
                                  "on disk . committed %s . no machine to summon — the words wait" % hsh)
                     elif wd is not None:
