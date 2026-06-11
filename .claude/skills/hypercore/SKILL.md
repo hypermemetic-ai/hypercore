@@ -88,7 +88,10 @@ graph's intent document is singular, and this repo is hypercore's folder.
   settles it — options are separated by " . ", hyper numbers them and
   1–9 picks one in the operator's name), "awaiting acceptance" an
   acceptance card (fields: ask,
-  try, state). Work that waits on no operator act does not stand in
+  try, state). Every card files with a blocks field — what it blocks,
+  what compounds while it waits (operator's word, 2026-06-11; the
+  ratified order statement is the measure) — and the queue line and the
+  card wear it. Work that waits on no operator act does not stand in
   work.md; git keeps the thinking until its forcing event arrives.
 - Decisions before material (operator's word, 2026-06-11): a call that
   commits the operator's resources or changes what they must later judge
