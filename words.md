@@ -12,6 +12,8 @@ machine (2026-06-11): you were right — github.com/hypermemetic-ai/hypercore ex
 
 operator (2026-06-11): so what's our plan for handling a very big unit of work? suppose I came at you today and said I need a logistics platform for a company, how would decomposition come up in the process and how of that would be up to me vs up to the agent? fable won't be available in a week, we'll need something resilient to situational stupidity. as the operator I want confidence that engaging with this system won't be a waste of time over such a horizon, so we need to prepare because it's a real possibility that a workload like that will really come up soon. be detailed, explain this to me.
 
+operator (2026-06-11): I made a decision but the card is still up. bad ux. not saying it needs to disappear, but clearly something has changed about it. this should be reflected.
+
 ## from the decision card, on "push epoch 2 to hypermemetic-ai/hypercore" . 2026-06-11
 
 operator (2026-06-11): I'd rather use a noreply. whatever's stock for qqp-dev.
