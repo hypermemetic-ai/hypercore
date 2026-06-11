@@ -98,12 +98,12 @@ The episode that does the work is disposable; the checks at the fold's boundary 
 
 Folds stack, and error compounds up the stack: whatever doubt a fold carries, everything built on it inherits. The weaker a graph's checks, the shallower it must stay before folding, and the less may be built on top of it.
 
-A representation of a graph is either read from the graph live or updated in the same act that folds it; nothing that shows a graph is allowed to catch up later. Whatever a view shows is what the next decision is made from. [machine]
+A view of a graph never lags it: every view is read live from the graph or updated in the same act that folds it. [machine]
 
 Work is made of operations. An operation is one move on the problem state, of five kinds: frame, gather, generate, test, commit — one small alphabet, so any execution graph can be read without learning new vocabulary.
 
 The five kinds are closed for good. Expressive power grows as named compounds, and a compound always decomposes back into the five — new vocabulary is always defined in old vocabulary, so no graph ever needs its own glossary. [machine]
 
-A node records what must survive to be read: an operation that crossed the operator–machine boundary, or one the fold's trust will rest on. Reasoning that stayed inside one party is absorbed into the operation it served. The graph is a ledger of commitments, not a trace of thought. [machine]
+An operation earns a node on two grounds only: it crossed the operator–machine boundary, or the fold's trust rests on it. Everything else is absorbed into the operation it served. The graph is a ledger of commitments, not a trace of thought. [machine]
 
 Let's just cut derive until we understand what it's supposed to do [machine]
