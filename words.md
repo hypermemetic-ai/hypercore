@@ -6,3 +6,5 @@ operator (2026-06-11): few things. work titles are cut all the way down to the f
 
 operator (2026-06-11): alright, here's another problem. I hit enter on a message and I see the machine is answering for 300+ seconds. I assume this means it's moved straight to building. this concerns me. I want to see decisions for me to approve/deny before the work begins and while the work is in progress. I want to direct the work and understand it while it happens. I think we had ratified this already but I'm not seeing the practical ramifications.
 
+operator (2026-06-11): never mind? maybe it's just slow. looks good actually, I saw a couple cards come up already
+
