@@ -34,6 +34,8 @@ operator (2026-06-11): if all that not running behind is is a dedicated session 
 
 machine (2026-06-11): mostly right — and the exception is the design constraint. most true-ups are exactly that: commit what the dead session left, message faithful to the diff. but the standing orders also ask a true-up to finish or correct half-done work, and that part takes judgment. so the proposal now on your queue: a `mini` file beside `machine` — same one-line format, model set there, sonnet today — and record-behind true-ups route to it under a hard bar: commit what is actually on disk, never finish or correct; anything ambiguous it leaves, named, for the full machine. that bar doubles as the class definition for what else goes mini: mechanically checkable, no latitude, no operator-facing words. nothing is built — it stands as a decide card, and your word sets it.
 
+operator (2026-06-11): I don't like this "go" and similar structure for decisions. just like the rest, should be keys with confirmation. while we're at it, the text that appears after pressing a is noisy and the important thing - needing to press y to confirm, is drowned out.
+
 ## from the decision card, on "busywork goes to a mini-machine" . 2026-06-11
 
 operator (2026-06-11): go
