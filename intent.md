@@ -105,5 +105,3 @@ Work is made of operations. An operation is one move on the problem state, of fo
 The four are closed for good: each word exists because a rule reads it. A fifth would sit outside every rule; new words are names for clusters of the four. [machine]
 
 An operation earns a node on two grounds only: it crossed the operator–machine boundary, or the fold's trust rests on it. Everything else is absorbed into the operation it served. The graph is a ledger of commitments, not a trace of thought.
-
-Let's just cut derive until we understand what it's supposed to do [machine]
