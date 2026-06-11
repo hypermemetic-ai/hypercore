@@ -314,8 +314,7 @@ def machine_label():
         return "none — the machine file names the command"
     name = os.path.basename(argv[0])
     model = argv[argv.index("--model") + 1] if "--model" in argv[:-1] else None
-    return name + (" · " + model if model
-                   else " · the harness default model — none pinned")
+    return model or name + " · the harness default model — none pinned"
 
 
 def summon():

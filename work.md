@@ -19,9 +19,9 @@
 - waits on: nothing from you yet — thinking continues; a second project is the forcing event
 
 ## the screen names the machine
-- ask: the very top row carries what answers — "claude · claude-fable-5", dim between the title and the counts, on every view; the screen claims only what the machine file states, and fable 5 is now pinned there on your word
-- try: look at the top row — the name rides it on every view; edit --model in the machine file and the row follows
-- state: awaiting acceptance — reworked to your words: top row, fable 5 pinned
+- ask: the very top row carries what answers — just the model name, claude-fable-5, dim between the title and the counts, on every view; the screen claims only what the machine file states, and fable 5 is pinned there on your word (the harness name appears only when no model is pinned)
+- try: look at the top row — the model name rides it on every view; edit --model in the machine file and the row follows
+- state: awaiting acceptance — reworked to your words: top row, fable 5 pinned, model name alone
 - since: 2026-06-11
 
 ## the work view hangs below its graph
