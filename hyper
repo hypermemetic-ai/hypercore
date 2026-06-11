@@ -370,10 +370,10 @@ def fullscreen_tick(left):
         note("fullscreen confirmed by the window manager")
         return 0, ""
     try:
-        r = subprocess.run(["xdotool", "windowstate", "--add", "FULLSCREEN", wid],
+        r = subprocess.run(["wmctrl", "-i", "-r", wid, "-b", "add,fullscreen"],
                            capture_output=True, text=True)
     except FileNotFoundError:
-        return 0, note("xdotool is not installed — the fullscreen request could not be made")
+        return 0, note("wmctrl is not installed — the fullscreen request could not be made")
     if r.returncode != 0:
         return 0, note("the fullscreen request failed — "
                        + (r.stderr.strip() or "no reason given"))
