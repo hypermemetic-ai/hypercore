@@ -15,15 +15,6 @@ machine (2026-06-11): the cause is upstream — ghostty ignores fullscreen=true 
 
 operator (2026-06-11): didn't work. caused some error.
 
-## Until sent, words bind nothing: the operator sees…
-
-> Until sent, words bind nothing: the operator sees everything they have typed and can change any of it before it crosses. [machine]
-
-- section: foundations
-- context: the operator's words, 2026-06-11 — "entering my words shouldn't bind me like it does (I can't go back to modify words while typing or even see words past the visible cutoff to my left)". the input line is now an editor: the text wraps whole, arrows move the cursor anywhere, esc abandons.
-- approve: the editor stands on endorsed intent.
-- cut: the words leave intent; the editor machinery stands unbacked — kept or torn out on your word. Nothing else breaks.
-
 ## Decisions surface while the work is in flight:…
 
 > Decisions surface while the work is in flight: a call that commits the operator's resources or changes what they must later judge is settled in the queue before the material exists. Below that bar the machine scopes freely, visibly, and answers for the calls it kept. [machine]

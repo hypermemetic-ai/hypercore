@@ -40,7 +40,7 @@ Reading the operator's words is machine work. Whether they are new intent, a new
 
 The conversation is live: words spoken in the interface summon the machine on the spot, and the answer lands while the operator watches. An answer that waits for a restart is a defect.
 
-Until sent, words bind nothing: the operator sees everything they have typed and can change any of it before it crosses. [machine]
+Until sent, words bind nothing: the operator sees everything they have typed and can change any of it before it crosses.
 
 The queue is a view, not a place: each decision lives where it arose — on a statement, on a node, on evidence — and showing the queue means reading all of those places fresh, every time. There is no list of its own to add to, remove from, or keep in sync, so nothing can be lost in motion and nothing can go stale.
 
