@@ -15,12 +15,3 @@ machine (2026-06-11): the cause is upstream — ghostty ignores fullscreen=true 
 
 operator (2026-06-11): didn't work. caused some error.
 
-## Decisions surface while the work is in flight:…
-
-> Decisions surface while the work is in flight: a call that commits the operator's resources or changes what they must later judge is settled in the queue before the material exists. Below that bar the machine scopes freely, visibly, and answers for the calls it kept. [machine]
-
-- section: foundations
-- context: the operator's words, 2026-06-11 — "important decisions being surfaced live as you work and settled by me BEFORE the work materializes. otherwise I'm captive to the machine's intent". Practiced the same day, before any build: the fullscreen route went to the operator with entailments and was settled by their pick.
-- approve: the bar binds all machine work from here on.
-- cut: build-then-accept returns — the machine builds on its own scope calls and the operator meets machinery only after it exists, with acceptance as the only lever.
-
