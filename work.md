@@ -1,8 +1,9 @@
 # work
 
-## the queue does not wear the cost of delay
+## the queue wears the cost of delay
 
-- ask: the other gap from the sweep — your ratified order statement promises every decision wears the cost of its own delay (what it blocks, what compounds while it waits), but the built queue orders by fixed kind and shows no cost anywhere. closing it is new machinery, and its absence has not blocked work twice, so the bar holds unless your word waives it
-- options: build the cheap slice — the machine writes what a card blocks when it files one, and the queue line and card wear it (one slice, acceptance card as always) . hold the bar — leave the gap until it blocks work twice, the statement standing as the measure
-- state: awaiting your decision
+- ask: closes the gap the sweep found, on your word (option 1, 2026-06-11) — when the machine files a card it writes a blocks field, what the card blocks and what compounds while it waits, and the queue line and the card both wear it; the skill carries the filing rule for every session
+- blocks: while it waits, cards keep filing without their delay-cost on the queue — the gap stands
+- try: restart hyper — this card is the evidence: its queue line carries the dim cost after the title, and the card shows a blocks line under the ask
+- state: awaiting acceptance
 - since: 2026-06-11
