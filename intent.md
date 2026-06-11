@@ -28,7 +28,7 @@ The interface shows everything the operator wants to know and nothing they don't
 
 The interface is keyboard-only.
 
-The interface opens fullscreen at login: the day starts where the decisions are. [machine]
+The interface opens fullscreen at login: the day starts where the decisions are.
 
 The interface is high contrast and set in deliberate type, with color spent only where it earns its place.
 
