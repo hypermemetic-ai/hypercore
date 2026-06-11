@@ -82,17 +82,17 @@ A strike can be informed disagreement or a refusal to incorporate what is not un
 
 ## work
 
-Work happens as a graph. A node expresses intent, and carrying it out grows a graph of further nodes: the steps, the candidates, the checks, the result.
+Work happens as a graph. A node expresses an ask, and carrying it out grows a graph of further nodes: the steps, the candidates, the checks, the result.
 
 That growing graph is an execution graph. It is a dynamically composed workflow, not a fixed template.
 
 A folder holds one execution graph. The unit on disk is the execution graph, not the single node.
 
-When the work is done, the execution graph folds into the node whose intent spawned it. The result becomes that node's material, and the steps become its history.
+When the work is done, the execution graph folds into the node whose ask spawned it. The result becomes that node's material, and the steps become its history.
 
 Folding preserves relations. A folded graph keeps its nodes and the relations between them, so the history reads as the graph it was, not a flat log.
 
-A folding condition is what makes a graph ready to fold. Its intent is met, or it is abandoned. Until then the graph stays open.
+A folding condition is what makes a graph ready to fold. Its ask is met, or it is abandoned. Until then the graph stays open.
 
 The episode that does the work is disposable; the checks at the fold's boundary are what survive it. A folded graph can be trusted only as far as those checks reach — whatever they did not cover rests on the word of a worker who no longer exists to be questioned.
 
@@ -100,8 +100,8 @@ Folds stack, and error compounds up the stack: whatever doubt a fold carries, ev
 
 A view of a graph never lags it: every view is read live from the graph or updated in the same act that folds it.
 
-Work is made of operations. An operation is one move on the problem state, of four kinds: ask, check, decide, do — one word for each thing a rule must find, and do for everything else.
+Work is made of operations. An operation is one move on the problem state, of four kinds: ask, check, decide, do — one word for each thing a statement must find, and do for everything else.
 
 A kind is what a statement goes looking for: folding looks for the ask, trust for the checks, ownership for the decides, and do is everything no statement needs. The set grows only when a new statement must find something new; other new words are names for clusters. [machine]
 
-An operation earns a node on two grounds only: it crossed the operator–machine boundary, or the fold's trust rests on it. Everything else is absorbed into the operation it served. The graph is a ledger of commitments, not a trace of thought.
+An operation earns a node on two grounds only: it crossed the operator–machine boundary, or the fold's trust rests on it. Everything else is do, absorbed into the operation it served. The graph is a ledger of commitments, not a trace of thought.
