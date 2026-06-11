@@ -8,3 +8,5 @@ machine (2026-06-11): all three landed. the work you could not see was state the
 
 operator (2026-06-11): I need conversations to happen in real time, not across restarts. and entering my words shouldn't bind me like it does (I can't go back to modify words while typing or even see words past the visible cutoff to my left). also, I think j/k are inverted, the up/down behavior might be defensible but left/right should be obvious (moving across statements feels like a horizontal operation).
 
+operator (2026-06-11): I don't even think the up/down is defensible to be honest.
+
