@@ -14,3 +14,7 @@ operator (2026-06-11): option 1 — execution graph wins — the machine lands t
 
 operator (2026-06-11): option 1 — execution graph wins — the machine lands the revision in structure (two operator-owned statements reworded on your word; one edit, one commit; one revert undoes it)
 
+## from the decision card, on "the queue does not wear the cost of delay" . 2026-06-11
+
+operator (2026-06-11): option 1 — build the cheap slice — the machine writes what a card blocks when it files one, and the queue line and card wear it (one slice, acceptance card as always)
+
