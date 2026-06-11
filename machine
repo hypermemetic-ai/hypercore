@@ -1,0 +1,7 @@
+# the machine hyper summons when the operator speaks: one command, one
+# visible setting. {prompt} stands for the summon instruction; brief.md
+# is written fresh beside this file at every summon, for any harness to
+# read. anything that takes a prompt slots in — claude today, codex or
+# another harness tomorrow. HYPER_MACHINE in the environment overrides
+# this file (testing).
+claude -p {prompt} --permission-mode acceptEdits

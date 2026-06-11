@@ -50,9 +50,10 @@
 
 ## one machine, any harness
 - ask: the summon stops being an idea and becomes the interface opening a terminal session for the operator — the command it runs becomes one visible setting (claude today, codex or any harness that takes a prompt tomorrow), and the session brief becomes a file any harness reads. a cohesion cut, not a feature: nothing the shortcut does that a typed terminal couldn't
-- state: picks settled (operator's words, 2026-06-11) — the summon stays and stays automatic: speaking is the summon, no extra action exists or will; the build-nothing leash is cut — summoned sessions build under the same orders as any session (decisions before material, slices with explanation and acceptance question). The cut is already landed in CLAUDE.md, the skill, and the summon instruction. What remains to build: the summon command as one visible setting, the brief as a file any harness reads
+- state: in use, awaiting acceptance — built 2026-06-11: the machine file at the root holds the one command ({prompt} stands for the summon instruction), and brief.md is written fresh at every summon for any harness to read
 - since: 2026-06-11
-- waits on: the remaining build landing; then the operator using it and accepting in their own words
+- try: read the machine file at the root — one line names the harness; swap it for codex or anything that takes a prompt and speaking summons that instead; brief.md beside it is what any session reads first
+- waits on: one act on its acceptance card
 
 ## acceptance has a place
 - ask: every slice awaiting acceptance surfaces as a card on the queue — what it does and how to try it, so evaluation is made easy (interface changes are their own evidence); one frictionless act on the card accepts and releases the slice; speaking is for reservations only, and those words land on the record like any speech

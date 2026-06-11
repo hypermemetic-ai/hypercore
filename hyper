@@ -43,9 +43,12 @@ LEDGERS = ("intent.md", "queue.md", "words.md", "work.md")
 GUARD = "the record is behind — m summons the machine to true it up"
 
 MACHINE_LOG = os.path.join(ROOT, ".hyper-machine.log")
+MACHINE_FILE = os.path.join(ROOT, "machine")
+BRIEF = os.path.join(ROOT, "brief.md")
 SUMMON = (
-    "the interface summoned you. read the session brief, then queue.md and "
-    "words.md; every operator word whose card or exchange block does not "
+    "the interface summoned you. read brief.md — the session brief, "
+    "written fresh at this summon — then queue.md and words.md; every "
+    "operator word whose card or exchange block does not "
     "end with a machine line awaits you. but first: if the record is behind "
     "— git status shows uncommitted changes — true it up before anything "
     "else. read the diff, verify what it claims against what is actually "
@@ -279,24 +282,48 @@ def fold_exchange(blk):
 
 # ----- the machine (summoned by speech; answers onto the same block) -----
 
+def machine_command():
+    """One visible setting: the first plain line of the machine file at
+    the root, {prompt} standing for the summon instruction — any harness
+    that takes a prompt slots in.  HYPER_MACHINE in the environment
+    overrides it (testing); with neither, claude."""
+    cmd = os.environ.get("HYPER_MACHINE")
+    if not cmd and os.path.exists(MACHINE_FILE):
+        with open(MACHINE_FILE) as f:
+            cmd = next((l.strip() for l in f
+                        if l.strip() and not l.lstrip().startswith("#")), None)
+    if not cmd:
+        exe = shutil.which("claude") or os.path.expanduser("~/.local/bin/claude")
+        if not os.path.exists(exe):
+            return None
+        cmd = shlex.quote(exe) + " -p {prompt} --permission-mode acceptEdits"
+    argv = [SUMMON if t == "{prompt}" else t for t in shlex.split(cmd)]
+    if SUMMON not in argv:
+        argv.append(SUMMON)
+    return argv
+
+
 def summon():
     """A headless machine session in this repo: it trues up the record if
     it is behind, answers the operator's words onto the blocks that carry
     them, may build under the standing orders, commits as it goes, and
-    stops.  HYPER_MACHINE overrides the command (testing)."""
-    over = os.environ.get("HYPER_MACHINE")
-    if over:
-        argv = shlex.split(over)
-    else:
-        exe = shutil.which("claude") or os.path.expanduser("~/.local/bin/claude")
-        if not os.path.exists(exe):
-            return None
-        argv = [exe, "-p", SUMMON, "--permission-mode", "acceptEdits"]
+    stops.  The contract is files and git; the brief lands in brief.md so
+    any harness reads the same bearings."""
+    argv = machine_command()
+    if argv is None:
+        return None
+    with open(BRIEF, "w") as f:
+        f.write(run("bash", os.path.join(".claude", "hooks", "session-brief.sh"),
+                    "--plain"))
     log = open(MACHINE_LOG, "ab", buffering=0)
     log.write(("\n--- summoned %s ---\n"
                % datetime.now().isoformat(timespec="seconds")).encode())
-    return subprocess.Popen(argv, cwd=ROOT, stdin=subprocess.DEVNULL,
-                            stdout=log, stderr=log, start_new_session=True)
+    try:
+        return subprocess.Popen(argv, cwd=ROOT, stdin=subprocess.DEVNULL,
+                                stdout=log, stderr=log, start_new_session=True)
+    except FileNotFoundError:
+        log.write(("the machine command was not found: %s\n" % argv[0]).encode())
+        return None
 
 
 def start_machine(machine):
@@ -741,7 +768,7 @@ def main(scr):
             elif ch == ord("m") and (awaits or dirty) and not machine:
                 machine = start_machine(machine)
                 flash = ("the machine is summoned" if machine else
-                         "claude is not on this machine — the words wait on disk")
+                         "no machine to summon — the machine file names the command")
             elif ch == ord("w") and work:
                 view, scroll = "work", 0
             elif ch == ord("d"):
@@ -758,7 +785,7 @@ def main(scr):
                         machine = start_machine(machine)
                         flash = ("on disk . committed %s . the machine is answering" % hsh
                                  if machine else
-                                 "on disk . committed %s . claude not found — the words wait" % hsh)
+                                 "on disk . committed %s . no machine to summon — the words wait" % hsh)
                     elif wd is not None:
                         flash = "no words — nothing landed"
 
@@ -789,7 +816,7 @@ def main(scr):
                     machine = start_machine(machine)
                     flash = ("on disk . committed %s . the machine is answering" % hsh
                              if machine else
-                             "on disk . committed %s . claude not found — the words wait" % hsh)
+                             "on disk . committed %s . no machine to summon — the words wait" % hsh)
 
         elif view == "accept":
             if ch == 27:
@@ -826,7 +853,7 @@ def main(scr):
                         machine = start_machine(machine)
                         flash = ("on disk . committed %s . the machine is answering" % hsh
                                  if machine else
-                                 "on disk . committed %s . claude not found — the words wait" % hsh)
+                                 "on disk . committed %s . no machine to summon — the words wait" % hsh)
                     elif wd is not None:
                         flash = "no words — nothing landed"
 
@@ -860,7 +887,7 @@ def main(scr):
                         scroll = -1
                         flash = ("on disk . committed %s . the machine is answering" % hsh
                                  if machine else
-                                 "on disk . committed %s . claude not found — the words wait" % hsh)
+                                 "on disk . committed %s . no machine to summon — the words wait" % hsh)
                     elif wd is not None:
                         flash = "no words — nothing landed"
 
@@ -886,7 +913,7 @@ def main(scr):
                         machine = start_machine(machine)
                         flash = ("on disk . committed %s . the machine is answering" % hsh
                                  if machine else
-                                 "on disk . committed %s . claude not found — the words wait" % hsh)
+                                 "on disk . committed %s . no machine to summon — the words wait" % hsh)
                     elif wd is not None:
                         flash = "no words — nothing landed"
 
@@ -912,7 +939,7 @@ def main(scr):
                         machine = start_machine(machine)
                         flash = ("on disk . committed %s . the machine is answering" % hsh
                                  if machine else
-                                 "on disk . committed %s . claude not found — the words wait" % hsh)
+                                 "on disk . committed %s . no machine to summon — the words wait" % hsh)
                     elif wd is not None:
                         flash = "no words — nothing landed"
 

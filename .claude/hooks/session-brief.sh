@@ -88,5 +88,11 @@ happens, so this conversation can be cleared at any moment without loss.
 If the operator says nothing else, resume ratification from the next
 pending statement."
 
-jq -n --arg ctx "$context" --arg msg "hypercore: ${total} statements awaiting ratification" \
-  '{hookSpecificOutput: {hookEventName: "SessionStart", additionalContext: $ctx}, systemMessage: $msg}'
+# --plain prints the brief bare — hyper writes it to brief.md at every
+# summon, so any harness reads the same bearings a claude hook injects.
+if [ "${1:-}" = "--plain" ]; then
+  printf '%s\n' "$context"
+else
+  jq -n --arg ctx "$context" --arg msg "hypercore: ${total} statements awaiting ratification" \
+    '{hookSpecificOutput: {hookEventName: "SessionStart", additionalContext: $ctx}, systemMessage: $msg}'
+fi
