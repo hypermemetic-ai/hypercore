@@ -12,3 +12,5 @@ machine (2026-06-11): glad it reads well. the simplicity is the point — nothin
 
 operator (2026-06-11): but how does the program change? how do we update the tui live? or do we?
 
+machine (2026-06-11): we don't — and on purpose. the one-second tick re-reads data (the .md files, git), not code; a running hyper keeps the program it launched with. when the machine changes hyper it edits the file and commits, like any slice — the new code takes effect at the next launch (q, then ./hyper). no execv, no self-restart: a program that swaps its own code mid-frame can die mid-keypress, and a restart is one keystroke. so: data live, code on relaunch. if you want hyper to notice its own file changed and offer a restart, say so and i'll open the ask.
+
