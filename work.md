@@ -19,13 +19,31 @@
 - waits on: the operator reading the work view and accepting in their own words; the statement behind it stands [machine] in the queue
 
 ## speak from anywhere
-- ask: s in any view takes the operator's words, lands them verbatim in words.md with the place attached, and commits; the machine answers next session and the exchange shows on the queue
-- state: awaiting acceptance
+- ask: s in any view takes the operator's words, lands them verbatim in words.md with the place attached, and commits; the machine answers onto the same block and the exchange shows on the queue
+- state: in use, awaiting acceptance
 - since: 2026-06-11
-- waits on: the operator speaking through it and accepting in their own words
+- waits on: the operator's own words, after use
 
 ## the interface at login
 - ask: ghostty opens hyper fullscreen at login — high contrast, deliberate type, color only where it earns its place
+- state: rebuilt — ghostty ignores fullscreen at startup upstream (ghostty #11252, every no-install route tested dead); on the operator's pick (2026-06-11) hyper now sends the window manager the fullscreen request itself, via xdotool, when the login entry starts it
+- since: 2026-06-11
+- waits on: xdotool installed once; one login seen fullscreen with the operator's own eyes; the statement behind it stands [machine] in the queue
+
+## the conversation, live
+- ask: speaking anywhere summons the machine on the spot — a headless session that answers onto the same card while the operator watches; the screen re-reads disk on a one-second tick, so the answer arrives with no restart anywhere; m summons by hand when words wait; the summoned machine only answers and records asks — it builds nothing; each summon spends one session's tokens
 - state: awaiting acceptance
 - since: 2026-06-11
-- waits on: one login seen with the operator's own eyes; the statements behind it stand [machine] in the queue
+- waits on: the operator speaking, watching the answer arrive, and accepting in their own words; the statement behind it stands [machine] in the queue
+
+## words you can edit
+- ask: the input line became an editor — everything typed stays visible, wrapped whole across lines; arrows move the cursor anywhere, home/end jump, backspace and delete edit in place; nothing binds until enter
+- state: awaiting acceptance
+- since: 2026-06-11
+- waits on: the operator typing in it and accepting in their own words; the statement behind it stands [machine] in the queue
+
+## across is horizontal
+- ask: arrows only, doing what they look like — ←/→ moves across statements, ↑/↓ moves and scrolls within the screen; j/k are gone
+- state: awaiting acceptance
+- since: 2026-06-11
+- waits on: the operator moving with it and accepting in their own words

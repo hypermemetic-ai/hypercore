@@ -5,21 +5,28 @@ One file, stdlib only, keyboard only.  Every frame is read fresh from
 disk: intent.md (the system), queue.md (decision cards), words.md (open
 exchanges), work.md (work in flight).  Every move the operator makes
 lands on disk and is committed in their name before the screen redraws.
+The screen re-reads disk on a one-second tick, so what lands shows up
+on its own — no restart anywhere.
 
     ./hyper
 
 Views    queue (home) . decision card . exchange . work . document . log
 Decide   a approve . c cut . e explain (words optional)
-Speak    s anywhere — words land verbatim, the place travels with them
-Move     j/k or arrows . enter open . esc back . q quit
+Speak    s anywhere — words land verbatim, the place travels with them,
+         and the machine is summoned to answer while you watch
+Move     arrows . left/right across statements . up/down within the
+         screen . enter open . esc back . q quit
 """
 
 import curses
 import locale
 import os
+import shlex
+import shutil
 import subprocess
 import textwrap
-from datetime import date
+import time
+from datetime import date, datetime
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 INTENT = os.path.join(ROOT, "intent.md")
@@ -31,6 +38,20 @@ LM = 3  # left margin
 
 LEDGERS = ("intent.md", "queue.md", "words.md")
 GUARD = "intent.md, queue.md or words.md has uncommitted changes — resolve before moving"
+
+MACHINE_LOG = os.path.join(ROOT, ".hyper-machine.log")
+SUMMON = (
+    "the operator spoke in hyper and the interface summoned you. read the "
+    "session brief, then queue.md and words.md; every operator word whose "
+    "card or exchange block does not end with a machine line awaits you. "
+    "answer each as a 'machine (YYYY-MM-DD): ...' line appended to the same "
+    "block, per the standing orders — short enough to read on a card. if "
+    "the words start work bigger than an answer, record the ask in work.md "
+    "and say so in the answer; build nothing in this channel. decisions "
+    "that are the operator's land as questions in your answer line, to be "
+    "settled in the interface — never assumed. never use AskUserQuestion "
+    "here: nobody can see it. commit every change with grounds, then stop."
+)
 
 
 # ----- disk ------------------------------------------------------------
@@ -230,6 +251,54 @@ def fold_exchange(blk):
                   ("words.md",))
 
 
+# ----- the machine (summoned by speech; answers onto the same block) -----
+
+def summon():
+    """A headless machine session in this repo: it reads the ledgers,
+    answers the operator's words onto the blocks that carry them, commits,
+    and stops.  It builds nothing; bigger asks return through work.md.
+    HYPER_MACHINE overrides the command (testing)."""
+    over = os.environ.get("HYPER_MACHINE")
+    if over:
+        argv = shlex.split(over)
+    else:
+        exe = shutil.which("claude") or os.path.expanduser("~/.local/bin/claude")
+        if not os.path.exists(exe):
+            return None
+        argv = [exe, "-p", SUMMON, "--permission-mode", "acceptEdits"]
+    log = open(MACHINE_LOG, "ab", buffering=0)
+    log.write(("\n--- summoned %s ---\n"
+               % datetime.now().isoformat(timespec="seconds")).encode())
+    return subprocess.Popen(argv, cwd=ROOT, stdin=subprocess.DEVNULL,
+                            stdout=log, stderr=log, start_new_session=True)
+
+
+def start_machine(machine):
+    """Summon unless one is already answering (it reads from disk, so words
+    that land mid-answer wait visibly and m summons again)."""
+    if machine:
+        return machine
+    p = summon()
+    return (p, time.time()) if p else None
+
+
+def login_fullscreen():
+    """ghostty ignores fullscreen=true at window creation on Linux
+    (ghostty-org/ghostty #11252); the toggle works once the window is
+    mapped.  When the login launcher asks (HYPER_FULLSCREEN=1), send the
+    window manager the same request the ctrl+enter toggle makes."""
+    wid = os.environ.get("WINDOWID")
+    if not (os.environ.get("HYPER_FULLSCREEN") and wid):
+        return ""
+    try:
+        r = subprocess.run(["xdotool", "windowstate", "--add", "FULLSCREEN", wid],
+                           capture_output=True, text=True)
+        return ("" if r.returncode == 0 else
+                "the fullscreen request failed — " + (r.stderr.strip() or "no reason given"))
+    except FileNotFoundError:
+        return "xdotool is not installed — the fullscreen request could not be made"
+
+
 # ----- screen -----------------------------------------------------------
 
 def put(scr, y, x, s, attr=0):
@@ -244,30 +313,63 @@ def wrap(text, width):
 
 
 def read_words(scr, h, w, prompt):
-    """One line of the operator's words at the bottom of the screen.
-    Enter sends, esc cancels."""
+    """The operator's words at the bottom of the screen, visible whole and
+    editable until sent: the text wraps across as many lines as it needs,
+    arrows move the cursor anywhere, home/end jump within the line,
+    backspace and delete edit in place.  Enter sends, esc abandons —
+    until then nothing binds."""
     curses.curs_set(1)
-    buf = ""
+    scr.timeout(-1)
+    width = max(10, w - 2 * LM)
+    buf, pos, top_seen = "", 0, h - 2
     try:
         while True:
-            avail = max(10, w - len(prompt) - LM - 2)
-            shown = buf[-avail:]
-            put(scr, h - 2, LM, " " * (w - LM - 1))
-            put(scr, h - 2, LM, prompt, curses.A_DIM)
-            put(scr, h - 2, LM + len(prompt), shown)
-            scr.move(h - 2, min(LM + len(prompt) + len(shown), w - 2))
+            rows = [buf[i:i + width] for i in range(0, len(buf), width)] or [""]
+            if buf and len(buf) % width == 0:
+                rows.append("")
+            cr, cc = divmod(pos, width)
+            maxrows = max(1, h - 8)
+            base = max(0, cr - maxrows + 1)
+            vis = rows[base:base + maxrows]
+            top = h - 2 - len(vis) - 1
+            top_seen = min(top_seen, top)
+            for y in range(top_seen, h):
+                put(scr, y, 0, " " * (w - 1))
+            put(scr, top, LM, prompt[: w - 2 * LM], curses.A_DIM)
+            for i, ln in enumerate(vis):
+                put(scr, top + 1 + i, LM, ln)
+            put(scr, h - 1, LM,
+                "enter sends . esc abandons . arrows move . home/end jump"[: w - 2 * LM],
+                curses.A_DIM)
+            scr.move(top + 1 + cr - base, min(LM + cc, w - 2))
             scr.refresh()
             ch = scr.get_wch()
-            if ch in ("\n", "\r"):
+            if ch in ("\n", "\r") or ch == curses.KEY_ENTER:
                 return buf
             if ch == "\x1b":
                 return None
             if ch in ("\x7f", "\b") or ch == curses.KEY_BACKSPACE:
-                buf = buf[:-1]
+                if pos:
+                    buf, pos = buf[: pos - 1] + buf[pos:], pos - 1
+            elif ch == curses.KEY_DC:
+                buf = buf[:pos] + buf[pos + 1:]
+            elif ch == curses.KEY_LEFT:
+                pos = max(0, pos - 1)
+            elif ch == curses.KEY_RIGHT:
+                pos = min(len(buf), pos + 1)
+            elif ch == curses.KEY_UP:
+                pos = max(0, pos - width)
+            elif ch == curses.KEY_DOWN:
+                pos = min(len(buf), pos + width)
+            elif ch == curses.KEY_HOME or ch == "\x01":
+                pos = (pos // width) * width
+            elif ch == curses.KEY_END or ch == "\x05":
+                pos = min(len(buf), (pos // width) * width + width)
             elif isinstance(ch, str) and ch.isprintable():
-                buf += ch
+                buf, pos = buf[:pos] + ch + buf[pos:], pos + len(ch)
     finally:
         curses.curs_set(0)
+        scr.timeout(1000)
 
 
 def main(scr):
@@ -282,6 +384,9 @@ def main(scr):
     DIM, BOLD, REV = curses.A_DIM, curses.A_BOLD, curses.A_REVERSE
 
     view, sel, ci, wsel, scroll, flash, confirm, exkey = "home", 0, 0, 0, 0, "", None, None
+    machine = None  # (Popen, started) while a summoned session is answering
+    flash = login_fullscreen()
+    scr.timeout(1000)  # the screen re-reads disk on its own — no restart anywhere
 
     while True:
         _, stmts = read_intent()
@@ -292,6 +397,14 @@ def main(scr):
         dirty = run("git", "status", "--porcelain").strip()
         last = run("git", "log", "-1", "--format=%h %s . %cr").strip()
 
+        awaits = [b for b in cards + exchanges
+                  if b["words"] and b["words"][-1].startswith("operator (")]
+        if machine and machine[0].poll() is not None:
+            rc = machine[0].returncode
+            flash = ("the machine has answered" if rc == 0 else
+                     "the machine failed (exit %d) — .hyper-machine.log holds the story" % rc)
+            machine = None
+
         answered = [b for b in exchanges
                     if b["words"] and b["words"][-1].startswith("machine (")]
         sent = [b for b in exchanges if b not in answered]
@@ -301,7 +414,7 @@ def main(scr):
         sel = max(0, min(sel, len(entries) - 1))
         ci = max(0, min(ci, len(pend) - 1))
         wsel = max(0, min(wsel, len(work) - 1))
-        exb = None
+        exb, exmax = None, 0
         if view == "card" and not pend:
             view = "home"
         if view == "exchange":
@@ -323,9 +436,18 @@ def main(scr):
         status = "%d WAITING" % waiting if waiting else "QUEUE CLEAR"
         put(scr, 0, max(LM, w - len(status) - LM), status, BOLD if waiting else DIM)
         put(scr, 1, LM, "─" * max(0, w - 2 * LM), DIM)
+        mtxt = ""
+        if machine:
+            mtxt = "the machine is answering · %ds" % (time.time() - machine[1])
+            put(scr, 2, max(LM, w - len(mtxt) - LM), mtxt, BOLD)
+        elif awaits:
+            mtxt = ("%d word%s the machine — m summons it"
+                    % (len(awaits), " awaits" if len(awaits) == 1 else "s await"))
+            put(scr, 2, max(LM, w - len(mtxt) - LM), mtxt, DIM)
         if dirty:
             files = ", ".join(l.split()[-1] for l in dirty.splitlines())
-            put(scr, 2, LM, ("the record is behind — uncommitted: " + files)[: w - 2 * LM],
+            room = w - 2 * LM - (len(mtxt) + 2 if mtxt else 0)
+            put(scr, 2, LM, ("the record is behind — uncommitted: " + files)[: max(0, room)],
                 ALERT)
 
         if view == "home":
@@ -401,17 +523,23 @@ def main(scr):
                     "… %d more below — space scrolls" % below, DIM)
 
         elif view == "exchange":
+            # the exchange reads as a chat: it opens pinned to the newest
+            # words (scroll == -1) and follows them as they land; scrolling
+            # up unpins, reaching the bottom pins again.
             put(scr, top, LM, exb["lines"][0][3:].strip().upper(), DIM)
             rows = []
             for wln in exb["words"]:
                 attr = DIM if wln.startswith("operator (") else 0
                 rows.append([])
                 rows += [[(LM, ln, attr)] for ln in wrap(wln, width)]
-            scroll = max(0, min(scroll, max(0, len(rows) - view_h)))
-            for i, segs in enumerate(rows[scroll: scroll + view_h]):
+            exmax = max(0, len(rows) - view_h)
+            eff = exmax if scroll == -1 else max(0, min(scroll, exmax))
+            for i, segs in enumerate(rows[eff: eff + view_h]):
                 for x, txt, attr in segs:
                     put(scr, top + 2 + i, x, txt, attr)
-            below = len(rows) - view_h - scroll
+            if eff > 0:
+                put(scr, top + 1, LM, "… %d above — ↑ scrolls" % eff, DIM)
+            below = len(rows) - view_h - eff
             if below > 0:
                 put(scr, top + 2 + view_h, LM,
                     "… %d more below — space scrolls" % below, DIM)
@@ -479,13 +607,14 @@ def main(scr):
                     "… %d more below — space scrolls" % below, DIM)
 
         hints = {
-            "home": (("enter open . j/k move . " if entries else "")
+            "home": (("enter open . ↑/↓ move . " if entries else "")
+                     + ("m summon . " if awaits and not machine else "")
                      + "s speak . w work . d document . g log . q quit"),
-            "card": "a approve . c cut . e explain . s speak . j/k next/prev . space/b scroll . esc back",
-            "exchange": "s speak . c fold away . space/b scroll . esc back",
-            "work": "j/k move . s speak on it . space/b scroll . esc back",
-            "doc": "j/k scroll . space/b page . s speak . esc back",
-            "log": "j/k scroll . space/b page . s speak . esc back",
+            "card": "a approve . c cut . e explain . s speak . ←/→ statements . ↑/↓ scroll . esc back",
+            "exchange": "s speak . c fold away . ↑/↓ scroll . space/b page . esc back",
+            "work": "↑/↓ move . s speak on it . space/b page . esc back",
+            "doc": "↑/↓ scroll . space/b page . s speak . esc back",
+            "log": "↑/↓ scroll . space/b page . s speak . esc back",
         }[view]
         put(scr, h - 3, LM, "─" * max(0, w - 2 * LM), DIM)
         if confirm:
@@ -501,6 +630,8 @@ def main(scr):
         scr.refresh()
 
         ch = scr.getch()
+        if ch == -1:
+            continue  # the tick: re-read disk, redraw, touch nothing
         flash = ""
 
         if confirm:
@@ -526,16 +657,20 @@ def main(scr):
         if view == "home":
             if ch == ord("q"):
                 return
-            elif ch in (curses.KEY_DOWN, ord("j")):
+            elif ch == curses.KEY_DOWN:
                 sel += 1
-            elif ch in (curses.KEY_UP, ord("k")):
+            elif ch == curses.KEY_UP:
                 sel -= 1
             elif ch in (10, 13, curses.KEY_ENTER) and entries:
                 kind, obj = entries[sel]
                 if kind == "decide":
                     view, ci, scroll = "card", pend.index(obj), 0
                 else:
-                    view, exkey, scroll = "exchange", obj["lines"][0], 0
+                    view, exkey, scroll = "exchange", obj["lines"][0], -1
+            elif ch == ord("m") and awaits and not machine:
+                machine = start_machine(machine)
+                flash = ("the machine is summoned" if machine else
+                         "claude is not on this machine — the words wait on disk")
             elif ch == ord("w") and work:
                 view, scroll = "work", 0
             elif ch == ord("d"):
@@ -546,20 +681,27 @@ def main(scr):
                 if guarded:
                     flash = GUARD
                 else:
-                    wd = read_words(scr, h, w, "your words (enter sends . esc cancels): ")
+                    wd = read_words(scr, h, w, "your words (enter sends . esc abandons): ")
                     if wd and wd.strip():
                         hsh = speak("the queue", wd)
-                        flash = "on disk . committed %s . the machine answers next session" % hsh
+                        machine = start_machine(machine)
+                        flash = ("on disk . committed %s . the machine is answering" % hsh
+                                 if machine else
+                                 "on disk . committed %s . claude not found — the words wait" % hsh)
                     elif wd is not None:
                         flash = "no words — nothing landed"
 
         elif view == "card":
             if ch == 27:
                 view = "home"
-            elif ch in (curses.KEY_DOWN, ord("j")):
+            elif ch == curses.KEY_RIGHT:
                 ci, scroll = ci + 1, 0
-            elif ch in (curses.KEY_UP, ord("k")):
+            elif ch == curses.KEY_LEFT:
                 ci, scroll = ci - 1, 0
+            elif ch == curses.KEY_DOWN:
+                scroll += 1
+            elif ch == curses.KEY_UP:
+                scroll -= 1
             elif ch == ord(" "):
                 scroll += view_h
             elif ch == ord("b"):
@@ -570,38 +712,54 @@ def main(scr):
                 confirm = ("cut", pend[ci])
             elif ch in (ord("e"), ord("s")):
                 wd = read_words(scr, h, w, "your words (enter sends . empty = just "
-                                           "explain . esc cancels): ")
+                                           "explain . esc abandons): ")
                 if wd is not None:
                     hsh = explain(pend[ci], wd)
-                    flash = ("on disk . committed %s . the machine reads it "
-                             "next session" % hsh)
+                    machine = start_machine(machine)
+                    flash = ("on disk . committed %s . the machine is answering" % hsh
+                             if machine else
+                             "on disk . committed %s . claude not found — the words wait" % hsh)
 
         elif view == "exchange":
             if ch == 27:
                 view = "home"
+            elif ch == curses.KEY_DOWN:
+                if scroll != -1:
+                    scroll += 1
+                    if scroll >= exmax:
+                        scroll = -1
+            elif ch == curses.KEY_UP:
+                scroll = max(0, (exmax if scroll == -1 else scroll) - 1)
             elif ch == ord(" "):
-                scroll += view_h
+                if scroll != -1:
+                    scroll += view_h
+                    if scroll >= exmax:
+                        scroll = -1
             elif ch == ord("b"):
-                scroll -= view_h
+                scroll = max(0, (exmax if scroll == -1 else scroll) - view_h)
             elif ch == ord("c"):
                 confirm = ("fold", exb)
             elif ch == ord("s"):
                 if guarded:
                     flash = GUARD
                 else:
-                    wd = read_words(scr, h, w, "your words (enter sends . esc cancels): ")
+                    wd = read_words(scr, h, w, "your words (enter sends . esc abandons): ")
                     if wd and wd.strip():
                         hsh = speak_more(exb, wd)
-                        flash = "on disk . committed %s . the machine answers next session" % hsh
+                        machine = start_machine(machine)
+                        scroll = -1
+                        flash = ("on disk . committed %s . the machine is answering" % hsh
+                                 if machine else
+                                 "on disk . committed %s . claude not found — the words wait" % hsh)
                     elif wd is not None:
                         flash = "no words — nothing landed"
 
         elif view == "work":
             if ch == 27:
                 view = "home"
-            elif ch in (curses.KEY_DOWN, ord("j")):
+            elif ch == curses.KEY_DOWN:
                 wsel += 1
-            elif ch in (curses.KEY_UP, ord("k")):
+            elif ch == curses.KEY_UP:
                 wsel -= 1
             elif ch == ord(" "):
                 scroll += view_h
@@ -612,19 +770,22 @@ def main(scr):
                     flash = GUARD
                 else:
                     name = work[wsel]["lines"][0][3:].strip()
-                    wd = read_words(scr, h, w, "your words (enter sends . esc cancels): ")
+                    wd = read_words(scr, h, w, "your words (enter sends . esc abandons): ")
                     if wd and wd.strip():
                         hsh = speak('the work view, on "%s"' % name, wd)
-                        flash = "on disk . committed %s . the machine answers next session" % hsh
+                        machine = start_machine(machine)
+                        flash = ("on disk . committed %s . the machine is answering" % hsh
+                                 if machine else
+                                 "on disk . committed %s . claude not found — the words wait" % hsh)
                     elif wd is not None:
                         flash = "no words — nothing landed"
 
         elif view in ("doc", "log"):
             if ch in (27, ord("q"), ord("d") if view == "doc" else ord("g")):
                 view = "home"
-            elif ch in (curses.KEY_DOWN, ord("j")):
+            elif ch == curses.KEY_DOWN:
                 scroll += 1
-            elif ch in (curses.KEY_UP, ord("k")):
+            elif ch == curses.KEY_UP:
                 scroll -= 1
             elif ch == ord(" "):
                 scroll += view_h
@@ -635,10 +796,13 @@ def main(scr):
                     flash = GUARD
                 else:
                     place = "the document" if view == "doc" else "the log"
-                    wd = read_words(scr, h, w, "your words (enter sends . esc cancels): ")
+                    wd = read_words(scr, h, w, "your words (enter sends . esc abandons): ")
                     if wd and wd.strip():
                         hsh = speak(place, wd)
-                        flash = "on disk . committed %s . the machine answers next session" % hsh
+                        machine = start_machine(machine)
+                        flash = ("on disk . committed %s . the machine is answering" % hsh
+                                 if machine else
+                                 "on disk . committed %s . claude not found — the words wait" % hsh)
                     elif wd is not None:
                         flash = "no words — nothing landed"
 

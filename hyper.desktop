@@ -2,6 +2,6 @@
 Type=Application
 Name=hypercore
 Comment=the operator's interface — fullscreen at login
-Exec=ghostty --config-file=/home/qqp/projects/hypercore/hyper.ghostty -e /home/qqp/projects/hypercore/hyper
+Exec=ghostty --config-file=/home/qqp/projects/hypercore/hyper.ghostty -e env HYPER_FULLSCREEN=1 /home/qqp/projects/hypercore/hyper
 Terminal=false
 X-GNOME-Autostart-enabled=true
