@@ -10,11 +10,14 @@ on its own — no restart anywhere.
 
     ./hyper
 
-Views    queue (home) . decision card . exchange . work . document . log
+Views    queue (home) . decision card . acceptance card . exchange .
+         work . document . log
 Decide   a approve . c cut . e explain (words optional)
+Accept   a on an acceptance card — one act, the slice is released;
+         s speaks reservations
 Speak    s anywhere — words land verbatim, the place travels with them,
          and the machine is summoned to answer while you watch
-Move     arrows . left/right across statements . up/down within the
+Move     arrows . left/right across cards . up/down within the
          screen . enter open . esc back . q quit
 """
 
@@ -214,6 +217,21 @@ def explain(st, words):
                   ("queue.md",))
 
 
+def accept(name):
+    """One frictionless act: the slice leaves work.md, git keeps the entry,
+    and the commit is the operator's acceptance."""
+    blocks = ledger(WORK)
+    blk = next((b for b in blocks if b["lines"][0][3:].strip() == name), None)
+    if blk is None:
+        return None
+    write_ledger(WORK, "work", [b for b in blocks if b is not blk])
+    return commit("accepted by the operator in the interface: " + name,
+                  "\n".join(blk["lines"])
+                  + "\n\ngrounds: the operator pressed accept on the card, with what "
+                    "the slice does and how to try it on screen. git keeps the entry.",
+                  ("work.md",))
+
+
 # ----- speech (from anywhere; the place travels with the words) ---------
 
 def speak(place, words):
@@ -391,7 +409,8 @@ def main(scr):
     ALERT = curses.color_pair(1) | curses.A_BOLD
     DIM, BOLD, REV = curses.A_DIM, curses.A_BOLD, curses.A_REVERSE
 
-    view, sel, ci, wsel, scroll, flash, confirm, exkey = "home", 0, 0, 0, 0, "", None, None
+    view, sel, ci, ai, wsel = "home", 0, 0, 0, 0
+    scroll, flash, confirm, exkey = 0, "", None, None
     machine = None  # (Popen, started) while a summoned session is answering
     flash = login_fullscreen()
     scr.timeout(1000)  # the screen re-reads disk on its own — no restart anywhere
@@ -416,14 +435,20 @@ def main(scr):
         answered = [b for b in exchanges
                     if b["words"] and b["words"][-1].startswith("machine (")]
         sent = [b for b in exchanges if b not in answered]
+        accepts = [b for b in work
+                   if "awaiting acceptance" in b["fields"].get("state", "")]
         entries = ([("decide", s) for s in pend]
+                   + [("accept", b) for b in accepts]
                    + [("read", b) for b in answered]
                    + [("sent", b) for b in sent])
         sel = max(0, min(sel, len(entries) - 1))
         ci = max(0, min(ci, len(pend) - 1))
+        ai = max(0, min(ai, len(accepts) - 1))
         wsel = max(0, min(wsel, len(work) - 1))
         exb, exmax = None, 0
         if view == "card" and not pend:
+            view = "home"
+        if view == "accept" and not accepts:
             view = "home"
         if view == "exchange":
             exb = next((b for b in exchanges if b["lines"][0] == exkey), None)
@@ -440,7 +465,7 @@ def main(scr):
         guarded = any(l.split()[-1] in LEDGERS for l in dirty.splitlines())
 
         put(scr, 0, LM, "H Y P E R C O R E", BOLD)
-        waiting = len(pend) + len(answered)
+        waiting = len(pend) + len(accepts) + len(answered)
         status = "%d WAITING" % waiting if waiting else "QUEUE CLEAR"
         put(scr, 0, max(LM, w - len(status) - LM), status, BOLD if waiting else DIM)
         put(scr, 1, LM, "─" * max(0, w - 2 * LM), DIM)
@@ -467,6 +492,9 @@ def main(scr):
                     if kind == "decide":
                         text = obj["text"].replace(MARKER, "")
                         tag = obj["section"] or ""
+                    elif kind == "accept":
+                        text = obj["lines"][0][3:].strip()
+                        tag = "awaiting your acceptance"
                     else:
                         text = obj["lines"][0][3:].strip()
                         tag = "answered — enter reads" if kind == "read" else "with the machine"
@@ -477,7 +505,7 @@ def main(scr):
                         put(scr, y, LM, (text + " " * width)[:width], REV)
                         put(scr, y, LM + width - len(tag), tag, REV)
                     else:
-                        put(scr, y, LM, text, 0 if kind == "decide" else DIM)
+                        put(scr, y, LM, text, 0 if kind in ("decide", "accept") else DIM)
                         put(scr, y, LM + width - len(tag), tag, DIM)
                     y += 1
             else:
@@ -485,10 +513,9 @@ def main(scr):
                 y += 1
             y += 1
             if work:
-                acc = sum(1 for b in work
-                          if "awaiting acceptance" in b["fields"].get("state", ""))
                 put(scr, y, LM, ("work in flight: %d . awaiting your acceptance: %d . "
-                                 "w opens the view" % (len(work), acc))[: w - 2 * LM], DIM)
+                                 "w opens the view" % (len(work), len(accepts)))[: w - 2 * LM],
+                    DIM)
                 y += 1
             put(scr, y, LM, ("last  " + last)[: w - 2 * LM], DIM)
 
@@ -522,6 +549,38 @@ def main(scr):
                     attr = DIM if wln.startswith("operator (") else 0
                     rows.append([])
                     rows += [[(LM + 2, ln, attr)] for ln in wrap(wln, width - 2)]
+            scroll = max(0, min(scroll, max(0, len(rows) - view_h)))
+            for i, segs in enumerate(rows[scroll: scroll + view_h]):
+                for x, txt, attr in segs:
+                    put(scr, top + 2 + i, x, txt, attr)
+            below = len(rows) - view_h - scroll
+            if below > 0:
+                put(scr, top + 2 + view_h, LM,
+                    "… %d more below — space scrolls" % below, DIM)
+
+        elif view == "accept":
+            blk = accepts[ai]
+            name = blk["lines"][0][3:].strip()
+            put(scr, top, LM,
+                ("awaiting your acceptance . %d of %d" % (ai + 1, len(accepts))).upper(),
+                DIM)
+            rows = [[(LM, ln, BOLD)] for ln in wrap(name, width)]
+            rows.append([])
+            for key, label in (("ask", "it does"), ("try", "try it"),
+                               ("state", "state"), ("waits on", "waits")):
+                val = blk["fields"].get(key)
+                if not val:
+                    continue
+                first = True
+                for ln in wrap(val, width - 9):
+                    rows.append([(LM, "%7s" % label, DIM), (LM + 9, ln, 0)]
+                                if first else [(LM + 9, ln, 0)])
+                    first = False
+                rows.append([])
+            rows += [[(LM, ln, DIM)]
+                     for ln in wrap("a accepts and releases the slice — the entry "
+                                    "leaves work.md, git keeps it. speak only if "
+                                    "you have reservations.", width)]
             scroll = max(0, min(scroll, max(0, len(rows) - view_h)))
             for i, segs in enumerate(rows[scroll: scroll + view_h]):
                 for x, txt, attr in segs:
@@ -620,6 +679,7 @@ def main(scr):
                      + ("m summon . " if (awaits or dirty) and not machine else "")
                      + "s speak . w work . d document . g log . q quit"),
             "card": "a approve . c cut . e explain . s speak . ←/→ statements . ↑/↓ scroll . esc back",
+            "accept": "a accept . s reservations . ←/→ slices . ↑/↓ scroll . space/b page . esc back",
             "exchange": "s speak . c fold away . ↑/↓ scroll . space/b page . esc back",
             "work": "↑/↓ move . s speak on it . space/b page . esc back",
             "doc": "↑/↓ scroll . space/b page . s speak . esc back",
@@ -674,6 +734,8 @@ def main(scr):
                 kind, obj = entries[sel]
                 if kind == "decide":
                     view, ci, scroll = "card", pend.index(obj), 0
+                elif kind == "accept":
+                    view, ai, scroll = "accept", accepts.index(obj), 0
                 else:
                     view, exkey, scroll = "exchange", obj["lines"][0], -1
             elif ch == ord("m") and (awaits or dirty) and not machine:
@@ -728,6 +790,45 @@ def main(scr):
                     flash = ("on disk . committed %s . the machine is answering" % hsh
                              if machine else
                              "on disk . committed %s . claude not found — the words wait" % hsh)
+
+        elif view == "accept":
+            if ch == 27:
+                view = "home"
+            elif ch == curses.KEY_RIGHT:
+                ai, scroll = ai + 1, 0
+            elif ch == curses.KEY_LEFT:
+                ai, scroll = ai - 1, 0
+            elif ch == curses.KEY_DOWN:
+                scroll += 1
+            elif ch == curses.KEY_UP:
+                scroll -= 1
+            elif ch == ord(" "):
+                scroll += view_h
+            elif ch == ord("b"):
+                scroll -= view_h
+            elif ch == ord("a"):
+                if guarded:
+                    flash = GUARD
+                else:
+                    name = accepts[ai]["lines"][0][3:].strip()
+                    hsh = accept(name)
+                    flash = ("that slice is no longer on disk — refreshed" if hsh is None
+                             else "accepted . committed %s . git keeps the entry" % hsh)
+            elif ch == ord("s"):
+                if guarded:
+                    flash = GUARD
+                else:
+                    name = accepts[ai]["lines"][0][3:].strip()
+                    wd = read_words(scr, h, w,
+                                    "your reservations (enter sends . esc abandons): ")
+                    if wd and wd.strip():
+                        hsh = speak('the acceptance card, on "%s"' % name, wd)
+                        machine = start_machine(machine)
+                        flash = ("on disk . committed %s . the machine is answering" % hsh
+                                 if machine else
+                                 "on disk . committed %s . claude not found — the words wait" % hsh)
+                    elif wd is not None:
+                        flash = "no words — nothing landed"
 
         elif view == "exchange":
             if ch == 27:
