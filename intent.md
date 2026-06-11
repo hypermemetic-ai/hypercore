@@ -58,7 +58,7 @@ When the operator leaves a meaningful choice open and the machine settles it, th
 
 A revision lands as one edit and one commit; nothing we build may grow that path. What it breaks becomes work, after it lands.
 
-The default motion is ratification: the machine drafts concrete statements and the operator endorses, amends, or strikes them. The operator is rarely asked to author from nothing.
+The default motion is ratification: the machine drafts concrete statements and the operator approves, cuts, or asks to have them explained. The operator is rarely asked to author from nothing.
 
 ## endorsement
 
@@ -76,9 +76,9 @@ Every statement is endorsed or unendorsed: endorsed is the operator's responsibi
 
 Unendorsed statements are debt. Leaving one unprocessed doesn't stop the machine from asking again; and as unendorsed statements come to depend on each other, the operator's model of the system drifts from reality.
 
-Ownership is visible in the file itself: a machine-owned statement ends with the marker [machine]. Endorsing drops the marker; amending and striking are the operator's other two answers.
+Ownership is visible in the file itself: a machine-owned statement ends with the marker [machine]. The operator has three commands: approve — the marker drops; cut — the words leave; explain — with or without the operator's words, the machine helps them reach a decision, and the statement returns.
 
-A strike can be informed disagreement or a refusal to incorporate what is not understood; either way the words leave intent. What a strike breaks — references left dangling, machinery left running with no statement behind it — is put before the operator as part of the decision, not discovered after it.
+A cut can be informed disagreement or a refusal to incorporate what is not understood; either way the words leave intent. What a cut breaks — references left dangling, machinery left running with no statement behind it — is put before the operator as part of the decision, not discovered after it.
 
 ## work
 
