@@ -357,6 +357,31 @@ def note(msg):
     return msg
 
 
+def ensure_launcher():
+    """The menu entry that launches hyper without a fresh login: a symlink
+    in the applications directory to the repo's hyper.desktop, kept by
+    hyper itself the way the autostart entry is — the repo stays the only
+    place the entry is written.  Returns a flash only when something is
+    wrong; the landing itself goes to the log."""
+    target = os.path.join(ROOT, "hyper.desktop")
+    link = os.path.join(os.path.expanduser("~"), ".local", "share",
+                        "applications", "hyper.desktop")
+    try:
+        if os.path.islink(link):
+            if os.readlink(link) == target:
+                return None
+            os.remove(link)
+        elif os.path.exists(link):
+            return note("a hyper.desktop that is not ours sits in the "
+                        "applications menu — left alone")
+        os.makedirs(os.path.dirname(link), exist_ok=True)
+        os.symlink(target, link)
+        note("the menu entry landed — hyper launches from the desktop menu now")
+        return None
+    except OSError as e:
+        return note("the menu entry could not land: %s" % e)
+
+
 def fullscreen_taken(wid):
     """Whether the window manager shows the window fullscreen yet; None
     when xprop is not there to ask."""
@@ -493,6 +518,7 @@ def main(scr):
     view, sel, ci, ai, wsel = "home", 0, 0, 0, 0
     scroll, flash, confirm, exkey = 0, "", None, None
     machine = None  # (Popen, started) while a summoned session is answering
+    flash = ensure_launcher() or flash
     fs_left = (FS_TRIES if os.environ.get("HYPER_FULLSCREEN")
                and os.environ.get("WINDOWID") else 0)
     if fs_left:
