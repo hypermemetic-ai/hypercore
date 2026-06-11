@@ -30,9 +30,10 @@
 
 ## the interface at login
 - ask: ghostty opens hyper fullscreen at login — high contrast, deliberate type, color only where it earns its place
-- state: failed at first login — the operator saw "some error" and its exact words were never captured, because the flash lives only on screen. xdotool is installed now. Two suspects from the code: xdotool missing at that login (resolved by the install — the next login tests it), or the fullscreen request firing before the window manager had taken the window. Next slice, machine-scoped: write the flash to disk so an error is always quotable, and retry the request until it sticks
+- state: hardened, awaiting acceptance — both repairs landed 2026-06-11: the flash writes to .hyper.log so an error is always quotable, and the fullscreen request retries each second until the window manager confirms it took (up to ten asks, every outcome logged). Both suspects from the failed login are covered: xdotool is installed, and the startup race loses to the retry
 - since: 2026-06-11
-- waits on: the operator's words on the error if remembered; one login seen fullscreen with the operator's own eyes; the statement behind it stands [machine] in the queue
+- try: log out and in once — either hyper opens fullscreen, or .hyper.log holds the exact words of what failed; accept only after a login seen with your own eyes
+- waits on: one act on its acceptance card, after one login; the statement behind it stands [machine] in the queue
 
 ## the conversation, live
 - ask: speaking anywhere summons the machine on the spot — a headless session that answers onto the same card while the operator watches; the screen re-reads disk on a one-second tick, so the answer arrives with no restart anywhere; m summons for stragglers; the summoned machine may build under the standing orders (the build-nothing leash was cut on the operator's word, 5bf28f7); each summon spends one session's tokens

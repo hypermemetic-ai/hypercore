@@ -45,6 +45,8 @@ GUARD = "the record is behind — m summons the machine to true it up"
 MACHINE_LOG = os.path.join(ROOT, ".hyper-machine.log")
 MACHINE_FILE = os.path.join(ROOT, "machine")
 BRIEF = os.path.join(ROOT, "brief.md")
+HYPER_LOG = os.path.join(ROOT, ".hyper.log")
+FS_TRIES = 10
 SUMMON = (
     "the interface summoned you. read brief.md — the session brief, "
     "written fresh at this summon — then queue.md and words.md; every "
@@ -335,21 +337,53 @@ def start_machine(machine):
     return (p, time.time()) if p else None
 
 
-def login_fullscreen():
+def note(msg):
+    """The flash dies with the screen; the log line is always quotable."""
+    with open(HYPER_LOG, "a") as f:
+        f.write("%s  %s\n" % (datetime.now().isoformat(timespec="seconds"), msg))
+    return msg
+
+
+def fullscreen_taken(wid):
+    """Whether the window manager shows the window fullscreen yet; None
+    when xprop is not there to ask."""
+    try:
+        r = subprocess.run(["xprop", "-id", wid, "_NET_WM_STATE"],
+                           capture_output=True, text=True)
+        if r.returncode == 0:
+            return "_NET_WM_STATE_FULLSCREEN" in r.stdout
+    except FileNotFoundError:
+        pass
+    return None
+
+
+def fullscreen_tick(left):
     """ghostty ignores fullscreen=true at window creation on Linux
-    (ghostty-org/ghostty #11252); the toggle works once the window is
-    mapped.  When the login launcher asks (HYPER_FULLSCREEN=1), send the
-    window manager the same request the ctrl+enter toggle makes."""
-    wid = os.environ.get("WINDOWID")
-    if not (os.environ.get("HYPER_FULLSCREEN") and wid):
-        return ""
+    (ghostty-org/ghostty #11252), and a request can fire before the window
+    manager has taken the window — a startup race.  So when the login
+    launcher asks (HYPER_FULLSCREEN=1): one request per tick until the
+    window manager confirms it took, every outcome on disk where it stays
+    quotable.  Returns (tries left, flash)."""
+    wid = os.environ["WINDOWID"]
+    taken = fullscreen_taken(wid)
+    if taken:
+        note("fullscreen confirmed by the window manager")
+        return 0, ""
     try:
         r = subprocess.run(["xdotool", "windowstate", "--add", "FULLSCREEN", wid],
                            capture_output=True, text=True)
-        return ("" if r.returncode == 0 else
-                "the fullscreen request failed — " + (r.stderr.strip() or "no reason given"))
     except FileNotFoundError:
-        return "xdotool is not installed — the fullscreen request could not be made"
+        return 0, note("xdotool is not installed — the fullscreen request could not be made")
+    if r.returncode != 0:
+        return 0, note("the fullscreen request failed — "
+                       + (r.stderr.strip() or "no reason given"))
+    left -= 1
+    if left == 0 and taken is False:
+        return 0, note("the fullscreen request was sent %d times and never stuck"
+                       % FS_TRIES)
+    if taken is None:
+        return min(left, 2), ""  # nobody to confirm — ask thrice and rest
+    return left, ""
 
 
 # ----- screen -----------------------------------------------------------
@@ -439,7 +473,10 @@ def main(scr):
     view, sel, ci, ai, wsel = "home", 0, 0, 0, 0
     scroll, flash, confirm, exkey = 0, "", None, None
     machine = None  # (Popen, started) while a summoned session is answering
-    flash = login_fullscreen()
+    fs_left = (FS_TRIES if os.environ.get("HYPER_FULLSCREEN")
+               and os.environ.get("WINDOWID") else 0)
+    if fs_left:
+        fs_left, flash = fullscreen_tick(fs_left)
     scr.timeout(1000)  # the screen re-reads disk on its own — no restart anywhere
 
     while True:
@@ -456,7 +493,7 @@ def main(scr):
         if machine and machine[0].poll() is not None:
             rc = machine[0].returncode
             flash = ("the machine has answered" if rc == 0 else
-                     "the machine failed (exit %d) — .hyper-machine.log holds the story" % rc)
+                     note("the machine failed (exit %d) — .hyper-machine.log holds the story" % rc))
             machine = None
 
         answered = [b for b in exchanges
@@ -727,7 +764,13 @@ def main(scr):
 
         ch = scr.getch()
         if ch == -1:
-            continue  # the tick: re-read disk, redraw, touch nothing
+            # the tick: re-read disk, redraw, touch nothing — except the
+            # fullscreen request, retried until the window manager confirms
+            if fs_left:
+                fs_left, msg = fullscreen_tick(fs_left)
+                if msg:
+                    flash = msg
+            continue
         flash = ""
 
         if confirm:
