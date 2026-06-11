@@ -1,14 +1,5 @@
 # queue
 
-## everything that crosses the boundary crosses through the interface
-
-> Everything that crosses the operator–machine boundary crosses through the interface and lands on disk; a crossing that left no record did not happen. [machine]
-
-- section: foundations
-- context: today the operator engages the machine only through a disposable conversation; the interface carries one direction, machine to operator. this statement names the destination — both directions cross in the interface, every crossing recorded.
-- approve: commits the program to growing the interface until conversations like this one are scaffolding, not the place where operating happens; every future channel must leave a disk record or it is not a channel.
-- cut: the conversation stays a permanent unrecorded channel beside the interface, and "the interface is the only place the operator is expected to operate" keeps meaning only the moves the system asks for, never the moves the operator initiates. the four statements below lose their frame but survive on their own.
-
 ## the operator can speak from anywhere
 
 > The operator can speak from anywhere in the interface: their words land on disk verbatim, the place they spoke from travels with them, and nothing more is asked of them. [machine]
@@ -44,3 +35,4 @@
 - context: priority decisions are coming and the question is who pays for priority. a stored priority field must be tended; a worn one is derived from what each decision blocks and what compounds while it waits, costliest first.
 - approve: the machine owns the order and shows its grounds on each card; a patterned operator override is evidence against those grounds and surfaces through the existing coherence statement, not silently absorbed.
 - cut: order stays document order until that visibly breaks, and priority then arrives the default way — a stored field someone must groom.
+

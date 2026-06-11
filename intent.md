@@ -28,7 +28,7 @@ The interface shows everything the operator wants to know and nothing they don't
 
 The interface is keyboard-only.
 
-Everything that crosses the operator–machine boundary crosses through the interface and lands on disk; a crossing that left no record did not happen. [machine]
+Everything that crosses the operator–machine boundary crosses through the interface and lands on disk; a crossing that left no record did not happen.
 
 The operator can speak from anywhere in the interface: their words land on disk verbatim, the place they spoke from travels with them, and nothing more is asked of them. [machine]
 
