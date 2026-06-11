@@ -50,8 +50,8 @@ the live queue state at every session start; this file carries the rules.
    answers words, records asks, and may build (operator's word,
    2026-06-11) — under the same orders as any session: decisions before
    material, every slice landed with its explanation and acceptance
-   question. The bar has a written floor (pending ratification —
-   [machine] in foundations): at one named moment, before the first
+   question. The bar has a written floor (ratified 2026-06-11 — operator-owned
+   in foundations): at one named moment, before the first
    write or command that creates the material, five yes/no tests, any
    yes surfaces — it leaves the project folder; it touches what the
    operator owns or uses; it binds future sessions; it takes more than

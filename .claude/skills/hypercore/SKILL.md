@@ -94,7 +94,7 @@ graph's intent document is singular, and this repo is hypercore's folder.
   mid-work, with options and entailments (the picker serves here too;
   what it never decides is acceptance). Below the bar the machine scopes
   freely and visibly, and answers for the calls it kept. The bar has a
-  written floor (pending ratification — [machine] in foundations): at
+  written floor (ratified 2026-06-11 — operator-owned in foundations): at
   one named moment, before the first write or command that creates the
   material, five yes/no tests, any yes surfaces — it leaves the project
   folder (sends, publishes, installs, spends); it touches what the
