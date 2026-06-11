@@ -102,7 +102,7 @@ A view of a graph never lags it: every view is read live from the graph or updat
 
 Work is made of operations. An operation is one move on the problem state, of five kinds: frame, gather, generate, test, commit — one small alphabet, so any execution graph can be read without learning new vocabulary.
 
-The five kinds are roles for rules to hang on, not a description of the work: trust reads the tests, decisions land in the commits. The alphabet stays closed so no operation ever falls outside the rules; meaning lives in the compounds, which grow freely. [machine]
+The five kinds are general on purpose: they are the roles rules hang on — trust reads the tests, decisions land in the commits — and the closed alphabet is what makes those rules total. A new kind is a silent hole in every rule already written; new words grow as compounds. [machine]
 
 An operation earns a node on two grounds only: it crossed the operator–machine boundary, or the fold's trust rests on it. Everything else is absorbed into the operation it served. The graph is a ledger of commitments, not a trace of thought.
 
