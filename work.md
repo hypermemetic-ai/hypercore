@@ -1,12 +1,5 @@
 # work
 
-## a spoken-on card shows it
-
-- ask: when your words land on a decision or acceptance card, the card stops wearing its stale state — in the queue the entry's label turns to "spoken", and on the card the state line reads "your words landed — the machine is on it" — until the machine's answer lands on that card.
-- try: speak on any decision card (s) and look at the queue and the card — the label and state change on the spot; when the machine's answer lands, the card returns to its real state. your own push card did exactly this the moment your noreply word landed.
-- state: awaiting acceptance
-- since: 2026-06-11
-
 ## prepare for a very big unit of work
 
 - ask: a logistics-platform-sized ask will outrun single episodes immediately. the doctrine for that is ratified — intent.md's work section: execution graphs, as-needed seams, every child born with its ask and its named check, weak episodes fold shallow — but it is intent, not machinery. work.md is a flat list; there is no folder-per-graph, no folding, no recorded checks. rebuild discipline forbids machinery before its absence blocks work twice, and epoch 1 burned precisely for building ahead of need. how do we prepare?
@@ -20,3 +13,4 @@
 - options: push as-is (your address goes public in all 259 commits — unretractable once cloned or indexed) . rewrite then push (the author on every commit becomes the noreply address; every commit id changes, content, messages, and dates stay; future commits set to match) . hold (nothing pushed; one command removes the remote)
 - state: awaiting your decision
 - since: 2026-06-11
+
