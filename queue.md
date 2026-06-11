@@ -9,6 +9,8 @@
 - approve: the next interface slice grows a speak key in every view; the operator's words become first-class records on disk, the seed every other motion grows from.
 - cut: the operator keeps engaging the machine only through conversation or through explain on machine-drafted cards; the interface stays answer-only, and the third statement (reading the words is machine work) has nothing to read.
 
+operator (2026-06-11): I don't know if I want all my words to land verbatim. I get the feeling that most operator words aren't maximally helpful as presented. they need refining, I think the kind of refinining that make them valid statements.
+
 ## reading the operator's words is machine work
 
 > Reading the operator's words is machine work. Whether they are new intent, a new ask, an answer, or a redirect is the machine's call to make and answer for; what it made of them returns through the queue. [machine]
