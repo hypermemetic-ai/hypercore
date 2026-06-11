@@ -6,9 +6,3 @@
 - state: awaiting your decision — this card sits on the queue; a goes, c cuts, s redirects
 - since: 2026-06-11
 
-## decide keys match the other cards
-- ask: one key scheme across every card: a affirms (approve a statement, go on a decision, accept a slice), c cuts, s speaks — y confirms each. the g key was the only stray and it is gone from decide cards; on the home view g still opens the log. the verbs stay true to each card — only the keys unified
-- try: open the decide card on your queue — the hint line now reads "a go . c cut . s redirect", and a then y lands "go" on the card exactly as before
-- state: awaiting acceptance — a then y on the card accepts and releases it
-- since: 2026-06-11
-
