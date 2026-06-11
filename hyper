@@ -705,6 +705,16 @@ def main(scr):
                           % b["lines"][0][3:].strip() for b in decides])
         standalone = [b for b in exchanges
                       if not b["lines"][0].startswith(riders)]
+        # a card the operator has spoken on wears that, not its stale
+        # state: their word landed, the machine owes the next move
+        spoken = set()
+        for kind, blks in (("decision", decides), ("acceptance", accepts)):
+            for b in blks:
+                key = ('## from the %s card, on "%s"'
+                       % (kind, b["lines"][0][3:].strip()))
+                if any(x["words"] and x["words"][-1].startswith("operator (")
+                       for x in exchanges if x["lines"][0].startswith(key)):
+                    spoken.add(b["lines"][0])
         answered = [b for b in standalone
                     if b["words"] and b["words"][-1].startswith("machine (")]
         sent = [b for b in standalone if b not in answered]
@@ -771,6 +781,9 @@ def main(scr):
             if entries:
                 for i, (kind, obj) in enumerate(entries):
                     label, lattr = KINDS[kind]
+                    if (kind in ("settle", "accept")
+                            and obj["lines"][0] in spoken):
+                        label, lattr = "spoken", DIM
                     if kind == "decide":
                         text = obj["text"].replace(MARKER, "")
                         tag = obj["section"] or ""
@@ -857,6 +870,8 @@ def main(scr):
             for key, label in (("ask", "it asks"), ("options", "options"),
                                ("state", "state"), ("since", "since")):
                 val = blk["fields"].get(key)
+                if key == "state" and blk["lines"][0] in spoken:
+                    val = "your words landed — the machine is on it"
                 if not val:
                     continue
                 first = True
@@ -901,6 +916,8 @@ def main(scr):
             for key, label in (("ask", "it does"), ("try", "try it"),
                                ("state", "state"), ("waits on", "waits")):
                 val = blk["fields"].get(key)
+                if key == "state" and blk["lines"][0] in spoken:
+                    val = "your words landed — the machine is on it"
                 if not val:
                     continue
                 first = True
