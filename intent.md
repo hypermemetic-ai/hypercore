@@ -30,7 +30,7 @@ The interface is keyboard-only.
 
 Everything that crosses the operator–machine boundary crosses through the interface and lands on disk; a crossing that left no record did not happen.
 
-The operator can speak from anywhere in the interface: their words land on disk verbatim, the place they spoke from travels with them, and nothing more is asked of them. [machine]
+The operator can speak from anywhere in the interface: their words land on disk verbatim, the place they spoke from travels with them, and nothing more is asked of them.
 
 Reading the operator's words is machine work. Whether they are new intent, a new ask, an answer, or a redirect is the machine's call to make and answer for; what it made of them returns through the queue.
 

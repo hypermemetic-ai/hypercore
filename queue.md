@@ -1,20 +1,5 @@
 # queue
 
-## the operator can speak from anywhere
-
-> The operator can speak from anywhere in the interface: their words land on disk verbatim, the place they spoke from travels with them, and nothing more is asked of them. [machine]
-
-- section: foundations
-- context: the first slice has one text entry — explain words on a card the machine drafted. the operator can answer but cannot begin. this generalizes explain-words into one standing move: speak, from any view, words landing verbatim with their context attached.
-- approve: the next interface slice grows a speak key in every view; the operator's words become first-class records on disk, the seed every other motion grows from.
-- cut: the operator keeps engaging the machine only through conversation or through explain on machine-drafted cards; the interface stays answer-only, and the third statement (reading the words is machine work) has nothing to read.
-
-operator (2026-06-11): I don't know if I want all my words to land verbatim. I get the feeling that most operator words aren't maximally helpful as presented. they need refining, I think the kind of refinining that make them valid statements.
-
-machine (2026-06-11): Verbatim is the record, not the result. Your words land raw so nothing is lost at the boundary and so every refinement can be checked against its source; the refining you want is already pledged in the statement you approved just after this one — reading your words is machine work, and what the machine makes of them returns through the queue as [machine] statements for your pick. Refined at the moment of capture, your words would be paraphrase: the machine rewording you at the boundary, with nothing left to check the rewording against.
-
-machine (2026-06-11): This card is the loop running: your raw words landed, the machine read them, and this answer came back to where you spoke. No redraft here — the refinement half already lives in its approved neighbour, and folding it in would re-create the redundancy the sweep just removed.
-
 ## the queue is a view, not a place
 
 > The queue is a view, not a place: each decision lives where it arose — on a statement, on a node, on evidence — and showing the queue means reading all of those places fresh, every time. There is no list of its own to add to, remove from, or keep in sync, so nothing can be lost in motion and nothing can go stale. [machine]
@@ -44,3 +29,4 @@ machine (2026-06-11): Without the rule: the queue is a real list, and the stuck 
 operator (2026-06-11): this all comes down to how smooth operator override ends up being. think about it: the moment I'm put under the kind of pressure that requires me to steer us somewhere specific is the moment I'm least interested in jumping through hoops to get the machine to align.
 
 machine (2026-06-11): You are right, and the statement now carries it: the word is the reorder, not a request for one — instant and unconditional. "Never by hand" was never negotiation; it draws the line between you saying "X first" and being done, versus you dragging cards or tending a priority field. Under pressure the machine complies first; whatever it thinks it learned from being overridden it raises later, never in the moment — as evidence against its own ordering through the coherence statement, not as friction against your steering. If override costs you one hoop, the statement fails its own test: the cost of delaying what you steered toward is exactly what the order claims to answer for. Redrafted in intent.md to bake the guarantee in.
+
