@@ -4,7 +4,7 @@
 
 - ask: a very big ask will outrun single episodes; give the ratified doctrine its machinery — graphs born on disk with their ask and named check, readable in the work view and the session brief — built cheap, features emerging from what already exists
 - check: the operator accepts the slice from its acceptance card
-- state: open — building
+- state: open — the slice awaits acceptance
 - since: 2026-06-11
 
 ## the operator settles the scope
@@ -27,5 +27,6 @@
 
 - op: check
 - check: the work view shows this graph beside hypercore and unfolds to its nodes; the brief lists it; the acceptance card stands in work.md
-- state: open
+- result: all three met — verified in a pty (f3bfb9d), brief tested in both modes (f514406), the card landed (7fb2186); when the operator accepts, this graph reaches its fold — the first
+- state: done
 - of: build the essentials for execution graphs
