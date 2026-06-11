@@ -16,3 +16,5 @@ machine (2026-06-11): the cards you saw were the first two slices landing. the w
 
 operator (2026-06-11): so what state is the work in? I see entries under w but I don't know what that entails for me. does in-flight mean it's happening now? also it would be nice if the interface showed what model the machine is using. I'm assuming it's fable 5 right now. in flight -> in-flight. as a first step towards multi-project, maybe w should be organized by graph? so one entry, hypercore, with current entries a level below that? it's a cheap starting point before we start thinking about how the rest of the interface would have to change too.
 
+operator (2026-06-11): I'll also ask - how do I start the interface if I close it? right now I log out and back in but some shortcut that launches it from desktop would be nice.
+
