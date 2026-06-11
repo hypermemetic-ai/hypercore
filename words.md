@@ -4,3 +4,5 @@
 
 operator (2026-06-11): I think work nodes should be visible under w even if there's nothing open for them. right now completing the tasks amounts to capability loss (user can't see the list or press d to read documents).
 
+machine (2026-06-11): agreed and built (a61575d): w now always opens, folded graphs stay on the project lines marked "folded · N nodes", and d still reads their documents — finishing work no longer hides it. the home summary keeps counting only open work. verified in a pty; relaunch to get it, then the acceptance card on the queue releases it.
+
