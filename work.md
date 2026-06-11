@@ -1,12 +1,5 @@
 # work
 
-## the working timer in minutes and seconds
-
-- ask: the "machine is working" line counts m:ss instead of bare seconds
-- try: speak anywhere — the top-right timer reads 0:01, 0:02 … while the machine answers
-- state: awaiting acceptance
-- since: 2026-06-11
-
 ## document and the selected work unit
 
 - ask: d opens intent.md only — hypercore's document. work units are several now, and each has its own documents (intent.md for hypercore, the files in work/<name>/ for a graph), so the key must learn which unit is meant. the costs — option 1 loses the one-key path from the queue to intent.md; option 3 adds standing state the header must carry everywhere, a legibility cost; option 2 changes nothing on the queue and puts the sensitivity where the selection already lives
