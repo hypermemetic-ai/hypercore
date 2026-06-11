@@ -1,8 +1,8 @@
 # work
 
 ## the machine answers without m
-- ask: m stops being a routine act — hyper summons the machine at launch when the record is behind or words wait, and summons again when words land mid-answer; m stays only as the manual retry after a failed run
-- options: go — it lands loop-guarded, re-summoning only for words the running machine could not have read, and a failed run never auto-retries; redirect — name the shape you want instead; cut — m stays the only summon. the cost either way: each auto-summon spends a machine run without an operator act
-- state: awaiting your decision — this card sits on the queue; s speaks your word
+- ask: the record calling is now the summons — at hyper's launch, a behind record or waiting words start the machine themselves (the mini when it is a bare true-up); words that land mid-answer bring one more summon when the run ends, the flag consumed so no loop can form; a failed run never auto-retries — m stays as the manual retry
+- try: next launch with anything waiting, the machine starts on its own — the flash reads "the record called"; speak while it answers and a second summon follows the first
+- state: awaiting acceptance — built 2026-06-11 on your go from the decision card
 - since: 2026-06-11
 
