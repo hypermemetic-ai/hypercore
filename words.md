@@ -42,3 +42,7 @@ operator (2026-06-11): there's uncommitted changes now and that's somehow my pro
 
 machine (2026-06-11): handled, and the path now lives inside. what happened: the summon answering your last words died on a 529 between writing and committing — its answer claimed rule edits it never made, and the guard then blocked s, the one channel that could have repaired it. the record is trued up and committed, and that failure mode is closed: the red line now ends with its own way out (m summons the machine whenever the record is behind, first orders to verify the strand and commit it right), and summoned sessions commit after every file, so a death strands less. to be caught up, open hyper: the queue carries every slice awaiting your acceptance as a card — what it does, how to try it — and a accepts in one act, on the bar your words set; speak only if you have reservations. eleven cards wait, plus the fullscreen statement, now testable: the flash lands in .hyper.log and the request retries until the window manager confirms, so the next login either opens fullscreen or leaves quotable words. j/k are back, j previous and k next. the machine file at the root is the one setting naming the harness, brief.md what any session reads. nothing waits outside the interface anymore.
 
+## from the acceptance card, on "the interface at login" . 2026-06-11
+
+operator (2026-06-11): same error, this time readable by you so we should be in a better place.
+
