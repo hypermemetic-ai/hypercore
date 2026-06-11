@@ -26,3 +26,5 @@ operator (2026-06-11): I like this but this should be the expanded view. default
 
 operator (2026-06-11): odd that both were listed as from the acceptance card on the screen names the machine. the second clearly isn't from there but from the other open item.
 
+operator (2026-06-11): just the model name is fine. not claude claude-fable-5.
+
