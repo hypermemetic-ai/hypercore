@@ -51,6 +51,12 @@ graph's intent document is singular, and this repo is hypercore's folder.
   statement stays ` [machine]` and returns for a pick. Explain is never
   a decision; nothing changes in intent.md except, after the story, the
   machine's own redraft of its own statement.
+- The story is the deliverable, and it stands alone: the machine tells
+  it and stops, leaving room for the operator to engage. The statement
+  returns for a pick only in a later exchange, once the operator has
+  had the story — never in the same breath as the telling. Redrafting
+  the wording and re-presenting the picker is not an answer to Explain;
+  that is the loop, not the way out of it (operator's word, 2026-06-10).
 
 ## Rebuild discipline
 
