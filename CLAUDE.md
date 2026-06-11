@@ -32,6 +32,9 @@ the live queue state at every session start; this file carries the rules.
    in the message.
 5. **Rebuild discipline:** no machinery before its absence has blocked
    work twice. Every new slice lands with a plain-words explanation and an
-   acceptance question for the operator.
+   acceptance question for the operator. Acceptance never runs through
+   the option picker (operator's word, 2026-06-11): the operator uses
+   the slice and accepts in their own words, with no lingering doubts —
+   until then the slice stays machine-owned material.
 
 Read `.claude/skills/hypercore/SKILL.md` for the full ground rules.

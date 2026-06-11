@@ -71,6 +71,10 @@ graph's intent document is singular, and this repo is hypercore's folder.
 - Nothing gets built ahead of the legibility it serves. Every slice of new
   machinery lands with a plain-words explanation and an acceptance
   question for the operator.
+- Acceptance of machinery never runs through the option picker
+  (operator's word, 2026-06-11): the picker ratifies statements;
+  machinery is accepted only in the operator's own words, after use,
+  with no lingering doubts. Until then the slice stays machine-owned.
 - Anti-ceremony holds: new machinery only after its absence blocks work
   twice.
 - Commit after every meaningful move; the git history is the transparency
