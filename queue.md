@@ -15,3 +15,5 @@ machine (2026-06-11): the cause is upstream — ghostty ignores fullscreen=true 
 
 operator (2026-06-11): didn't work. caused some error.
 
+machine (2026-06-11): the error's exact words died with the screen — the flash is never written to disk, a legibility failure in its own right. What the record shows: xdotool is installed now, and the code can only flash two errors. Either that login ran before the install (then the flash said "xdotool is not installed" and the next login is the real test), or the request fired before the window manager had taken the window — a startup race the machine can harden with a retry. Both repairs are recorded in work.md: the flash lands on disk so an error is always quotable, and the request retries until it sticks. If you remember the error's words, speak them — they pick between the suspects at once.
+

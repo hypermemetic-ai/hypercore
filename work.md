@@ -26,9 +26,9 @@
 
 ## the interface at login
 - ask: ghostty opens hyper fullscreen at login — high contrast, deliberate type, color only where it earns its place
-- state: rebuilt — ghostty ignores fullscreen at startup upstream (ghostty #11252, every no-install route tested dead); on the operator's pick (2026-06-11) hyper now sends the window manager the fullscreen request itself, via xdotool, when the login entry starts it
+- state: failed at first login — the operator saw "some error" and its exact words were never captured, because the flash lives only on screen. xdotool is installed now. Two suspects from the code: xdotool missing at that login (resolved by the install — the next login tests it), or the fullscreen request firing before the window manager had taken the window. Next slice, machine-scoped: write the flash to disk so an error is always quotable, and retry the request until it sticks
 - since: 2026-06-11
-- waits on: xdotool installed once; one login seen fullscreen with the operator's own eyes; the statement behind it stands [machine] in the queue
+- waits on: the operator's words on the error if remembered; one login seen fullscreen with the operator's own eyes; the statement behind it stands [machine] in the queue
 
 ## the conversation, live
 - ask: speaking anywhere summons the machine on the spot — a headless session that answers onto the same card while the operator watches; the screen re-reads disk on a one-second tick, so the answer arrives with no restart anywhere; m summons by hand when words wait; the summoned machine only answers and records asks — it builds nothing; each summon spends one session's tokens
