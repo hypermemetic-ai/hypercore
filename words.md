@@ -8,3 +8,5 @@ machine (2026-06-11): no watchers, no push — a one-second tick. the screen wai
 
 operator (2026-06-11): thanks. very cool.
 
+machine (2026-06-11): glad it reads well. the simplicity is the point — nothing to desync. nothing new asked, so nothing opened; the queue stays clear.
+
