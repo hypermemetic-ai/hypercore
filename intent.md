@@ -20,6 +20,14 @@ The operator can read the system's state at a glance, without asking the machine
 
 The operator's interface is a queue of decisions. A decision arrives with the context to decide it, the options on the table, and what each option entails: what it unblocks, what it breaks, what keeps running unbacked, and what reversing it later would cost.
 
+The interface is the only place the operator is expected to operate: every move the system asks of them can be made there. [machine]
+
+The interface is the only way the operator catches issues with the system: a problem it cannot surface is a problem the operator will never see. Blinding the operator in any meaningful way kills the program. [machine]
+
+The interface shows everything the operator wants to know and nothing they don't. Every element on screen earns its place. [machine]
+
+The interface is keyboard-only. [machine]
+
 The machine never silently commits the operator's resources: scope calls that change what the operator must later judge, build machinery, or decline their intent are theirs to make; within endorsed intent the machine scopes freely and visibly. Every decision records its grounds at the moment it is made.
 
 ## structure
