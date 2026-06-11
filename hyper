@@ -18,10 +18,14 @@ Accept   a then y on an acceptance card — confirmed like every
          other release; s speaks reservations
 Speak    s anywhere — words land verbatim, the place travels with them,
          and the machine is summoned to answer while you watch
-True up  m when the record is behind — a bare true-up (no words waiting)
-         goes to the mini, the small machine in the mini file: it commits
-         what is on disk and never finishes or corrects; anything it
-         leaves, and every waiting word, goes to the full machine
+Machine  the record calling is the summons — at launch, a behind record
+         or waiting words start the machine without m, and words landing
+         mid-answer summon it once more when the run ends; m stays as
+         the manual retry after a failed or partial run.  a bare true-up
+         (no words waiting) goes to the mini, the small machine in the
+         mini file: it commits what is on disk and never finishes or
+         corrects; anything it leaves, and every word, goes to the full
+         machine
 Move     arrows . left/right across cards (j previous, k next) . up/down
          within the screen . enter open . esc back . q quit
 """
@@ -559,7 +563,9 @@ def main(scr):
     wexp = False  # the work view opens folded to the graph line
     scroll, flash, confirm, exkey = 0, "", None, None
     machine = None  # (Popen, started, kind) while a summoned session is answering
-    escalate = False  # a mini left work behind — the next m goes to the full machine
+    escalate = False  # a mini left work behind — the next summon goes to the full machine
+    boot = True  # the first frame summons the machine itself when the record calls
+    resummon = False  # words landed mid-answer — one more summon when this one ends
     flash = ensure_launcher() or flash
     fs_left = (FS_TRIES if os.environ.get("HYPER_FULLSCREEN")
                and os.environ.get("WINDOWID") else 0)
@@ -579,23 +585,40 @@ def main(scr):
         awaits = [b for b in cards + exchanges
                   if b["words"] and b["words"][-1].startswith("operator (")]
         if machine and machine[0].poll() is not None:
-            rc = machine[0].returncode
-            if machine[2] == "mini":
+            rc, kind = machine[0].returncode, machine[2]
+            machine = None
+            if kind == "mini" and (rc != 0 or dirty):
                 # the mini's bar: commit what is on disk, leave the rest —
                 # whatever it leaves escalates to the full machine
-                if rc == 0 and not dirty:
-                    flash = "the mini trued up the record"
-                else:
-                    escalate = True
-                    flash = note("the mini left work behind%s — named in "
-                                 ".hyper-machine.log; m summons the full machine"
-                                 % ("" if rc == 0 else " (exit %d)" % rc))
+                escalate = True
+                flash = note("the mini left work behind%s — named in "
+                             ".hyper-machine.log; m summons the full machine"
+                             % ("" if rc == 0 else " (exit %d)" % rc))
+            elif rc != 0:
+                flash = note("the machine failed (exit %d) — .hyper-machine.log "
+                             "holds the story; m retries" % rc)
             else:
-                flash = ("the machine has answered" if rc == 0 else
-                         note("the machine failed (exit %d) — .hyper-machine.log holds the story" % rc))
-            machine = None
+                flash = ("the mini trued up the record" if kind == "mini"
+                         else "the machine has answered")
+                if resummon and awaits:
+                    # words landed mid-answer — one more summon, and the flag
+                    # is consumed: only a fresh operator act sets it again
+                    machine = start_machine(None)
+                    if machine:
+                        flash = "words landed mid-answer — the machine is summoned again"
+            resummon = False
         if not dirty:
             escalate = False
+        if boot:
+            # the machine answers without m: at launch, a behind record or
+            # waiting words summon it themselves; m stays as the manual retry
+            boot = False
+            if (awaits or dirty) and not machine:
+                kind = ("mini" if dirty and not awaits and mini_command()
+                        else "machine")
+                machine = start_machine(machine, kind)
+                if machine:
+                    flash = "the record called — the %s is summoned" % kind
 
         accepts = [b for b in work
                    if "awaiting acceptance" in b["fields"].get("state", "")]
@@ -1050,6 +1073,7 @@ def main(scr):
                                                "(enter sends . esc abandons): ")
                     if wd and wd.strip():
                         hsh = speak("the queue", wd)
+                        resummon = resummon or machine is not None
                         machine = start_machine(machine)
                         flash = ("on disk . committed %s . the machine is answering" % hsh
                                  if machine else
@@ -1081,6 +1105,7 @@ def main(scr):
                                            "empty = just explain . esc abandons): ")
                 if wd is not None:
                     hsh = explain(pend[ci], wd)
+                    resummon = resummon or machine is not None
                     machine = start_machine(machine)
                     flash = ("on disk . committed %s . the machine is answering" % hsh
                              if machine else
@@ -1111,6 +1136,7 @@ def main(scr):
                                     "(enter sends . esc abandons): " % name)
                     if wd and wd.strip():
                         hsh = speak('the decision card, on "%s"' % name, wd)
+                        resummon = resummon or machine is not None
                         machine = start_machine(machine)
                         flash = ("on disk . committed %s . the machine is answering" % hsh
                                  if machine else
@@ -1145,6 +1171,7 @@ def main(scr):
                                     "(enter sends . esc abandons): " % name)
                     if wd and wd.strip():
                         hsh = speak('the acceptance card, on "%s"' % name, wd)
+                        resummon = resummon or machine is not None
                         machine = start_machine(machine)
                         flash = ("on disk . committed %s . the machine is answering" % hsh
                                  if machine else
@@ -1179,6 +1206,7 @@ def main(scr):
                                                "(enter sends . esc abandons): ")
                     if wd and wd.strip():
                         hsh = speak_more(exb, wd)
+                        resummon = resummon or machine is not None
                         machine = start_machine(machine)
                         scroll = -1
                         flash = ("on disk . committed %s . the machine is answering" % hsh
@@ -1213,6 +1241,7 @@ def main(scr):
                                                "(enter sends . esc abandons): " % name)
                     if wd and wd.strip():
                         hsh = speak('the work view, on "%s"' % name, wd)
+                        resummon = resummon or machine is not None
                         machine = start_machine(machine)
                         flash = ("on disk . committed %s . the machine is answering" % hsh
                                  if machine else
@@ -1240,6 +1269,7 @@ def main(scr):
                                                "(enter sends . esc abandons): " % place)
                     if wd and wd.strip():
                         hsh = speak(place, wd)
+                        resummon = resummon or machine is not None
                         machine = start_machine(machine)
                         flash = ("on disk . committed %s . the machine is answering" % hsh
                                  if machine else
