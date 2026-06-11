@@ -24,6 +24,8 @@ machine (2026-06-11): one session at a time, never parallel — that is the desi
 
 operator (2026-06-11): I don't think there's a strong reason why the decide options should be different than the options for other card types.
 
+machine (2026-06-11): agreed — there wasn't one. the stray was the key, not the shape: every card already offered affirm, cut, speak, but decide cards alone spelled affirm g. now a affirms everywhere — approve a statement, go on a decision, accept a slice — c cuts, s speaks, y confirms each. the verbs stay true to what each act does; only the keys unified. built, on your queue as an acceptance card; if you meant the verbs or the option set too, one word redirects it.
+
 ## from the decision card, on "the surfacing bar gets written down" . 2026-06-11
 
 operator (2026-06-11): this needs to be more general than stuff about the interface. needs to work for any project. and needs to be concrete enough that it can't reasonably be missed. the challenge is not just communicating this via a line in a prompt, it's for us to understand what we mean clearly enough that we can expect consistency. we're still in a trial run here, this mechanism needs to be resilient to real world, real project pressures.

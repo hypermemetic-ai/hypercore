@@ -13,8 +13,8 @@ on its own — no restart anywhere.
 Views    queue (home) . decision card . work-decision card .
          acceptance card . exchange . work . document . log
 Decide   a approve . c cut . e explain (words optional); a standing-work
-         decision settles by key — g go . c cut, y confirms — and the
-         word lands on the card as if spoken; s redirects in the
+         decision settles by the same keys — a go . c cut, y confirms —
+         and the word lands on the card as if spoken; s redirects in the
          operator's own words
 Accept   a then y on an acceptance card — confirmed like every
          other release; s speaks reservations
@@ -877,7 +877,7 @@ def main(scr):
                     rows += [[(LM + 2, ln, attr)] for ln in wrap(wln, width - 2)]
                 rows.append([])
             rows += [[(LM, ln, DIM)]
-                     for ln in wrap("g goes . c cuts — y confirms either, and the "
+                     for ln in wrap("a goes . c cuts — y confirms either, and the "
                                     "word lands on the card for the machine to "
                                     "execute; s speaks a redirect or anything "
                                     "else in your own words.", width)]
@@ -1044,7 +1044,7 @@ def main(scr):
                      + ("m summon . " if (awaits or dirty) and not machine else "")
                      + "s speak . w work . d document . g log . q quit"),
             "card": "a approve . c cut . e explain . s speak . j/k statements . space/b page . esc back",
-            "settle": "g go . c cut . s redirect . j/k cards . space/b page . esc back",
+            "settle": "a go . c cut . s redirect . j/k cards . space/b page . esc back",
             "accept": "a accept . s reservations . j/k slices . space/b page . esc back",
             "exchange": "s speak . c fold away . space/b page . esc back",
             "work": ("j/k move . s speak on it . space/b page . esc fold" if wexp
@@ -1217,7 +1217,7 @@ def main(scr):
                 scroll += view_h
             elif ch == ord("b"):
                 scroll -= view_h
-            elif ch == ord("g"):
+            elif ch == ord("a"):
                 confirm = ("go", decides[si]["lines"][0][3:].strip())
             elif ch == ord("c"):
                 confirm = ("cut-card", decides[si]["lines"][0][3:].strip())
