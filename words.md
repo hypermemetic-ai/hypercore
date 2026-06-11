@@ -16,3 +16,5 @@ operator (2026-06-11): I don't like this "go" and similar structure for decision
 
 operator (2026-06-11): I never did see the desktop shortcut. that item was folded I believe but the change didn't really land.
 
+machine (2026-06-11): both landed, each an acceptance card on your queue. keys: on a decide card g goes and c cuts — y confirms, and the key lands the word on the card exactly as if you had typed it, committed in your name; s stays for redirects in your own words. and every confirm line now leads loud with "y confirms …", the entailment dim behind it — the y no longer drowns. the shortcut: your fold was honest, the link was being stolen. every launch of any copy of hyper — my own test copies in /tmp included — re-pointed the menu symlink at itself, and when the copy vanished the link dangled and cinnamon dropped the entry. test copies never touch it now, only a dangling link is reclaimed, the entry gained a category so the menu files it under accessories, and the link points at the repo again.
+
