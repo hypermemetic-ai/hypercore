@@ -467,8 +467,15 @@ def main(scr):
     curses.curs_set(0)
     curses.use_default_colors()
     curses.init_pair(1, curses.COLOR_RED, -1)
+    curses.init_pair(2, curses.COLOR_YELLOW, -1)
     ALERT = curses.color_pair(1) | curses.A_BOLD
+    ACCENT = curses.color_pair(2) | curses.A_BOLD
     DIM, BOLD, REV = curses.A_DIM, curses.A_BOLD, curses.A_REVERSE
+    # the queue leads each entry with its kind — what kind of call the
+    # operator faces reads before any title does
+    KINDS = {"decide": ("decide", BOLD), "accept": ("accept", ACCENT),
+             "read": ("answered", DIM), "sent": ("sent", DIM)}
+    GUT = 10  # the kind column
 
     view, sel, ci, ai, wsel = "home", 0, 0, 0, 0
     scroll, flash, confirm, exkey = 0, "", None, None
@@ -529,9 +536,15 @@ def main(scr):
         guarded = any(l.split()[-1] in LEDGERS for l in dirty.splitlines())
 
         put(scr, 0, LM, "H Y P E R C O R E", BOLD)
-        waiting = len(pend) + len(accepts) + len(answered)
-        status = "%d WAITING" % waiting if waiting else "QUEUE CLEAR"
-        put(scr, 0, max(LM, w - len(status) - LM), status, BOLD if waiting else DIM)
+        parts = []
+        if pend:
+            parts.append("%d TO DECIDE" % len(pend))
+        if accepts:
+            parts.append("%d TO ACCEPT" % len(accepts))
+        if answered:
+            parts.append("%d ANSWERED" % len(answered))
+        status = " . ".join(parts) if parts else "QUEUE CLEAR"
+        put(scr, 0, max(LM, w - len(status) - LM), status, BOLD if parts else DIM)
         put(scr, 1, LM, "─" * max(0, w - 2 * LM), DIM)
         mtxt = ""
         if machine:
@@ -553,24 +566,27 @@ def main(scr):
             y = top + 2
             if entries:
                 for i, (kind, obj) in enumerate(entries):
+                    label, lattr = KINDS[kind]
                     if kind == "decide":
                         text = obj["text"].replace(MARKER, "")
                         tag = obj["section"] or ""
-                    elif kind == "accept":
-                        text = obj["lines"][0][3:].strip()
-                        tag = "awaiting your acceptance"
                     else:
                         text = obj["lines"][0][3:].strip()
-                        tag = "answered — enter reads" if kind == "read" else "with the machine"
-                    room = width - len(tag) - 3
+                        tag = ""
+                    room = width - GUT - (len(tag) + 2 if tag else 0)
                     if len(text) > room:
                         text = text[: max(1, room - 1)] + "…"
                     if i == sel:
-                        put(scr, y, LM, (text + " " * width)[:width], REV)
-                        put(scr, y, LM + width - len(tag), tag, REV)
+                        put(scr, y, LM, " " * width, REV)
+                        put(scr, y, LM, label, lattr | REV)
+                        put(scr, y, LM + GUT, text, REV)
+                        if tag:
+                            put(scr, y, LM + width - len(tag), tag, REV)
                     else:
-                        put(scr, y, LM, text, 0 if kind in ("decide", "accept") else DIM)
-                        put(scr, y, LM + width - len(tag), tag, DIM)
+                        put(scr, y, LM, label, lattr)
+                        put(scr, y, LM + GUT, text, 0 if kind in ("decide", "accept") else DIM)
+                        if tag:
+                            put(scr, y, LM + width - len(tag), tag, DIM)
                     y += 1
             else:
                 put(scr, y, LM, "nothing waits on you.", DIM)
