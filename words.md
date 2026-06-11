@@ -18,3 +18,5 @@ operator (2026-06-11): ah, we need a better term then surely. open?
 
 machine (2026-06-11): open it is — landed. the home line now reads "open work: N . awaiting your acceptance: N", and the docstring and README follow; it also rhymes with the ledger, where each entry's state is already open until your word closes it. two places still say in-flight and stay: intent.md (lines on readable work and decisions surfacing) and CLAUDE.md rule 6 — those are your text, not mine to rename. want them swept to open too, or left as written? (the brief's header is still permission-blocked to me, so it keeps the old spelling until you or a freer hand edits .claude/hooks/session-brief.sh line 71.)
 
+operator (2026-06-11): I don't like open either. I'll leave this call to you. and make sure it's used consistently. also, we need to solve your permission problem. full permissions granted hereby except irreversibly destructive. I'll add that work status is not clear and any standing work item should correspond to a clear operator action. right now I see an empty queue but three items. you see the issue.
+
