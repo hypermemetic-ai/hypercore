@@ -10,3 +10,7 @@ operator (2026-06-11): how do sessions start when I send a message?
 
 machine (2026-06-11): your words land in words.md and commit in your name; then hyper writes brief.md fresh (the live queue state) and starts the command in the machine file — claude -p with a standing summon instruction, headless, in this repo. that session reads the brief, queue.md and words.md, trues up the record if it is behind, answers every word not yet ended by a machine line, commits as it goes, and stops. one runs at a time — a pid lock; words that land mid-answer (like this one) wait and trigger one more summon when the run ends. a behind record with no words waiting goes to the mini instead, which only commits and never edits.
 
+## from the decision card, on "document and the selected work unit" . 2026-06-11
+
+operator (2026-06-11): option 1 — document moves to the work view — d on a selected project line opens that unit's documents, and the queue loses d
+
