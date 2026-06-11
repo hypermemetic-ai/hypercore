@@ -62,7 +62,7 @@ Intent lives relative to an execution graph, folded or unfolded: the graph's fol
 
 An execution graph's intent document is that graph's current intended reality.
 
-Work that is not about hypercore lives with its project: the project's folder carries its own intent and graphs, versioned in its own repository, and hypercore keeps a registry of linked folders the interface reads. [machine]
+Work that is not about hypercore lives with its project: the project's folder carries its own intent and graphs, versioned in its own repository, and hypercore keeps a registry of linked folders the interface reads.
 
 ## statements
 
