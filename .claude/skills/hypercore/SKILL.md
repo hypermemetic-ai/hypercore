@@ -143,10 +143,14 @@ graph's intent document is singular, and this repo is hypercore's folder.
   operator act names the act, exactly as work.md entries do — but the
   operator's cards stay in work.md; a graph never asks the operator
   anything directly.
-- Folding is machine convention until the first graph reaches its fold
-  (the seam is cut when work reaches it): the result lands on the
-  spawning node, the root state becomes folded, hyper and the brief
-  stop showing it, git keeps it. A graph that cannot meet its check
+- Folding: the result lands on the spawning node, the root state becomes
+  folded, hyper and the brief stop showing it, git keeps it. When the
+  root's check is an acceptance card, the card carries `- graph: <name>`
+  and hyper folds the root in the acceptance commit itself — a fold can
+  never lag its acceptance (built 2026-06-11 on the operator's word,
+  "once is proof enough", after the first fold lagged). A session landing
+  such a card writes the graph field; any other fold the machine lands by
+  editing graph.md and committing. A graph that cannot meet its check
   never folds dirty — it returns as a decision card in work.md.
 - hyper's work view lists every open graph beside hypercore and unfolds
   to its nodes; the session brief carries them to every summoned session.

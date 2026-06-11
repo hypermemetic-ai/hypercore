@@ -273,19 +273,55 @@ def explain(st, words):
                   ("queue.md",))
 
 
+def fold_root(gname):
+    """The fold rides the acceptance: when an accepted slice was a graph's
+    folding condition (the card names it in a graph field), the result lands
+    on the root and the state turns folded in the same act — a fold can
+    never lag its acceptance again. Returns the edited path, or None."""
+    path = os.path.join(WORKDIR, gname, "graph.md")
+    if not os.path.exists(path):
+        return None
+    with open(path) as f:
+        raw = f.read().splitlines()
+    heads = [i for i, l in enumerate(raw) if l.startswith("## ")]
+    if not heads:
+        return None
+    end = heads[1] if len(heads) > 1 else len(raw)
+    for i in range(heads[0], end):
+        if raw[i].startswith("- state: "):
+            if "folded" in raw[i]:
+                return None
+            raw[i] = "- state: folded"
+            if not any(l.startswith("- result: ") for l in raw[heads[0]:end]):
+                raw.insert(i, "- result: accepted by the operator from the "
+                              "slice's card (%s)" % date.today().isoformat())
+            with open(path, "w") as f:
+                f.write("\n".join(raw) + "\n")
+            return os.path.relpath(path, ROOT)
+    return None
+
+
 def accept(name):
     """One frictionless act: the slice leaves work.md, git keeps the entry,
-    and the commit is the operator's acceptance."""
+    and the commit is the operator's acceptance. A card carrying a graph
+    field folds that graph in the same commit."""
     blocks = ledger(WORK)
     blk = next((b for b in blocks if b["lines"][0][3:].strip() == name), None)
     if blk is None:
         return None
     write_ledger(WORK, "work", [b for b in blocks if b is not blk])
-    return commit("accepted by the operator in the interface: " + name,
-                  "\n".join(blk["lines"])
-                  + "\n\ngrounds: the operator pressed approve on the card, with what "
-                    "the slice does and how to try it on screen. git keeps the entry.",
-                  ("work.md",))
+    gname = blk["fields"].get("graph")
+    folded = fold_root(gname) if gname else None
+    body = ("\n".join(blk["lines"])
+            + "\n\ngrounds: the operator pressed approve on the card, with what "
+              "the slice does and how to try it on screen. git keeps the entry.")
+    if folded:
+        body += ("\n\nthe slice was %s's folding condition; the fold rides "
+                 "this commit — result on the root, state folded." % gname)
+    return commit("accepted by the operator in the interface: " + name
+                  + (" — %s folds" % gname if folded else ""),
+                  body,
+                  ("work.md", folded) if folded else ("work.md",))
 
 
 # ----- speech (from anywhere; the place travels with the words) ---------
