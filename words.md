@@ -30,15 +30,3 @@ machine (2026-06-11): agreed — there wasn't one. the stray was the key, not th
 
 operator (2026-06-11): I don't even think the verbs need to be different. why "go" on a decision? let's just pick generally applicable verbs.
 
-## from the decision card, on "the surfacing bar gets written down" . 2026-06-11
-
-operator (2026-06-11): this needs to be more general than stuff about the interface. needs to work for any project. and needs to be concrete enough that it can't reasonably be missed. the challenge is not just communicating this via a line in a prompt, it's for us to understand what we mean clearly enough that we can expect consistency. we're still in a trial run here, this mechanism needs to be resilient to real world, real project pressures.
-
-machine (2026-06-11): redrafted, project-blind, on the card. what we mean, in one sentence: you delegate execution, never stakes — the machine decides how, you decide anything that changes your world. the floor turns that into five yes/no tests on the act itself: it leaves the project folder (sends, publishes, installs, spends); it touches what you own or use (your words, your files, your environment); it binds future sessions (a default, a policy, a recurring job, a dependency); it takes more than one git command or one redo to take back; or the machine catches itself arguing that none of these apply — doubt surfaces. consistency under pressure comes from when the check runs, not how hard: one checkpoint, at the moment before the first write or command that creates the material — pressure erodes vigilance, it cannot erode a named moment. and the floor is auditable after the fact: every commit can be held against it, so a miss shows in the record instead of vanishing. the redraft sits on the same card, still yours to settle.
-
-operator (2026-06-11): go
-
-operator (2026-06-11): go
-
-machine (2026-06-11): gone and done — the floor stands in foundations, your approve already dropped its marker, and rule 6 and the skill now read it as ratified rather than pending. the doubled go is the relaunch window at work: the hyper you pressed it in predates the machine lock, so each landing summoned its own session — three raced, one landed the statement, the others left no mark on the record. relaunch hyper to arm the lock and the doubling ends. (the two answers above landed out of order from racing sessions and the stale one ended the card; reordered so the card ends on the current state — every word kept.)
-
