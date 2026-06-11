@@ -28,6 +28,10 @@ The interface shows everything the operator wants to know and nothing they don't
 
 The interface is keyboard-only.
 
+The interface opens fullscreen at login: the day starts where the decisions are. [machine]
+
+The interface is high contrast and set in deliberate type, with color spent only where it earns its place. [machine]
+
 Everything that crosses the operator–machine boundary crosses through the interface and lands on disk; a crossing that left no record did not happen.
 
 The operator can speak from anywhere in the interface: their words land on disk verbatim, the place they spoke from travels with them, and nothing more is asked of them.
@@ -37,6 +41,8 @@ Reading the operator's words is machine work. Whether they are new intent, a new
 The queue is a view, not a place: each decision lives where it arose — on a statement, on a node, on evidence — and showing the queue means reading all of those places fresh, every time. There is no list of its own to add to, remove from, or keep in sync, so nothing can be lost in motion and nothing can go stale.
 
 The order of the queue is the machine's claim about what the operator's attention is worth next, and it answers for that claim: every decision wears the cost of its own delay — what it blocks, what compounds while it waits. The operator's word overrides the order instantly and unconditionally — the word is the reorder, not a request for one — and whatever the machine learns from being overridden, it raises later, never in the moment.
+
+Work in flight is readable from the interface: what exists, what state each piece is in, and what it waits on. Setting priorities takes nothing the interface does not show. [machine]
 
 The machine never silently commits the operator's resources: scope calls that change what the operator must later judge, build machinery, or decline their intent are theirs to make; within endorsed intent the machine scopes freely and visibly. Every decision records its grounds at the moment it is made.
 
