@@ -1,12 +1,5 @@
 # work
 
-## work in flight, on disk and on screen
-- ask: the machine's work state leaves its session memory for this file, and the interface shows it — what exists, what state it is in, what it waits on (w from the queue)
-- state: awaiting acceptance
-- since: 2026-06-11
-- try: press w — what exists, what state it is in, what it waits on, read live from work.md
-- waits on: one act on its acceptance card; the statement behind it stands [machine] in the queue
-
 ## speak from anywhere
 - ask: s in any view takes the operator's words, lands them verbatim in words.md with the place attached, and commits; the machine answers onto the same block and the exchange shows on the queue
 - state: in use, awaiting acceptance
