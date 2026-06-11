@@ -18,12 +18,6 @@
 - since: 2026-06-11
 - waits on: nothing from you yet — thinking continues; a second project is the forcing event
 
-## the prompt says where the words will land
-- ask: you noticed two speeches filed under one card — the place is captured the moment you press s, and the prompt never said which place that was. now it does: every speak prompt opens by naming its filing place — from the queue, on "<card>", into this exchange, on "<work entry>", from the document, from the log — before anything binds
-- try: press s anywhere — the prompt's first words name where the words will be filed; esc still abandons
-- state: awaiting acceptance
-- since: 2026-06-11
-
 ## the card carries its own conversation
 - ask: words spoken on an acceptance card ride that card while it stands — they show below it as the exchange so far, and leave the home queue to the card itself instead of appearing as a separate item; if the card is released or cut, the exchange returns to the queue as its own entry
 - try: open an acceptance card that has been spoken on — the exchange reads below the slice's fields; the home queue lists only the card
