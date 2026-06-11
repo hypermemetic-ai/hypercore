@@ -61,6 +61,28 @@ made of them return through the queue.
 "
 fi
 
+# open execution graphs: work/<name>/graph.md, the first block the root
+# ask born with its check; a folded root has left standing work.
+graphs_block=""
+if [ -d work ]; then
+  graphs_summary=$(for g in work/*/graph.md; do
+    [ -f "$g" ] || continue
+    awk -v name="$(basename "$(dirname "$g")")" '
+      /^## /       { n++ }
+      /^- state: / { s = substr($0, 10)
+                     if (n == 1 && root == "") root = s
+                     if (s ~ /open/) open++ }
+      END { if (root !~ /folded/)
+              printf "  %s — %d node%s, %d open · root: %s\n", \
+                     name, n, (n == 1 ? "" : "s"), open, root }
+    ' "$g"
+  done) || graphs_summary=""
+  [ -n "$graphs_summary" ] && graphs_block="
+Open execution graphs (work/<name>/graph.md — the unit on disk is the
+graph; read each graph.md you touch in full before growing or folding it):
+${graphs_summary}"
+fi
+
 work_block=""
 if [ -f work.md ]; then
   work_summary=$(awk '
@@ -77,7 +99,7 @@ context="hypercore session brief — generated from disk by .claude/hooks/sessio
 Re-ratification queue: ${total} statements still marked [machine] in ${doc}.
 ${per_sec}
 Next pending: ${next:-none — the queue is clear}
-${behind_block}${words_block}${work_block}
+${behind_block}${words_block}${work_block}${graphs_block}
 
 Recent commits:
 ${recent}
