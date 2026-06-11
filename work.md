@@ -7,13 +7,6 @@
 - try: log out and in once — either hyper opens fullscreen, or .hyper.log holds the exact words of what failed; accept only after a login seen with your own eyes
 - waits on: one act on its acceptance card, after one login; the statement behind it stands [machine] in the queue
 
-## words you can edit
-- ask: the input line became an editor — everything typed stays visible, wrapped whole across lines; arrows move the cursor anywhere, home/end jump, backspace and delete edit in place; nothing binds until enter
-- state: awaiting acceptance
-- since: 2026-06-11
-- try: press s and type past the margin — everything stays visible; move the cursor back with arrows; esc abandons, nothing binds until enter
-- waits on: one act on its acceptance card; the statement behind it stands [machine] in the queue
-
 ## one machine, any harness
 - ask: the summon stops being an idea and becomes the interface opening a terminal session for the operator — the command it runs becomes one visible setting (claude today, codex or any harness that takes a prompt tomorrow), and the session brief becomes a file any harness reads. a cohesion cut, not a feature: nothing the shortcut does that a typed terminal couldn't
 - state: in use, awaiting acceptance — built 2026-06-11: the machine file at the root holds the one command ({prompt} stands for the summon instruction), and brief.md is written fresh at every summon for any harness to read
