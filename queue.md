@@ -31,3 +31,5 @@ operator (2026-06-11): tough statement. I don't understand the implications or p
 - approve: the machine owns the order and shows its grounds on each card; a patterned operator override is evidence against those grounds and surfaces through the existing coherence statement, not silently absorbed.
 - cut: order stays document order until that visibly breaks, and priority then arrives the default way — a stored field someone must groom.
 
+operator (2026-06-11): this all comes down to how smooth operator override ends up being. think about it: the moment I'm put under the kind of pressure that requires me to steer us somewhere specific is the moment I'm least interested in jumping through hoops to get the machine to align.
+
