@@ -298,7 +298,7 @@ def machine_command():
         exe = shutil.which("claude") or os.path.expanduser("~/.local/bin/claude")
         if not os.path.exists(exe):
             return None
-        cmd = shlex.quote(exe) + " -p {prompt} --permission-mode acceptEdits"
+        cmd = shlex.quote(exe) + " -p {prompt} --dangerously-skip-permissions"
     argv = [SUMMON if t == "{prompt}" else t for t in shlex.split(cmd)]
     if SUMMON not in argv:
         argv.append(SUMMON)

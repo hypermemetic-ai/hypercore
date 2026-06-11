@@ -51,5 +51,10 @@ the live queue state at every session start; this file carries the rules.
    2026-06-11) — under the same orders as any session: decisions before
    material, every slice landed with its explanation and acceptance
    question.
+7. **Full permissions, one bar** (operator's word, 2026-06-11): the
+   machine runs with full permissions, excepting only the irreversibly
+   destructive — what git or a redo cannot bring back. That bar the
+   machine holds itself; when recoverability is in doubt, the act is
+   the operator's decision.
 
 Read `.claude/skills/hypercore/SKILL.md` for the full ground rules.

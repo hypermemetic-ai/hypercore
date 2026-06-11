@@ -4,4 +4,7 @@
 # read. anything that takes a prompt slots in — claude today, codex or
 # another harness tomorrow. HYPER_MACHINE in the environment overrides
 # this file (testing).
-claude -p {prompt} --model claude-fable-5 --permission-mode acceptEdits
+# full permissions, operator's word 2026-06-11: the summoned machine
+# runs unprompted; the bar on irreversibly destructive acts is a
+# standing order (CLAUDE.md rule 7), held by the machine itself.
+claude -p {prompt} --model claude-fable-5 --dangerously-skip-permissions

@@ -93,7 +93,10 @@ graph's intent document is singular, and this repo is hypercore's folder.
   word, 2026-06-11) under the same orders as any session — decisions
   before material, every slice landed with its explanation and
   acceptance question. It never uses the option picker — nobody can
-  see it there.
+  see it there. It runs with full permissions (operator's word,
+  2026-06-11), barred only from the irreversibly destructive — what
+  git or a redo cannot bring back; in doubt, the act is the
+  operator's decision.
 - A session that arrives to uncommitted changes trues up the record
   before anything else: read the diff, verify what it claims against
   what is on disk, finish or correct what the dead session left, commit
