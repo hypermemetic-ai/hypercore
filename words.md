@@ -8,3 +8,5 @@ machine (2026-06-11): your own structure statements carry most of the answer —
 
 operator (2026-06-11): I think I've brought this up already. selecting an option in a decision card isn't as definitive as it should be. there's nothing else for me to do, no reason the card should stay up I think.
 
+machine (2026-06-11): you're right, and it's built — twice raised meets the bar, and acceptance cards already worked this way (the fold rides the acceptance commit). now a decisive word on a decision card — approve, cut, or a numbered pick — settles it on the spot: your word lands and the entry leaves work.md in the same commit, git keeps the card, the machine still executes the word. speaking on a card still leaves it standing, since words alone are not a decision. the slice is on the queue awaiting your acceptance; it runs from the next hyper launch.
+
