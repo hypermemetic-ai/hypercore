@@ -1,0 +1,426 @@
+#!/usr/bin/env python3
+"""hyper — the operator's interface to hypercore.
+
+One file, stdlib only, keyboard only.  It reads intent.md (the system)
+and queue.md (open decision cards drafted by the machine), and writes
+the operator's decisions straight back to disk — marker edits, cuts,
+explain-words — each one committed to git in the operator's name
+before the screen redraws.
+
+    ./hyper
+
+Views    queue (home) . decision card . document . log
+Decide   a approve . c cut . e explain (words optional)
+Move     j/k or arrows . enter open . esc back . q quit
+"""
+
+import curses
+import os
+import subprocess
+import textwrap
+from datetime import date
+
+ROOT = os.path.dirname(os.path.abspath(__file__))
+INTENT = os.path.join(ROOT, "intent.md")
+QUEUE = os.path.join(ROOT, "queue.md")
+MARKER = " [machine]"
+
+
+# ----- disk ------------------------------------------------------------
+
+def run(*args):
+    return subprocess.run(args, cwd=ROOT, capture_output=True, text=True).stdout
+
+
+def read_intent():
+    """Every statement with its section and line span.  A statement is a
+    paragraph: consecutive non-blank, non-heading lines."""
+    with open(INTENT) as f:
+        lines = f.read().splitlines()
+    stmts, sec, i = [], None, 0
+    while i < len(lines):
+        if lines[i].startswith("## "):
+            sec = lines[i][3:].strip()
+            i += 1
+        elif not lines[i].strip() or lines[i].startswith("#"):
+            i += 1
+        else:
+            start = i
+            para = []
+            while i < len(lines) and lines[i].strip() and not lines[i].startswith("#"):
+                para.append(lines[i].strip())
+                i += 1
+            text = " ".join(para)
+            stmts.append({"text": text, "section": sec, "span": (start, i),
+                          "pending": text.endswith(MARKER)})
+    return lines, stmts
+
+
+def write_intent(lines):
+    with open(INTENT, "w") as f:
+        f.write("\n".join(lines) + "\n")
+
+
+def queue_blocks():
+    """queue.md as raw entry blocks, each keyed by its blockquote — the
+    verbatim text of the statement the card belongs to."""
+    if not os.path.exists(QUEUE):
+        return []
+    with open(QUEUE) as f:
+        raw = f.read().splitlines()
+    heads = [i for i, l in enumerate(raw) if l.startswith("## ")]
+    blocks = []
+    for a, b in zip(heads, heads[1:] + [len(raw)]):
+        block = raw[a:b]
+        quote = " ".join(l[2:].strip() for l in block if l.startswith("> "))
+        blocks.append({"quote": quote, "lines": block})
+    return blocks
+
+
+def write_queue(blocks):
+    if not blocks:
+        if os.path.exists(QUEUE):
+            os.remove(QUEUE)
+        return
+    out = ["# queue", ""]
+    for b in blocks:
+        entry = list(b["lines"])
+        while entry and not entry[-1].strip():
+            entry.pop()
+        out += entry + [""]
+    with open(QUEUE, "w") as f:
+        f.write("\n".join(out) + "\n")
+
+
+def card_for(st, blocks):
+    for b in blocks:
+        if b["quote"] == st["text"]:
+            fields, words = {}, []
+            for ln in b["lines"]:
+                if ln.startswith("- ") and ": " in ln:
+                    k, v = ln[2:].split(": ", 1)
+                    fields[k.strip()] = v.strip()
+                elif ln.startswith("operator ("):
+                    words.append(ln)
+            return {"fields": fields, "words": words}
+    return None
+
+
+# ----- decisions (each one lands on disk and commits) -------------------
+
+def head(text, n=8):
+    words = text.replace(MARKER, "").split()
+    return " ".join(words[:n]) + ("…" if len(words) > n else "")
+
+
+def commit(subject, body):
+    paths = ["intent.md"]
+    if os.path.exists(QUEUE) or run("git", "ls-files", "queue.md").strip():
+        paths.append("queue.md")
+    run("git", "add", "--", *paths)
+    run("git", "commit", "-m", subject, "-m", body)
+    return run("git", "log", "-1", "--format=%h").strip()
+
+
+def find(text):
+    _, stmts = read_intent()
+    return next((s for s in stmts if s["text"] == text), None)
+
+
+def approve(text, has_card):
+    st = find(text)
+    if st is None:
+        return None
+    lines, _ = read_intent()
+    end = st["span"][1]
+    if lines[end - 1].endswith(MARKER):
+        lines[end - 1] = lines[end - 1][: -len(MARKER)]
+    write_intent(lines)
+    write_queue([b for b in queue_blocks() if b["quote"] != text])
+    grounds = ("grounds: the operator pressed approve in hyper with the card's entailments on screen."
+               if has_card else
+               "grounds: the operator pressed approve in hyper; no card was on file and the interface said so.")
+    return commit("approved by the operator in the interface: " + head(text),
+                  text.replace(MARKER, "") + "\n\n" + grounds)
+
+
+def cut(text, card):
+    st = find(text)
+    if st is None:
+        return None
+    lines, _ = read_intent()
+    s, e = st["span"]
+    del lines[s:e]
+    if 0 < s < len(lines) and not lines[s - 1].strip() and not lines[s].strip():
+        del lines[s]
+    write_intent(lines)
+    write_queue([b for b in queue_blocks() if b["quote"] != text])
+    breaks = card["fields"].get("cut") if card else None
+    body = ('the words that left: "' + text.replace(MARKER, "") + '"\n\n'
+            + ("what it breaks, as drafted on the card: " + breaks if breaks else
+               "no drafted entailments were on file; the interface said so before the pick."))
+    return commit("cut by the operator in the interface: " + head(text), body)
+
+
+def explain(st, words):
+    blocks = queue_blocks()
+    blk = next((b for b in blocks if b["quote"] == st["text"]), None)
+    if blk is None:
+        blk = {"quote": st["text"],
+               "lines": ["## " + head(st["text"]), "", "> " + st["text"], "",
+                         "- section: " + (st["section"] or "—")]}
+        blocks.append(blk)
+    if blk["lines"] and blk["lines"][-1].strip():
+        blk["lines"].append("")
+    blk["lines"].append("operator (%s): %s" % (date.today().isoformat(),
+                        words.strip() or "explain — tell the story"))
+    write_queue(blocks)
+    return commit("the operator asks explain in the interface: " + head(st["text"]),
+                  (words.strip() or "(no words — the machine tells the story)")
+                  + "\n\nthe machine reads queue.md at next session start and answers.")
+
+
+# ----- screen -----------------------------------------------------------
+
+def put(scr, y, x, s, attr=0):
+    try:
+        scr.addstr(y, x, s, attr)
+    except curses.error:
+        pass
+
+
+def wrap(text, width):
+    return textwrap.wrap(text, max(10, width)) or [""]
+
+
+def read_words(scr, h, w):
+    """One line of the operator's words at the bottom of the screen.
+    Enter sends (empty is a plain explain), esc cancels."""
+    curses.curs_set(1)
+    buf = ""
+    try:
+        while True:
+            prompt = "your words (enter sends . empty = just explain . esc cancels): "
+            avail = max(10, w - len(prompt) - 4)
+            shown = buf[-avail:]
+            put(scr, h - 2, 2, " " * (w - 3))
+            put(scr, h - 2, 2, prompt, curses.A_DIM)
+            put(scr, h - 2, 2 + len(prompt), shown)
+            scr.move(h - 2, min(2 + len(prompt) + len(shown), w - 2))
+            scr.refresh()
+            ch = scr.get_wch()
+            if ch in ("\n", "\r"):
+                return buf
+            if ch == "\x1b":
+                return None
+            if ch in ("\x7f", "\b") or ch == curses.KEY_BACKSPACE:
+                buf = buf[:-1]
+            elif isinstance(ch, str) and ch.isprintable():
+                buf += ch
+    finally:
+        curses.curs_set(0)
+
+
+def main(scr):
+    try:
+        curses.set_escdelay(25)
+    except AttributeError:
+        pass
+    curses.curs_set(0)
+    curses.use_default_colors()
+    curses.init_pair(1, curses.COLOR_YELLOW, -1)
+    curses.init_pair(2, curses.COLOR_RED, -1)
+    ACCENT, ALERT = curses.color_pair(1), curses.color_pair(2)
+    DIM, BOLD = curses.A_DIM, curses.A_BOLD
+
+    view, sel, scroll, flash, confirm = "home", 0, 0, "", None
+
+    while True:
+        _, stmts = read_intent()
+        pend = [s for s in stmts if s["pending"]]
+        blocks = queue_blocks()
+        dirty = run("git", "status", "--porcelain").strip()
+        last = run("git", "log", "-1", "--format=%h %s . %cr").strip()
+        sel = max(0, min(sel, len(pend) - 1))
+        if view == "card" and not pend:
+            view = "home"
+
+        scr.erase()
+        h, w = scr.getmaxyx()
+        width = min(w - 4, 76)
+
+        put(scr, 0, 2, "hypercore", BOLD)
+        status = "%d waiting" % len(pend) if pend else "queue clear"
+        put(scr, 0, max(2, w - len(status) - 2), status,
+            (ACCENT | BOLD) if pend else DIM)
+        if dirty:
+            files = ", ".join(l.split()[-1] for l in dirty.splitlines())
+            put(scr, 1, 2, ("uncommitted changes on disk — the record is behind: "
+                            + files)[: w - 4], ALERT)
+        top = 3
+
+        if view == "home":
+            y = top
+            if pend:
+                for i, st in enumerate(pend):
+                    line = st["text"].replace(MARKER, "")
+                    tag = st["section"] or ""
+                    room = width - len(tag) - 6
+                    if len(line) > room:
+                        line = line[: room - 1] + "…"
+                    put(scr, y, 2, ("> " if i == sel else "  ") + line,
+                        BOLD if i == sel else 0)
+                    put(scr, y, 2 + width - len(tag), tag, DIM)
+                    y += 1
+            else:
+                put(scr, y, 2, "nothing waits on you.", DIM)
+                y += 1
+            put(scr, y + 1, 2, ("last  " + last)[: w - 4], DIM)
+
+        elif view == "card":
+            st = pend[sel]
+            card = card_for(st, blocks)
+            put(scr, top, 2, "%s . %d of %d" % (st["section"], sel + 1, len(pend)), DIM)
+            y = top + 2
+            wl = wrap(st["text"].replace(MARKER, ""), width)
+            for ln in wl:
+                put(scr, y, 2, ln, BOLD)
+                y += 1
+            mx = 2 + len(wl[-1]) + 1
+            if mx + 9 >= w:
+                put(scr, y, 2, "[machine]", ACCENT)
+                y += 1
+            else:
+                put(scr, y - 1, mx, "[machine]", ACCENT)
+            y += 1
+            drafted = False
+            if card:
+                for key in ("context", "approve", "cut"):
+                    val = card["fields"].get(key)
+                    if not val:
+                        continue
+                    drafted = True
+                    first = True
+                    for ln in wrap(val, width - 9):
+                        if first:
+                            put(scr, y, 2, "%7s" % key, DIM)
+                        put(scr, y, 11, ln)
+                        first = False
+                        y += 1
+            if not drafted:
+                for ln in wrap("no entailments on file — context and what "
+                               "approve or cut entails is not drafted; "
+                               "e asks the machine for them.", width):
+                    put(scr, y, 2, ln, ACCENT)
+                    y += 1
+            if card and card["words"]:
+                y += 1
+                put(scr, y, 2, "your words so far", DIM)
+                y += 1
+                for wln in card["words"]:
+                    for ln in wrap(wln, width - 2):
+                        put(scr, y, 4, ln, DIM)
+                        y += 1
+
+        elif view in ("doc", "log"):
+            if view == "doc":
+                rows, cursec = [("intent", BOLD)], None
+                for st in stmts:
+                    if st["section"] != cursec:
+                        cursec = st["section"]
+                        rows += [("", 0), (cursec or "", BOLD), ("", 0)]
+                    attr = ACCENT if st["pending"] else 0
+                    rows += [(ln, attr) for ln in wrap(st["text"], width)]
+                    rows.append(("", 0))
+            else:
+                rows = [((e if len(e) <= width else e[: width - 1] + "…"), 0)
+                        for e in run("git", "log", "-200",
+                                     "--format=%h %s . %cr").splitlines()]
+            view_h = h - top - 2
+            scroll = max(0, min(scroll, max(0, len(rows) - view_h)))
+            for i, (txt, attr) in enumerate(rows[scroll: scroll + view_h]):
+                put(scr, top + i, 2, txt, attr)
+
+        hints = {
+            "home": (("enter decide . j/k move . " if pend else "")
+                     + "d document . g log . q quit"),
+            "card": "a approve . c cut . e explain . j/k next/prev . esc back",
+            "doc": "j/k scroll . space/b page . esc back",
+            "log": "j/k scroll . space/b page . esc back",
+        }[view]
+        if confirm:
+            kind, _ = confirm
+            msg = {"approve": "approve — the marker drops and this statement becomes yours",
+                   "cut": "cut — the words leave intent"}[kind] + " . y confirm . esc keep"
+            put(scr, h - 2, 2, msg[: w - 4],
+                ((ACCENT if kind == "approve" else ALERT) | BOLD))
+        elif flash:
+            put(scr, h - 2, 2, flash[: w - 4], ACCENT)
+        put(scr, h - 1, 2, hints[: w - 4], DIM)
+        scr.refresh()
+
+        ch = scr.getch()
+        flash = ""
+
+        if confirm:
+            kind, st = confirm
+            confirm = None
+            if ch in (ord("y"), ord("Y")):
+                if any(l.split()[-1] in ("intent.md", "queue.md")
+                       for l in dirty.splitlines()):
+                    flash = "intent.md or queue.md has uncommitted changes — resolve before deciding"
+                    continue
+                card = card_for(st, blocks)
+                hsh = (approve(st["text"], card is not None) if kind == "approve"
+                       else cut(st["text"], card))
+                flash = ("that statement is no longer on disk — refreshed" if hsh is None
+                         else "%s . committed %s" % ("approved" if kind == "approve" else "cut", hsh))
+            continue
+
+        if view == "home":
+            if ch == ord("q"):
+                return
+            elif ch in (curses.KEY_DOWN, ord("j")):
+                sel += 1
+            elif ch in (curses.KEY_UP, ord("k")):
+                sel -= 1
+            elif ch in (10, 13, curses.KEY_ENTER) and pend:
+                view = "card"
+            elif ch == ord("d"):
+                view, scroll = "doc", 0
+            elif ch == ord("g"):
+                view, scroll = "log", 0
+        elif view == "card":
+            if ch == 27:
+                view = "home"
+            elif ch in (curses.KEY_DOWN, ord("j")):
+                sel += 1
+            elif ch in (curses.KEY_UP, ord("k")):
+                sel -= 1
+            elif ch == ord("a"):
+                confirm = ("approve", pend[sel])
+            elif ch == ord("c"):
+                confirm = ("cut", pend[sel])
+            elif ch == ord("e"):
+                words = read_words(scr, h, w)
+                if words is not None:
+                    hsh = explain(pend[sel], words)
+                    flash = ("on disk . committed %s . the machine reads it "
+                             "next session" % hsh)
+        elif view in ("doc", "log"):
+            if ch in (27, ord("q"), ord("d") if view == "doc" else ord("g")):
+                view = "home"
+            elif ch in (curses.KEY_DOWN, ord("j")):
+                scroll += 1
+            elif ch in (curses.KEY_UP, ord("k")):
+                scroll -= 1
+            elif ch == ord(" "):
+                scroll += h - top - 2
+            elif ch == ord("b"):
+                scroll -= h - top - 2
+
+
+if __name__ == "__main__":
+    if not os.path.exists(INTENT):
+        raise SystemExit("hyper: intent.md not found beside this file")
+    curses.wrapper(main)

@@ -17,12 +17,23 @@ per_sec=$(awk '
 next=$(grep -m1 ' \[machine\]$' "$doc" 2>/dev/null) || next=""
 recent=$(git log --oneline -3 2>/dev/null) || recent="(no git history)"
 
+words=$(grep -h '^operator (' queue.md 2>/dev/null) || words=""
+words_block=""
+if [ -n "$words" ]; then
+  words_block="
+Operator words from the interface (queue.md), awaiting the machine's answer:
+${words}
+Answer these first — each is an explain pick made in hyper; the full card
+is in queue.md. Tell the story or answer the words, then stop.
+"
+fi
+
 context="hypercore session brief — generated from disk by .claude/hooks/session-brief.sh
 
 Re-ratification queue: ${total} statements still marked [machine] in ${doc}.
 ${per_sec}
 Next pending: ${next:-none — the queue is clear}
-
+${words_block}
 Recent commits:
 ${recent}
 
