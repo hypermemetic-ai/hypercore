@@ -28,3 +28,5 @@ operator (2026-06-11): odd that both were listed as from the acceptance card on 
 
 operator (2026-06-11): just the model name is fine. not claude claude-fable-5.
 
+operator (2026-06-11): also, this conversation should be presented below the card, not as a separate item.
+
