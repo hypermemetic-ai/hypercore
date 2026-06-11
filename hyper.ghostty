@@ -1,0 +1,22 @@
+# hyper.ghostty — the terminal hyper lives in at login.
+# Loaded by hyper.desktop: ghostty --config-file=<this> -e <repo>/hyper
+# High contrast, deliberate type, color spent only where it earns its
+# place — the palette's red is the record-behind alert, nothing else.
+
+font-family = IBM Plex Mono
+font-family = Ubuntu Mono
+font-size = 14
+
+background = #000000
+foreground = #e8e3d6
+palette = 1=#c43d3d
+palette = 9=#c43d3d
+minimum-contrast = 1
+bold-is-bright = false
+
+cursor-style = block
+fullscreen = true
+window-decoration = false
+window-padding-x = 28
+window-padding-y = 22
+confirm-close-surface = false
