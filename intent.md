@@ -28,13 +28,11 @@ Intent starts work; material is what the work makes. Intent comes whole from the
 
 Intent lives relative to a work graph, folded or unfolded: the graph's folder contains its intent. hypercore is itself a folded work graph; this repository is its folder. Everything in it that is not intent is material.
 
-## statements
-
 A work graph's intent document is that graph's current intended reality.
 
-A statement is plain, declarative, and strong enough to be wrong — wrong against material, evidence, or later judgment.
+## statements
 
-Within an execution graph, one name means one concept.
+A statement is plain, declarative, and strong enough to be wrong — wrong against material, evidence, or later judgment.
 
 Every statement should be ownable: one party can put their name on it and answer for changing it.
 
@@ -42,25 +40,25 @@ If it doesn't matter enough for the operator to hear about it, it isn't a statem
 
 The operator and the machine are both bound by coherence. When the operator's decisions stop making sense together, the machine calls it out rather than silently applying the newest word.
 
-When the operator leaves a meaningful choice open and the machine settles it, that settlement is visible as machine-owned intent until the operator endorses it.
-
 A revision lands as one edit and one commit; nothing we build may grow that path. What it breaks becomes work, after it lands.
-
-The default motion is ratification: the machine drafts concrete statements and the operator decides. The operator is rarely asked to author from nothing.
 
 ## endorsement
 
 The machine never endorses for the operator.
 
-Ownership does not make a statement true. When evidence turns against a statement — whoever owns it — the operator hears about it; only the owner changes the words.
-
 Every statement is endorsed or unendorsed: endorsed is the operator's responsibility, unendorsed is the machine's. Material answers to whoever is responsible for the statement behind it.
 
-Unendorsed statements are debt. Leaving one unprocessed doesn't stop the machine from asking again; and as unendorsed statements come to depend on each other, the operator's model of the system drifts from reality.
+Ownership does not make a statement true. When evidence turns against a statement — whoever owns it — the operator hears about it; only the owner changes the words.
 
 Ownership is visible in the file itself: a machine-owned statement ends with the marker [machine]. The operator has three commands: approve — the marker drops; cut — the words leave; explain — with or without the operator's words, the machine helps them reach a decision, and the statement returns.
 
+The default motion is ratification: the machine drafts concrete statements and the operator decides. The operator is rarely asked to author from nothing.
+
 A cut can be informed disagreement or a refusal to incorporate what is not understood; either way the words leave intent. What a cut breaks — references left dangling, machinery left running with no statement behind it — is put before the operator as part of the decision, not discovered after it.
+
+When the operator leaves a meaningful choice open and the machine settles it, that settlement is visible as machine-owned intent until the operator endorses it.
+
+Unendorsed statements are debt. Leaving one unprocessed doesn't stop the machine from asking again; and as unendorsed statements come to depend on each other, the operator's model of the system drifts from reality.
 
 ## work
 
@@ -68,7 +66,15 @@ Work happens as a graph. A node expresses an ask, and carrying it out grows a gr
 
 That growing graph is an execution graph. It is a dynamically composed workflow, not a fixed template.
 
+Within an execution graph, one name means one concept.
+
 A folder holds one execution graph. The unit on disk is the execution graph, not the single node.
+
+Work is made of operations. An operation is one move on the problem state, of four kinds: ask, check, decide, do — one word for each thing a statement must find, and do for everything else.
+
+A new kind enters in the same edit as the statement that must find it, and stays only while a statement reads it; other new words are names for clusters.
+
+An operation earns a node on two grounds only: it crossed the operator–machine boundary, or the fold's trust rests on it. Everything else is do, absorbed into the operation it served. The graph is a ledger of commitments, not a trace of thought.
 
 When the work is done, the execution graph folds into the node whose ask spawned it. The result becomes that node's material, and the steps become its history.
 
@@ -81,9 +87,3 @@ The episode that does the work is disposable; the checks at the fold's boundary 
 Folds stack, and error compounds up the stack: whatever doubt a fold carries, everything built on it inherits. The weaker a graph's checks, the shallower it must stay before folding, and the less may be built on top of it.
 
 A view of a graph never lags it: every view is read live from the graph or updated in the same act that folds it.
-
-Work is made of operations. An operation is one move on the problem state, of four kinds: ask, check, decide, do — one word for each thing a statement must find, and do for everything else.
-
-A new kind enters in the same edit as the statement that must find it, and stays only while a statement reads it; other new words are names for clusters.
-
-An operation earns a node on two grounds only: it crossed the operator–machine boundary, or the fold's trust rests on it. Everything else is do, absorbed into the operation it served. The graph is a ledger of commitments, not a trace of thought.
