@@ -739,15 +739,15 @@ def main(scr):
                     "… %d more below — space scrolls" % below, DIM)
 
         hints = {
-            "home": (("enter open . ↑/↓ move . " if entries else "")
+            "home": (("enter open . j/k move . " if entries else "")
                      + ("m summon . " if (awaits or dirty) and not machine else "")
                      + "s speak . w work . d document . g log . q quit"),
-            "card": "a approve . c cut . e explain . s speak . ←/→ j/k statements . ↑/↓ scroll . esc back",
-            "accept": "a accept . s reservations . ←/→ j/k slices . ↑/↓ scroll . space/b page . esc back",
-            "exchange": "s speak . c fold away . ↑/↓ scroll . space/b page . esc back",
-            "work": "↑/↓ move . s speak on it . space/b page . esc back",
-            "doc": "↑/↓ scroll . space/b page . s speak . esc back",
-            "log": "↑/↓ scroll . space/b page . s speak . esc back",
+            "card": "a approve . c cut . e explain . s speak . j/k statements . space/b page . esc back",
+            "accept": "a accept . s reservations . j/k slices . space/b page . esc back",
+            "exchange": "s speak . c fold away . space/b page . esc back",
+            "work": "j/k move . s speak on it . space/b page . esc back",
+            "doc": "space/b page . s speak . esc back",
+            "log": "space/b page . s speak . esc back",
         }[view]
         put(scr, h - 3, LM, "─" * max(0, w - 2 * LM), DIM)
         if confirm:
@@ -796,9 +796,9 @@ def main(scr):
         if view == "home":
             if ch == ord("q"):
                 return
-            elif ch == curses.KEY_DOWN:
+            elif ch in (curses.KEY_DOWN, ord("k")):
                 sel += 1
-            elif ch == curses.KEY_UP:
+            elif ch in (curses.KEY_UP, ord("j")):
                 sel -= 1
             elif ch in (10, 13, curses.KEY_ENTER) and entries:
                 kind, obj = entries[sel]
@@ -937,9 +937,9 @@ def main(scr):
         elif view == "work":
             if ch == 27:
                 view = "home"
-            elif ch == curses.KEY_DOWN:
+            elif ch in (curses.KEY_DOWN, ord("k")):
                 wsel += 1
-            elif ch == curses.KEY_UP:
+            elif ch in (curses.KEY_UP, ord("j")):
                 wsel -= 1
             elif ch == ord(" "):
                 scroll += view_h
