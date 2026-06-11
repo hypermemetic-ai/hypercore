@@ -1,12 +1,5 @@
 # work
 
-## the interface — first slice
-- ask: a keyboard-only interface where the operator decides: the queue as home, decision cards with entailments, approve / cut / explain, every decision committed in the operator's name before the screen redraws
-- state: in use, awaiting acceptance
-- since: 2026-06-11
-- try: you are in it — this card, the queue behind it, and every pick that commits in your name are the slice
-- waits on: one act on its acceptance card
-
 ## the return path
 - ask: machine answers land on the card that asked, shown as the exchange so far; the session brief stops nagging once a word is answered
 - state: in use, awaiting acceptance
@@ -76,3 +69,4 @@
 - since: 2026-06-11
 - try: on any card, j and k — j to the previous, k to the next; if the inversion points the wrong way, say so and it lands the other way
 - waits on: one act on its acceptance card; the operator's correction if the inversion points the wrong way
+
