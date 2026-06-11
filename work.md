@@ -1,9 +1,9 @@
 # work
 
 ## busywork goes to a mini-machine
-- ask: your words from the queue — a dedicated small-model session for busywork, starting from the observation that truing up the record is mostly just committing what a dead session left; the model set in a file like the machine's, never hardcoded (sonnet today)
-- options: go — a `mini` file lands beside `machine` (same one-line format, {prompt} and all), and record-behind true-ups route to it under a hard bar: commit what is actually on disk with grounds faithful to the diff, never finish or correct half-done work — anything ambiguous it leaves, named, for the full machine; redirect — name the busywork class you want delegated first; cut — one machine for everything
-- state: awaiting your decision — this card sits on the queue; s speaks your word
+- ask: a `mini` file now sits beside `machine` — same one-line format, sonnet today, your one-line edit to change — and a bare true-up (record behind, no words waiting) summons it instead of the full machine, under the hard bar: commit what is actually on disk with grounds faithful to the diff, never finish or correct; anything it leaves stays uncommitted, named in .hyper-machine.log, and the next summon goes to the full machine
+- try: next time the record is behind with no words waiting, m — the top right reads "the mini is answering" and the commits land under sonnet; words always bring the full machine
+- state: awaiting acceptance — built 2026-06-11 on your go from the decision card
 - since: 2026-06-11
 
 ## the machine answers without m
