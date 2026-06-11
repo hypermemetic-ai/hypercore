@@ -38,3 +38,7 @@ machine (2026-06-11): mostly right — and the exception is the design constrain
 
 operator (2026-06-11): go
 
+## from the decision card, on "the machine answers without m" . 2026-06-11
+
+operator (2026-06-11): go
+
