@@ -7,13 +7,6 @@
 - try: log out and in once — either hyper opens fullscreen, or .hyper.log holds the exact words of what failed; accept only after a login seen with your own eyes
 - waits on: one act on its acceptance card, after one login; the statement behind it stands [machine] in the queue
 
-## the conversation, live
-- ask: speaking anywhere summons the machine on the spot — a headless session that answers onto the same card while the operator watches; the screen re-reads disk on a one-second tick, so the answer arrives with no restart anywhere; m summons for stragglers; the summoned machine may build under the standing orders (the build-nothing leash was cut on the operator's word, 5bf28f7); each summon spends one session's tokens
-- state: awaiting acceptance
-- since: 2026-06-11
-- try: speak from anywhere and stay on the exchange — the answer lands while you watch, no restart
-- waits on: one act on its acceptance card; the statement behind it stands [machine] in the queue
-
 ## words you can edit
 - ask: the input line became an editor — everything typed stays visible, wrapped whole across lines; arrows move the cursor anywhere, home/end jump, backspace and delete edit in place; nothing binds until enter
 - state: awaiting acceptance
