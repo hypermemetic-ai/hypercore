@@ -13,8 +13,8 @@ on its own — no restart anywhere.
 Views    queue (home) . decision card . acceptance card . exchange .
          work . document . log
 Decide   a approve . c cut . e explain (words optional)
-Accept   a on an acceptance card — one act, the slice is released;
-         s speaks reservations
+Accept   a then y on an acceptance card — confirmed like every
+         other release; s speaks reservations
 Speak    s anywhere — words land verbatim, the place travels with them,
          and the machine is summoned to answer while you watch
 Move     arrows . left/right across cards (j previous, k next) . up/down
@@ -642,9 +642,9 @@ def main(scr):
                     first = False
                 rows.append([])
             rows += [[(LM, ln, DIM)]
-                     for ln in wrap("a accepts and releases the slice — the entry "
-                                    "leaves work.md, git keeps it. speak only if "
-                                    "you have reservations.", width)]
+                     for ln in wrap("a then y accepts and releases the slice — the "
+                                    "entry leaves work.md, git keeps it. speak only "
+                                    "if you have reservations.", width)]
             scroll = max(0, min(scroll, max(0, len(rows) - view_h)))
             for i, segs in enumerate(rows[scroll: scroll + view_h]):
                 for x, txt, attr in segs:
@@ -762,6 +762,7 @@ def main(scr):
             kind = confirm[0]
             msg = {"approve": "approve — the marker drops and this statement becomes yours",
                    "cut": "cut — the words leave intent",
+                   "accept": "accept — the slice is released and leaves work.md; git keeps the entry",
                    "fold": "fold this exchange away — git keeps the words"}[kind] \
                   + " . y confirm . esc keep"
             put(scr, h - 2, LM, msg[: w - 2 * LM], ALERT if kind == "cut" else BOLD)
@@ -793,6 +794,10 @@ def main(scr):
                     flash = ("that exchange is no longer on disk — refreshed" if hsh is None
                              else "folded . committed %s" % hsh)
                     view = "home"
+                elif kind == "accept":
+                    hsh = accept(payload)
+                    flash = ("that slice is no longer on disk — refreshed" if hsh is None
+                             else "accepted . committed %s . git keeps the entry" % hsh)
                 else:
                     card = card_for(payload, cards)
                     hsh = (approve(payload["text"], card is not None) if kind == "approve"
@@ -885,13 +890,7 @@ def main(scr):
             elif ch == ord("b"):
                 scroll -= view_h
             elif ch == ord("a"):
-                if guarded:
-                    flash = GUARD
-                else:
-                    name = accepts[ai]["lines"][0][3:].strip()
-                    hsh = accept(name)
-                    flash = ("that slice is no longer on disk — refreshed" if hsh is None
-                             else "accepted . committed %s . git keeps the entry" % hsh)
+                confirm = ("accept", accepts[ai]["lines"][0][3:].strip())
             elif ch == ord("s"):
                 if guarded:
                     flash = GUARD

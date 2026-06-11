@@ -36,8 +36,9 @@ the live queue state at every session start; this file carries the rules.
    the option picker; the own-words bar was a proxy for the chance to
    test and fell on the operator's word (2026-06-11): every slice
    awaiting acceptance surfaces as a card — what it does, how to try it
-   (interface changes are their own evidence) — and one frictionless act
-   on the card accepts and releases it. The operator speaks only when
+   (interface changes are their own evidence) — and one act on the card,
+   confirmed like every other release (operator's word, 2026-06-11),
+   accepts and releases it. The operator speaks only when
    they have reservations, and those words land on the card like any
    speech. Until accepted the slice stays machine-owned material.
 6. **Decisions before material** (operator's word, 2026-06-11): a call
