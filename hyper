@@ -2,8 +2,8 @@
 """hyper — the operator's interface to hypercore.
 
 One file, stdlib only, keyboard only.  Every frame is read fresh from
-disk: intent.md (the system), queue.md (decision cards), words.md (open
-exchanges), work.md (open work).  Every move the operator makes
+disk: intent.md (the system), queue.md (decision cards), words.md (the
+exchanges), work.md (standing work).  Every move the operator makes
 lands on disk and is committed in their name before the screen redraws.
 The screen re-reads disk on a one-second tick, so what lands shows up
 on its own — no restart anywhere.
@@ -644,7 +644,7 @@ def main(scr):
                 y += 1
             y += 1
             if work:
-                put(scr, y, LM, ("open work: %d . awaiting your acceptance: %d . "
+                put(scr, y, LM, ("standing work: %d . awaiting your acceptance: %d . "
                                  "w opens the view" % (len(work), len(accepts)))[: w - 2 * LM],
                     DIM)
                 y += 1
@@ -755,7 +755,7 @@ def main(scr):
                     "… %d more below — space scrolls" % below, DIM)
 
         elif view == "work" and not wexp:
-            put(scr, top, LM, "WORK IN-FLIGHT", DIM)
+            put(scr, top, LM, "STANDING WORK", DIM)
             # the view opens folded to the graph line — the default reads
             # at project level, one project today; enter unfolds it
             put(scr, top + 2, LM, ("hypercore" + " " * width)[:width], REV)
@@ -765,7 +765,7 @@ def main(scr):
                 put(scr, top + 2, LM + width - len(summary), summary, REV)
 
         elif view == "work":
-            put(scr, top, LM, "WORK IN-FLIGHT", DIM)
+            put(scr, top, LM, "STANDING WORK", DIM)
             # one project today: the entries hang a level below their
             # graph — the cheap seam toward many projects, presentation
             # only until a second graph exists

@@ -68,7 +68,7 @@ if [ -f work.md ]; then
     /^- state: /  { printf "  %s — %s\n", name, substr($0, 10) }
   ' work.md 2>/dev/null) || work_summary=""
   [ -n "$work_summary" ] && work_block="
-Work in flight (work.md — keep it true; the operator reads it in hyper):
+Standing work (work.md — keep it true; the operator reads it in hyper):
 ${work_summary}"
 fi
 

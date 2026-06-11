@@ -43,7 +43,7 @@ the live queue state at every session start; this file carries the rules.
    speech. Until accepted the slice stays machine-owned material.
 6. **Decisions before material** (operator's word, 2026-06-11): a call
    that commits the operator's resources or changes what they must later
-   judge surfaces while the work is in-flight — with options and
+   judge surfaces while the work is underway — with options and
    entailments — and is settled by the operator before the material
    exists. Below that bar the machine scopes freely, visibly, and
    answers for the calls it kept. The machine the interface summons

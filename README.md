@@ -21,9 +21,9 @@ recoverable forever in git history. What survived is intent.
   s speaks from anywhere, the place travels with the words, and speaking
   summons the machine — the answer lands while the operator watches.
   m summons for stragglers and whenever the record is behind. w shows
-  open work; j/k move across cards, j previous and k next.
+  standing work; j/k move across cards, j previous and k next.
 - **queue.md / words.md / work.md** — the ledgers behind the views:
-  decision cards, open exchanges, open work. Machine-maintained;
+  decision cards, the exchanges, standing work. Machine-maintained;
   the operator only reads and decides.
 - **machine** — the one visible setting: the command a summon runs,
   {prompt} standing for the instruction. claude today; codex or any
