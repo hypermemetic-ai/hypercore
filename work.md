@@ -30,9 +30,3 @@
 - state: awaiting acceptance
 - since: 2026-06-11
 
-## hyper launches from the desktop menu
-- ask: closing hyper no longer costs a login — hyper keeps a menu entry the way it keeps the autostart one, a symlink in the applications directory to the repo's hyper.desktop, ensured at every start and healed if it dangles; a foreign file by that name is left alone and flagged
-- try: the entry lands the next time hyper starts (this summoned session cannot write outside the repo — one more login does it); from then on the desktop menu, or super and typing hyper, opens it anytime
-- state: awaiting acceptance
-- since: 2026-06-11
-
