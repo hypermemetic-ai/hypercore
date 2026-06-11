@@ -15,7 +15,9 @@ Views    queue (home) . decision card . work-decision card .
 Decide   a approve . c cut . e explain (words optional); the verbs are
          the same on every card — on a standing-work decision approve
          lands on the card as if spoken, y confirms, and the machine
-         executes it; s speaks in the operator's own words
+         executes it; the card's options wear numbers, 1–9 picks one,
+         y confirms, and the option's own words land in the operator's
+         name; s speaks in the operator's own words
 Accept   a approve then y on an acceptance card — confirmed like every
          other release; s speaks reservations
 Speak    s anywhere — words land verbatim, the place travels with them,
@@ -902,8 +904,22 @@ def main(scr):
                 DIM)
             rows = [[(LM, ln, BOLD)] for ln in wrap(name, width)]
             rows.append([])
-            for key, label in (("ask", "it asks"), ("options", "options"),
+            opts = [o.strip() for o in blk["fields"].get("options", "").split(" . ")
+                    if o.strip()]
+            for key, label in (("ask", "it asks"), ("options", None),
                                ("state", "state"), ("since", "since")):
+                if key == "options":
+                    # each option wears the number that picks it — the
+                    # number is the word, y confirms, and the option's own
+                    # words land on the card in the operator's name
+                    for n, opt in enumerate(opts, 1):
+                        first = True
+                        for ln in wrap(opt, width - 9):
+                            rows.append([(LM, "%7d" % n, BOLD), (LM + 9, ln, 0)]
+                                        if first else [(LM + 9, ln, 0)])
+                            first = False
+                        rows.append([])
+                    continue
                 val = blk["fields"].get(key)
                 if key == "state" and blk["lines"][0] in spoken:
                     val = "your words landed — the machine is on it"
@@ -927,10 +943,13 @@ def main(scr):
                     rows += [[(LM + 2, ln, attr)] for ln in wrap(wln, width - 2)]
                 rows.append([])
             rows += [[(LM, ln, DIM)]
-                     for ln in wrap("a approves . c cuts — y confirms either, and "
-                                    "the word lands on the card for the machine "
-                                    "to execute; s speaks anything else in your "
-                                    "own words.", width)]
+                     for ln in wrap("a approves . c cuts"
+                                    + (" . 1–%d picks an option" % len(opts)
+                                       if opts else "")
+                                    + " — y confirms any, and the word lands "
+                                    "on the card for the machine to execute; "
+                                    "s speaks anything else in your own "
+                                    "words.", width)]
             scroll = max(0, min(scroll, max(0, len(rows) - view_h)))
             for i, segs in enumerate(rows[scroll: scroll + view_h]):
                 for x, txt, attr in segs:
@@ -1119,7 +1138,7 @@ def main(scr):
                      + ("m summon . " if (awaits or dirty) and not machine else "")
                      + "s speak . w work . d document . g log . q quit"),
             "card": "a approve . c cut . e explain . s speak . j/k statements . space/b page . esc back",
-            "settle": "a approve . c cut . s speak . j/k cards . space/b page . esc back",
+            "settle": "a approve . c cut . 1–9 pick . s speak . j/k cards . space/b page . esc back",
             "accept": "a approve . s speak . j/k slices . space/b page . esc back",
             "exchange": "s speak . c fold away . space/b page . esc back",
             "work": ("j/k move . s speak on it . space/b page . esc fold"
@@ -1134,13 +1153,16 @@ def main(scr):
             kind = confirm[0]
             lead = "y confirms %s . esc keeps things as they are" \
                    % {"approve": "approve", "cut": "the cut", "accept": "approve",
-                      "fold": "the fold", "go": "approve", "cut-card": "the cut"}[kind]
+                      "fold": "the fold", "go": "approve", "cut-card": "the cut",
+                      "pick": "option %s" % (confirm[1][1] if kind == "pick" else "")}[kind]
             tail = {"approve": "the marker drops; the statement becomes yours",
                     "cut": "the words leave intent",
                     "accept": "the slice is released; git keeps the entry",
                     "fold": "the exchange leaves the queue; git keeps the words",
                     "go": "the word lands on the card; the machine executes it",
-                    "cut-card": "the word lands on the card; the machine executes it"}[kind]
+                    "cut-card": "the word lands on the card; the machine executes it",
+                    "pick": "the option's words land on the card in your name; "
+                            "the machine executes them"}[kind]
             put(scr, h - 2, LM, lead[: w - 2 * LM],
                 ALERT if kind in ("cut", "cut-card") else BOLD)
             x = LM + len(lead) + 3
@@ -1174,11 +1196,16 @@ def main(scr):
                 if guarded:
                     flash = GUARD
                     continue
-                if kind in ("go", "cut-card"):
+                if kind in ("go", "cut-card", "pick"):
                     # the key is the word: it lands on the card exactly as
                     # if spoken, and the machine executes it
-                    word = "approve" if kind == "go" else "cut"
-                    hsh = speak('the decision card, on "%s"' % payload, word)
+                    if kind == "pick":
+                        name, n, opt = payload
+                        word = "option %d — %s" % (n, opt)
+                    else:
+                        name = payload
+                        word = "approve" if kind == "go" else "cut"
+                    hsh = speak('the decision card, on "%s"' % name, word)
                     resummon = resummon or machine is not None
                     machine = start_machine(machine)
                     flash = ("%s . committed %s . the machine is working" % (word, hsh)
@@ -1297,6 +1324,14 @@ def main(scr):
                 confirm = ("go", decides[si]["lines"][0][3:].strip())
             elif ch == ord("c"):
                 confirm = ("cut-card", decides[si]["lines"][0][3:].strip())
+            elif ord("1") <= ch <= ord("9"):
+                opts = [o.strip() for o in
+                        decides[si]["fields"].get("options", "").split(" . ")
+                        if o.strip()]
+                n = ch - ord("0")
+                if n <= len(opts):
+                    confirm = ("pick", (decides[si]["lines"][0][3:].strip(),
+                                        n, opts[n - 1]))
             elif ch == ord("s"):
                 if guarded:
                     flash = GUARD

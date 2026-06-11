@@ -85,7 +85,9 @@ graph's intent document is singular, and this repo is hypercore's folder.
   2026-06-11): every work.md entry names a clear operator act in its
   state — "awaiting your decision" surfaces a decision card on the
   queue (fields: ask, options, state, since; the operator's word
-  settles it), "awaiting acceptance" an acceptance card (fields: ask,
+  settles it — options are separated by " . ", hyper numbers them and
+  1–9 picks one in the operator's name), "awaiting acceptance" an
+  acceptance card (fields: ask,
   try, state). Work that waits on no operator act does not stand in
   work.md; git keeps the thinking until its forcing event arrives.
 - Decisions before material (operator's word, 2026-06-11): a call that
