@@ -24,7 +24,9 @@ Speak    s anywhere — words land verbatim, the place travels with them,
          and the machine is summoned to work while you watch
 Graphs   the work view lists every open execution graph beside hypercore
          and unfolds to its nodes — work/<name>/graph.md, read live; the
-         unit on disk is the graph
+         unit on disk is the graph; d on a project line opens that
+         unit's documents — intent.md for hypercore, the files in
+         work/<name>/ for a graph
 Machine  the record calling is the summons — at launch, a behind record
          or waiting words start the machine without m, and words landing
          mid-answer summon it once more when the run ends; m stays as
@@ -647,6 +649,7 @@ def main(scr):
 
     view, sel, ci, ai, si, wsel, gsel = "home", 0, 0, 0, 0, 0, 0
     wexp = None  # the work view opens folded; set, it names the unfolded project
+    dunit = 0  # the project whose documents the document view shows
     scroll, flash, confirm, exkey = 0, "", None, None
     machine = None  # (Popen, started, kind) while a summoned session is working
     escalate = False  # a mini left work behind — the next summon goes to the full machine
@@ -755,6 +758,7 @@ def main(scr):
         ai = max(0, min(ai, len(accepts) - 1))
         si = max(0, min(si, len(decides) - 1))
         gsel = max(0, min(gsel, len(projects) - 1))
+        dunit = max(0, min(dunit, len(projects) - 1))
         if wexp is not None and wexp >= len(projects):
             wexp = None
         witems = work if wexp in (None, 0) else projects[wexp][1]
@@ -1112,8 +1116,11 @@ def main(scr):
                     "… %d more below — space scrolls" % below, DIM)
 
         elif view in ("doc", "log"):
-            put(scr, top, LM, "INTENT" if view == "doc" else "THE RECORD", DIM)
-            if view == "doc":
+            dname = projects[dunit][0] if view == "doc" else ""
+            put(scr, top, LM,
+                ("INTENT" if dunit == 0 else dname.upper())
+                if view == "doc" else "THE RECORD", DIM)
+            if view == "doc" and dunit == 0:
                 rows, cursec = [], None
                 for st in stmts:
                     if st["section"] != cursec:
@@ -1122,6 +1129,18 @@ def main(scr):
                     attr = DIM if st["pending"] else 0
                     rows += [(ln, attr) for ln in wrap(st["text"], width)]
                     rows.append(("", 0))
+            elif view == "doc":
+                # a graph's documents are its folder, read live: every file
+                # in work/<name>/, led by its name
+                rows, folder = [], os.path.join(WORKDIR, dname)
+                for fn in sorted(os.listdir(folder)):
+                    fpath = os.path.join(folder, fn)
+                    if not os.path.isfile(fpath):
+                        continue
+                    rows += [("", 0), (fn, BOLD), ("", 0)]
+                    with open(fpath, encoding="utf-8") as f:
+                        for ln in f.read().splitlines():
+                            rows += [(wl, 0) for wl in wrap(ln, width)]
             else:
                 rows = [((e if len(e) <= width else e[: width - 1] + "…"), 0)
                         for e in run("git", "log", "-200",
@@ -1137,14 +1156,14 @@ def main(scr):
         hints = {
             "home": (("enter open . j/k move . " if entries else "")
                      + ("m summon . " if (awaits or dirty) and not machine else "")
-                     + "s speak . w work . d document . g log . q quit"),
+                     + "s speak . w work . g log . q quit"),
             "card": "a approve . c cut . e explain . s speak . j/k statements . space/b page . esc back",
             "settle": "a approve . c cut . 1–9 pick . s speak . j/k cards . space/b page . esc back",
             "accept": "a approve . s speak . j/k slices . space/b page . esc back",
             "exchange": "s speak . c fold away . space/b page . esc back",
             "work": ("j/k move . s speak on it . space/b page . esc fold"
                      if wexp is not None
-                     else "enter unfold . j/k move . s speak . esc back"),
+                     else "enter unfold . j/k move . d document . s speak . esc back"),
             "doc": "space/b page . s speak . esc back",
             "log": "space/b page . s speak . esc back",
         }[view]
@@ -1256,8 +1275,6 @@ def main(scr):
                          "no machine to summon — the machine file names the command")
             elif ch == ord("w") and (work or gs):
                 view, scroll, wexp = "work", 0, None
-            elif ch == ord("d"):
-                view, scroll = "doc", 0
             elif ch == ord("g"):
                 view, scroll = "log", 0
             elif ch == ord("s"):
@@ -1430,6 +1447,10 @@ def main(scr):
                     view = "home"
             elif ch in (10, 13, curses.KEY_ENTER) and wexp is None:
                 wexp, wsel, scroll = gsel, 0, 0
+            elif ch == ord("d") and wexp is None:
+                # the selection is the unit: d opens the documents of the
+                # project line under the cursor
+                dunit, view, scroll = gsel, "doc", 0
             elif ch in (curses.KEY_DOWN, ord("k")):
                 if wexp is None:
                     gsel += 1
@@ -1475,7 +1496,11 @@ def main(scr):
 
         elif view in ("doc", "log"):
             if ch in (27, ord("q"), ord("d") if view == "doc" else ord("g")):
-                view = "home"
+                # the document came from the work view's project lines and
+                # goes back there; the log still backs out to the queue
+                view = "work" if view == "doc" else "home"
+                if view == "work":
+                    wexp, scroll = None, 0
             elif ch == curses.KEY_DOWN:
                 scroll += 1
             elif ch == curses.KEY_UP:
@@ -1488,7 +1513,9 @@ def main(scr):
                 if guarded:
                     flash = GUARD
                 else:
-                    place = "the document" if view == "doc" else "the log"
+                    place = (("the document" if dunit == 0 else
+                              'the documents of "%s"' % projects[dunit][0])
+                             if view == "doc" else "the log")
                     wd = read_words(scr, h, w, "your words, from %s "
                                                "(enter sends . esc abandons): " % place)
                     if wd and wd.strip():
