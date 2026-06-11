@@ -43,7 +43,7 @@
 - waits on: the operator typing in it and accepting in their own words; the statement behind it stands [machine] in the queue
 
 ## across is horizontal
-- ask: arrows only, doing what they look like — ←/→ moves across statements, ↑/↓ moves and scrolls within the screen; j/k are gone
-- state: awaiting acceptance
+- ask: arrows doing what they look like — ←/→ across statements, ↑/↓ within the screen — and, by the operator's redirect (2026-06-11), j/k restored across statements with their effects inverted from the first slice (j to the previous statement, k to the next); space/b paging stays as it stands
+- state: redirected — the slice cut j/k entirely, but the operator's criticism was the direction, not the keys; the restore is the next slice
 - since: 2026-06-11
-- waits on: the operator moving with it and accepting in their own words
+- waits on: the restore landing; then the operator moving with it and accepting in their own words; the operator's correction if the inversion recorded points the wrong way

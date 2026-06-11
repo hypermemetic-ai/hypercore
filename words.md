@@ -20,3 +20,5 @@ machine (2026-06-11): all of it landed. the chat feel lives inside now: speaking
 
 operator (2026-06-11): I actually preferred j/k and space/b. it was something new I hadn't experienced. I simply critizised the mappings for j and k. I suggested their effect should be inverted.
 
+machine (2026-06-11): the slice overshot your words — you asked for j and k inverted, and the machine cut them instead. space/b never left; they still page in every view. The restore is recorded in work.md: j/k come back across statements with their effects swapped from the first slice — j to the previous statement, k to the next — and the arrows stay alongside, costing nothing. If the inversion you meant points the other way, say so and it lands that way. This channel builds nothing; the next build lands it.
+
