@@ -516,6 +516,7 @@ def main(scr):
     GUT = 10  # the kind column
 
     view, sel, ci, ai, wsel = "home", 0, 0, 0, 0
+    wexp = False  # the work view opens folded to the graph line
     scroll, flash, confirm, exkey = 0, "", None, None
     machine = None  # (Popen, started) while a summoned session is answering
     flash = ensure_launcher() or flash
@@ -737,6 +738,16 @@ def main(scr):
                 put(scr, top + 2 + view_h, LM,
                     "… %d more below — space scrolls" % below, DIM)
 
+        elif view == "work" and not wexp:
+            put(scr, top, LM, "WORK IN-FLIGHT", DIM)
+            # the view opens folded to the graph line — the default reads
+            # at project level, one project today; enter unfolds it
+            put(scr, top + 2, LM, ("hypercore" + " " * width)[:width], REV)
+            summary = ("%d entr%s · %d await your acceptance"
+                       % (len(work), "y" if len(work) == 1 else "ies", len(accepts)))
+            if len(summary) <= width - len("hypercore") - 2:
+                put(scr, top + 2, LM + width - len(summary), summary, REV)
+
         elif view == "work":
             put(scr, top, LM, "WORK IN-FLIGHT", DIM)
             # one project today: the entries hang a level below their
@@ -818,7 +829,8 @@ def main(scr):
             "card": "a approve . c cut . e explain . s speak . j/k statements . space/b page . esc back",
             "accept": "a accept . s reservations . j/k slices . space/b page . esc back",
             "exchange": "s speak . c fold away . space/b page . esc back",
-            "work": "j/k move . s speak on it . space/b page . esc back",
+            "work": ("j/k move . s speak on it . space/b page . esc fold" if wexp
+                     else "enter unfold . s speak . esc back"),
             "doc": "space/b page . s speak . esc back",
             "log": "space/b page . s speak . esc back",
         }[view]
@@ -891,7 +903,7 @@ def main(scr):
                 flash = ("the machine is summoned" if machine else
                          "no machine to summon — the machine file names the command")
             elif ch == ord("w") and work:
-                view, scroll = "work", 0
+                view, scroll, wexp = "work", 0, False
             elif ch == ord("d"):
                 view, scroll = "doc", 0
             elif ch == ord("g"):
@@ -1008,20 +1020,26 @@ def main(scr):
 
         elif view == "work":
             if ch == 27:
-                view = "home"
-            elif ch in (curses.KEY_DOWN, ord("k")):
+                if wexp:
+                    wexp, scroll = False, 0
+                else:
+                    view = "home"
+            elif ch in (10, 13, curses.KEY_ENTER) and not wexp:
+                wexp, scroll = True, 0
+            elif ch in (curses.KEY_DOWN, ord("k")) and wexp:
                 wsel += 1
-            elif ch in (curses.KEY_UP, ord("j")):
+            elif ch in (curses.KEY_UP, ord("j")) and wexp:
                 wsel -= 1
-            elif ch == ord(" "):
+            elif ch == ord(" ") and wexp:
                 scroll += view_h
-            elif ch == ord("b"):
+            elif ch == ord("b") and wexp:
                 scroll -= view_h
             elif ch == ord("s") and work:
                 if guarded:
                     flash = GUARD
                 else:
-                    name = work[wsel]["lines"][0][3:].strip()
+                    name = (work[wsel]["lines"][0][3:].strip() if wexp
+                            else "hypercore")
                     wd = read_words(scr, h, w, "your words (enter sends . esc abandons): ")
                     if wd and wd.strip():
                         hsh = speak('the work view, on "%s"' % name, wd)

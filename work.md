@@ -25,8 +25,8 @@
 - since: 2026-06-11
 
 ## the work view hangs below its graph
-- ask: w groups the work under one project line — hypercore — with every entry a level below, your first step toward multi-project; presentation only, the per-project file seam stays in the open ask above until a second project forces it
-- try: press w — hypercore heads the view and the entries sit indented beneath it, each with its state, ask, and what it waits on
-- state: awaiting acceptance
+- ask: w opens folded to the graph line — hypercore, with how many entries it holds and how many await you — and enter unfolds it to the entries a level below, each with its state, ask, and what it waits on; esc folds back. presentation only, the per-project file seam stays in the open ask above until a second project forces it
+- try: press w — just hypercore, with the counts beside it; enter unfolds, esc folds, s speaks on the project when folded and on the entry when unfolded
+- state: awaiting acceptance — reworked to your words: folded by default, enter expands
 - since: 2026-06-11
 
