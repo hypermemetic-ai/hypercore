@@ -1,12 +1,5 @@
 # work
 
-## speak from anywhere
-- ask: s in any view takes the operator's words, lands them verbatim in words.md with the place attached, and commits; the machine answers onto the same block and the exchange shows on the queue
-- state: in use, awaiting acceptance
-- since: 2026-06-11
-- try: press s anywhere, send a word, watch it commit with the place attached
-- waits on: one act on its acceptance card
-
 ## the interface at login
 - ask: ghostty opens hyper fullscreen at login — high contrast, deliberate type, color only where it earns its place
 - state: hardened, awaiting acceptance — both repairs landed 2026-06-11: the flash writes to .hyper.log so an error is always quotable, and the fullscreen request retries each second until the window manager confirms it took (up to ten asks, every outcome logged). Both suspects from the failed login are covered: xdotool is installed, and the startup race loses to the retry
