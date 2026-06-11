@@ -18,3 +18,7 @@ operator (2026-06-11): so what state is the work in? I see entries under w but I
 
 operator (2026-06-11): I'll also ask - how do I start the interface if I close it? right now I log out and back in but some shortcut that launches it from desktop would be nice.
 
+## from the acceptance card, on "the screen names the machine" . 2026-06-11
+
+operator (2026-06-11): I think name should be on the very top row, somewhere tasteful. and yes, let's pin fable 5.
+
