@@ -20,6 +20,8 @@ operator (2026-06-11): I don't know if I want all my words to land verbatim. I g
 - approve: the queue is always read live from wherever decisions arose; no add, remove, or move operation on the queue itself may ever be built.
 - cut: the queue becomes a real list someone maintains, and the only candidates are the machine (more machinery to trust) or the operator (graph maintenance — the ceremony alarm already in foundations).
 
+operator (2026-06-11): tough statement. I don't understand the implications or prior reasoning here.
+
 ## the order of the queue is a machine claim that answers for itself
 
 > The order of the queue is the machine's claim about what the operator's attention is worth next, and it answers for that claim: every decision wears the cost of its own delay — what it blocks, what compounds while it waits — and the operator reorders with a word, never by hand. [machine]
