@@ -4,7 +4,8 @@
 
 - ask: a very big ask will outrun single episodes; give the ratified doctrine its machinery — graphs born on disk with their ask and named check, readable in the work view and the session brief — built cheap, features emerging from what already exists
 - check: the operator accepts the slice from its acceptance card
-- state: open — the slice awaits acceptance
+- result: accepted by the operator in the interface at 16:37 (c9b028b) — the check was met then, but the fold lagged: no session updated this root, and the stale "awaits acceptance" stood in the work view until the operator asked about it; trued up and folded the same day
+- state: folded
 - since: 2026-06-11
 
 ## the operator settles the scope
