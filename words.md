@@ -10,3 +10,5 @@ operator (2026-06-11): thanks. very cool.
 
 machine (2026-06-11): glad it reads well. the simplicity is the point — nothing to desync. nothing new asked, so nothing opened; the queue stays clear.
 
+operator (2026-06-11): but how does the program change? how do we update the tui live? or do we?
+
