@@ -36,6 +36,8 @@ machine (2026-06-11): mostly right — and the exception is the design constrain
 
 operator (2026-06-11): I don't like this "go" and similar structure for decisions. just like the rest, should be keys with confirmation. while we're at it, the text that appears after pressing a is noisy and the important thing - needing to press y to confirm, is drowned out.
 
+operator (2026-06-11): I never did see the desktop shortcut. that item was folded I believe but the change didn't really land.
+
 ## from the decision card, on "busywork goes to a mini-machine" . 2026-06-11
 
 operator (2026-06-11): go
