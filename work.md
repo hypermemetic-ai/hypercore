@@ -6,6 +6,12 @@
 - state: awaiting your decision — this card sits on the queue; s speaks your word
 - since: 2026-06-11
 
+## the model name moves to the bottom right
+- ask: the top row returns to title and status alone; the machine's name sits in the bottom-right corner, dim, beside the key hints — out of the way until looked for
+- try: any view — the name reads bottom right, the top row is clean; if right of the top bar reads better after all, one word moves it
+- state: awaiting acceptance — built 2026-06-11 on your words from the queue; of your two spots, top-right is where the status already lives, so bottom right keeps the minimalism
+- since: 2026-06-11
+
 ## decisions surface before and during the work
 - ask: a call that is the operator's lands as a work.md entry awaiting their decision and surfaces on the queue as a card — the ask, the options, what each entails — settled by their word before the material exists, mid-work included
 - try: this build is its own evidence — the queue now carries decide cards read from work.md ("the machine answers without m" is the first); enter opens one, s speaks your word on it, and the exchange rides the card

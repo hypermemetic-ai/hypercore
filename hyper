@@ -602,12 +602,6 @@ def main(scr):
             parts.append("%d ANSWERED" % len(answered))
         status = " . ".join(parts) if parts else "QUEUE CLEAR"
         put(scr, 0, max(LM, w - len(status) - LM), status, BOLD if parts else DIM)
-        # the machine's name rides the top row, dim, between title and
-        # status — drawn only when it fits whole
-        label = machine_label()
-        lx = (w - len(label)) // 2
-        if lx > LM + 19 and lx + len(label) <= w - LM - len(status) - 2:
-            put(scr, 0, lx, label, DIM)
         put(scr, 1, LM, "─" * max(0, w - 2 * LM), DIM)
         mtxt = ""
         if machine:
@@ -922,6 +916,11 @@ def main(scr):
         elif flash:
             put(scr, h - 2, LM, flash[: w - 2 * LM], BOLD)
         put(scr, h - 1, LM, hints[: w - 2 * LM], DIM)
+        # the machine's name sits bottom right, dim, out of the queue's
+        # way — drawn only when it fits clear of the key hints
+        label = machine_label()
+        if LM + len(hints) + 2 + len(label) <= w - LM:
+            put(scr, h - 1, w - LM - len(label), label, DIM)
         scr.refresh()
 
         ch = scr.getch()
