@@ -22,11 +22,11 @@ Accept   a approve then y on an acceptance card — confirmed like every
          other release; s speaks reservations
 Speak    s anywhere — words land verbatim, the place travels with them,
          and the machine is summoned to work while you watch
-Graphs   the work view lists every open execution graph beside hypercore
-         and unfolds to its nodes — work/<name>/graph.md, read live; the
-         unit on disk is the graph; d on a project line opens that
-         unit's documents — intent.md for hypercore, the files in
-         work/<name>/ for a graph
+Graphs   the work view lists every execution graph beside hypercore —
+         folded ones included, marked folded — and unfolds to its nodes:
+         work/<name>/graph.md, read live; the unit on disk is the graph;
+         d on a project line opens that unit's documents — intent.md for
+         hypercore, the files in work/<name>/ for a graph
 Machine  the record calling is the summons — at launch, a behind record
          or waiting words start the machine without m, and words landing
          mid-answer summon it once more when the run ends; m stays as
@@ -182,10 +182,10 @@ def card_for(st, cards):
 
 
 def graphs():
-    """Every open execution graph on disk, read fresh: work/<name>/graph.md,
+    """Every execution graph on disk, read fresh: work/<name>/graph.md,
     a ledger of nodes whose first block is the root ask born with its check.
-    A graph whose root state says folded has left standing work — git keeps
-    it."""
+    Folded graphs stay listed — finishing the work must not cost the
+    operator the view of it — only the open counts treat them as closed."""
     out = []
     if not os.path.isdir(WORKDIR):
         return out
@@ -193,7 +193,7 @@ def graphs():
         path = os.path.join(WORKDIR, name, "graph.md")
         if os.path.exists(path):
             blocks = ledger(path)
-            if blocks and "folded" not in blocks[0]["fields"].get("state", ""):
+            if blocks:
                 out.append((name, blocks))
     return out
 
@@ -706,8 +706,10 @@ def main(scr):
         work = ledger(WORK)
         gs = graphs()
         # the work view's project lines: the repo's own standing work
-        # first, then every open execution graph, read live
+        # first, then every execution graph — folded ones too — read live
         projects = [("hypercore", None)] + gs
+        gopen = sum(1 for _, blks in gs
+                    if "folded" not in blks[0]["fields"].get("state", ""))
         dirty = run("git", "status", "--porcelain").strip()
         last = run("git", "log", "-1", "--format=%h %s . %cr").strip()
 
@@ -810,8 +812,6 @@ def main(scr):
             exb = next((b for b in exchanges if b["lines"][0] == exkey), None)
             if exb is None:
                 view = "home"
-        if view == "work" and not work and not gs:
-            view = "home"
 
         scr.erase()
         h, w = scr.getmaxyx()
@@ -883,13 +883,13 @@ def main(scr):
                 put(scr, y, LM, "nothing waits on you.", DIM)
                 y += 1
             y += 1
-            if work or gs:
+            if work or gopen:
                 bits = []
                 if work:
                     bits.append("standing work: %d . awaiting your acceptance: %d"
                                 % (len(work), len(accepts)))
-                if gs:
-                    bits.append("open graphs: %d" % len(gs))
+                if gopen:
+                    bits.append("open graphs: %d" % gopen)
                 put(scr, y, LM,
                     (" . ".join(bits) + " . w opens the view")[: w - 2 * LM], DIM)
                 y += 1
@@ -1079,11 +1079,14 @@ def main(scr):
                                % (len(work), "y" if len(work) == 1 else "ies",
                                   len(accepts)))
                 else:
-                    open_n = sum(1 for b in pblocks
-                                 if "open" in b["fields"].get("state", ""))
-                    summary = ("%d node%s · %d open"
-                               % (len(pblocks),
-                                  "" if len(pblocks) == 1 else "s", open_n))
+                    nodes = "%d node%s" % (len(pblocks),
+                                           "" if len(pblocks) == 1 else "s")
+                    if "folded" in pblocks[0]["fields"].get("state", ""):
+                        summary = "folded · " + nodes
+                    else:
+                        open_n = sum(1 for b in pblocks
+                                     if "open" in b["fields"].get("state", ""))
+                        summary = "%s · %d open" % (nodes, open_n)
                 if i == gsel:
                     put(scr, y, LM, (pname + " " * width)[:width], REV)
                     if len(summary) <= width - len(pname) - 2:
@@ -1309,7 +1312,9 @@ def main(scr):
                 machine = start_machine(machine, kind)
                 flash = ("the %s is summoned" % kind if machine else
                          "no machine to summon — the machine file names the command")
-            elif ch == ord("w") and (work or gs):
+            elif ch == ord("w"):
+                # always open — finished work stays visible, its list and
+                # documents reachable; nothing open is a state, not a wall
                 view, scroll, wexp = "work", 0, None
             elif ch == ord("g"):
                 view, scroll = "log", 0
