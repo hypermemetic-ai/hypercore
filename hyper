@@ -20,6 +20,9 @@ Accept   a approve then y on an acceptance card — confirmed like every
          other release; s speaks reservations
 Speak    s anywhere — words land verbatim, the place travels with them,
          and the machine is summoned to work while you watch
+Graphs   the work view lists every open execution graph beside hypercore
+         and unfolds to its nodes — work/<name>/graph.md, read live; the
+         unit on disk is the graph
 Machine  the record calling is the summons — at launch, a behind record
          or waiting words start the machine without m, and words landing
          mid-answer summon it once more when the run ends; m stays as
@@ -47,6 +50,7 @@ INTENT = os.path.join(ROOT, "intent.md")
 QUEUE = os.path.join(ROOT, "queue.md")
 WORDS = os.path.join(ROOT, "words.md")
 WORK = os.path.join(ROOT, "work.md")
+WORKDIR = os.path.join(ROOT, "work")
 MARKER = " [machine]"
 LM = 3  # left margin
 
@@ -171,6 +175,23 @@ def write_ledger(path, title, blocks):
 
 def card_for(st, cards):
     return next((b for b in cards if b["quote"] == st["text"]), None)
+
+
+def graphs():
+    """Every open execution graph on disk, read fresh: work/<name>/graph.md,
+    a ledger of nodes whose first block is the root ask born with its check.
+    A graph whose root state says folded has left standing work — git keeps
+    it."""
+    out = []
+    if not os.path.isdir(WORKDIR):
+        return out
+    for name in sorted(os.listdir(WORKDIR)):
+        path = os.path.join(WORKDIR, name, "graph.md")
+        if os.path.exists(path):
+            blocks = ledger(path)
+            if blocks and "folded" not in blocks[0]["fields"].get("state", ""):
+                out.append((name, blocks))
+    return out
 
 
 # ----- decisions (each one lands on disk and commits) -------------------
@@ -622,8 +643,8 @@ def main(scr):
              "read": ("answered", DIM), "sent": ("sent", DIM)}
     GUT = 10  # the kind column
 
-    view, sel, ci, ai, si, wsel = "home", 0, 0, 0, 0, 0
-    wexp = False  # the work view opens folded to the graph line
+    view, sel, ci, ai, si, wsel, gsel = "home", 0, 0, 0, 0, 0, 0
+    wexp = None  # the work view opens folded; set, it names the unfolded project
     scroll, flash, confirm, exkey = 0, "", None, None
     machine = None  # (Popen, started, kind) while a summoned session is working
     escalate = False  # a mini left work behind — the next summon goes to the full machine
@@ -642,6 +663,10 @@ def main(scr):
         cards = ledger(QUEUE)
         exchanges = ledger(WORDS)
         work = ledger(WORK)
+        gs = graphs()
+        # the work view's project lines: the repo's own standing work
+        # first, then every open execution graph, read live
+        projects = [("hypercore", None)] + gs
         dirty = run("git", "status", "--porcelain").strip()
         last = run("git", "log", "-1", "--format=%h %s . %cr").strip()
 
@@ -727,7 +752,11 @@ def main(scr):
         ci = max(0, min(ci, len(pend) - 1))
         ai = max(0, min(ai, len(accepts) - 1))
         si = max(0, min(si, len(decides) - 1))
-        wsel = max(0, min(wsel, len(work) - 1))
+        gsel = max(0, min(gsel, len(projects) - 1))
+        if wexp is not None and wexp >= len(projects):
+            wexp = None
+        witems = work if wexp in (None, 0) else projects[wexp][1]
+        wsel = max(0, min(wsel, len(witems) - 1))
         exb, exmax = None, 0
         if view == "card" and not pend:
             view = "home"
@@ -739,7 +768,7 @@ def main(scr):
             exb = next((b for b in exchanges if b["lines"][0] == exkey), None)
             if exb is None:
                 view = "home"
-        if view == "work" and not work:
+        if view == "work" and not work and not gs:
             view = "home"
 
         scr.erase()
@@ -747,7 +776,8 @@ def main(scr):
         width = min(w - 2 * LM, 76)
         top = 4
         view_h = max(1, h - top - 6)
-        guarded = any(l.split()[-1] in LEDGERS for l in dirty.splitlines())
+        guarded = any(l.split()[-1] in LEDGERS or l.split()[-1].endswith("graph.md")
+                      for l in dirty.splitlines())
 
         put(scr, 0, LM, "H Y P E R C O R E", BOLD)
         parts = []
@@ -810,10 +840,15 @@ def main(scr):
                 put(scr, y, LM, "nothing waits on you.", DIM)
                 y += 1
             y += 1
-            if work:
-                put(scr, y, LM, ("standing work: %d . awaiting your acceptance: %d . "
-                                 "w opens the view" % (len(work), len(accepts)))[: w - 2 * LM],
-                    DIM)
+            if work or gs:
+                bits = []
+                if work:
+                    bits.append("standing work: %d . awaiting your acceptance: %d"
+                                % (len(work), len(accepts)))
+                if gs:
+                    bits.append("open graphs: %d" % len(gs))
+                put(scr, y, LM,
+                    (" . ".join(bits) + " . w opens the view")[: w - 2 * LM], DIM)
                 y += 1
             put(scr, y, LM, ("last  " + last)[: w - 2 * LM], DIM)
 
@@ -972,24 +1007,42 @@ def main(scr):
                 put(scr, top + 2 + view_h, LM,
                     "… %d more below — space scrolls" % below, DIM)
 
-        elif view == "work" and not wexp:
+        elif view == "work" and wexp is None:
             put(scr, top, LM, "STANDING WORK", DIM)
-            # the view opens folded to the graph line — the default reads
-            # at project level, one project today; enter unfolds it
-            put(scr, top + 2, LM, ("hypercore" + " " * width)[:width], REV)
-            summary = ("%d entr%s · %d await your acceptance"
-                       % (len(work), "y" if len(work) == 1 else "ies", len(accepts)))
-            if len(summary) <= width - len("hypercore") - 2:
-                put(scr, top + 2, LM + width - len(summary), summary, REV)
+            # the view opens folded to the project lines — the repo's own
+            # work first, then every open execution graph; enter unfolds
+            # the selected one
+            y = top + 2
+            for i, (pname, pblocks) in enumerate(projects):
+                if pblocks is None:
+                    summary = ("%d entr%s · %d await your acceptance"
+                               % (len(work), "y" if len(work) == 1 else "ies",
+                                  len(accepts)))
+                else:
+                    open_n = sum(1 for b in pblocks
+                                 if "open" in b["fields"].get("state", ""))
+                    summary = ("%d node%s · %d open"
+                               % (len(pblocks),
+                                  "" if len(pblocks) == 1 else "s", open_n))
+                if i == gsel:
+                    put(scr, y, LM, (pname + " " * width)[:width], REV)
+                    if len(summary) <= width - len(pname) - 2:
+                        put(scr, y, LM + width - len(summary), summary, REV)
+                else:
+                    put(scr, y, LM, pname[:width], BOLD)
+                    if len(summary) <= width - len(pname) - 2:
+                        put(scr, y, LM + width - len(summary), summary, DIM)
+                y += 1
 
         elif view == "work":
             put(scr, top, LM, "STANDING WORK", DIM)
-            # one project today: the entries hang a level below their
-            # graph — the cheap seam toward many projects, presentation
-            # only until a second graph exists
-            rows, marks = [[(LM, "hypercore", BOLD)], []], []
+            # one project unfolded: work.md entries under hypercore, an
+            # execution graph's nodes under its name — same shape, read live
+            pname, pblocks = projects[wexp]
+            items = work if pblocks is None else pblocks
+            rows, marks = [[(LM, pname, BOLD)], []], []
             iw = width - 2
-            for i, b in enumerate(work):
+            for i, b in enumerate(items):
                 # the title owns its row; the state sits beside it only when
                 # it fits whole, and wraps below otherwise — never the
                 # other way around
@@ -1012,6 +1065,11 @@ def main(scr):
                 ask = b["fields"].get("ask")
                 if ask:
                     rows += [[(LM + 4, ln, DIM)] for ln in wrap(ask, iw - 2)]
+                for key in ("check", "result"):
+                    val = b["fields"].get(key)
+                    if val:
+                        rows += [[(LM + 4, ln, DIM)]
+                                 for ln in wrap(key + ": " + val, iw - 2)]
                 waits = b["fields"].get("waits on")
                 if waits:
                     rows += [[(LM + 4, ln, DIM)]
@@ -1064,8 +1122,9 @@ def main(scr):
             "settle": "a approve . c cut . s speak . j/k cards . space/b page . esc back",
             "accept": "a approve . s speak . j/k slices . space/b page . esc back",
             "exchange": "s speak . c fold away . space/b page . esc back",
-            "work": ("j/k move . s speak on it . space/b page . esc fold" if wexp
-                     else "enter unfold . s speak . esc back"),
+            "work": ("j/k move . s speak on it . space/b page . esc fold"
+                     if wexp is not None
+                     else "enter unfold . j/k move . s speak . esc back"),
             "doc": "space/b page . s speak . esc back",
             "log": "space/b page . s speak . esc back",
         }[view]
@@ -1167,8 +1226,8 @@ def main(scr):
                 machine = start_machine(machine, kind)
                 flash = ("the %s is summoned" % kind if machine else
                          "no machine to summon — the machine file names the command")
-            elif ch == ord("w") and work:
-                view, scroll, wexp = "work", 0, False
+            elif ch == ord("w") and (work or gs):
+                view, scroll, wexp = "work", 0, None
             elif ch == ord("d"):
                 view, scroll = "doc", 0
             elif ch == ord("g"):
@@ -1329,30 +1388,47 @@ def main(scr):
 
         elif view == "work":
             if ch == 27:
-                if wexp:
-                    wexp, scroll = False, 0
+                if wexp is not None:
+                    wexp, scroll = None, 0
                 else:
                     view = "home"
-            elif ch in (10, 13, curses.KEY_ENTER) and not wexp:
-                wexp, scroll = True, 0
-            elif ch in (curses.KEY_DOWN, ord("k")) and wexp:
-                wsel += 1
-            elif ch in (curses.KEY_UP, ord("j")) and wexp:
-                wsel -= 1
-            elif ch == ord(" ") and wexp:
+            elif ch in (10, 13, curses.KEY_ENTER) and wexp is None:
+                wexp, wsel, scroll = gsel, 0, 0
+            elif ch in (curses.KEY_DOWN, ord("k")):
+                if wexp is None:
+                    gsel += 1
+                else:
+                    wsel += 1
+            elif ch in (curses.KEY_UP, ord("j")):
+                if wexp is None:
+                    gsel -= 1
+                else:
+                    wsel -= 1
+            elif ch == ord(" ") and wexp is not None:
                 scroll += view_h
-            elif ch == ord("b") and wexp:
+            elif ch == ord("b") and wexp is not None:
                 scroll -= view_h
-            elif ch == ord("s") and work:
+            elif ch == ord("s"):
                 if guarded:
                     flash = GUARD
                 else:
-                    name = (work[wsel]["lines"][0][3:].strip() if wexp
-                            else "hypercore")
+                    # the place travels with the words: a project line, a
+                    # work.md entry, or a node of the graph it belongs to
+                    if wexp is None:
+                        pname, pblocks = projects[gsel]
+                        name, place = pname, 'the work view, on "%s"' % pname
+                    else:
+                        pname, pblocks = projects[wexp]
+                        items = work if pblocks is None else pblocks
+                        name = (items[wsel]["lines"][0][3:].strip() if items
+                                else pname)
+                        place = ('the work view, on "%s"' % name
+                                 if pblocks is None else
+                                 'the graph "%s", on "%s"' % (pname, name))
                     wd = read_words(scr, h, w, 'your words, on "%s" '
                                                "(enter sends . esc abandons): " % name)
                     if wd and wd.strip():
-                        hsh = speak('the work view, on "%s"' % name, wd)
+                        hsh = speak(place, wd)
                         resummon = resummon or machine is not None
                         machine = start_machine(machine)
                         flash = ("on disk . committed %s . the machine is working" % hsh
