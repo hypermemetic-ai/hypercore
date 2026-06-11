@@ -19,9 +19,9 @@
 - waits on: nothing from you yet — thinking continues; a second project is the forcing event
 
 ## the screen names the machine
-- ask: the interface says what answers — the home view carries a machine line naming the harness and the model, and the answering timer top-right carries the same name; the screen claims only what the machine file states, so with no --model pinned it says the harness default answers
-- try: look under the queue — "machine  claude · the harness default model — none pinned"; speak, and the answering line names it too. pin --model claude-fable-5 in the machine file and the line names the model exactly
-- state: awaiting acceptance
+- ask: the very top row carries what answers — "claude · claude-fable-5", dim between the title and the counts, on every view; the screen claims only what the machine file states, and fable 5 is now pinned there on your word
+- try: look at the top row — the name rides it on every view; edit --model in the machine file and the row follows
+- state: awaiting acceptance — reworked to your words: top row, fable 5 pinned
 - since: 2026-06-11
 
 ## the work view hangs below its graph

@@ -584,11 +584,16 @@ def main(scr):
             parts.append("%d ANSWERED" % len(answered))
         status = " . ".join(parts) if parts else "QUEUE CLEAR"
         put(scr, 0, max(LM, w - len(status) - LM), status, BOLD if parts else DIM)
+        # the machine's name rides the top row, dim, between title and
+        # status — drawn only when it fits whole
+        label = machine_label()
+        lx = (w - len(label)) // 2
+        if lx > LM + 19 and lx + len(label) <= w - LM - len(status) - 2:
+            put(scr, 0, lx, label, DIM)
         put(scr, 1, LM, "─" * max(0, w - 2 * LM), DIM)
         mtxt = ""
         if machine:
-            mtxt = ("the machine is answering · %ds · %s"
-                    % (time.time() - machine[1], machine_label()))
+            mtxt = "the machine is answering · %ds" % (time.time() - machine[1])
             put(scr, 2, max(LM, w - len(mtxt) - LM), mtxt, BOLD)
         elif awaits:
             mtxt = ("%d word%s the machine — m summons it"
@@ -637,8 +642,6 @@ def main(scr):
                                  "w opens the view" % (len(work), len(accepts)))[: w - 2 * LM],
                     DIM)
                 y += 1
-            put(scr, y, LM, ("machine  " + machine_label())[: w - 2 * LM], DIM)
-            y += 1
             put(scr, y, LM, ("last  " + last)[: w - 2 * LM], DIM)
 
         elif view == "card":
