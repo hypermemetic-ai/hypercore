@@ -794,7 +794,8 @@ def main(scr):
         put(scr, 1, LM, "─" * max(0, w - 2 * LM), DIM)
         mtxt = ""
         if machine:
-            mtxt = "the %s is working · %ds" % (machine[2], time.time() - machine[1])
+            mtxt = ("the %s is working · %d:%02d"
+                    % ((machine[2],) + divmod(int(time.time() - machine[1]), 60)))
             put(scr, 2, max(LM, w - len(mtxt) - LM), mtxt, BOLD)
         elif awaits:
             mtxt = ("%d word%s the machine — m summons it"
