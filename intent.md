@@ -34,7 +34,7 @@ The operator can speak from anywhere in the interface: their words land on disk 
 
 Reading the operator's words is machine work. Whether they are new intent, a new ask, an answer, or a redirect is the machine's call to make and answer for; what it made of them returns through the queue.
 
-The queue is a view, not a place: each decision lives where it arose — on a statement, on a node, on evidence — and showing the queue means reading all of those places fresh, every time. There is no list of its own to add to, remove from, or keep in sync, so nothing can be lost in motion and nothing can go stale. [machine]
+The queue is a view, not a place: each decision lives where it arose — on a statement, on a node, on evidence — and showing the queue means reading all of those places fresh, every time. There is no list of its own to add to, remove from, or keep in sync, so nothing can be lost in motion and nothing can go stale.
 
 The order of the queue is the machine's claim about what the operator's attention is worth next, and it answers for that claim: every decision wears the cost of its own delay — what it blocks, what compounds while it waits. The operator's word overrides the order instantly and unconditionally — the word is the reorder, not a request for one — and whatever the machine learns from being overridden, it raises later, never in the moment. [machine]
 
