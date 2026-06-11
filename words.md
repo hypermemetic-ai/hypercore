@@ -40,6 +40,8 @@ operator (2026-06-11): I don't like this "go" and similar structure for decision
 
 operator (2026-06-11): go
 
+machine (2026-06-11): built as the card stated. the `mini` file sits beside `machine` — same one-line format, sonnet pinned there, one line to change. when the record is behind and no words wait, the summon goes to the mini under the hard bar: commit what is on disk, grounds faithful to the diff, never finish or correct; anything ambiguous stays uncommitted, named in .hyper-machine.log, and the interface sends the next summon to the full machine. words always bring the full machine, and with no mini file the full machine takes the true-up itself. the slice waits for your a on the queue.
+
 ## from the decision card, on "the machine answers without m" . 2026-06-11
 
 operator (2026-06-11): go
