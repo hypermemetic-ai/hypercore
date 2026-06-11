@@ -42,6 +42,12 @@
 - since: 2026-06-11
 - waits on: the operator typing in it and accepting in their own words; the statement behind it stands [machine] in the queue
 
+## one machine, any harness
+- ask: the summon stops being an idea and becomes the interface opening a terminal session for the operator — the command it runs becomes one visible setting (claude today, codex or any harness that takes a prompt tomorrow), and the session brief becomes a file any harness reads. a cohesion cut, not a feature: nothing the shortcut does that a typed terminal couldn't
+- state: recorded, not started
+- since: 2026-06-11
+- waits on: the operator's two picks from the answer in words.md — keep the summon as a shortcut or cut it and open terminals by hand; keep the build-nothing leash on unwatched sessions or let them build under the same rules as any session
+
 ## across is horizontal
 - ask: arrows doing what they look like — ←/→ across statements, ↑/↓ within the screen — and, by the operator's redirect (2026-06-11), j/k restored across statements with their effects inverted from the first slice (j to the previous statement, k to the next); space/b paging stays as it stands
 - state: redirected — the slice cut j/k entirely, but the operator's criticism was the direction, not the keys; the restore is the next slice
