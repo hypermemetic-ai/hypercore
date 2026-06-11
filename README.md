@@ -1,27 +1,27 @@
 # hypercore
 
-hypercore is a small graph for a human and an agent to think with together.
+hypercore is a small system for a human and an agent to think with together.
 
-## Epoch 2 — 2026-06-10
+## Epoch 2 — reset 2026-06-10
 
-The operator called a reset: inherited debt burned, and operator legibility
-returned as the ruling constraint. The engine (~2,600 lines), the viewer, the
-database, the snapshots, and all work graphs were deleted in one commit; git
-history holds the whole first epoch, recoverable forever.
+The operator burned the first epoch: the engine (~2,600 lines), the viewer,
+the database, the snapshots, all work graphs — deleted in one commit,
+recoverable forever in git history. What survived is intent.
 
-What survives is the intent — the five root documents:
+- **intent.md** — the system. One document (foundations, structure,
+  statements, endorsement, work), edited directly, every change committed
+  with plain-words grounds. A statement ending ` [machine]` carries no
+  operator endorsement yet; only the operator's word drops the marker.
+- **hyper** — the operator's interface. One python file, stdlib, keyboard
+  only. Home is the queue of decisions; cards carry context and what each
+  pick entails; approve / cut / explain land on disk and commit in the
+  operator's name before the screen redraws; s speaks from anywhere and
+  the place travels with the words; w shows work in flight.
+- **queue.md / words.md / work.md** — the ledgers behind the views:
+  decision cards, open exchanges, work in flight. Machine-maintained;
+  the operator only reads and decides.
+- **hyper.desktop / hyper.ghostty** — the launcher: ghostty opens hyper
+  fullscreen at login, high contrast, IBM Plex Mono, one color (red)
+  reserved for "the record is behind".
 
-- **foundations** — why hypercore exists and the properties it protects.
-- **structure** — nodes, intent, material, relations.
-- **statements** — what a statement is and what makes one worth keeping.
-- **endorsement** — who stands behind a statement.
-- **work** — how work runs as an execution graph and folds.
-
-Every statement carried over from the first epoch is marked ` [machine]`: it
-holds no operator endorsement in this epoch until the operator endorses,
-amends, or strikes it — one at a time, with grounds. The only unmarked
-statements are the three at the head of foundations, spoken by the operator
-on the day of the reset. They rule everything that gets rebuilt.
-
-There is no engine right now. These files are the system. Nothing gets built
-ahead of the legibility it serves.
+The conversation with the machine is disposable; the repo is the state.

@@ -18,22 +18,44 @@ next=$(grep -m1 ' \[machine\]$' "$doc" 2>/dev/null) || next=""
 recent=$(git log --oneline -3 2>/dev/null) || recent="(no git history)"
 
 # only operator words the machine has not yet answered: lines after the
-# last "machine (" line of their card. an answered word stops nagging.
-words=$(awk '
-  function flush() { if (pending != "") out = out pending; pending = "" }
-  /^## /        { flush() }
-  /^operator \(/ { pending = pending $0 "\n" }
-  /^machine \(/  { pending = "" }
-  END { flush(); printf "%s", out }
-' queue.md 2>/dev/null) || words=""
+# last "machine (" line of their card or exchange. an answered word stops
+# nagging. read from both ledgers that carry operator words.
+ledgers=""
+[ -f queue.md ] && ledgers="queue.md"
+[ -f words.md ] && ledgers="$ledgers words.md"
+words=""
+if [ -n "$ledgers" ]; then
+  words=$(awk '
+    function flush() { if (pending != "") out = out pending; pending = "" }
+    /^## /        { flush(); src = $0 }
+    /^operator \(/ { pending = pending "  [" FILENAME " . " substr(src, 4) "]\n  " $0 "\n" }
+    /^machine \(/  { pending = "" }
+    END { flush(); printf "%s", out }
+  ' $ledgers 2>/dev/null) || words=""
+fi
 words_block=""
 if [ -n "$words" ]; then
   words_block="
-Operator words from the interface (queue.md), awaiting the machine's answer:
+Operator words awaiting the machine's answer:
 ${words}
-Answer these first — each is an explain pick made in hyper; the full card
-is in queue.md. Tell the story or answer the words, then stop.
+Answer these first. queue.md words are explain picks — tell the story or
+answer the words, then stop; the answer lands as a 'machine (date):' line
+on the same card. words.md words are speech from anywhere — read them,
+decide what they are (new intent, a new ask, an answer, a redirect),
+answer in a 'machine (date):' line on the same block, and let what you
+made of them return through the queue.
 "
+fi
+
+work_block=""
+if [ -f work.md ]; then
+  work_summary=$(awk '
+    /^## /        { name = substr($0, 4) }
+    /^- state: /  { printf "  %s — %s\n", name, substr($0, 10) }
+  ' work.md 2>/dev/null) || work_summary=""
+  [ -n "$work_summary" ] && work_block="
+Work in flight (work.md — keep it true; the operator reads it in hyper):
+${work_summary}"
 fi
 
 context="hypercore session brief — generated from disk by .claude/hooks/session-brief.sh
@@ -41,7 +63,8 @@ context="hypercore session brief — generated from disk by .claude/hooks/sessio
 Re-ratification queue: ${total} statements still marked [machine] in ${doc}.
 ${per_sec}
 Next pending: ${next:-none — the queue is clear}
-${words_block}
+${words_block}${work_block}
+
 Recent commits:
 ${recent}
 
