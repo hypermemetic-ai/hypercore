@@ -7,13 +7,6 @@
 - try: log out and in once — either hyper opens fullscreen, or .hyper.log holds the exact words of what failed; accept only after a login seen with your own eyes
 - waits on: one act on its acceptance card, after one login; the statement behind it stands [machine] in the queue
 
-## acceptance has a place
-- ask: every slice awaiting acceptance surfaces as a card on the queue — what it does and how to try it, so evaluation is made easy (interface changes are their own evidence); one frictionless act on the card accepts and releases the slice; speaking is for reservations only, and those words land on the record like any speech
-- state: in use, awaiting acceptance — built 2026-06-11, on the bar the operator's words settled
-- since: 2026-06-11
-- try: this card is the slice showing itself — what you are reading, and the a that would release it; the entry leaves work.md and git keeps it
-- waits on: one act on its own acceptance card
-
 ## the record never stays behind
 - ask: when a machine session dies between writing and committing, the interface offers the repair instead of just the alarm — the red line names the stranded files and ends with the way out (m trues it up); m summons the machine whenever the record is behind, with first orders to verify what the strand claims, finish or correct it, and commit with grounds; the session brief flags a dirty tree to every session, typed or summoned; and summoned sessions commit after every file they finish, so a death strands less
 - state: in use, awaiting acceptance — born from today's strand: a summon died on a 529 between writing and committing, the guard then blocked speech (the one recovery channel), and the operator had to leave the interface to get the record trued
