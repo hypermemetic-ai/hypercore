@@ -38,12 +38,19 @@ graph's intent document is singular, and this repo is hypercore's folder.
 - Batches go to the operator through the option picker (the
   AskUserQuestion tool), never as plain prose to answer freehand: one
   question per statement, at most four to a batch, options Endorse /
-  Amend / Strike.
+  Amend / Strike / Explain.
 - What each answer entails lives in the option descriptions; what a
   strike breaks is spelled out before the pick, never after.
 - An Amend pick still needs the operator's wording: take it from the
   pick's note, or ask as a follow-up. The operator's plain words always
   override the picker.
+- An Explain pick means the statement isn't understood yet. The machine
+  answers with the story — the scenario with the rule and the same
+  scenario without it, failure shown each way — and a redrafted
+  formulation that moves the story's value into the wording. The
+  statement stays ` [machine]` and returns for a pick. Explain is never
+  a decision; nothing changes in intent.md except, after the story, the
+  machine's own redraft of its own statement.
 
 ## Rebuild discipline
 
