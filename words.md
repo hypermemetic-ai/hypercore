@@ -24,3 +24,5 @@ operator (2026-06-11): I think name should be on the very top row, somewhere tas
 
 operator (2026-06-11): I like this but this should be the expanded view. default I think should be just hypercore, enter -> it expands like now.
 
+operator (2026-06-11): odd that both were listed as from the acceptance card on the screen names the machine. the second clearly isn't from there but from the other open item.
+
