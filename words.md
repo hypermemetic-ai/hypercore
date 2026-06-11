@@ -1,11 +1,5 @@
 # words
 
-## from the work view, on "across is horizontal" . 2026-06-11
-
-operator (2026-06-11): I actually preferred j/k and space/b. it was something new I hadn't experienced. I simply critizised the mappings for j and k. I suggested their effect should be inverted.
-
-machine (2026-06-11): the slice overshot your words — you asked for j and k inverted, and the machine cut them instead. space/b never left; they still page in every view. The restore is recorded in work.md: j/k come back across statements with their effects swapped from the first slice — j to the previous statement, k to the next — and the arrows stay alongside, costing nothing. If the inversion you meant points the other way, say so and it lands that way. This channel builds nothing; the next build lands it.
-
 ## from the queue . 2026-06-11
 
 operator (2026-06-11): I don't buy this summon idea. why does it exist? can't everything just be a conversation in a different terminal session? I shoud be able to think about this interface as no different than a typical terminal I typed claude into, I think. also, I don't want to commit us to claude specifically. I'd like to sometimes use another harness where appropriate. say codex instead of claude. should work either way and what we commit to should be agnostic about this. let's keep in mind as we do all this that the interface ought to remain simple. resist the temptation to just add things. always look for cohesion wins.
