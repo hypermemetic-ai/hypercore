@@ -102,7 +102,7 @@ A view of a graph never lags it: every view is read live from the graph or updat
 
 Work is made of operations. An operation is one move on the problem state, of five kinds: frame, gather, generate, test, commit — one small alphabet, so any execution graph can be read without learning new vocabulary.
 
-The five kinds are closed for good. Expressive power grows as named compounds, and a compound always decomposes back into the five — new vocabulary is always defined in old vocabulary, so no graph ever needs its own glossary. [machine]
+The five kinds are closed for good. A new word is only ever a name for a compound of them, and a compound can always be opened back into the five. [machine]
 
 An operation earns a node on two grounds only: it crossed the operator–machine boundary, or the fold's trust rests on it. Everything else is absorbed into the operation it served. The graph is a ledger of commitments, not a trace of thought.
 
