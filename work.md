@@ -7,13 +7,6 @@
 - try: log out and in once — either hyper opens fullscreen, or .hyper.log holds the exact words of what failed; accept only after a login seen with your own eyes
 - waits on: one act on its acceptance card, after one login; the statement behind it stands [machine] in the queue
 
-## one machine, any harness
-- ask: the summon stops being an idea and becomes the interface opening a terminal session for the operator — the command it runs becomes one visible setting (claude today, codex or any harness that takes a prompt tomorrow), and the session brief becomes a file any harness reads. a cohesion cut, not a feature: nothing the shortcut does that a typed terminal couldn't
-- state: in use, awaiting acceptance — built 2026-06-11: the machine file at the root holds the one command ({prompt} stands for the summon instruction), and brief.md is written fresh at every summon for any harness to read
-- since: 2026-06-11
-- try: read the machine file at the root — one line names the harness; swap it for codex or anything that takes a prompt and speaking summons that instead; brief.md beside it is what any session reads first
-- waits on: one act on its acceptance card
-
 ## acceptance has a place
 - ask: every slice awaiting acceptance surfaces as a card on the queue — what it does and how to try it, so evaluation is made easy (interface changes are their own evidence); one frictionless act on the card accepts and releases the slice; speaking is for reservations only, and those words land on the record like any speech
 - state: in use, awaiting acceptance — built 2026-06-11, on the bar the operator's words settled
