@@ -102,6 +102,6 @@ A view of a graph never lags it: every view is read live from the graph or updat
 
 Work is made of operations. An operation is one move on the problem state, of four kinds: ask, check, decide, do — one word for each thing a statement must find, and do for everything else.
 
-A new kind enters in the same edit as the statement that must find it, and stays only while a statement reads it; other new words are names for clusters. [machine]
+A new kind enters in the same edit as the statement that must find it, and stays only while a statement reads it; other new words are names for clusters.
 
 An operation earns a node on two grounds only: it crossed the operator–machine boundary, or the fold's trust rests on it. Everything else is do, absorbed into the operation it served. The graph is a ledger of commitments, not a trace of thought.
