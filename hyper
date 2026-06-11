@@ -17,7 +17,10 @@ Decide   a approve . c cut . e explain (words optional); the verbs are
          lands on the card as if spoken, y confirms, and the machine
          executes it; the card's options wear numbers, 1–9 picks one,
          y confirms, and the option's own words land in the operator's
-         name; s speaks in the operator's own words
+         name; a decisive word (approve, cut, a pick) settles the card
+         on the spot — the entry leaves work.md in the same commit,
+         nothing is left for the operator to do; s speaks in the
+         operator's own words
 Accept   a approve then y on an acceptance card — confirmed like every
          other release; s speaks reservations
 Speak    s anywhere — words land verbatim, the place travels with them,
@@ -322,6 +325,38 @@ def accept(name):
                   + (" — %s folds" % gname if folded else ""),
                   body,
                   ("work.md", folded) if folded else ("work.md",))
+
+
+def settle_card(name, word):
+    """A decisive word on a decision card settles it on the spot: the word
+    lands on the card's block and the entry leaves work.md in the same
+    commit — nothing is left for the operator to do, so the card does not
+    stay up. git keeps the entry; the machine executes the word."""
+    stamp = date.today().isoformat()
+    headline = '## from the decision card, on "%s" . %s' % (name, stamp)
+    blocks = ledger(WORDS)
+    blk = next((b for b in blocks if b["lines"][0] == headline), None)
+    if blk is None:
+        blk = {"lines": [headline]}
+        blocks.append(blk)
+    if blk["lines"][-1].strip():
+        blk["lines"].append("")
+    blk["lines"].append("operator (%s): %s" % (stamp, word.strip()))
+    write_ledger(WORDS, "words", blocks)
+    wblocks = ledger(WORK)
+    entry = next((b for b in wblocks
+                  if b["lines"][0][3:].strip() == name), None)
+    if entry is not None:
+        write_ledger(WORK, "work", [b for b in wblocks if b is not entry])
+    body = (word.strip() + "\n\nthe word settles the card: the entry leaves "
+            "work.md in this commit, git keeps it; the machine reads "
+            "words.md and executes the decision.")
+    if entry is not None:
+        body += "\n\n" + "\n".join(entry["lines"])
+    return commit('the operator settles a decision card in the interface — '
+                  '"%s": %s' % (name, head(word)),
+                  body,
+                  ("words.md", "work.md") if entry else ("words.md",))
 
 
 # ----- speech (from anywhere; the place travels with the words) ---------
@@ -1237,10 +1272,12 @@ def main(scr):
                     "cut": "the words leave intent",
                     "accept": "the slice is released; git keeps the entry",
                     "fold": "the exchange leaves the queue; git keeps the words",
-                    "go": "the word lands on the card; the machine executes it",
-                    "cut-card": "the word lands on the card; the machine executes it",
-                    "pick": "the option's words land on the card in your name; "
-                            "the machine executes them"}[kind]
+                    "go": "the word settles the card — it leaves the queue; "
+                          "the machine executes it",
+                    "cut-card": "the word settles the card — it leaves the queue; "
+                                "the machine executes it",
+                    "pick": "the option's words land in your name and settle "
+                            "the card; the machine executes them"}[kind]
             put(scr, h - 2, LM, lead[: w - 2 * LM],
                 ALERT if kind in ("cut", "cut-card") else BOLD)
             x = LM + len(lead) + 3
@@ -1275,20 +1312,21 @@ def main(scr):
                     flash = GUARD
                     continue
                 if kind in ("go", "cut-card", "pick"):
-                    # the key is the word: it lands on the card exactly as
-                    # if spoken, and the machine executes it
+                    # the key is the word, and the word is decisive: it
+                    # lands on the card, the card settles in the same
+                    # commit, and the machine executes it
                     if kind == "pick":
                         name, n, opt = payload
                         word = "option %d — %s" % (n, opt)
                     else:
                         name = payload
                         word = "approve" if kind == "go" else "cut"
-                    hsh = speak('the decision card, on "%s"' % name, word)
+                    hsh = settle_card(name, word)
                     resummon = resummon or machine is not None
                     machine = start_machine(machine)
-                    flash = ("%s . committed %s . the machine is working" % (word, hsh)
+                    flash = ("%s . settled . committed %s . the machine is working" % (word, hsh)
                              if machine else
-                             "%s . committed %s . no machine to summon — the word waits" % (word, hsh))
+                             "%s . settled . committed %s . no machine to summon — the word waits" % (word, hsh))
                 elif kind == "fold":
                     hsh = fold_exchange(payload)
                     flash = ("that exchange is no longer on disk — refreshed" if hsh is None
