@@ -30,3 +30,5 @@ operator (2026-06-11): or bottom right? lots of ideas here.
 
 machine (2026-06-11): bottom right — of your two spots, the right of the top bar is where the status counts already live, and crowding them repeats the crime. the name now sits dim beside the key hints, the top row is title and status alone, and the card waits for your a; one word moves it if the other spot wins on sight.
 
+operator (2026-06-11): if all that not running behind is is a dedicated session that spawns just to commit changes, a dumb model should be able to handle this, right? let's start thinking about a class of busywork tasks that we can delegate to the mini-machine (probably sonnet for us now, but like with the other, shouldn't be hardcoded, just set).
+
