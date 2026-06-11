@@ -28,6 +28,16 @@ The interface shows everything the operator wants to know and nothing they don't
 
 The interface is keyboard-only.
 
+Everything that crosses the operator–machine boundary crosses through the interface and lands on disk; a crossing that left no record did not happen. [machine]
+
+The operator can speak from anywhere in the interface: their words land on disk verbatim, the place they spoke from travels with them, and nothing more is asked of them. [machine]
+
+Reading the operator's words is machine work. Whether they are new intent, a new ask, an answer, or a redirect is the machine's call to make and answer for; what it made of them returns through the queue. [machine]
+
+The queue is a view, not a place: a decision lives where it arises — on a statement, on a node, on evidence — and the queue is read live from all of it. Nothing is moved into the queue or out of it. [machine]
+
+The order of the queue is the machine's claim about what the operator's attention is worth next, and it answers for that claim: every decision wears the cost of its own delay — what it blocks, what compounds while it waits — and the operator reorders with a word, never by hand. [machine]
+
 The machine never silently commits the operator's resources: scope calls that change what the operator must later judge, build machinery, or decline their intent are theirs to make; within endorsed intent the machine scopes freely and visibly. Every decision records its grounds at the moment it is made.
 
 ## structure
