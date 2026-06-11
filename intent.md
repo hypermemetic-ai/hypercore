@@ -96,11 +96,11 @@ A folding condition is what makes a graph ready to fold. Its intent is met, or i
 
 Trust in a folded graph rests on the checks at its boundary, because they are all that survives to be read: the episode that did the work is gone, and its competence cannot be inspected after the fact. A fold with no checks is a hope, not a result. [machine]
 
-Folds stack, and error compounds up the stack: whatever doubt a fold carries, everything built on it inherits. The weaker a graph's checks, the shallower it must stay before folding, and the less may be built on top of it. [machine]
+Folds stack, and error compounds up the stack: whatever doubt a fold carries, everything built on it inherits. The weaker a graph's checks, the shallower it must stay before folding, and the less may be built on top of it.
 
 A fold is reflected everywhere the graph is represented; no representation lags behind it. [machine]
 
-Work is made of operations. An operation is one move on the problem state, of five kinds: frame, gather, generate, test, commit — one small alphabet, so any execution graph can be read without learning new vocabulary. [machine]
+Work is made of operations. An operation is one move on the problem state, of five kinds: frame, gather, generate, test, commit — one small alphabet, so any execution graph can be read without learning new vocabulary.
 
 The alphabet of operations never grows. Named clusters of operations are the compounds that grow freely; decomposition is how a compound expands, not a primitive. [machine]
 
