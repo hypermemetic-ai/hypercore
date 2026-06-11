@@ -24,11 +24,11 @@ graph's intent document is singular, and this repo is hypercore's folder.
 ## Ownership still binds
 
 - A statement ending ` [machine]` holds no operator endorsement in this
-  epoch. Endorsing removes the marker — only on the operator's explicit
+  epoch. Approving removes the marker — only on the operator's explicit
   word in conversation, recorded with grounds in the git commit.
-- The machine never strikes or amends an unmarked (operator-owned)
+- The machine never cuts or rewords an unmarked (operator-owned)
   statement, and never removes a marker without the operator's word.
-- Before relaying any strike or destructive decision, surface what it
+- Before relaying any cut or destructive decision, surface what it
   breaks — before the decision, not after.
 - Operator judgment is never assumed; their words in conversation are the
   only warrant.
@@ -37,20 +37,25 @@ graph's intent document is singular, and this repo is hypercore's folder.
 
 - Batches go to the operator through the option picker (the
   AskUserQuestion tool), never as plain prose to answer freehand: one
-  question per statement, at most four to a batch, options Endorse /
-  Amend / Strike / Explain.
+  question per statement, at most four to a batch, options Approve /
+  Cut / Explain — two commands for when the operator knows, one for
+  when they don't.
 - What each answer entails lives in the option descriptions; what a
-  strike breaks is spelled out before the pick, never after.
-- An Amend pick still needs the operator's wording: take it from the
-  pick's note, or ask as a follow-up. The operator's plain words always
-  override the picker.
-- An Explain pick means the statement isn't understood yet. The machine
-  answers with the story — the scenario with the rule and the same
-  scenario without it, failure shown each way — and a redrafted
-  formulation that moves the story's value into the wording. The
-  statement stays ` [machine]` and returns for a pick. Explain is never
-  a decision; nothing changes in intent.md except, after the story, the
-  machine's own redraft of its own statement.
+  cut breaks is spelled out before the pick, never after.
+- There is no amend option (operator's word, 2026-06-10: it stalled
+  twice and never ran once). The operator's words arrive through
+  explain or as freehand — which is explain with words attached — and
+  steer machine redrafts that stay ` [machine]` until approved. The
+  operator's plain words always override the picker.
+- An Explain pick means the operator can't decide yet, and carries
+  their words optionally. With words, the machine answers them;
+  without, it tells the story — the scenario with the rule and the
+  same scenario without it, failure shown each way. Either way the
+  machine's one obligation is to help the operator reach a decision;
+  it may redraft its own statement along the way. The statement stays
+  ` [machine]` and returns for a pick. Explain is never a decision;
+  nothing changes in intent.md except the machine's own redraft of its
+  own statement.
 - The story is the deliverable, and it stands alone: the machine tells
   it and stops, leaving room for the operator to engage. The statement
   returns for a pick only in a later exchange, once the operator has
@@ -61,7 +66,8 @@ graph's intent document is singular, and this repo is hypercore's folder.
 ## Rebuild discipline
 
 - Every statement carried from epoch 1 awaits re-ratification: the
-  operator endorses, amends, or strikes, one at a time, grounds each time.
+  operator approves, cuts, or has it explained, one at a time, grounds
+  each time.
 - Nothing gets built ahead of the legibility it serves. Every slice of new
   machinery lands with a plain-words explanation and an acceptance
   question for the operator.
