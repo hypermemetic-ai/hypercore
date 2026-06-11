@@ -12,11 +12,11 @@ on its own — no restart anywhere.
 
 Views    queue (home) . decision card . work-decision card .
          acceptance card . exchange . work . document . log
-Decide   a approve . c cut . e explain (words optional); a standing-work
-         decision settles by the same keys — a go . c cut, y confirms —
-         and the word lands on the card as if spoken; s redirects in the
-         operator's own words
-Accept   a then y on an acceptance card — confirmed like every
+Decide   a approve . c cut . e explain (words optional); the verbs are
+         the same on every card — on a standing-work decision approve
+         lands on the card as if spoken, y confirms, and the machine
+         executes it; s speaks in the operator's own words
+Accept   a approve then y on an acceptance card — confirmed like every
          other release; s speaks reservations
 Speak    s anywhere — words land verbatim, the place travels with them,
          and the machine is summoned to work while you watch
@@ -258,7 +258,7 @@ def accept(name):
     write_ledger(WORK, "work", [b for b in blocks if b is not blk])
     return commit("accepted by the operator in the interface: " + name,
                   "\n".join(blk["lines"])
-                  + "\n\ngrounds: the operator pressed accept on the card, with what "
+                  + "\n\ngrounds: the operator pressed approve on the card, with what "
                     "the slice does and how to try it on screen. git keeps the entry.",
                   ("work.md",))
 
@@ -877,10 +877,10 @@ def main(scr):
                     rows += [[(LM + 2, ln, attr)] for ln in wrap(wln, width - 2)]
                 rows.append([])
             rows += [[(LM, ln, DIM)]
-                     for ln in wrap("a goes . c cuts — y confirms either, and the "
-                                    "word lands on the card for the machine to "
-                                    "execute; s speaks a redirect or anything "
-                                    "else in your own words.", width)]
+                     for ln in wrap("a approves . c cuts — y confirms either, and "
+                                    "the word lands on the card for the machine "
+                                    "to execute; s speaks anything else in your "
+                                    "own words.", width)]
             scroll = max(0, min(scroll, max(0, len(rows) - view_h)))
             for i, segs in enumerate(rows[scroll: scroll + view_h]):
                 for x, txt, attr in segs:
@@ -921,7 +921,7 @@ def main(scr):
                     rows += [[(LM + 2, ln, attr)] for ln in wrap(wln, width - 2)]
                 rows.append([])
             rows += [[(LM, ln, DIM)]
-                     for ln in wrap("a then y accepts and releases the slice — the "
+                     for ln in wrap("a then y approves and releases the slice — the "
                                     "entry leaves work.md, git keeps it. speak only "
                                     "if you have reservations.", width)]
             scroll = max(0, min(scroll, max(0, len(rows) - view_h)))
@@ -1044,8 +1044,8 @@ def main(scr):
                      + ("m summon . " if (awaits or dirty) and not machine else "")
                      + "s speak . w work . d document . g log . q quit"),
             "card": "a approve . c cut . e explain . s speak . j/k statements . space/b page . esc back",
-            "settle": "a go . c cut . s redirect . j/k cards . space/b page . esc back",
-            "accept": "a accept . s reservations . j/k slices . space/b page . esc back",
+            "settle": "a approve . c cut . s speak . j/k cards . space/b page . esc back",
+            "accept": "a approve . s speak . j/k slices . space/b page . esc back",
             "exchange": "s speak . c fold away . space/b page . esc back",
             "work": ("j/k move . s speak on it . space/b page . esc fold" if wexp
                      else "enter unfold . s speak . esc back"),
@@ -1057,8 +1057,8 @@ def main(scr):
             # the one thing that matters reads first and loudest: y confirms
             kind = confirm[0]
             lead = "y confirms %s . esc keeps things as they are" \
-                   % {"approve": "approve", "cut": "the cut", "accept": "accept",
-                      "fold": "the fold", "go": "go", "cut-card": "the cut"}[kind]
+                   % {"approve": "approve", "cut": "the cut", "accept": "approve",
+                      "fold": "the fold", "go": "approve", "cut-card": "the cut"}[kind]
             tail = {"approve": "the marker drops; the statement becomes yours",
                     "cut": "the words leave intent",
                     "accept": "the slice is released; git keeps the entry",
@@ -1101,7 +1101,7 @@ def main(scr):
                 if kind in ("go", "cut-card"):
                     # the key is the word: it lands on the card exactly as
                     # if spoken, and the machine executes it
-                    word = "go" if kind == "go" else "cut"
+                    word = "approve" if kind == "go" else "cut"
                     hsh = speak('the decision card, on "%s"' % payload, word)
                     resummon = resummon or machine is not None
                     machine = start_machine(machine)
@@ -1116,7 +1116,7 @@ def main(scr):
                 elif kind == "accept":
                     hsh = accept(payload)
                     flash = ("that slice is no longer on disk — refreshed" if hsh is None
-                             else "accepted . committed %s . git keeps the entry" % hsh)
+                             else "approved . committed %s . git keeps the entry" % hsh)
                 else:
                     card = card_for(payload, cards)
                     hsh = (approve(payload["text"], card is not None) if kind == "approve"
@@ -1227,7 +1227,7 @@ def main(scr):
                 else:
                     name = decides[si]["lines"][0][3:].strip()
                     wd = read_words(scr, h, w,
-                                    'your redirect or words, on "%s" '
+                                    'your words, on "%s" '
                                     "(enter sends . esc abandons): " % name)
                     if wd and wd.strip():
                         hsh = speak('the decision card, on "%s"' % name, wd)
@@ -1262,7 +1262,7 @@ def main(scr):
                 else:
                     name = accepts[ai]["lines"][0][3:].strip()
                     wd = read_words(scr, h, w,
-                                    'your reservations, on "%s" '
+                                    'your words, on "%s" '
                                     "(enter sends . esc abandons): " % name)
                     if wd and wd.strip():
                         hsh = speak('the acceptance card, on "%s"' % name, wd)
