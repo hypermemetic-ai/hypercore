@@ -34,3 +34,5 @@ machine (2026-06-11): redrafted, project-blind, on the card. what we mean, in on
 
 operator (2026-06-11): go
 
+operator (2026-06-11): go
+
