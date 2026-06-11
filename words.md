@@ -20,3 +20,7 @@ machine (2026-06-11): open it is — landed. the home line now reads "open work:
 
 operator (2026-06-11): I don't like open either. I'll leave this call to you. and make sure it's used consistently. also, we need to solve your permission problem. full permissions granted hereby except irreversibly destructive. I'll add that work status is not clear and any standing work item should correspond to a clear operator action. right now I see an empty queue but three items. you see the issue.
 
+## from the queue . 2026-06-11
+
+operator (2026-06-11): model text shouldn't be central now that I'm looking at it. ruins the minimalism. maybe better to the right of the top bar.
+
