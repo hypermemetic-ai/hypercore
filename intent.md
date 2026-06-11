@@ -32,23 +32,21 @@ Intent lives relative to a work graph, folded or unfolded: the graph's folder co
 
 A work graph's intent document is that graph's current intended reality.
 
-A statement is plain, declarative, and strong enough to be wrong.
+A statement is plain, declarative, and strong enough to be wrong — wrong against material, evidence, or later judgment.
 
 Within an execution graph, one name means one concept.
 
 Every statement should be ownable: one party can put their name on it and answer for changing it.
 
-Every statement should be falsifiable against material, evidence, or later judgment.
-
 If it doesn't matter enough for the operator to hear about it, it isn't a statement.
 
 The operator and the machine are both bound by coherence. When the operator's decisions stop making sense together, the machine calls it out rather than silently applying the newest word.
 
-When the operator leaves a meaningful choice open and the machine settles it, that settlement is visible as machine-owned intent until the operator endorses it. The operator must be informed of this.
+When the operator leaves a meaningful choice open and the machine settles it, that settlement is visible as machine-owned intent until the operator endorses it.
 
 A revision lands as one edit and one commit; nothing we build may grow that path. What it breaks becomes work, after it lands.
 
-The default motion is ratification: the machine drafts concrete statements and the operator approves, cuts, or asks to have them explained. The operator is rarely asked to author from nothing.
+The default motion is ratification: the machine drafts concrete statements and the operator decides. The operator is rarely asked to author from nothing.
 
 ## endorsement
 
