@@ -18,12 +18,6 @@
 - since: 2026-06-11
 - waits on: nothing from you yet — thinking continues; a second project is the forcing event
 
-## the screen names the machine
-- ask: the very top row carries what answers — just the model name, claude-fable-5, dim between the title and the counts, on every view; the screen claims only what the machine file states, and fable 5 is pinned there on your word (the harness name appears only when no model is pinned)
-- try: look at the top row — the model name rides it on every view; edit --model in the machine file and the row follows
-- state: awaiting acceptance — reworked to your words: top row, fable 5 pinned, model name alone
-- since: 2026-06-11
-
 ## the prompt says where the words will land
 - ask: you noticed two speeches filed under one card — the place is captured the moment you press s, and the prompt never said which place that was. now it does: every speak prompt opens by naming its filing place — from the queue, on "<card>", into this exchange, on "<work entry>", from the document, from the log — before anything binds
 - try: press s anywhere — the prompt's first words name where the words will be filed; esc still abandons
