@@ -305,6 +305,19 @@ def machine_command():
     return argv
 
 
+def machine_label():
+    """What answers, by name: the harness from the machine command, and
+    the model only when the command pins one — the screen never claims
+    more than the command states."""
+    argv = machine_command()
+    if argv is None:
+        return "none — the machine file names the command"
+    name = os.path.basename(argv[0])
+    model = argv[argv.index("--model") + 1] if "--model" in argv[:-1] else None
+    return name + (" · " + model if model
+                   else " · the harness default model — none pinned")
+
+
 def summon():
     """A headless machine session in this repo: it trues up the record if
     it is behind, answers the operator's words onto the blocks that carry
@@ -548,7 +561,8 @@ def main(scr):
         put(scr, 1, LM, "─" * max(0, w - 2 * LM), DIM)
         mtxt = ""
         if machine:
-            mtxt = "the machine is answering · %ds" % (time.time() - machine[1])
+            mtxt = ("the machine is answering · %ds · %s"
+                    % (time.time() - machine[1], machine_label()))
             put(scr, 2, max(LM, w - len(mtxt) - LM), mtxt, BOLD)
         elif awaits:
             mtxt = ("%d word%s the machine — m summons it"
@@ -597,6 +611,8 @@ def main(scr):
                                  "w opens the view" % (len(work), len(accepts)))[: w - 2 * LM],
                     DIM)
                 y += 1
+            put(scr, y, LM, ("machine  " + machine_label())[: w - 2 * LM], DIM)
+            y += 1
             put(scr, y, LM, ("last  " + last)[: w - 2 * LM], DIM)
 
         elif view == "card":
