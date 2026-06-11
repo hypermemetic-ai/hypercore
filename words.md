@@ -48,3 +48,5 @@ machine (2026-06-11): built as the card stated. the `mini` file sits beside `mac
 
 operator (2026-06-11): go
 
+machine (2026-06-11): built as the card stated. at launch, a behind record or waiting words summon the machine on their own — the mini when it is a bare true-up; words that land mid-answer bring exactly one more summon when the run ends, the flag consumed so no loop can form; a failed run never auto-retries. m stays as the manual retry after a failed or partial run. the slice waits for your a on the queue.
+
