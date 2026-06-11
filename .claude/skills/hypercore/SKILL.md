@@ -81,6 +81,13 @@ graph's intent document is singular, and this repo is hypercore's folder.
   card like any speech. Until accepted the slice stays machine-owned.
 - Anti-ceremony holds: new machinery only after its absence blocks work
   twice.
+- Standing work is the operator's action list (operator's word,
+  2026-06-11): every work.md entry names a clear operator act in its
+  state — "awaiting your decision" surfaces a decision card on the
+  queue (fields: ask, options, state, since; the operator's word
+  settles it), "awaiting acceptance" an acceptance card (fields: ask,
+  try, state). Work that waits on no operator act does not stand in
+  work.md; git keeps the thinking until its forcing event arrives.
 - Decisions before material (operator's word, 2026-06-11): a call that
   commits the operator's resources or changes what they must later judge
   is settled by the operator before the material exists — surfaced live,

@@ -10,9 +10,10 @@ on its own — no restart anywhere.
 
     ./hyper
 
-Views    queue (home) . decision card . acceptance card . exchange .
-         work . document . log
-Decide   a approve . c cut . e explain (words optional)
+Views    queue (home) . decision card . work-decision card .
+         acceptance card . exchange . work . document . log
+Decide   a approve . c cut . e explain (words optional); a standing-work
+         decision is settled by the operator's word — s speaks it
 Accept   a then y on an acceptance card — confirmed like every
          other release; s speaks reservations
 Speak    s anywhere — words land verbatim, the place travels with them,
@@ -510,11 +511,12 @@ def main(scr):
     DIM, BOLD, REV = curses.A_DIM, curses.A_BOLD, curses.A_REVERSE
     # the queue leads each entry with its kind — what kind of call the
     # operator faces reads before any title does
-    KINDS = {"decide": ("decide", BOLD), "accept": ("accept", ACCENT),
+    KINDS = {"decide": ("decide", BOLD), "settle": ("decide", BOLD),
+             "accept": ("accept", ACCENT),
              "read": ("answered", DIM), "sent": ("sent", DIM)}
     GUT = 10  # the kind column
 
-    view, sel, ci, ai, wsel = "home", 0, 0, 0, 0
+    view, sel, ci, ai, si, wsel = "home", 0, 0, 0, 0, 0
     wexp = False  # the work view opens folded to the graph line
     scroll, flash, confirm, exkey = 0, "", None, None
     machine = None  # (Popen, started) while a summoned session is answering
@@ -544,27 +546,37 @@ def main(scr):
 
         accepts = [b for b in work
                    if "awaiting acceptance" in b["fields"].get("state", "")]
-        # words spoken on an acceptance card ride that card: they show
-        # below it, not as their own queue item, while the card stands
-        riders = tuple('## from the acceptance card, on "%s"'
-                       % b["lines"][0][3:].strip() for b in accepts)
+        # standing work is the operator's action list: an entry awaiting
+        # their decision is a queue card like any other call they face
+        decides = [b for b in work
+                   if "awaiting your decision" in b["fields"].get("state", "")]
+        # words spoken on a work card ride that card: they show below it,
+        # not as their own queue item, while the card stands
+        riders = tuple(['## from the acceptance card, on "%s"'
+                        % b["lines"][0][3:].strip() for b in accepts]
+                       + ['## from the decision card, on "%s"'
+                          % b["lines"][0][3:].strip() for b in decides])
         standalone = [b for b in exchanges
                       if not b["lines"][0].startswith(riders)]
         answered = [b for b in standalone
                     if b["words"] and b["words"][-1].startswith("machine (")]
         sent = [b for b in standalone if b not in answered]
         entries = ([("decide", s) for s in pend]
+                   + [("settle", b) for b in decides]
                    + [("accept", b) for b in accepts]
                    + [("read", b) for b in answered]
                    + [("sent", b) for b in sent])
         sel = max(0, min(sel, len(entries) - 1))
         ci = max(0, min(ci, len(pend) - 1))
         ai = max(0, min(ai, len(accepts) - 1))
+        si = max(0, min(si, len(decides) - 1))
         wsel = max(0, min(wsel, len(work) - 1))
         exb, exmax = None, 0
         if view == "card" and not pend:
             view = "home"
         if view == "accept" and not accepts:
+            view = "home"
+        if view == "settle" and not decides:
             view = "home"
         if view == "exchange":
             exb = next((b for b in exchanges if b["lines"][0] == exkey), None)
@@ -582,8 +594,8 @@ def main(scr):
 
         put(scr, 0, LM, "H Y P E R C O R E", BOLD)
         parts = []
-        if pend:
-            parts.append("%d TO DECIDE" % len(pend))
+        if pend or decides:
+            parts.append("%d TO DECIDE" % (len(pend) + len(decides)))
         if accepts:
             parts.append("%d TO ACCEPT" % len(accepts))
         if answered:
@@ -635,7 +647,8 @@ def main(scr):
                             put(scr, y, LM + width - len(tag), tag, REV)
                     else:
                         put(scr, y, LM, label, lattr)
-                        put(scr, y, LM + GUT, text, 0 if kind in ("decide", "accept") else DIM)
+                        put(scr, y, LM + GUT, text,
+                            0 if kind in ("decide", "settle", "accept") else DIM)
                         if tag:
                             put(scr, y, LM + width - len(tag), tag, DIM)
                     y += 1
@@ -680,6 +693,52 @@ def main(scr):
                     attr = DIM if wln.startswith("operator (") else 0
                     rows.append([])
                     rows += [[(LM + 2, ln, attr)] for ln in wrap(wln, width - 2)]
+            scroll = max(0, min(scroll, max(0, len(rows) - view_h)))
+            for i, segs in enumerate(rows[scroll: scroll + view_h]):
+                for x, txt, attr in segs:
+                    put(scr, top + 2 + i, x, txt, attr)
+            below = len(rows) - view_h - scroll
+            if below > 0:
+                put(scr, top + 2 + view_h, LM,
+                    "… %d more below — space scrolls" % below, DIM)
+
+        elif view == "settle":
+            # a standing work entry awaiting the operator's decision: the
+            # ask, the options with what each entails, and one channel —
+            # the operator's word settles it
+            blk = decides[si]
+            name = blk["lines"][0][3:].strip()
+            put(scr, top, LM,
+                ("awaiting your decision . %d of %d" % (si + 1, len(decides))).upper(),
+                DIM)
+            rows = [[(LM, ln, BOLD)] for ln in wrap(name, width)]
+            rows.append([])
+            for key, label in (("ask", "it asks"), ("options", "options"),
+                               ("state", "state"), ("since", "since")):
+                val = blk["fields"].get(key)
+                if not val:
+                    continue
+                first = True
+                for ln in wrap(val, width - 9):
+                    rows.append([(LM, "%7s" % label, DIM), (LM + 9, ln, 0)]
+                                if first else [(LM + 9, ln, 0)])
+                    first = False
+                rows.append([])
+            chat = [wln for b in exchanges
+                    if b["lines"][0].startswith(
+                        '## from the decision card, on "%s"' % name)
+                    for wln in b["words"]]
+            if chat:
+                rows += [[(LM, "THE EXCHANGE SO FAR", DIM)]]
+                for wln in chat:
+                    attr = DIM if wln.startswith("operator (") else 0
+                    rows.append([])
+                    rows += [[(LM + 2, ln, attr)] for ln in wrap(wln, width - 2)]
+                rows.append([])
+            rows += [[(LM, ln, DIM)]
+                     for ln in wrap("your word settles this — s speaks it. go, "
+                                    "redirect, or cut land the same way; the "
+                                    "machine executes what you said.", width)]
             scroll = max(0, min(scroll, max(0, len(rows) - view_h)))
             for i, segs in enumerate(rows[scroll: scroll + view_h]):
                 for x, txt, attr in segs:
@@ -843,6 +902,7 @@ def main(scr):
                      + ("m summon . " if (awaits or dirty) and not machine else "")
                      + "s speak . w work . d document . g log . q quit"),
             "card": "a approve . c cut . e explain . s speak . j/k statements . space/b page . esc back",
+            "settle": "s your word settles it . j/k cards . space/b page . esc back",
             "accept": "a accept . s reservations . j/k slices . space/b page . esc back",
             "exchange": "s speak . c fold away . space/b page . esc back",
             "work": ("j/k move . s speak on it . space/b page . esc fold" if wexp
@@ -910,6 +970,8 @@ def main(scr):
                 kind, obj = entries[sel]
                 if kind == "decide":
                     view, ci, scroll = "card", pend.index(obj), 0
+                elif kind == "settle":
+                    view, si, scroll = "settle", decides.index(obj), 0
                 elif kind == "accept":
                     view, ai, scroll = "accept", accepts.index(obj), 0
                 else:
@@ -967,6 +1029,38 @@ def main(scr):
                     flash = ("on disk . committed %s . the machine is answering" % hsh
                              if machine else
                              "on disk . committed %s . no machine to summon — the words wait" % hsh)
+
+        elif view == "settle":
+            if ch == 27:
+                view = "home"
+            elif ch in (curses.KEY_RIGHT, ord("k")):
+                si, scroll = si + 1, 0
+            elif ch in (curses.KEY_LEFT, ord("j")):
+                si, scroll = si - 1, 0
+            elif ch == curses.KEY_DOWN:
+                scroll += 1
+            elif ch == curses.KEY_UP:
+                scroll -= 1
+            elif ch == ord(" "):
+                scroll += view_h
+            elif ch == ord("b"):
+                scroll -= view_h
+            elif ch == ord("s"):
+                if guarded:
+                    flash = GUARD
+                else:
+                    name = decides[si]["lines"][0][3:].strip()
+                    wd = read_words(scr, h, w,
+                                    'your decision, on "%s" '
+                                    "(enter sends . esc abandons): " % name)
+                    if wd and wd.strip():
+                        hsh = speak('the decision card, on "%s"' % name, wd)
+                        machine = start_machine(machine)
+                        flash = ("on disk . committed %s . the machine is answering" % hsh
+                                 if machine else
+                                 "on disk . committed %s . no machine to summon — the words wait" % hsh)
+                    elif wd is not None:
+                        flash = "no words — nothing landed"
 
         elif view == "accept":
             if ch == 27:
