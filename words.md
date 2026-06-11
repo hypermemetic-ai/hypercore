@@ -32,3 +32,5 @@ operator (2026-06-11): this needs to be more general than stuff about the interf
 
 machine (2026-06-11): redrafted, project-blind, on the card. what we mean, in one sentence: you delegate execution, never stakes — the machine decides how, you decide anything that changes your world. the floor turns that into five yes/no tests on the act itself: it leaves the project folder (sends, publishes, installs, spends); it touches what you own or use (your words, your files, your environment); it binds future sessions (a default, a policy, a recurring job, a dependency); it takes more than one git command or one redo to take back; or the machine catches itself arguing that none of these apply — doubt surfaces. consistency under pressure comes from when the check runs, not how hard: one checkpoint, at the moment before the first write or command that creates the material — pressure erodes vigilance, it cannot erode a named moment. and the floor is auditable after the fact: every commit can be held against it, so a miss shows in the record instead of vanishing. the redraft sits on the same card, still yours to settle.
 
+operator (2026-06-11): go
+
