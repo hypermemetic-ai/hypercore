@@ -911,7 +911,8 @@ def main(scr):
                 if guarded:
                     flash = GUARD
                 else:
-                    wd = read_words(scr, h, w, "your words (enter sends . esc abandons): ")
+                    wd = read_words(scr, h, w, "your words, from the queue "
+                                               "(enter sends . esc abandons): ")
                     if wd and wd.strip():
                         hsh = speak("the queue", wd)
                         machine = start_machine(machine)
@@ -941,8 +942,8 @@ def main(scr):
             elif ch == ord("c"):
                 confirm = ("cut", pend[ci])
             elif ch in (ord("e"), ord("s")):
-                wd = read_words(scr, h, w, "your words (enter sends . empty = just "
-                                           "explain . esc abandons): ")
+                wd = read_words(scr, h, w, "your words, on this statement (enter sends . "
+                                           "empty = just explain . esc abandons): ")
                 if wd is not None:
                     hsh = explain(pend[ci], wd)
                     machine = start_machine(machine)
@@ -973,7 +974,8 @@ def main(scr):
                 else:
                     name = accepts[ai]["lines"][0][3:].strip()
                     wd = read_words(scr, h, w,
-                                    "your reservations (enter sends . esc abandons): ")
+                                    'your reservations, on "%s" '
+                                    "(enter sends . esc abandons): " % name)
                     if wd and wd.strip():
                         hsh = speak('the acceptance card, on "%s"' % name, wd)
                         machine = start_machine(machine)
@@ -1006,7 +1008,8 @@ def main(scr):
                 if guarded:
                     flash = GUARD
                 else:
-                    wd = read_words(scr, h, w, "your words (enter sends . esc abandons): ")
+                    wd = read_words(scr, h, w, "your words, into this exchange "
+                                               "(enter sends . esc abandons): ")
                     if wd and wd.strip():
                         hsh = speak_more(exb, wd)
                         machine = start_machine(machine)
@@ -1039,7 +1042,8 @@ def main(scr):
                 else:
                     name = (work[wsel]["lines"][0][3:].strip() if wexp
                             else "hypercore")
-                    wd = read_words(scr, h, w, "your words (enter sends . esc abandons): ")
+                    wd = read_words(scr, h, w, 'your words, on "%s" '
+                                               "(enter sends . esc abandons): " % name)
                     if wd and wd.strip():
                         hsh = speak('the work view, on "%s"' % name, wd)
                         machine = start_machine(machine)
@@ -1065,7 +1069,8 @@ def main(scr):
                     flash = GUARD
                 else:
                     place = "the document" if view == "doc" else "the log"
-                    wd = read_words(scr, h, w, "your words (enter sends . esc abandons): ")
+                    wd = read_words(scr, h, w, "your words, from %s "
+                                               "(enter sends . esc abandons): " % place)
                     if wd and wd.strip():
                         hsh = speak(place, wd)
                         machine = start_machine(machine)
