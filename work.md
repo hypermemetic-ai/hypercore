@@ -70,6 +70,7 @@
 
 ## across is horizontal
 - ask: arrows doing what they look like — ←/→ across statements, ↑/↓ within the screen — and, by the operator's redirect (2026-06-11), j/k restored across statements with their effects inverted from the first slice (j to the previous statement, k to the next); space/b paging stays as it stands
-- state: redirected — the slice cut j/k entirely, but the operator's criticism was the direction, not the keys; the restore is the next slice
+- state: in use, awaiting acceptance — the restore landed 2026-06-11: j/k move across decision and acceptance cards, j previous and k next, arrows alongside
 - since: 2026-06-11
-- waits on: the restore landing; then the operator moving with it and accepting in their own words; the operator's correction if the inversion recorded points the wrong way
+- try: on any card, j and k — j to the previous, k to the next; if the inversion points the wrong way, say so and it lands the other way
+- waits on: one act on its acceptance card; the operator's correction if the inversion points the wrong way

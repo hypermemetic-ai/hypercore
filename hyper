@@ -17,8 +17,8 @@ Accept   a on an acceptance card — one act, the slice is released;
          s speaks reservations
 Speak    s anywhere — words land verbatim, the place travels with them,
          and the machine is summoned to answer while you watch
-Move     arrows . left/right across cards . up/down within the
-         screen . enter open . esc back . q quit
+Move     arrows . left/right across cards (j previous, k next) . up/down
+         within the screen . enter open . esc back . q quit
 """
 
 import curses
@@ -678,8 +678,8 @@ def main(scr):
             "home": (("enter open . ↑/↓ move . " if entries else "")
                      + ("m summon . " if (awaits or dirty) and not machine else "")
                      + "s speak . w work . d document . g log . q quit"),
-            "card": "a approve . c cut . e explain . s speak . ←/→ statements . ↑/↓ scroll . esc back",
-            "accept": "a accept . s reservations . ←/→ slices . ↑/↓ scroll . space/b page . esc back",
+            "card": "a approve . c cut . e explain . s speak . ←/→ j/k statements . ↑/↓ scroll . esc back",
+            "accept": "a accept . s reservations . ←/→ j/k slices . ↑/↓ scroll . space/b page . esc back",
             "exchange": "s speak . c fold away . ↑/↓ scroll . space/b page . esc back",
             "work": "↑/↓ move . s speak on it . space/b page . esc back",
             "doc": "↑/↓ scroll . space/b page . s speak . esc back",
@@ -765,9 +765,9 @@ def main(scr):
         elif view == "card":
             if ch == 27:
                 view = "home"
-            elif ch == curses.KEY_RIGHT:
+            elif ch in (curses.KEY_RIGHT, ord("k")):
                 ci, scroll = ci + 1, 0
-            elif ch == curses.KEY_LEFT:
+            elif ch in (curses.KEY_LEFT, ord("j")):
                 ci, scroll = ci - 1, 0
             elif ch == curses.KEY_DOWN:
                 scroll += 1
@@ -794,9 +794,9 @@ def main(scr):
         elif view == "accept":
             if ch == 27:
                 view = "home"
-            elif ch == curses.KEY_RIGHT:
+            elif ch in (curses.KEY_RIGHT, ord("k")):
                 ai, scroll = ai + 1, 0
-            elif ch == curses.KEY_LEFT:
+            elif ch in (curses.KEY_LEFT, ord("j")):
                 ai, scroll = ai - 1, 0
             elif ch == curses.KEY_DOWN:
                 scroll += 1
