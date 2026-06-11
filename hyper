@@ -542,11 +542,17 @@ def main(scr):
                      note("the machine failed (exit %d) — .hyper-machine.log holds the story" % rc))
             machine = None
 
-        answered = [b for b in exchanges
-                    if b["words"] and b["words"][-1].startswith("machine (")]
-        sent = [b for b in exchanges if b not in answered]
         accepts = [b for b in work
                    if "awaiting acceptance" in b["fields"].get("state", "")]
+        # words spoken on an acceptance card ride that card: they show
+        # below it, not as their own queue item, while the card stands
+        riders = tuple('## from the acceptance card, on "%s"'
+                       % b["lines"][0][3:].strip() for b in accepts)
+        standalone = [b for b in exchanges
+                      if not b["lines"][0].startswith(riders)]
+        answered = [b for b in standalone
+                    if b["words"] and b["words"][-1].startswith("machine (")]
+        sent = [b for b in standalone if b not in answered]
         entries = ([("decide", s) for s in pend]
                    + [("accept", b) for b in accepts]
                    + [("read", b) for b in answered]
@@ -701,6 +707,17 @@ def main(scr):
                     rows.append([(LM, "%7s" % label, DIM), (LM + 9, ln, 0)]
                                 if first else [(LM + 9, ln, 0)])
                     first = False
+                rows.append([])
+            chat = [wln for b in exchanges
+                    if b["lines"][0].startswith(
+                        '## from the acceptance card, on "%s"' % name)
+                    for wln in b["words"]]
+            if chat:
+                rows += [[(LM, "THE EXCHANGE SO FAR", DIM)]]
+                for wln in chat:
+                    attr = DIM if wln.startswith("operator (") else 0
+                    rows.append([])
+                    rows += [[(LM + 2, ln, attr)] for ln in wrap(wln, width - 2)]
                 rows.append([])
             rows += [[(LM, ln, DIM)]
                      for ln in wrap("a then y accepts and releases the slice — the "

@@ -30,3 +30,9 @@
 - state: awaiting acceptance
 - since: 2026-06-11
 
+## the card carries its own conversation
+- ask: words spoken on an acceptance card ride that card while it stands — they show below it as the exchange so far, and leave the home queue to the card itself instead of appearing as a separate item; if the card is released or cut, the exchange returns to the queue as its own entry
+- try: open an acceptance card that has been spoken on — the exchange reads below the slice's fields; the home queue lists only the card
+- state: awaiting acceptance
+- since: 2026-06-11
+
