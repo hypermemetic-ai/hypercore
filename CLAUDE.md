@@ -41,7 +41,10 @@ the live queue state at every session start; this file carries the rules.
    judge surfaces while the work is in flight — with options and
    entailments — and is settled by the operator before the material
    exists. Below that bar the machine scopes freely, visibly, and
-   answers for the calls it kept. The headless machine the interface
-   summons only answers words and records asks; it never builds.
+   answers for the calls it kept. The machine the interface summons
+   answers words, records asks, and may build (operator's word,
+   2026-06-11) — under the same orders as any session: decisions before
+   material, every slice landed with its explanation and acceptance
+   question.
 
 Read `.claude/skills/hypercore/SKILL.md` for the full ground rules.

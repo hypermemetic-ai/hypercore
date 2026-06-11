@@ -44,9 +44,15 @@
 
 ## one machine, any harness
 - ask: the summon stops being an idea and becomes the interface opening a terminal session for the operator — the command it runs becomes one visible setting (claude today, codex or any harness that takes a prompt tomorrow), and the session brief becomes a file any harness reads. a cohesion cut, not a feature: nothing the shortcut does that a typed terminal couldn't
-- state: recorded, not started
+- state: picks settled (operator's words, 2026-06-11) — the summon stays and stays automatic: speaking is the summon, no extra action exists or will; the build-nothing leash is cut — summoned sessions build under the same orders as any session (decisions before material, slices with explanation and acceptance question). The cut is already landed in CLAUDE.md, the skill, and the summon instruction. What remains to build: the summon command as one visible setting, the brief as a file any harness reads
 - since: 2026-06-11
-- waits on: the operator's two picks from the answer in words.md — keep the summon as a shortcut or cut it and open terminals by hand; keep the build-nothing leash on unwatched sessions or let them build under the same rules as any session
+- waits on: the remaining build landing; then the operator using it and accepting in their own words
+
+## acceptance has a place
+- ask: every slice awaiting acceptance surfaces as a card on the queue — what it does, how to try it, and a place to answer on the spot; the operator's words land on the card like any other speech, and acceptance in their own words releases the slice
+- state: recorded, not started — named by the operator (2026-06-11): "these work slices pending acceptance can't really progress unless some card comes up giving me the option to accept or not. looks like a gap to me"
+- since: 2026-06-11
+- waits on: one operator pick before the material exists — the card takes their own words (the standing bar: own words, after use, no lingering doubts; a plain "accepted" is enough), or it offers a one-key accept, which loosens that bar; the question is posed in words.md
 
 ## across is horizontal
 - ask: arrows doing what they look like — ←/→ across statements, ↑/↓ within the screen — and, by the operator's redirect (2026-06-11), j/k restored across statements with their effects inverted from the first slice (j to the previous statement, k to the next); space/b paging stays as it stands

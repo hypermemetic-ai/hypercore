@@ -85,7 +85,10 @@ graph's intent document is singular, and this repo is hypercore's folder.
   freely and visibly, and answers for the calls it kept.
 - The interface summons a headless machine session when the operator
   speaks (hyper runs `claude -p`). That channel answers operator words
-  onto their cards and records asks in work.md; it never builds
-  machinery and never uses the option picker — nobody can see it there.
+  onto their cards, records asks in work.md, and may build (operator's
+  word, 2026-06-11) under the same orders as any session — decisions
+  before material, every slice landed with its explanation and
+  acceptance question. It never uses the option picker — nobody can
+  see it there.
 - Commit after every meaningful move; the git history is the transparency
   record.
