@@ -20,9 +20,13 @@ machine (2026-06-11): open it is — landed. the home line now reads "open work:
 
 operator (2026-06-11): I don't like open either. I'll leave this call to you. and make sure it's used consistently. also, we need to solve your permission problem. full permissions granted hereby except irreversibly destructive. I'll add that work status is not clear and any standing work item should correspond to a clear operator action. right now I see an empty queue but three items. you see the issue.
 
+machine (2026-06-11): all three landed. the term: standing work — your own phrase in these words ('any standing work item'); it says the entry stands on the books awaiting someone, and implies no motion. swept everywhere, including — on your word here, disclosed — your two intent lines and rule 6, which read 'underway' where in-flight truly meant a build in motion. permissions: the machine file now summons with full permissions, your one bar — the irreversibly destructive, what git cannot bring back — is standing order rule 7, held by the machine itself; the same grant let me fix the brief's stale header at last. and the issue, seen: two items waited on your word and the queue never told you; a third waited on nothing at all. work.md is now your action list — every standing entry names your act and sits on the queue. 'the machine answers without m' is a decide card: open it, s speaks your word. the surfacing build itself is the old 'decisions surface' proposal executed, awaiting your a. 'many work units, one queue' left work.md by your rule — git keeps the thinking until a second project forces the decision.
+
 ## from the queue . 2026-06-11
 
 operator (2026-06-11): model text shouldn't be central now that I'm looking at it. ruins the minimalism. maybe better to the right of the top bar.
 
 operator (2026-06-11): or bottom right? lots of ideas here.
+
+machine (2026-06-11): bottom right — of your two spots, the right of the top bar is where the status counts already live, and crowding them repeats the crime. the name now sits dim beside the key hints, the top row is title and status alone, and the card waits for your a; one word moves it if the other spot wins on sight.
 
