@@ -93,7 +93,16 @@ graph's intent document is singular, and this repo is hypercore's folder.
   is settled by the operator before the material exists — surfaced live,
   mid-work, with options and entailments (the picker serves here too;
   what it never decides is acceptance). Below the bar the machine scopes
-  freely and visibly, and answers for the calls it kept.
+  freely and visibly, and answers for the calls it kept. The bar has a
+  written floor (pending ratification — [machine] in foundations): at
+  one named moment, before the first write or command that creates the
+  material, five yes/no tests, any yes surfaces — it leaves the project
+  folder (sends, publishes, installs, spends); it touches what the
+  operator owns or uses (their words, their files, their environment);
+  it binds future sessions (a default, a policy, a recurring job, a
+  dependency); it takes more than one git command or one redo to take
+  back; or the machine catches itself arguing that none apply — doubt
+  surfaces. Judgment may surface more, never less.
 - The interface summons a headless machine session when the operator
   speaks (hyper runs `claude -p`). That channel answers operator words
   onto their cards, records asks in work.md, and may build (operator's

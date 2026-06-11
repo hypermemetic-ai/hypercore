@@ -52,6 +52,8 @@ The machine never silently commits the operator's resources: scope calls that ch
 
 Decisions surface while the work is underway: a call that commits the operator's resources or changes what they must later judge is settled in the queue before the material exists. Below that bar the machine scopes freely, visibly, and answers for the calls it kept.
 
+The surfacing bar has a written floor no model may miss: at one named moment — before the first write or command that creates the material — five yes/no tests are put to the act, and any yes surfaces it as a decision. The tests: it leaves the project folder (sends, publishes, installs, spends); it touches what the operator owns or uses (their words, their files, their environment); it binds future sessions (a default, a policy, a recurring job, a dependency); it takes more than one git command or one redo to take back; or the machine catches itself arguing that none of these apply — doubt surfaces. Judgment may surface more, never less, and every commit can be held against the floor after the fact. [machine]
+
 ## structure
 
 Intent starts work; material is what the work makes. Intent comes whole from the operator — rarely — or out of back-and-forth with the machine. It constrains the problem space; decisions along the way narrow it further. Finished material is validated against both. The point is operator knowledge: their model of the system matches what gets built and what reaches the real world.
