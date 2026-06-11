@@ -36,23 +36,29 @@ WORK = os.path.join(ROOT, "work.md")
 MARKER = " [machine]"
 LM = 3  # left margin
 
-LEDGERS = ("intent.md", "queue.md", "words.md")
-GUARD = "intent.md, queue.md or words.md has uncommitted changes — resolve before moving"
+LEDGERS = ("intent.md", "queue.md", "words.md", "work.md")
+GUARD = "the record is behind — m summons the machine to true it up"
 
 MACHINE_LOG = os.path.join(ROOT, ".hyper-machine.log")
 SUMMON = (
-    "the operator spoke in hyper and the interface summoned you. read the "
-    "session brief, then queue.md and words.md; every operator word whose "
-    "card or exchange block does not end with a machine line awaits you. "
-    "answer each as a 'machine (YYYY-MM-DD): ...' line appended to the same "
-    "block, per the standing orders — short enough to read on a card. if "
-    "the words start work bigger than an answer, record the ask in work.md "
-    "and say so in the answer; you may build when the words call for it, "
-    "under the standing orders — decisions before material, every slice "
-    "landed with its explanation and acceptance question. decisions "
-    "that are the operator's land as questions in your answer line, to be "
-    "settled in the interface — never assumed. never use AskUserQuestion "
-    "here: nobody can see it. commit every change with grounds, then stop."
+    "the interface summoned you. read the session brief, then queue.md and "
+    "words.md; every operator word whose card or exchange block does not "
+    "end with a machine line awaits you. but first: if the record is behind "
+    "— git status shows uncommitted changes — true it up before anything "
+    "else. read the diff, verify what it claims against what is actually "
+    "on disk, finish or correct what the dead session left, and commit "
+    "with grounds. then answer each waiting word as a "
+    "'machine (YYYY-MM-DD): ...' line appended to the same block, per the "
+    "standing orders — short enough to read on a card. if the words start "
+    "work bigger than an answer, record the ask in work.md and say so in "
+    "the answer; you may build when the words call for it, under the "
+    "standing orders — decisions before material, every slice landed with "
+    "its explanation and acceptance question. decisions that are the "
+    "operator's land as questions in your answer line, to be settled in "
+    "the interface — never assumed. never use AskUserQuestion here: nobody "
+    "can see it. commit after every file you finish, with grounds, not "
+    "once at the end — a session can die mid-flight, and only what is "
+    "committed survives it. then stop."
 )
 
 
@@ -256,10 +262,10 @@ def fold_exchange(blk):
 # ----- the machine (summoned by speech; answers onto the same block) -----
 
 def summon():
-    """A headless machine session in this repo: it reads the ledgers,
-    answers the operator's words onto the blocks that carry them, commits,
-    and stops.  It builds nothing; bigger asks return through work.md.
-    HYPER_MACHINE overrides the command (testing)."""
+    """A headless machine session in this repo: it trues up the record if
+    it is behind, answers the operator's words onto the blocks that carry
+    them, may build under the standing orders, commits as it goes, and
+    stops.  HYPER_MACHINE overrides the command (testing)."""
     over = os.environ.get("HYPER_MACHINE")
     if over:
         argv = shlex.split(over)
@@ -449,8 +455,9 @@ def main(scr):
         if dirty:
             files = ", ".join(l.split()[-1] for l in dirty.splitlines())
             room = w - 2 * LM - (len(mtxt) + 2 if mtxt else 0)
-            put(scr, 2, LM, ("the record is behind — uncommitted: " + files)[: max(0, room)],
-                ALERT)
+            put(scr, 2, LM,
+                ("the record is behind — uncommitted: %s — m trues it up"
+                 % files)[: max(0, room)], ALERT)
 
         if view == "home":
             put(scr, top, LM, "THE QUEUE", DIM)
@@ -610,7 +617,7 @@ def main(scr):
 
         hints = {
             "home": (("enter open . ↑/↓ move . " if entries else "")
-                     + ("m summon . " if awaits and not machine else "")
+                     + ("m summon . " if (awaits or dirty) and not machine else "")
                      + "s speak . w work . d document . g log . q quit"),
             "card": "a approve . c cut . e explain . s speak . ←/→ statements . ↑/↓ scroll . esc back",
             "exchange": "s speak . c fold away . ↑/↓ scroll . space/b page . esc back",
@@ -669,7 +676,7 @@ def main(scr):
                     view, ci, scroll = "card", pend.index(obj), 0
                 else:
                     view, exkey, scroll = "exchange", obj["lines"][0], -1
-            elif ch == ord("m") and awaits and not machine:
+            elif ch == ord("m") and (awaits or dirty) and not machine:
                 machine = start_machine(machine)
                 flash = ("the machine is summoned" if machine else
                          "claude is not on this machine — the words wait on disk")

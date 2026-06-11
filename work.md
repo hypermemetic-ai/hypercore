@@ -54,6 +54,13 @@
 - since: 2026-06-11
 - waits on: the build landing; then the operator accepting slices through it
 
+## the record never stays behind
+- ask: when a machine session dies between writing and committing, the interface offers the repair instead of just the alarm — the red line names the stranded files and ends with the way out (m trues it up); m summons the machine whenever the record is behind, with first orders to verify what the strand claims, finish or correct it, and commit with grounds; the session brief flags a dirty tree to every session, typed or summoned; and summoned sessions commit after every file they finish, so a death strands less
+- state: in use, awaiting acceptance — born from today's strand: a summon died on a 529 between writing and committing, the guard then blocked speech (the one recovery channel), and the operator had to leave the interface to get the record trued
+- since: 2026-06-11
+- try: the strand that occasioned it is already trued up — the log holds the story; if the red line ever shows again, the way out is written on it
+- waits on: one act on its acceptance card
+
 ## across is horizontal
 - ask: arrows doing what they look like — ←/→ across statements, ↑/↓ within the screen — and, by the operator's redirect (2026-06-11), j/k restored across statements with their effects inverted from the first slice (j to the previous statement, k to the next); space/b paging stays as it stands
 - state: redirected — the slice cut j/k entirely, but the operator's criticism was the direction, not the keys; the restore is the next slice

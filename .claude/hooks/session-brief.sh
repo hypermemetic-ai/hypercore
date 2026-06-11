@@ -17,6 +17,20 @@ per_sec=$(awk '
 next=$(grep -m1 ' \[machine\]$' "$doc" 2>/dev/null) || next=""
 recent=$(git log --oneline -3 2>/dev/null) || recent="(no git history)"
 
+# a dead session can strand changes between writing and committing; the
+# brief flags it so every session, typed or summoned, trues it up first.
+behind=$(git status --porcelain 2>/dev/null) || behind=""
+behind_block=""
+if [ -n "$behind" ]; then
+  behind_block="
+THE RECORD IS BEHIND — uncommitted changes:
+${behind}
+True this up before anything else: read the diff, verify what it claims
+against what is on disk, finish or correct what the dead session left,
+and commit with grounds.
+"
+fi
+
 # only operator words the machine has not yet answered: lines after the
 # last "machine (" line of their card or exchange. an answered word stops
 # nagging. read from both ledgers that carry operator words.
@@ -63,7 +77,7 @@ context="hypercore session brief — generated from disk by .claude/hooks/sessio
 Re-ratification queue: ${total} statements still marked [machine] in ${doc}.
 ${per_sec}
 Next pending: ${next:-none — the queue is clear}
-${words_block}${work_block}
+${behind_block}${words_block}${work_block}
 
 Recent commits:
 ${recent}

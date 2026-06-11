@@ -94,5 +94,10 @@ graph's intent document is singular, and this repo is hypercore's folder.
   before material, every slice landed with its explanation and
   acceptance question. It never uses the option picker — nobody can
   see it there.
-- Commit after every meaningful move; the git history is the transparency
-  record.
+- A session that arrives to uncommitted changes trues up the record
+  before anything else: read the diff, verify what it claims against
+  what is on disk, finish or correct what the dead session left, commit
+  with grounds. In hyper, m summons the machine for exactly this.
+- Commit after every meaningful move — and after every file finished,
+  not once at the end; a session can die mid-flight, and only what is
+  committed survives it. The git history is the transparency record.
