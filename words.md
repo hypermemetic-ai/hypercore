@@ -12,3 +12,5 @@ operator (2026-06-11): I think I've brought this up already. selecting an option
 
 operator (2026-06-11): option 1 — with the project — its folder carries its intent and graphs in its own repo, hypercore keeps a registry of linked folders the interface reads
 
+machine (2026-06-11): settled and landed. the doctrine now stands in structure — outside work lives with its project, its folder carries its intent and graphs in its own repo, hypercore keeps a registry of linked folders the interface reads — marked [machine], so it returns through the queue for your ratification. the decision card left standing work; the registry itself stays unbuilt until the first real outside ask, per the bar.
+
