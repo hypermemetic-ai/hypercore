@@ -36,5 +36,12 @@ the live queue state at every session start; this file carries the rules.
    the option picker (operator's word, 2026-06-11): the operator uses
    the slice and accepts in their own words, with no lingering doubts —
    until then the slice stays machine-owned material.
+6. **Decisions before material** (operator's word, 2026-06-11): a call
+   that commits the operator's resources or changes what they must later
+   judge surfaces while the work is in flight — with options and
+   entailments — and is settled by the operator before the material
+   exists. Below that bar the machine scopes freely, visibly, and
+   answers for the calls it kept. The headless machine the interface
+   summons only answers words and records asks; it never builds.
 
 Read `.claude/skills/hypercore/SKILL.md` for the full ground rules.

@@ -77,5 +77,15 @@ graph's intent document is singular, and this repo is hypercore's folder.
   with no lingering doubts. Until then the slice stays machine-owned.
 - Anti-ceremony holds: new machinery only after its absence blocks work
   twice.
+- Decisions before material (operator's word, 2026-06-11): a call that
+  commits the operator's resources or changes what they must later judge
+  is settled by the operator before the material exists — surfaced live,
+  mid-work, with options and entailments (the picker serves here too;
+  what it never decides is acceptance). Below the bar the machine scopes
+  freely and visibly, and answers for the calls it kept.
+- The interface summons a headless machine session when the operator
+  speaks (hyper runs `claude -p`). That channel answers operator words
+  onto their cards and records asks in work.md; it never builds
+  machinery and never uses the option picker — nobody can see it there.
 - Commit after every meaningful move; the git history is the transparency
   record.
