@@ -16,9 +16,3 @@ operator (2026-06-11): I don't like this "go" and similar structure for decision
 
 operator (2026-06-11): I never did see the desktop shortcut. that item was folded I believe but the change didn't really land.
 
-## from the decision card, on "the machine answers without m" . 2026-06-11
-
-operator (2026-06-11): go
-
-machine (2026-06-11): built as the card stated. at launch, a behind record or waiting words summon the machine on their own — the mini when it is a bare true-up; words that land mid-answer bring exactly one more summon when the run ends, the flag consumed so no loop can form; a failed run never auto-retries. m stays as the manual retry after a failed or partial run. the slice waits for your a on the queue.
-
