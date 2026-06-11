@@ -1,12 +1,5 @@
 # work
 
-## kinds at a glance
-- ask: what kind of call the operator faces reads before any title does — acceptance visibly apart from decisions, every type parseable from the main screen
-- state: built, awaiting acceptance — every home-queue entry leads with its kind in a left column (decide bold, accept in the one accent color, answered and sent dim) and the header counts the kinds apart (1 TO DECIDE . 2 TO ACCEPT) instead of one flat WAITING number; the redundant right-hand tags dropped
-- since: 2026-06-11
-- try: look at the home queue in a freshly started hyper — this card leads with accept in color, statements lead with decide, exchanges with answered or sent
-- waits on: one act on its acceptance card
-
 ## the machine answers without m
 - ask: m stops being a routine act — hyper summons the machine at launch when the record is behind or words wait, and summons again when words land mid-answer; m stays only as the manual retry after a failed run
 - state: proposed — nothing built. loop-guard drafted: re-summon only for words the running machine could not have read; a failed run never auto-retries. each auto-summon spends a machine run without an operator act, which is why this waits on your word rather than landing built
@@ -22,3 +15,4 @@
 - ask: the interface carries several work units and intersecting work without becoming a mess — the seam is undrafted; first thought is per-unit folders with one queue reading them all
 - state: open — thinking only, nothing built
 - since: 2026-06-11
+
