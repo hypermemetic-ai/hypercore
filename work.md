@@ -6,9 +6,3 @@
 - state: awaiting your decision — this card sits on the queue; a goes, c cuts, s redirects
 - since: 2026-06-11
 
-
-## one machine across every hyper
-- ask: built on what this summon witnessed — your parallelism question was already fact. the one-session bar lived in each hyper's memory and died with it: every relaunch or second window while words waited summoned another machine, and three ran at once on your last words (.hyper-machine.log, 14:19–14:23). the summoned pid now lands in a lock file; a hyper finding a live machine adopts it — the status shows it working — instead of summoning a twin; a stale lock clears itself, and the run's end removes it. two hypers booting in the same instant can still double — the window shrank from every relaunch to that blink
-- try: while a machine works, open a second hyper — its status reads "the machine is working" and .hyper.log carries "adopted, not doubled" (hypers launched before this landed predate the lock; relaunch first)
-- state: awaiting acceptance — a then y on the card accepts and releases it
-- since: 2026-06-11
