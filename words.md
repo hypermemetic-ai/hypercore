@@ -16,3 +16,5 @@ machine (2026-06-11): all five, in order. top row: done, and on your last word i
 
 operator (2026-06-11): ah, we need a better term then surely. open?
 
+machine (2026-06-11): open it is — landed. the home line now reads "open work: N . awaiting your acceptance: N", and the docstring and README follow; it also rhymes with the ledger, where each entry's state is already open until your word closes it. two places still say in-flight and stay: intent.md (lines on readable work and decisions surfacing) and CLAUDE.md rule 6 — those are your text, not mine to rename. want them swept to open too, or left as written? (the brief's header is still permission-blocked to me, so it keeps the old spelling until you or a freer hand edits .claude/hooks/session-brief.sh line 71.)
+
