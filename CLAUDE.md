@@ -33,9 +33,13 @@ the live queue state at every session start; this file carries the rules.
 5. **Rebuild discipline:** no machinery before its absence has blocked
    work twice. Every new slice lands with a plain-words explanation and an
    acceptance question for the operator. Acceptance never runs through
-   the option picker (operator's word, 2026-06-11): the operator uses
-   the slice and accepts in their own words, with no lingering doubts —
-   until then the slice stays machine-owned material.
+   the option picker; the own-words bar was a proxy for the chance to
+   test and fell on the operator's word (2026-06-11): every slice
+   awaiting acceptance surfaces as a card — what it does, how to try it
+   (interface changes are their own evidence) — and one frictionless act
+   on the card accepts and releases it. The operator speaks only when
+   they have reservations, and those words land on the card like any
+   speech. Until accepted the slice stays machine-owned material.
 6. **Decisions before material** (operator's word, 2026-06-11): a call
    that commits the operator's resources or changes what they must later
    judge surfaces while the work is in flight — with options and

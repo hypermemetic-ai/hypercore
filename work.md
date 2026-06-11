@@ -49,10 +49,10 @@
 - waits on: the remaining build landing; then the operator using it and accepting in their own words
 
 ## acceptance has a place
-- ask: every slice awaiting acceptance surfaces as a card on the queue — what it does, how to try it, and a place to answer on the spot; the operator's words land on the card like any other speech, and acceptance in their own words releases the slice
-- state: recorded, not started — named by the operator (2026-06-11): "these work slices pending acceptance can't really progress unless some card comes up giving me the option to accept or not. looks like a gap to me"
+- ask: every slice awaiting acceptance surfaces as a card on the queue — what it does and how to try it, so evaluation is made easy (interface changes are their own evidence); one frictionless act on the card accepts and releases the slice; speaking is for reservations only, and those words land on the card like any speech
+- state: pick settled (operator's words, 2026-06-11) — the own-words bar was a proxy for the opportunity to test, and it goes: acceptance is frictionless by default, the operator speaks only when they have reservations. The bar revision is landed in CLAUDE.md and the skill. Ready to build
 - since: 2026-06-11
-- waits on: one operator pick before the material exists — the card takes their own words (the standing bar: own words, after use, no lingering doubts; a plain "accepted" is enough), or it offers a one-key accept, which loosens that bar; the question is posed in words.md
+- waits on: the build landing; then the operator accepting slices through it
 
 ## across is horizontal
 - ask: arrows doing what they look like — ←/→ across statements, ↑/↓ within the screen — and, by the operator's redirect (2026-06-11), j/k restored across statements with their effects inverted from the first slice (j to the previous statement, k to the next); space/b paging stays as it stands

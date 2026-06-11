@@ -71,10 +71,14 @@ graph's intent document is singular, and this repo is hypercore's folder.
 - Nothing gets built ahead of the legibility it serves. Every slice of new
   machinery lands with a plain-words explanation and an acceptance
   question for the operator.
-- Acceptance of machinery never runs through the option picker
-  (operator's word, 2026-06-11): the picker ratifies statements;
-  machinery is accepted only in the operator's own words, after use,
-  with no lingering doubts. Until then the slice stays machine-owned.
+- Acceptance of machinery never runs through the option picker: the
+  picker ratifies statements. The own-words bar was a proxy for the
+  chance to test and fell on the operator's word (2026-06-11): every
+  slice awaiting acceptance surfaces as a card — what it does, how to
+  try it (interface changes are their own evidence) — and one
+  frictionless act on the card accepts and releases it; the operator
+  speaks only when they have reservations, and those words land on the
+  card like any speech. Until accepted the slice stays machine-owned.
 - Anti-ceremony holds: new machinery only after its absence blocks work
   twice.
 - Decisions before material (operator's word, 2026-06-11): a call that

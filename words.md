@@ -34,3 +34,9 @@ machine (2026-06-11): it already is automatic — speaking is the summon, and th
 
 operator (2026-06-11): the point of the accept in my words thing is that I wasn't given an opportunity to test the work. if the work is directly visible because it is a change to the interface I use to evaluate it then there is no gap. but for other changes, this was my point, it must be made easy for the operator to evaluate for acceptance. if they have reservations they speak, but they shouldn't have to speak just to make acceptance frictionless. that should be the default.
 
+machine (2026-06-11): that settles the card's shape and revises the bar itself: the own-words requirement was a proxy for the chance to test, so it goes. the bar is now the opportunity to evaluate — the acceptance card shows what the slice does and how to try it (interface changes are their own evidence), and one frictionless act on the card accepts; you speak only when you have reservations, and those words land on the card like any speech. the revision is landed in CLAUDE.md, the skill, and work.md, and "acceptance has a place" is cleared to build in this shape — no picks remain on it; the next build lands it.
+
+## from a terminal session, outside the interface . 2026-06-11
+
+operator (2026-06-11): there's uncommitted changes now and that's somehow my problem. think of the situation we're in like this: the operator really wants everything to be caught up. right now I see no convincing path towards everything being sorted from the interface itself. I entered a typical terminal session because I know you can handle things from here. and please do, but this time only. what you do here should include any changes necessary for the operator to convincingly do everything they need to do to be caught up.
+
