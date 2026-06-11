@@ -12,3 +12,5 @@ machine (2026-06-11): built (1a25eb1) — the fold now rides the acceptance: a g
 
 operator (2026-06-11): when we say "fold away" for text like this, what fold means isn't clear to me. it should imply we're storing the text, but are we? if so where?
 
+machine (2026-06-11): yes — stored, twice over, in git. folding an exchange removes its block from words.md, but the fold commit carries the full text in its own body, and every earlier commit of words.md still holds it too. `git log words.md` finds it; nothing in this repo is ever erased — a fold only takes text out of the live view. graph folds are gentler still: the node stays in work/<name>/graph.md with state turned to folded. if "fold away" reads wrong on the key, say a truer phrase and I'll put it there.
+
