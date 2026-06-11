@@ -22,3 +22,5 @@ operator (2026-06-11): I'll also ask - how do I start the interface if I close i
 
 operator (2026-06-11): I think name should be on the very top row, somewhere tasteful. and yes, let's pin fable 5.
 
+operator (2026-06-11): I like this but this should be the expanded view. default I think should be just hypercore, enter -> it expands like now.
+
