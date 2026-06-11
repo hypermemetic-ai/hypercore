@@ -6,3 +6,7 @@ operator (2026-06-11): alright, I don't know what I want here. I think there's w
 
 machine (2026-06-11): swept the statement set against the material. the name first: intent already answers you — "hypercore is itself a folded work graph; this repository is its folder" — and a folded graph seen from its parent is a node, so both your words are right. but your question walked straight into the one real seam the sweep found: structure says "work graph", the work section and all the material say "execution graph" — two names on one unit. that, and one more gap — your order statement promises every decision wears the cost of its own delay, and the built queue shows none — now stand as two decision cards in work.md. the code itself swept clean: compiles, no dead references, every ledger read live, transients ignored, README current; nothing earned hardening for its own sake.
 
+## from the decision card, on "one name for the graph unit" . 2026-06-11
+
+operator (2026-06-11): option 1 — execution graph wins — the machine lands the revision in structure (two operator-owned statements reworded on your word; one edit, one commit; one revert undoes it)
+
