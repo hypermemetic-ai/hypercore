@@ -10,3 +10,7 @@ operator (2026-06-11): I need conversations to happen in real time, not across r
 
 operator (2026-06-11): I don't even think the up/down is defensible to be honest.
 
+operator (2026-06-11): restarting didn't even update the conversation state so clearly the interface isn't self sufficient yet. I added notes to everything, let's figure this out.
+
+operator (2026-06-11): two things I'll add. one, I want this chat feel we have here to be part of the interface's capabilities. I don't want to have to restart for a response. two, you may or may not have figured that ctrl+enter works everytime to go fullscreen with ghostty. also, do we have the flow right? here we see I'm sharing vague pointers to work off. the workflow I imagine from here should involve important decisions being surfaced live as you work and settled by me BEFORE the work materializes. otherwise I'm captive to the machine's intent, no? reason with me if I'm missing something.
+
