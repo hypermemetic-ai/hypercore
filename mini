@@ -1,0 +1,11 @@
+# the small machine hyper summons for busywork — today: truing up a
+# record left behind.  same format as the machine file: one command,
+# one visible setting, {prompt} standing for the task; the model is set
+# here, never hardcoded — sonnet today, one line to change.  the bar it
+# runs under is hard and lives in the prompt hyper hands it: commit what
+# is actually on disk with grounds faithful to the diff, never finish or
+# correct half-done work; anything ambiguous it leaves uncommitted,
+# named, for the full machine.  HYPER_MINI in the environment overrides
+# this file (testing); with no mini file, the full machine takes the
+# busywork itself.
+claude -p {prompt} --model claude-sonnet-4-6 --dangerously-skip-permissions

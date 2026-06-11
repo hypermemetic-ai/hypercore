@@ -18,6 +18,10 @@ Accept   a then y on an acceptance card — confirmed like every
          other release; s speaks reservations
 Speak    s anywhere — words land verbatim, the place travels with them,
          and the machine is summoned to answer while you watch
+True up  m when the record is behind — a bare true-up (no words waiting)
+         goes to the mini, the small machine in the mini file: it commits
+         what is on disk and never finishes or corrects; anything it
+         leaves, and every waiting word, goes to the full machine
 Move     arrows . left/right across cards (j previous, k next) . up/down
          within the screen . enter open . esc back . q quit
 """
@@ -45,6 +49,7 @@ GUARD = "the record is behind — m summons the machine to true it up"
 
 MACHINE_LOG = os.path.join(ROOT, ".hyper-machine.log")
 MACHINE_FILE = os.path.join(ROOT, "machine")
+MINI_FILE = os.path.join(ROOT, "mini")
 BRIEF = os.path.join(ROOT, "brief.md")
 HYPER_LOG = os.path.join(ROOT, ".hyper.log")
 FS_TRIES = 10
@@ -68,6 +73,19 @@ SUMMON = (
     "can see it. commit after every file you finish, with grounds, not "
     "once at the end — a session can die mid-flight, and only what is "
     "committed survives it. then stop."
+)
+TRUE_UP = (
+    "the interface summoned you as the mini-machine. the record is behind, "
+    "and your only task is to true it up: read git status and the diff, "
+    "verify what each change claims against what is actually on disk, and "
+    "commit what is there — one commit per coherent change, grounds "
+    "faithful to the diff. the bar is hard: never finish, correct, or "
+    "extend half-done work; never edit a file; never answer operator "
+    "words — those wait for the full machine. anything ambiguous — a "
+    "change you cannot describe faithfully, or one that looks half-done — "
+    "leave uncommitted and name it, with what made it ambiguous, in your "
+    "final output; the interface hands what you leave to the full machine. "
+    "then stop."
 )
 
 
@@ -285,25 +303,44 @@ def fold_exchange(blk):
 
 # ----- the machine (summoned by speech; answers onto the same block) -----
 
-def machine_command():
-    """One visible setting: the first plain line of the machine file at
-    the root, {prompt} standing for the summon instruction — any harness
-    that takes a prompt slots in.  HYPER_MACHINE in the environment
-    overrides it (testing); with neither, claude."""
-    cmd = os.environ.get("HYPER_MACHINE")
-    if not cmd and os.path.exists(MACHINE_FILE):
-        with open(MACHINE_FILE) as f:
+def harness_line(envvar, path):
+    """One visible setting: the first plain line of the file at the root,
+    the environment variable overriding it (testing)."""
+    cmd = os.environ.get(envvar)
+    if not cmd and os.path.exists(path):
+        with open(path) as f:
             cmd = next((l.strip() for l in f
                         if l.strip() and not l.lstrip().startswith("#")), None)
+    return cmd
+
+
+def fill(cmd, prompt):
+    argv = [prompt if t == "{prompt}" else t for t in shlex.split(cmd)]
+    if prompt not in argv:
+        argv.append(prompt)
+    return argv
+
+
+def machine_command():
+    """The machine file at the root, {prompt} standing for the summon
+    instruction — any harness that takes a prompt slots in.  HYPER_MACHINE
+    in the environment overrides it (testing); with neither, claude."""
+    cmd = harness_line("HYPER_MACHINE", MACHINE_FILE)
     if not cmd:
         exe = shutil.which("claude") or os.path.expanduser("~/.local/bin/claude")
         if not os.path.exists(exe):
             return None
         cmd = shlex.quote(exe) + " -p {prompt} --dangerously-skip-permissions"
-    argv = [SUMMON if t == "{prompt}" else t for t in shlex.split(cmd)]
-    if SUMMON not in argv:
-        argv.append(SUMMON)
-    return argv
+    return fill(cmd, SUMMON)
+
+
+def mini_command():
+    """The small machine for busywork — a bare true-up of a record left
+    behind, under the commit-only bar in TRUE_UP.  Set in the mini file
+    beside the machine file; with no mini, None — the full machine takes
+    the true-up itself."""
+    cmd = harness_line("HYPER_MINI", MINI_FILE)
+    return fill(cmd, TRUE_UP) if cmd else None
 
 
 def machine_label():
@@ -318,36 +355,38 @@ def machine_label():
     return model or name + " · the harness default model — none pinned"
 
 
-def summon():
+def summon(kind="machine"):
     """A headless machine session in this repo: it trues up the record if
     it is behind, answers the operator's words onto the blocks that carry
     them, may build under the standing orders, commits as it goes, and
     stops.  The contract is files and git; the brief lands in brief.md so
-    any harness reads the same bearings."""
-    argv = machine_command()
+    any harness reads the same bearings.  kind "mini" is the small machine
+    on the bare true-up — no brief, its whole task is in the prompt."""
+    argv = mini_command() if kind == "mini" else machine_command()
     if argv is None:
         return None
-    with open(BRIEF, "w") as f:
-        f.write(run("bash", os.path.join(".claude", "hooks", "session-brief.sh"),
-                    "--plain"))
+    if kind != "mini":
+        with open(BRIEF, "w") as f:
+            f.write(run("bash", os.path.join(".claude", "hooks", "session-brief.sh"),
+                        "--plain"))
     log = open(MACHINE_LOG, "ab", buffering=0)
-    log.write(("\n--- summoned %s ---\n"
-               % datetime.now().isoformat(timespec="seconds")).encode())
+    log.write(("\n--- summoned %s (%s) ---\n"
+               % (datetime.now().isoformat(timespec="seconds"), kind)).encode())
     try:
         return subprocess.Popen(argv, cwd=ROOT, stdin=subprocess.DEVNULL,
                                 stdout=log, stderr=log, start_new_session=True)
     except FileNotFoundError:
-        log.write(("the machine command was not found: %s\n" % argv[0]).encode())
+        log.write(("the %s command was not found: %s\n" % (kind, argv[0])).encode())
         return None
 
 
-def start_machine(machine):
+def start_machine(machine, kind="machine"):
     """Summon unless one is already answering (it reads from disk, so words
     that land mid-answer wait visibly and m summons again)."""
     if machine:
         return machine
-    p = summon()
-    return (p, time.time()) if p else None
+    p = summon(kind)
+    return (p, time.time(), kind) if p else None
 
 
 def note(msg):
@@ -519,7 +558,8 @@ def main(scr):
     view, sel, ci, ai, si, wsel = "home", 0, 0, 0, 0, 0
     wexp = False  # the work view opens folded to the graph line
     scroll, flash, confirm, exkey = 0, "", None, None
-    machine = None  # (Popen, started) while a summoned session is answering
+    machine = None  # (Popen, started, kind) while a summoned session is answering
+    escalate = False  # a mini left work behind — the next m goes to the full machine
     flash = ensure_launcher() or flash
     fs_left = (FS_TRIES if os.environ.get("HYPER_FULLSCREEN")
                and os.environ.get("WINDOWID") else 0)
@@ -540,9 +580,22 @@ def main(scr):
                   if b["words"] and b["words"][-1].startswith("operator (")]
         if machine and machine[0].poll() is not None:
             rc = machine[0].returncode
-            flash = ("the machine has answered" if rc == 0 else
-                     note("the machine failed (exit %d) — .hyper-machine.log holds the story" % rc))
+            if machine[2] == "mini":
+                # the mini's bar: commit what is on disk, leave the rest —
+                # whatever it leaves escalates to the full machine
+                if rc == 0 and not dirty:
+                    flash = "the mini trued up the record"
+                else:
+                    escalate = True
+                    flash = note("the mini left work behind%s — named in "
+                                 ".hyper-machine.log; m summons the full machine"
+                                 % ("" if rc == 0 else " (exit %d)" % rc))
+            else:
+                flash = ("the machine has answered" if rc == 0 else
+                         note("the machine failed (exit %d) — .hyper-machine.log holds the story" % rc))
             machine = None
+        if not dirty:
+            escalate = False
 
         accepts = [b for b in work
                    if "awaiting acceptance" in b["fields"].get("state", "")]
@@ -605,7 +658,7 @@ def main(scr):
         put(scr, 1, LM, "─" * max(0, w - 2 * LM), DIM)
         mtxt = ""
         if machine:
-            mtxt = "the machine is answering · %ds" % (time.time() - machine[1])
+            mtxt = "the %s is answering · %ds" % (machine[2], time.time() - machine[1])
             put(scr, 2, max(LM, w - len(mtxt) - LM), mtxt, BOLD)
         elif awaits:
             mtxt = ("%d word%s the machine — m summons it"
@@ -976,8 +1029,12 @@ def main(scr):
                 else:
                     view, exkey, scroll = "exchange", obj["lines"][0], -1
             elif ch == ord("m") and (awaits or dirty) and not machine:
-                machine = start_machine(machine)
-                flash = ("the machine is summoned" if machine else
+                # busywork goes to the mini: a bare true-up — record behind,
+                # no words waiting, nothing escalated — is its whole class
+                kind = ("mini" if dirty and not awaits and not escalate
+                        and mini_command() else "machine")
+                machine = start_machine(machine, kind)
+                flash = ("the %s is summoned" % kind if machine else
                          "no machine to summon — the machine file names the command")
             elif ch == ord("w") and work:
                 view, scroll, wexp = "work", 0, False
