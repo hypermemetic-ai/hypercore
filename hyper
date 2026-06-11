@@ -13,7 +13,9 @@ on its own — no restart anywhere.
 Views    queue (home) . decision card . work-decision card .
          acceptance card . exchange . work . document . log
 Decide   a approve . c cut . e explain (words optional); a standing-work
-         decision is settled by the operator's word — s speaks it
+         decision settles by key — g go . c cut, y confirms — and the
+         word lands on the card as if spoken; s redirects in the
+         operator's own words
 Accept   a then y on an acceptance card — confirmed like every
          other release; s speaks reservations
 Speak    s anywhere — words land verbatim, the place travels with them,
@@ -806,9 +808,10 @@ def main(scr):
                     rows += [[(LM + 2, ln, attr)] for ln in wrap(wln, width - 2)]
                 rows.append([])
             rows += [[(LM, ln, DIM)]
-                     for ln in wrap("your word settles this — s speaks it. go, "
-                                    "redirect, or cut land the same way; the "
-                                    "machine executes what you said.", width)]
+                     for ln in wrap("g goes . c cuts — y confirms either, and the "
+                                    "word lands on the card for the machine to "
+                                    "execute; s speaks a redirect or anything "
+                                    "else in your own words.", width)]
             scroll = max(0, min(scroll, max(0, len(rows) - view_h)))
             for i, segs in enumerate(rows[scroll: scroll + view_h]):
                 for x, txt, attr in segs:
@@ -972,7 +975,7 @@ def main(scr):
                      + ("m summon . " if (awaits or dirty) and not machine else "")
                      + "s speak . w work . d document . g log . q quit"),
             "card": "a approve . c cut . e explain . s speak . j/k statements . space/b page . esc back",
-            "settle": "s your word settles it . j/k cards . space/b page . esc back",
+            "settle": "g go . c cut . s redirect . j/k cards . space/b page . esc back",
             "accept": "a accept . s reservations . j/k slices . space/b page . esc back",
             "exchange": "s speak . c fold away . space/b page . esc back",
             "work": ("j/k move . s speak on it . space/b page . esc fold" if wexp
@@ -982,13 +985,22 @@ def main(scr):
         }[view]
         put(scr, h - 3, LM, "─" * max(0, w - 2 * LM), DIM)
         if confirm:
+            # the one thing that matters reads first and loudest: y confirms
             kind = confirm[0]
-            msg = {"approve": "approve — the marker drops and this statement becomes yours",
-                   "cut": "cut — the words leave intent",
-                   "accept": "accept — the slice is released and leaves work.md; git keeps the entry",
-                   "fold": "fold this exchange away — git keeps the words"}[kind] \
-                  + " . y confirm . esc keep"
-            put(scr, h - 2, LM, msg[: w - 2 * LM], ALERT if kind == "cut" else BOLD)
+            lead = "y confirms %s . esc keeps things as they are" \
+                   % {"approve": "approve", "cut": "the cut", "accept": "accept",
+                      "fold": "the fold", "go": "go", "cut-card": "the cut"}[kind]
+            tail = {"approve": "the marker drops; the statement becomes yours",
+                    "cut": "the words leave intent",
+                    "accept": "the slice is released; git keeps the entry",
+                    "fold": "the exchange leaves the queue; git keeps the words",
+                    "go": "the word lands on the card; the machine executes it",
+                    "cut-card": "the word lands on the card; the machine executes it"}[kind]
+            put(scr, h - 2, LM, lead[: w - 2 * LM],
+                ALERT if kind in ("cut", "cut-card") else BOLD)
+            x = LM + len(lead) + 3
+            if x < w - LM:
+                put(scr, h - 2, x, tail[: w - LM - x], DIM)
         elif flash:
             put(scr, h - 2, LM, flash[: w - 2 * LM], BOLD)
         put(scr, h - 1, LM, hints[: w - 2 * LM], DIM)
@@ -1017,7 +1029,17 @@ def main(scr):
                 if guarded:
                     flash = GUARD
                     continue
-                if kind == "fold":
+                if kind in ("go", "cut-card"):
+                    # the key is the word: it lands on the card exactly as
+                    # if spoken, and the machine executes it
+                    word = "go" if kind == "go" else "cut"
+                    hsh = speak('the decision card, on "%s"' % payload, word)
+                    resummon = resummon or machine is not None
+                    machine = start_machine(machine)
+                    flash = ("%s . committed %s . the machine is answering" % (word, hsh)
+                             if machine else
+                             "%s . committed %s . no machine to summon — the word waits" % (word, hsh))
+                elif kind == "fold":
                     hsh = fold_exchange(payload)
                     flash = ("that exchange is no longer on disk — refreshed" if hsh is None
                              else "folded . committed %s" % hsh)
@@ -1126,13 +1148,17 @@ def main(scr):
                 scroll += view_h
             elif ch == ord("b"):
                 scroll -= view_h
+            elif ch == ord("g"):
+                confirm = ("go", decides[si]["lines"][0][3:].strip())
+            elif ch == ord("c"):
+                confirm = ("cut-card", decides[si]["lines"][0][3:].strip())
             elif ch == ord("s"):
                 if guarded:
                     flash = GUARD
                 else:
                     name = decides[si]["lines"][0][3:].strip()
                     wd = read_words(scr, h, w,
-                                    'your decision, on "%s" '
+                                    'your redirect or words, on "%s" '
                                     "(enter sends . esc abandons): " % name)
                     if wd and wd.strip():
                         hsh = speak('the decision card, on "%s"' % name, wd)
