@@ -10,3 +10,5 @@ machine (2026-06-11): swept the statement set against the material. the name fir
 
 operator (2026-06-11): option 1 — execution graph wins — the machine lands the revision in structure (two operator-owned statements reworded on your word; one edit, one commit; one revert undoes it)
 
+operator (2026-06-11): option 1 — execution graph wins — the machine lands the revision in structure (two operator-owned statements reworded on your word; one edit, one commit; one revert undoes it)
+
