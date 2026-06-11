@@ -11,15 +11,6 @@
 
 operator (2026-06-11): I don't know if I want all my words to land verbatim. I get the feeling that most operator words aren't maximally helpful as presented. they need refining, I think the kind of refinining that make them valid statements.
 
-## reading the operator's words is machine work
-
-> Reading the operator's words is machine work. Whether they are new intent, a new ask, an answer, or a redirect is the machine's call to make and answer for; what it made of them returns through the queue. [machine]
-
-- section: foundations
-- context: the operator's attention is the scarcest resource and classification is bookkeeping. the operator speaks a sentence; the machine decides what kind of thing the sentence is and files it where it belongs.
-- approve: the machine answers for misreadings the way it answers for any machine-owned call; what it made of the words always comes back visible, so a misreading is catchable in the queue, not buried.
-- cut: the operator must label their own words at the moment of speaking — ask or intent or redirect, a form instead of a sentence — which puts graph bookkeeping in the operator's hands at every utterance.
-
 ## the queue is a view, not a place
 
 > The queue is a view, not a place: a decision lives where it arises — on a statement, on a node, on evidence — and the queue is read live from all of it. Nothing is moved into the queue or out of it. [machine]

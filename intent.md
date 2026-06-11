@@ -32,7 +32,7 @@ Everything that crosses the operator–machine boundary crosses through the inte
 
 The operator can speak from anywhere in the interface: their words land on disk verbatim, the place they spoke from travels with them, and nothing more is asked of them. [machine]
 
-Reading the operator's words is machine work. Whether they are new intent, a new ask, an answer, or a redirect is the machine's call to make and answer for; what it made of them returns through the queue. [machine]
+Reading the operator's words is machine work. Whether they are new intent, a new ask, an answer, or a redirect is the machine's call to make and answer for; what it made of them returns through the queue.
 
 The queue is a view, not a place: a decision lives where it arises — on a statement, on a node, on evidence — and the queue is read live from all of it. Nothing is moved into the queue or out of it. [machine]
 
