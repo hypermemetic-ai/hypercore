@@ -94,16 +94,16 @@ Folding preserves relations. A folded graph keeps its nodes and the relations be
 
 A folding condition is what makes a graph ready to fold. Its intent is met, or it is abandoned. Until then the graph stays open.
 
-Trust in a folded graph rests on the checks at its boundary, because they are all that survives to be read: the episode that did the work is gone, and its competence cannot be inspected after the fact. A fold with no checks is a hope, not a result. [machine]
+The episode that does the work is disposable; the checks at the fold's boundary are what survive it. A folded graph can be trusted only as far as those checks reach — whatever they did not cover rests on the word of a worker who no longer exists to be questioned. [machine]
 
 Folds stack, and error compounds up the stack: whatever doubt a fold carries, everything built on it inherits. The weaker a graph's checks, the shallower it must stay before folding, and the less may be built on top of it.
 
-A fold is reflected everywhere the graph is represented; no representation lags behind it. [machine]
+A fold lands everywhere the graph is shown, at once. Decisions are made through views, and a view that can lag behind a fold can hand the next session dead work as live. [machine]
 
 Work is made of operations. An operation is one move on the problem state, of five kinds: frame, gather, generate, test, commit — one small alphabet, so any execution graph can be read without learning new vocabulary.
 
-The alphabet of operations never grows. Named clusters of operations are the compounds that grow freely; decomposition is how a compound expands, not a primitive. [machine]
+The five kinds are closed for good. Expressive power grows as named compounds, and a compound always decomposes back into the five — new vocabulary is always defined in old vocabulary, so no graph ever needs a glossary of its era. [machine]
 
-An operation earns a node when it crosses the operator–machine boundary or when a fold depends on its standing; reasoning that stays inside one party is absorbed into the operations it serves. The graph is a commitment ledger, not a trace of everything thought. [machine]
+A node records a commitment: an operation that crossed the operator–machine boundary, or one a fold's trust depends on. Reasoning that stayed inside one party is absorbed into the operation it served. The graph is the ledger both parties can be held to — neither drowned in thought-traces nor thinned past its commitments. [machine]
 
 Let's just cut derive until we understand what it's supposed to do [machine]
