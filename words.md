@@ -16,3 +16,5 @@ operator (2026-06-11): we should hide the mouse cursor in the interface. it serv
 
 operator (2026-06-11): do our changes to red text affect "the record is behind - uncommitted" messages? it's the most common and annoying.
 
+operator (2026-06-11): is there anything like a free lunch when model routing? and if so, can we fold it in as a structural element buying us speed without accuracy loss? talk to me about this, and conduct extensive research.
+
