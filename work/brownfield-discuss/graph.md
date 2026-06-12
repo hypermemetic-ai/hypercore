@@ -25,3 +25,22 @@
 - state: awaiting acceptance (the card is on the queue)
 - since: 2026-06-11
 - of: brownfield-discuss
+
+## discuss carries a machine-drafted intent.md
+
+- op: do
+- ask: execute the operator's option-1 pick — distill discuss's constitution.md, contract.md, and README.md into an intent.md in its repo, every statement [machine]-marked, its own docs left standing as the operating documents
+- check: ~/projects/discuss/intent.md exists, committed in discuss's repo (1d61c19), twelve statements, all carrying the marker — none endorsed
+- result: landed 2026-06-11; sections foundations / structure / work, the work statement naming the hypercore link itself
+- state: done
+- since: 2026-06-11
+- of: what brownfielding writes into discuss
+
+## the queue ratifies linked intent
+
+- op: ask
+- ask: the operator's pick says "ratified from hyper", but the queue reads only hypercore's intent.md — discuss's twelve [machine] statements are debt the interface cannot yet surface. teach the queue to read every linked folder's intent.md, and approve/cut/explain to edit and commit in the linked repo.
+- check: discuss's pending statements count in hyper's queue and an approve from hyper drops a marker in a commit landed in discuss's repo
+- state: open
+- since: 2026-06-11
+- of: what brownfielding writes into discuss
