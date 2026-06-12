@@ -45,6 +45,7 @@ Move     arrows . left/right across cards (j previous, k next) . up/down
 """
 
 import curses
+import hashlib
 import locale
 import os
 import re
@@ -75,6 +76,7 @@ MACHINE_FILE = os.path.join(ROOT, "machine")
 MINI_FILE = os.path.join(ROOT, "mini")
 BRIEF = os.path.join(ROOT, "brief.md")
 HYPER_LOG = os.path.join(ROOT, ".hyper.log")
+READ_FILE = os.path.join(ROOT, ".hyper-read")  # answers the operator has read
 FS_TRIES = 10
 SUMMON = (
     "the interface summoned you. read brief.md — the session brief, "
@@ -254,6 +256,30 @@ def write_ledger(path, title, blocks):
         out += entry + [""]
     with open(path, "w") as f:
         f.write("\n".join(out) + "\n")
+
+
+def exchange_sig(b):
+    """An answered exchange's identity for unread tracking: the block head
+    plus its latest machine line, so a fresh answer reads unread again."""
+    last = next((w for w in reversed(b["words"])
+                 if w.startswith("machine (")), "")
+    return hashlib.sha1((b["lines"][0] + "\n" + last).encode()).hexdigest()
+
+
+def read_marks():
+    if not os.path.exists(READ_FILE):
+        return set()
+    with open(READ_FILE) as f:
+        return set(f.read().split())
+
+
+def mark_read(b, current):
+    """The operator opened the answer: record it, dropping marks whose
+    exchanges have folded away."""
+    sigs = {exchange_sig(x) for x in current}
+    marks = (read_marks() & sigs) | {exchange_sig(b)}
+    with open(READ_FILE, "w") as f:
+        f.write("\n".join(sorted(marks)) + "\n")
 
 
 def card_for(st, cards):
@@ -1233,6 +1259,9 @@ def main(scr):
                                and c["words"][-1].startswith(OP_LINES))
         answered = [b for b in standalone
                     if b["words"] and b["words"][-1].startswith("machine (")]
+        seen = read_marks()
+        for b in answered:
+            b["unread"] = exchange_sig(b) not in seen
         sent = [b for b in standalone if b not in answered]
         # what needs the operator sorts above what waits on the machine
         # (the operator's word, 2026-06-11): a spoken-on card and an
@@ -1404,19 +1433,22 @@ def main(scr):
                         if tag:
                             put(scr, y, LM + width - len(tag), tag, BOLD)
                     else:
-                        put(scr, y, LM, label, lattr)
-                        put(scr, y, LM + GUT, text,
-                            0 if kind in ("decide", "settle", "accept") else DIM)
+                        # an unread answer reads bold and clears once
+                        # opened — proper unread behavior, in place of
+                        # the dot (their word, 2026-06-12)
+                        if kind == "read" and obj.get("unread"):
+                            put(scr, y, LM, label, BOLD)
+                            put(scr, y, LM + GUT, text, BOLD)
+                        else:
+                            put(scr, y, LM, label, lattr)
+                            put(scr, y, LM + GUT, text,
+                                0 if kind in ("decide", "settle", "accept")
+                                else DIM)
                         if cost:
                             put(scr, y, LM + GUT + len(text),
                                 " — " + cost, DIM)
                         if tag:
                             put(scr, y, LM + width - len(tag), tag, DIM)
-                    if kind == "read":
-                        # the white dot marks an unread answer, back on
-                        # the left (their word, 2026-06-12 — the right
-                        # side was tried and read worse)
-                        put(scr, y, LM - 2, "●", BOLD)
                     y += 1
             else:
                 put(scr, y, LM, "nothing waits on you.", DIM)
@@ -2041,6 +2073,8 @@ def main(scr):
                     view, ai, scroll = "accept", accepts.index(obj), 0
                 else:
                     view, exkey, scroll = "exchange", obj["lines"][0], -1
+                    if kind == "read":
+                        mark_read(obj, answered)
             elif (ch == ord("m") and not machine
                   and (awaits or dirty or gopen or lgopen)):
                 # busywork goes to the mini: a bare true-up — record behind,
