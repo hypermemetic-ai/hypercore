@@ -26,6 +26,8 @@ operator (2026-06-11): I say this - if the logs track different types of events,
 
 machine (2026-06-11): landed, still yours to accept: the event type now reads in muted color on the act, not in louder text — sand for your speech, moss for your decisions, plain dim for the machine's own moves — and the stripe shade dropped a step fainter. the substance keeps the line. the card's try line names the relaunch.
 
+operator (2026-06-11): almost. but the alternating style is still too visible. the second text unit is now a black block over that which is ugly. and it should be a dedicated column, not attached to the first block.
+
 ## from the queue . 2026-06-11
 
 operator (2026-06-11): I don't like the m:ss format. I think I would prefer something like 1m 50s
