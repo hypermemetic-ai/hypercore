@@ -6,3 +6,7 @@ operator (2026-06-11): let's use "discuss" as our test case for an external proj
 
 machine (2026-06-11): found it — ~/projects/discuss, a live repo with its own governance (constitution.md, contract.md, method/). this is the first real outside ask, the one the linked-folder registry waited on. recorded: the graph brownfield-discuss is open, and one call is yours before anything lands in discuss's repo — what brownfielding writes there; the decision card is on the queue. the registry link itself (read-only, touches nothing in discuss) is being built now and arrives as its own acceptance card.
 
+## from the decision card, on "what brownfielding writes into discuss" . 2026-06-11
+
+operator (2026-06-11): option 1 — a machine-drafted intent.md distilled from discuss's own docs, [machine]-marked and ratified from hyper, with work/ growing as asks arrive — the full hypercore shape, versioned in discuss's repo
+
