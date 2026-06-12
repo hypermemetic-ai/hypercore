@@ -26,6 +26,8 @@ machine (2026-06-11): Fair push — the card oversold the cost. What we've done 
 
 operator (2026-06-11): well, if it's cheap then why aren't all log entries written to be maximally legible? looks like it'd be a simpler system too, without all the manipulation logic.
 
+machine (2026-06-11): No reason but habit — the subjects are ours to write, and writing them legible from the start is the simplest system; the display's manipulation logic retires with it. It now leads the card as option 1 (27cf882). Its honest limits, so the pick is informed: entries already in history stay as written (git is immutable), and your own long speeches still cut at a word boundary in the subject — only a summarizer could shorten those to the idea, which is what option 2's gist notes would add. If the limits sit fine, option 1 is one keystroke.
+
 ## words . 2026-06-11
 
 operator (2026-06-11): it's taxing to follow conversations under all these different queue items. we need some simplifying design decision. a couple come to mind. one: collapse incoming messages into a single stream, with some system to break it back up when reading. two: provide a clearer "action needed" indicator, borrowing from modern ux design, like, say, a white dot beside the item requiring attention. other ideas welcome. I am tired and not at my best. I trust your jugement, think creatively.
