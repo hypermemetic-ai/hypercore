@@ -1542,15 +1542,22 @@ def main(scr):
             # project (ratified), each a peer, never a child; enter
             # unfolds the line under the cursor, d opens its documents
             tops = [("hypercore", summary)]
+            # a linked project's line wears the same data as hypercore's
+            # (the operator's word, 2026-06-11 — discuss read thinner);
+            # its path moves to the unfolded headline
             for n, b in enumerate(linked):
                 lname = b["lines"][0][3:].strip()
-                lgs = projects[lidx[n]][1][3]
-                lsum = "linked · " + b["fields"].get("path", "?")
+                ldata = projects[lidx[n]][1]
+                lw, lgs = ldata[2], ldata[3]
+                lacc = sum(1 for x in lw if "awaiting acceptance"
+                           in x["fields"].get("state", ""))
+                lsum = ("standing work: %d . awaiting acceptance: %d"
+                        % (len(lw), lacc))
                 if lgs:
                     lopen = sum(1 for _, blks in lgs
                                 if "folded" not in blks[0]["fields"].get("state", ""))
-                    lsum += " · %d graph%s, %d open" % (
-                        len(lgs), "" if len(lgs) == 1 else "s", lopen)
+                    lsum += (" . open subgraphs: %d" % lopen if lopen
+                             else " . folded subgraphs: %d" % len(lgs))
                 tops.append((lname, lsum))
             for i, (tname, tsum) in enumerate(tops):
                 if i >= view_h:
@@ -1578,7 +1585,8 @@ def main(scr):
                 # a linked project unfolds to its own work and graphs,
                 # read live from its folder
                 items, glines = pdata[2], pdata[3]
-                headline = pname + " · linked"
+                headline = (pname + " · linked · "
+                            + pdata[1].replace(os.path.expanduser("~"), "~"))
             else:
                 items, glines = pdata, []
                 headline = (pdata[0]["fields"].get("of", "hypercore")
