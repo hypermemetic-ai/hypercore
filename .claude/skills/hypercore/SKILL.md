@@ -131,7 +131,10 @@ graph's intent document is singular, and this repo is hypercore's folder.
 - A big ask runs as an execution graph: a folder work/<name>/ holding
   graph.md. The doctrine is intent.md's work section; this is its
   machinery — there is no engine, the machine grows and folds graphs by
-  editing graph.md and committing.
+  editing graph.md and committing. work/ holds only current work; folded
+  graphs live under history/ — the fold moves the folder there, and
+  either folder exists only while it holds a graph (operator's word,
+  2026-06-11).
 - graph.md is a ledger of '## ' node blocks with '- key: value' fields,
   the same shape hyper reads everywhere. The first block is the root
   node: the ask that spawned the graph, born with its check (the folding
@@ -147,7 +150,8 @@ graph's intent document is singular, and this repo is hypercore's folder.
   operator's cards stay in work.md; a graph never asks the operator
   anything directly.
 - Folding: the result lands on the spawning node, the root state becomes
-  folded, hyper and the brief stop showing it, git keeps it. When the
+  folded, the folder moves under history/, the brief stops showing it,
+  git keeps it and hyper still lists it, marked folded. When the
   root's check is an acceptance card, the card carries `- graph: <name>`
   and hyper folds the root in the acceptance commit itself — a fold can
   never lag its acceptance (built 2026-06-11 on the operator's word,
