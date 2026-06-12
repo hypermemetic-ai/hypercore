@@ -12,6 +12,8 @@ machine (2026-06-11): Done (53a839b) — the dot now means one thing, an unread 
 
 operator (2026-06-11): I'll add. I wrote text under a decision, but it's still bold and marked with the dot. assuming the dot clears based on the previous request, the bold is still probably wrong. the fact that I responded puts the onus on the machine to do something from there, not me.
 
+machine (2026-06-11): Right on both counts — the dot was the slice you've since accepted, and the bold was a real gap: work cards you speak on already drop to a dim "spoken" row below the fold, but statement cards didn't. Fixed (8697cfa): a statement whose card ends with your unanswered words now sorts with the waiting items and reads "spoken", dim; the bold decide returns only when the machine's answer lands and the pick is yours again. Awaiting acceptance in work.md; relaunch hyper to see it. The card that prompted this resolved itself — you cut the statement — but the fix covers every future one.
+
 ## from the log . 2026-06-11
 
 operator (2026-06-11): I'm not liking this new log structure. first, "the" "a" etc. are back and to no positive effect. second, now that most of the screen is colored it looks like a mess again. what we had earlier was more sensible.
