@@ -22,7 +22,8 @@
 - op: do
 - ask: build the registry of linked folders the interface reads (ratified structure statement; deferred to the first real outside ask — this one), discuss its first entry
 - check: a fresh hyper's work view shows the discuss line under hypercore's, reading "linked · ~/projects/discuss" — verified in a pty before the slice landed
-- state: awaiting acceptance (the card is on the queue)
+- result: accepted by the operator from the card (7d78517, 2026-06-11) — the registry is released
+- state: done
 - since: 2026-06-11
 - of: brownfield-discuss
 
