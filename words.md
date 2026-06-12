@@ -10,6 +10,8 @@ operator (2026-06-11): we're closer, but "the thing it is about" is almost as im
 
 machine (2026-06-11): landed on the slice, still yours to accept: every log line now reads act · thing · detail — the act leads (yours in cyan), the statement or card it is about follows at full weight, pulled forward even when the commit subject buried it mid-sentence, and only the detail stays dim. the card's try line names the relaunch.
 
+operator (2026-06-11): still not quite there. think harder about what exactly should go in the "thing this concerns" field. it should be exceedingly clear with minimal words. the dim details should just be cut. they barely fit anyway and aren't critical.
+
 ## from the queue . 2026-06-11
 
 operator (2026-06-11): I don't like the m:ss format. I think I would prefer something like 1m 50s
