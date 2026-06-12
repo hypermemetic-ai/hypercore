@@ -2,9 +2,16 @@
 
 ## the log reads at a glance
 
-- ask: from your words, five rounds now — last round: the cyan too blue and unconvincing, alternating rows the traditional answer, hash and time wanting columns. the log now wears alternating row shading, color left it entirely — every line reads act in bold · the one thing it concerns at full weight — and hash and age sit in their own right-aligned columns at the edge. the since-you-last-acted head on the queue wears the same stripes.
-- try: relaunch hyper (q, then the menu) — g: rows alternate a faint shade, hashes align in one column, ages in another at the right edge, no color anywhere in the log
+- ask: from your words, six rounds now — last round: the bold too bright and noisy, rows cut short, the content itself questioned. answer: what the operator wants to see is the substance, so it leads — the words spoken, the statement approved, the slice built, at normal weight, no bold anywhere; the act follows dim; hash and age keep their right-aligned columns; and the record uses the whole screen's width instead of the 76-column prose measure. the stripes stay.
+- try: relaunch hyper (q, then the menu) — g: a row reads like — I don't like m:ss format · operator speaks — full-width, striped, columns aligned, nothing bright
 - blocks: until accepted, the record stays as the version you called closer-but-not-there
 - state: awaiting acceptance
+- since: 2026-06-11
+
+## linked projects open under w
+
+- ask: from your words — discuss could not be selected: when the registry landed, a linked line was deliberately the link and no more, deferred until a linked project carried hypercore-shaped state to read. discuss now does (a ratified intent, the absorb-old-governance graph). the build: the work view's top-level lines become selectable — enter on a linked project unfolds its work and graphs, d opens its documents, all read live from its own folder.
+- blocks: until built, discuss's graph and intent are reachable only from its own repo
+- state: the machine is building — nothing to act on yet
 - since: 2026-06-11
 

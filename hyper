@@ -873,13 +873,10 @@ def main(scr):
     AGE_W = 14  # the age column — wide enough for "13 minutes ago"
 
     def log_segs(line, x, room):
-        # a log entry reads act · thing, then hash and age each in its
-        # own right-aligned column (the operator's word, 2026-06-11,
-        # five rounds): the act leads in bold, the one name it concerns
-        # follows at full weight — the quoted card or statement name
-        # when the subject carries one, else the head of what follows
-        # the act's colon — and the reference data sits in columns at
-        # the edge, where alignment, not a sentence, holds it.
+        # a log entry is one calm line, no bold anywhere (the operator's
+        # word, 2026-06-11, six rounds): the substance at normal weight,
+        # the act dim after it, hash and age in right-aligned columns at
+        # the edge — alignment, not a sentence, holds the reference data.
         hsh, _, rest = line.partition(" ")
         sub, sep, age = rest.rpartition(" . ")
         if not sep or not age.endswith("ago"):
@@ -903,11 +900,20 @@ def main(scr):
             i = tail.find(": ")
             t = (tail[i + 2:] if i >= 0 else tail).lstrip(":,—. ")
             thing = t[: joint(t)].rstrip(":,. ")
+        # what the operator really wants to see (their word, six rounds):
+        # the substance — what was said, decided, or built — leads at
+        # normal weight; the act that produced it follows dim. an act
+        # with a named actor yields the line to its thing; a machine
+        # build's own name is the substance.
+        if "operator" in act or act.startswith(("machine", "mini", "trued")):
+            subject, actor = (thing, act) if thing else (act, "")
+        else:
+            subject, actor = act, "machine"
         acol = x + room - AGE_W
         hcol = (acol - 2 if age else x + room) - len(hsh)
-        pieces = [(act, BOLD)]
-        if thing:
-            pieces += [(" · ", DIM), (thing, 0)]
+        pieces = [(subject, 0)]
+        if actor:
+            pieces += [(" · ", DIM), (actor, DIM)]
         segs, pos, text_room = [], x, hcol - x - 2
         for i, (txt, attr) in enumerate(pieces):
             left = text_room - (pos - x)
@@ -1544,7 +1550,11 @@ def main(scr):
                         for ln in f.read().splitlines():
                             rows += [(wl, 0) for wl in wrap(ln, width)]
             else:
-                rows = [log_segs(e, LM, width)
+                # the record gets the whole screen — the rows asked for
+                # room (the operator's word), and the 76-column measure
+                # is for prose, not a table
+                lw = w - 2 * LM
+                rows = [log_segs(e, LM, lw)
                         for e in run("git", "log", "-200",
                                      "--format=%h %s . %cr").splitlines()]
             if view == "doc":
@@ -1555,7 +1565,7 @@ def main(scr):
                 # keeps each row's shade
                 shade = (ZEBRA if view == "log" and (scroll + i) % 2 else 0)
                 if shade:
-                    put(scr, top + 2 + i, LM, " " * width, shade)
+                    put(scr, top + 2 + i, LM, " " * (w - 2 * LM), shade)
                 for x, txt, attr in segs:
                     put(scr, top + 2 + i, x, txt, attr | shade)
             below = len(rows) - view_h - scroll

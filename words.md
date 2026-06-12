@@ -20,6 +20,8 @@ machine (2026-06-11): landed, still yours to accept: color left the log entirely
 
 operator (2026-06-11): no dice. the alternating styling works but the bright parts are too bright. it's very visually noisy. shouldn't have to be. we'll want to give the rows more room, too many are cut short now. and the content still doesn't convince me. imagine, what does the operator really want to see in the log?
 
+machine (2026-06-11): rethought from your question, still yours to accept: what the operator wants in the log is the substance — the words spoken, the statement approved, the slice built — so it leads every line now, at normal weight, no bold anywhere; the act that produced it follows dim. hash and age keep their columns, the stripes stay faint, and the record uses the whole screen instead of the 76-column prose measure, so rows stop getting cut. a row reads like — I don't like m:ss format · operator speaks. the card's try line names the relaunch.
+
 ## from the queue . 2026-06-11
 
 operator (2026-06-11): I don't like the m:ss format. I think I would prefer something like 1m 50s
@@ -37,6 +39,8 @@ operator (2026-06-11): I think of the queue as the main screen. if you agree, I 
 machine (2026-06-11): agreed — the queue is the main screen, and words spoken there are the default channel, not a place worth naming. landed as a slice, yours to accept: the prompt reads plain "your words", the block heads "words . <date>", the commit drops "from the queue"; the place still travels where it narrows context — a card, a graph, a document. the card's try line names the relaunch.
 
 operator (2026-06-11): I can't select discuss under w. what's up with that?
+
+machine (2026-06-11): deliberate, and now outgrown: when the registry landed, a linked line was the link and no more — nothing stood behind it to read, so w never made it selectable. discuss has since grown the state worth reading: a fully ratified intent and its absorb-old-governance graph. the build opens as work and lands this session: the top-level lines become selectable, enter on discuss unfolds its work and graphs read live from its own folder, d opens its documents. it comes to you as a slice with its own card.
 
 ## words . 2026-06-11
 
