@@ -68,7 +68,7 @@ Brownfielding an external project is distillation, then ratification: the folder
 
 A linked project's intent ratifies from hyper, and every ratifying commit lands in the project's own repository — hypercore holds the link, never the words.
 
-What a brownfield's cuts leave unbacked — documents, gates, machinery with no statement behind them — becomes the project's first absorption work, opened as a graph in its own folder. [machine]
+What a brownfield's cuts leave unbacked — documents, gates, machinery with no statement behind them — becomes the project's first absorption work, opened as a graph in its own folder.
 
 ## statements
 
