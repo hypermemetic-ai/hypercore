@@ -22,3 +22,7 @@ operator (2026-06-11): I'm not liking this new log structure. first, "the" "a" e
 
 machine (2026-06-11): Restored (7499d12) — the display condenses again: articles dropped, substance leading plain, the act alone colored in its own column, hash and age at the edge. To be plain about what this supersedes: the written-at-the-source decision still holds for what git records — subjects stay full prose there — but its render-as-written half steps back on your word. Awaiting acceptance in work.md; relaunch hyper, then g.
 
+## from the acceptance card, on "the log returns to the earlier structure" . 2026-06-11
+
+operator (2026-06-11): no, I'm not looking to combine the two approaches. if I suggest a change to the logs, the change should occur at time of generation.
+
