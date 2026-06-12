@@ -20,3 +20,5 @@ operator (2026-06-11): again, I pick a decision, I see it here as if I had writt
 
 operator (2026-06-11): I don't like any of these frankly. what have we been doing so far? all the log changes so far have been great and I wasn't consulted in this way about them. so I assumed they weren't as expensive as options 1 and 2 make it seem here.
 
+machine (2026-06-11): Fair push — the card oversold the cost. What we've done so far is mechanical: width, columns, which clause leads — rearranging text already in the record, free, so no card. Shortening to the idea is the first log change code alone can't make: someone writes the summary. But that someone is nearly free either way — a gist note is one extra line from the session each speech already summons, a mini call is pennies once per entry. The card is redrafted to say so (c346ea5), down to the real question: does the gist live in the record (git notes) or only in the display (mini cache). Cheap either way; pick whichever reading you trust.
+
