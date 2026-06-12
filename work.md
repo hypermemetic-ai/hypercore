@@ -1,13 +1,5 @@
 # work
 
-## a pick reads as a decision, not your speech
-
-- ask: your words (2026-06-11, three rounds — "I pick a decision, I see it here as if I had written something", then "it shouldn't be an exchange at all… the decision just is the decision, recorded but not conversation-spawning"). built as you said: settling a card no longer writes the conversation ledger at all — the entry's state flips to "decided — option N …" in the settle commit, the machine executes the word and clears the entry with the executing commit, and no exchange exists unless you actually speak
-- try: relaunch hyper (q, then the menu) — settle any decision card: no exchange appears anywhere; the entry reads "decided" in w until the machine's executing commit clears it
-- blocks: nothing — record shape and display
-- state: awaiting acceptance
-- since: 2026-06-11
-
 ## long entries shorten to their idea
 
 - ask: your words (2026-06-11, on the log-width card — the next part is actually shortening long entries so I get the idea). every log change so far rearranged text already in the record — mechanical, free, no card. this is the first one code alone can't make: shortening to the idea means someone writes a summary. the cost is small either way; the card asks only who holds the pen
