@@ -1,12 +1,5 @@
 # work
 
-## folded graphs live under archive
-
-- ask: from your words on the graphs card and this one — a folded graph's folder is history and the folder is named archive, your pick over the machine's first choice. open graphs live under work/, the fold moves the folder under archive/, and either folder exists only while it holds a graph. hyper reads both homes: the work view, the document view, and the fold-at-accept all follow the folder
-- try: ls at the root — graph-machinery sits in archive/, the work folder is gone; in hyper the work view still lists graph-machinery, marked folded, and d on its line still opens its ledger
-- state: awaiting acceptance
-- since: 2026-06-11
-
 ## how hypercore's own graphs sit in the system
 
 - ask: from your semantics word — you are right by your own ratified statements: a graph folds into the node whose ask spawned it, and hypercore is itself a folded execution graph with this repository as its folder. graph-machinery's ask was hypercore work, so the graph was hypercore's subgraph all along. its result did land in hypercore — the machinery is this repo's material, and the folded ledger sits inside hypercore's folder — but the work view showed the graph as a peer line beside hypercore, a child misread as a sibling, and its root never named its parent. the question is how to true the semantics up
@@ -14,3 +7,4 @@
 - blocks: nothing running — no graph is open today; the next graph spawned wears whichever semantics this settles
 - state: awaiting your decision
 - since: 2026-06-11
+
