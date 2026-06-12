@@ -18,12 +18,6 @@ operator (2026-06-11): I think I want more proactive requirement extraction in t
 
 machine (2026-06-12): The data exists — git carries it. Epoch 2 shows about a dozen decision-card events: seven you settled, five the machine filed mid-work. But every one concerns hypercore's own machinery; sts2's six founding statements were drafted without a single mid-work question or research proposal. So your hunch is confirmed where it counts: the machine has treated decisions-before-material as a brake on what it was about to do, never as a probe into what it doesn't yet know — extraction stayed passive, drawing only on your words and what was already in reach. Three things landed on this: a structure statement [machine] on the queue (4505723 — intent-setting is extraction, not transcription; a quiet queue while intent forms signals stalled extraction, not finished work); the ask you named, made real — a decision card in sts2-overlay (8359960) asks your approval to send a three-seat research panel (game-state exposure, jorbs's data, overlay technique), findings as files plus new opens, nothing built before the design decisions reach you; and the panel pattern generalizes once the statement is ratified.
 
-## from the acceptance card, on "the log returns to the earlier structure" . 2026-06-11
-
-operator (2026-06-11): no, I'm not looking to combine the two approaches. if I suggest a change to the logs, the change should occur at time of generation.
-
-machine (2026-06-12): Reworked (1d637d1) — the change moved to generation: every subject hyper commits now leaves article-free at the source, sessions are bound to the same bar in the standing orders, and the display renders subjects exactly as written — its only additions are the hash and age columns and color, which stays on the act phrase so the substance reads plain. Lines already in git keep their articles; history doesn't regenerate. The card carries the rework — relaunch hyper, act once, then g.
-
 ## words . 2026-06-12
 
 operator (2026-06-12): I think I prefer the unread dot on the left after all.
