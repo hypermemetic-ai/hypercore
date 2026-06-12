@@ -28,3 +28,7 @@ operator (2026-06-11): once again I selected an option and still see the card in
 
 machine (2026-06-11): your pick landed — the card just outlived it, and here is why: settle-at-word was accepted at 18:50, but the hyper you picked in was started before that, and a running hyper re-reads the ledgers every second while its own code it reads only at launch. the old pick path spoke the word without dropping the entry. the hyper you opened at 19:22 wears the fix — your next pick settles on the spot — and I have dropped the entry your pick earned (a4982be). the gap is general: every accepted slice stays invisible on screen until you relaunch. whether hyper should notice its own staleness is on a decision card — a notice line with a relaunch key, an automatic re-exec, or leave the relaunch yours.
 
+## from the decision card, on "the interface wears old code until relaunched" . 2026-06-11
+
+operator (2026-06-11): option 3 — leave it — relaunch stays yours, and every slice's try line keeps naming it
+
