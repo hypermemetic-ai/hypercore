@@ -8,3 +8,5 @@ machine (2026-06-12): Redrafted (sts2-overlay 93091ba) — the panel's data seat
 
 operator (2026-06-12): the machine response informed my decision. once I made the decision, the machine response served no purpose. it should have cleared.
 
+machine (2026-06-12): Built (2c92f56) — from now on a decision or acceptance whose card carries an answered exchange clears it in the same act; only an exchange ending in your unanswered words stays, since the machine owes it a move. Awaiting acceptance in work.md; relaunch hyper. This exchange predates the slice, so it clears the old way — with the panel's executing commit, which is underway: all three seats are out now, findings land as files in sts2-overlay plus new opens on the queue.
+
