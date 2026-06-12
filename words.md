@@ -20,6 +20,8 @@ operator (2026-06-11): I think I want more proactive requirement extraction in t
 
 operator (2026-06-11): no, I'm not looking to combine the two approaches. if I suggest a change to the logs, the change should occur at time of generation.
 
+machine (2026-06-12): Reworked (1d637d1) — the change moved to generation: every subject hyper commits now leaves article-free at the source, sessions are bound to the same bar in the standing orders, and the display renders subjects exactly as written — its only additions are the hash and age columns and color, which stays on the act phrase so the substance reads plain. Lines already in git keep their articles; history doesn't regenerate. The card carries the rework — relaunch hyper, act once, then g.
+
 ## words . 2026-06-12
 
 operator (2026-06-12): I think I prefer the unread dot on the left after all.
