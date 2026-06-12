@@ -79,6 +79,11 @@ graph's intent document is singular, and this repo is hypercore's folder.
   frictionless act on the card accepts and releases it; the operator
   speaks only when they have reservations, and those words land on the
   card like any speech. Until accepted the slice stays machine-owned.
+  A running hyper reads the ledgers every tick but its own code only at
+  launch, and stays that way (operator's pick, 2026-06-11: leave it —
+  no staleness notice, no auto-re-exec): the relaunch is the operator's
+  act, and every slice that changes the interface names it in its try
+  line.
 - Anti-ceremony holds: new machinery only after its absence blocks work
   twice.
 - Standing work is the operator's action list (operator's word,
