@@ -14,14 +14,6 @@
 - state: awaiting acceptance
 - since: 2026-06-11
 
-## a linked project's line wears the same data as hypercore's
-
-- ask: your words (2026-06-11 — linked project discuss has less data on it than hypercore in w view) — in the work view, a linked project's top line now carries the same summary hypercore's does: standing work, awaiting acceptance, open or folded subgraphs, counted from its own folder; the path it used to show moves to the headline of its unfolded page
-- try: relaunch hyper (q, then the menu) — w, and discuss's line reads the same counts hypercore's does; enter on discuss shows its path in the headline
-- blocks: nothing — display only
-- state: awaiting acceptance
-- since: 2026-06-11
-
 ## space and b adapt to the page
 
 - ask: your words (2026-06-11 — you miss the old space/b, and what reads best comes down to the page) — space/b now page in the reading views (statement, decision, and acceptance cards, exchanges, documents, the log) and keep the one-line walk in the lists (the work view); in an exchange, space pages toward the tail and pins there. Arrows stay the fine grain everywhere, home/end the snap to the edges, pgup/pgdn unchanged. Footer hints read "space/b page" where it pages.
