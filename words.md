@@ -32,3 +32,7 @@ machine (2026-06-11): No reason but habit — the subjects are ours to write, an
 
 operator (2026-06-11): it's taxing to follow conversations under all these different queue items. we need some simplifying design decision. a couple come to mind. one: collapse incoming messages into a single stream, with some system to break it back up when reading. two: provide a clearer "action needed" indicator, borrowing from modern ux design, like, say, a white dot beside the item requiring attention. other ideas welcome. I am tired and not at my best. I trust your jugement, think creatively.
 
+## from the acceptance card, on "a pick reads as a decision, not your speech" . 2026-06-11
+
+operator (2026-06-11): this is an improvement, but really it shouldn't be an exchange at all I think. why should it not be treated the same as other cards? where the decision just is the decision, recorded but not conversation-spawning?
+
