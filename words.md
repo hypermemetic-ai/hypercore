@@ -18,6 +18,8 @@ operator (2026-06-11): these cards you mention are not visible.
 
 operator (2026-06-11): some log entries are being cut short with much room to spare
 
+operator (2026-06-11): new project. jorbs made a sts2 website with tons of excellent data. let's figure out how to take the best data from there and use it to run an overlay over the game to help me make decisions when picking cards. this will be a fresh look into the initial phase of a new project. a pattern that I admittedly haven't really seen so far, which I believe would be healthy, is for the machine to provide the operator with the opportunity to adequately engage in the high level design phase. do we cover this with an intent queue rotation? because that could work as a system: lay down the law at the very start, so to say.
+
 ## from the decision card, on "the link statement still says "awaiting absorption"" . 2026-06-11
 
 operator (2026-06-11): option 1 — revise — on your word the machine drafts a replacement that keeps the link sentence and "work/ grows as asks arrive" and drops the fulfilled absorption clause, returning [machine] for ratification
