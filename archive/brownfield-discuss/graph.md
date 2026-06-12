@@ -4,7 +4,8 @@
 
 - ask: from the operator's words (2026-06-11): use discuss (~/projects/discuss) as the test case for an external project, and define a brownfielding procedure along the way
 - check: discuss reads from the interface as a linked external project, and the brownfielding procedure stands in intent.md, ratified by the operator
-- state: open
+- result: check met 2026-06-11 — discuss reads linked (registry, e003062 exercised), its twelve statements ratified in its own repo, and the procedure's three statements stand operator-owned in intent.md, the last approved at 077746e after the no-documents redraft
+- state: folded
 - since: 2026-06-11
 - of: hypercore
 
