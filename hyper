@@ -27,9 +27,10 @@ Speak    s anywhere — words land verbatim, the place travels with them,
          and the machine is summoned to work while you watch
 Graphs   the work view lists every execution graph beside hypercore —
          folded ones included, marked folded — and unfolds to its nodes:
-         work/<name>/graph.md, read live; the unit on disk is the graph;
-         d on a project line opens that unit's documents — intent.md for
-         hypercore, the files in work/<name>/ for a graph
+         <name>/graph.md, read live; open graphs live under work/, folded
+         ones under history/ — the fold moves the folder; the unit on
+         disk is the graph; d on a project line opens that unit's
+         documents — intent.md for hypercore, the graph's folder else
 Machine  the record calling is the summons — at launch, a behind record
          or waiting words start the machine without m, and words landing
          mid-answer summon it once more when the run ends; m stays as
@@ -57,7 +58,8 @@ INTENT = os.path.join(ROOT, "intent.md")
 QUEUE = os.path.join(ROOT, "queue.md")
 WORDS = os.path.join(ROOT, "words.md")
 WORK = os.path.join(ROOT, "work.md")
-WORKDIR = os.path.join(ROOT, "work")
+WORKDIR = os.path.join(ROOT, "work")      # open graphs — current work only
+HISTDIR = os.path.join(ROOT, "history")   # folded graphs — the fold moves them here
 MARKER = " [machine]"
 LM = 3  # left margin
 
@@ -184,20 +186,32 @@ def card_for(st, cards):
     return next((b for b in cards if b["quote"] == st["text"]), None)
 
 
+def graph_folder(name):
+    """Where a graph's folder is today: under work/ while open, under
+    history/ once folded. Either parent exists only while it holds one."""
+    for base in (WORKDIR, HISTDIR):
+        d = os.path.join(base, name)
+        if os.path.isdir(d):
+            return d
+    return os.path.join(WORKDIR, name)
+
+
 def graphs():
-    """Every execution graph on disk, read fresh: work/<name>/graph.md,
-    a ledger of nodes whose first block is the root ask born with its check.
-    Folded graphs stay listed — finishing the work must not cost the
-    operator the view of it — only the open counts treat them as closed."""
+    """Every execution graph on disk, read fresh: <name>/graph.md, a
+    ledger of nodes whose first block is the root ask born with its check.
+    Open graphs live under work/, folded ones under history/ — folded
+    graphs stay listed, finishing the work must not cost the operator the
+    view of it — only the open counts treat them as closed."""
     out = []
-    if not os.path.isdir(WORKDIR):
-        return out
-    for name in sorted(os.listdir(WORKDIR)):
-        path = os.path.join(WORKDIR, name, "graph.md")
-        if os.path.exists(path):
-            blocks = ledger(path)
-            if blocks:
-                out.append((name, blocks))
+    for base in (WORKDIR, HISTDIR):
+        if not os.path.isdir(base):
+            continue
+        for name in sorted(os.listdir(base)):
+            path = os.path.join(base, name, "graph.md")
+            if os.path.exists(path):
+                blocks = ledger(path)
+                if blocks:
+                    out.append((name, blocks))
     return out
 
 
@@ -279,9 +293,12 @@ def explain(st, words):
 def fold_root(gname):
     """The fold rides the acceptance: when an accepted slice was a graph's
     folding condition (the card names it in a graph field), the result lands
-    on the root and the state turns folded in the same act — a fold can
-    never lag its acceptance again. Returns the edited path, or None."""
-    path = os.path.join(WORKDIR, gname, "graph.md")
+    on the root, the state turns folded, and the folder moves under
+    history/ in the same act — a folded graph is history and is named as
+    such; work/ holds only current work and is gone when none is. Returns
+    the edited path (at its new home), or None."""
+    src = os.path.join(WORKDIR, gname)
+    path = os.path.join(src, "graph.md")
     if not os.path.exists(path):
         return None
     with open(path) as f:
@@ -300,7 +317,14 @@ def fold_root(gname):
                               "slice's card (%s)" % date.today().isoformat())
             with open(path, "w") as f:
                 f.write("\n".join(raw) + "\n")
-            return os.path.relpath(path, ROOT)
+            dst = os.path.join(HISTDIR, gname)
+            os.makedirs(HISTDIR, exist_ok=True)
+            run("git", "mv", src, dst)
+            try:
+                os.rmdir(WORKDIR)
+            except OSError:
+                pass  # other work is current — the folder stays
+            return os.path.relpath(os.path.join(dst, "graph.md"), ROOT)
     return None
 
 
@@ -320,7 +344,8 @@ def accept(name):
               "the slice does and how to try it on screen. git keeps the entry.")
     if folded:
         body += ("\n\nthe slice was %s's folding condition; the fold rides "
-                 "this commit — result on the root, state folded." % gname)
+                 "this commit — result on the root, state folded, the "
+                 "folder moved under history/." % gname)
     return commit("accepted by the operator in the interface: " + name
                   + (" — %s folds" % gname if folded else ""),
                   body,
@@ -1223,9 +1248,10 @@ def main(scr):
                     rows += [(ln, attr) for ln in wrap(st["text"], width)]
                     rows.append(("", 0))
             elif view == "doc":
-                # a graph's documents are its folder, read live: every file
-                # in work/<name>/, led by its name
-                rows, folder = [], os.path.join(WORKDIR, dname)
+                # a graph's documents are its folder, read live — under
+                # work/ while open, under history/ once folded — every
+                # file in it, led by its name
+                rows, folder = [], graph_folder(dname)
                 for fn in sorted(os.listdir(folder)):
                     fpath = os.path.join(folder, fn)
                     if not os.path.isfile(fpath):
