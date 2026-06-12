@@ -132,6 +132,8 @@ A folding condition is what makes a graph ready to fold. Its ask is met, or it i
 
 A graph that cannot meet its folding condition does not fold dirty: it returns as a decision — abandon, re-cut, or change the ask — and a changed ask that touches endorsed intent is the operator's.
 
+A check names an observation about the work, not an act of trust in it.
+
 The episode that does the work is disposable; the checks at the fold's boundary are what survive it. A folded graph can be trusted only as far as those checks reach — whatever they did not cover rests on the word of a worker who no longer exists to be questioned.
 
 Folds stack, and error compounds up the stack: whatever doubt a fold carries, everything built on it inherits. The weaker a graph's checks, the shallower it must stay before folding, and the less may be built on top of it.
