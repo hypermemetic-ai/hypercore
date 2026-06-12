@@ -2,8 +2,8 @@
 
 ## the log reads at a glance
 
-- ask: from your words, four rounds now — last round: the thing field exceedingly clear, the dim details cut. every log line now reads act · thing and stops: the act in bold (yours in cyan), then the one thing it concerns at full weight — the card or statement's quoted name when the act names one, the statement's head on an approve or cut, your words' own first clause on a speak — hash and age trailing dim. no detail follows; it barely fit and wasn't critical.
-- try: relaunch hyper (q, then the menu) — g: a speak line reads operator speaks · I don't like m:ss format, an accept line reads accepted by operator · timer and pointer; the hyper open now wears the old code
+- ask: from your words, five rounds now — last round: the cyan too blue and unconvincing, alternating rows the traditional answer, hash and time wanting columns. the log now wears alternating row shading, color left it entirely — every line reads act in bold · the one thing it concerns at full weight — and hash and age sit in their own right-aligned columns at the edge. the since-you-last-acted head on the queue wears the same stripes.
+- try: relaunch hyper (q, then the menu) — g: rows alternate a faint shade, hashes align in one column, ages in another at the right edge, no color anywhere in the log
 - blocks: until accepted, the record stays as the version you called closer-but-not-there
 - state: awaiting acceptance
 - since: 2026-06-11

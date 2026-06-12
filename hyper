@@ -856,28 +856,34 @@ def main(scr):
     curses.init_pair(3, curses.COLOR_CYAN, -1)
     ALERT = curses.color_pair(1) | curses.A_BOLD
     ACCENT = curses.color_pair(2) | curses.A_BOLD
-    MARK = curses.color_pair(3) | curses.A_BOLD  # the operator's acts in the log
     DIM, BOLD, REV = curses.A_DIM, curses.A_BOLD, curses.A_REVERSE
+    # the log's rows alternate a faint shade for multiline readability
+    # (the operator's word, 2026-06-11 — the traditional approach); the
+    # cyan left with it, too blue on the operator's screen
+    ZEBRA = 0
+    if curses.COLORS >= 256:
+        curses.init_pair(4, -1, 235)
+        ZEBRA = curses.color_pair(4)
     # the queue leads each entry with its kind — what kind of call the
     # operator faces reads before any title does
     KINDS = {"decide": ("decide", BOLD), "settle": ("decide", BOLD),
              "accept": ("accept", ACCENT),
              "read": ("answered", DIM), "sent": ("sent", DIM)}
 
+    AGE_W = 14  # the age column — wide enough for "13 minutes ago"
+
     def log_segs(line, x, room):
-        # a log entry reads act · thing, then hash and age — nothing
-        # else (the operator's word, 2026-06-11, four rounds): the act
-        # leads and pops, the thing it concerns follows at full weight
-        # in minimal words — the quoted card or statement name when the
-        # subject carries one, else the head of what follows the act's
-        # colon — and the detail is cut; it barely fit and was never
-        # critical.  non-load-bearing words go; the operator's acts
-        # read cyan, the machine's bold.
+        # a log entry reads act · thing, then hash and age each in its
+        # own right-aligned column (the operator's word, 2026-06-11,
+        # five rounds): the act leads in bold, the one name it concerns
+        # follows at full weight — the quoted card or statement name
+        # when the subject carries one, else the head of what follows
+        # the act's colon — and the reference data sits in columns at
+        # the edge, where alignment, not a sentence, holds it.
         hsh, _, rest = line.partition(" ")
         sub, sep, age = rest.rpartition(" . ")
         if not sep or not age.endswith("ago"):
             sub, age = rest, ""
-        op_act = "the operator" in sub and "in the interface" in sub
         sub = sub.replace(" in the interface", "")
         sub = " ".join(w for w in sub.split(" ") if w not in ("the", "a", "an"))
 
@@ -897,13 +903,14 @@ def main(scr):
             i = tail.find(": ")
             t = (tail[i + 2:] if i >= 0 else tail).lstrip(":,—. ")
             thing = t[: joint(t)].rstrip(":,. ")
-        pieces = [(act, MARK if op_act else BOLD)]
+        acol = x + room - AGE_W
+        hcol = (acol - 2 if age else x + room) - len(hsh)
+        pieces = [(act, BOLD)]
         if thing:
             pieces += [(" · ", DIM), (thing, 0)]
-        meta = " · " + hsh + (" · " + age if age else "")
-        segs, pos = [], x
+        segs, pos, text_room = [], x, hcol - x - 2
         for i, (txt, attr) in enumerate(pieces):
-            left = room - (pos - x) - (0 if i == 0 else len(meta))
+            left = text_room - (pos - x)
             if left < (1 if i == 0 else 8):
                 break
             clipped = len(txt) > left
@@ -914,11 +921,11 @@ def main(scr):
             if clipped:
                 break
         while segs and segs[-1][1] == " · ":
-            pos -= 3
             segs.pop()
-        left = room - (pos - x)
-        if left >= len(meta):
-            segs.append((pos, meta, DIM))
+        if hcol > x:
+            segs.append((hcol, hsh, DIM))
+        if age:
+            segs.append((acol + max(0, AGE_W - len(age)), age[:AGE_W], DIM))
         return segs
     GUT = 10  # the kind column
 
@@ -1127,9 +1134,12 @@ def main(scr):
                 put(scr, y, LM, "SINCE YOU LAST ACTED — %d MOVE%s"
                     % (len(moves), "" if len(moves) == 1 else "S"), DIM)
                 y += 1
-                for ln in moves[:4]:
+                for i, ln in enumerate(moves[:4]):
+                    shade = ZEBRA if i % 2 else 0
+                    if shade:
+                        put(scr, y, LM + 2, " " * (width - 2), shade)
                     for x, txt, attr in log_segs(ln, LM + 2, width - 2):
-                        put(scr, y, x, txt, attr)
+                        put(scr, y, x, txt, attr | shade)
                     y += 1
                 if len(moves) > 4:
                     put(scr, y, LM + 2,
@@ -1541,8 +1551,13 @@ def main(scr):
                 rows = [[(LM, txt, attr)] if txt else [] for txt, attr in rows]
             scroll = max(0, min(scroll, max(0, len(rows) - view_h)))
             for i, segs in enumerate(rows[scroll: scroll + view_h]):
+                # the stripes ride the entries, not the screen — scrolling
+                # keeps each row's shade
+                shade = (ZEBRA if view == "log" and (scroll + i) % 2 else 0)
+                if shade:
+                    put(scr, top + 2 + i, LM, " " * width, shade)
                 for x, txt, attr in segs:
-                    put(scr, top + 2 + i, x, txt, attr)
+                    put(scr, top + 2 + i, x, txt, attr | shade)
             below = len(rows) - view_h - scroll
             if below > 0:
                 put(scr, top + 2 + view_h, LM,

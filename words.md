@@ -16,6 +16,8 @@ machine (2026-06-11): cut and sharpened, still yours to accept: every line now r
 
 operator (2026-06-11): I don't like the off color, too blue on my screen. also I'm not convinced we need it. if our concern is multiline readibility, the traditional approach is actually alternating row styles. hash and time should be organized in a column. looks messy otherwise.
 
+machine (2026-06-11): landed, still yours to accept: color left the log entirely — rows alternate a faint shade instead, the traditional way, and hash and age sit in their own right-aligned columns at the edge. the line itself stays act in bold · the thing at full weight. the queue's since-you-last-acted head wears the same stripes. the card's try line names the relaunch.
+
 ## from the queue . 2026-06-11
 
 operator (2026-06-11): I don't like the m:ss format. I think I would prefer something like 1m 50s
