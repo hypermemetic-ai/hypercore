@@ -8,3 +8,7 @@ machine (2026-06-11): My misread — your words named the line below the queue, 
 
 operator (2026-06-11): doesn't address the log line below it. that was part of the original ask.
 
+## words . 2026-06-11
+
+operator (2026-06-11): so what keeps sessions running when there's open work? because there's open work but I don't think anything is working it?
+
