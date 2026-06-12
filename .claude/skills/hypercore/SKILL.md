@@ -32,6 +32,17 @@ graph's intent document is singular, and this repo is hypercore's folder.
   breaks — before the decision, not after.
 - Operator judgment is never assumed; their words in conversation are the
   only warrant.
+- Evidence reaches the operator (the operator's pick, 2026-06-11):
+  intent promises that when evidence turns against a statement — whoever
+  owns it — the operator hears about it; this rule is the carrier. Any
+  session that catches material evidence against a statement — in code,
+  in behavior, in the record, or in the operator's own later words —
+  files a decision card in work.md before it stops: the statement quoted
+  verbatim, the evidence, options with what each entails (revise / cut /
+  leave it standing, drawn from what the evidence allows), and a blocks
+  field naming what runs unbacked while the card waits. Only the owner
+  changes the words; the card is how the owner finds out. Noticing and
+  not filing is the failure mode this rule exists to close.
 
 ## Ratification mechanics
 

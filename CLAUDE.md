@@ -61,5 +61,13 @@ the live queue state at every session start; this file carries the rules.
    destructive — what git or a redo cannot bring back. That bar the
    machine holds itself; when recoverability is in doubt, the act is
    the operator's decision.
+8. **Evidence reaches the operator** (operator's pick, 2026-06-11):
+   intent promises the operator hears when evidence turns against a
+   statement; this rule carries it. Any session that catches material
+   evidence against a statement — whoever owns it — files a decision
+   card in work.md before it stops: the statement verbatim, the
+   evidence, options with what each entails, and what runs unbacked
+   while it waits. Only the owner changes the words; the card is how
+   the owner finds out.
 
 Read `.claude/skills/hypercore/SKILL.md` for the full ground rules.
