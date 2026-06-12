@@ -14,6 +14,8 @@ operator (2026-06-11): I don't know. I don't like the look of these log lines on
 
 machine (2026-06-11): Your newest word supersedes the structure ask — done (f2af96c): the main screen speaks in calm prose now. The since-rows are full sentences, dim — no stripes, no hashes, no columns; the last line under the standing-work line is quiet prose with its age. Columns and stripes stay in the log view (g), where reference reading belongs. "Preserve it and bring it forward" also landed in intent as a [machine] statement (9903428) — it returns through the queue for your pick. Relaunch shows the screen; the card stays up for your acceptance.
 
+operator (2026-06-11): the last line is quiet, sure, but almost useless as it stands. too much text, not carefully selected. function and beauty shouldn't compete.
+
 ## words . 2026-06-11
 
 operator (2026-06-11): so what keeps sessions running when there's open work? because there's open work but I don't think anything is working it?
