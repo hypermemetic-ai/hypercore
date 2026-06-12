@@ -42,6 +42,7 @@
 - op: ask
 - ask: the operator's pick says "ratified from hyper", but the queue reads only hypercore's intent.md — discuss's twelve [machine] statements are debt the interface cannot yet surface. teach the queue to read every linked folder's intent.md, and approve/cut/explain to edit and commit in the linked repo.
 - check: discuss's pending statements count in hyper's queue and an approve from hyper drops a marker in a commit landed in discuss's repo
-- state: open
+- result: built and verified in a throwaway copy — the queue read 12 pending, the card wore "discuss · foundations", approve dropped the marker and committed in the copy's discuss repo, hypercore stayed clean; the brief counts linked pending too
+- state: awaiting acceptance (the card is on the queue)
 - since: 2026-06-11
 - of: what brownfielding writes into discuss

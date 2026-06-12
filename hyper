@@ -113,14 +113,18 @@ TRUE_UP = (
 
 # ----- disk ------------------------------------------------------------
 
+def run_in(cwd, *args):
+    return subprocess.run(args, cwd=cwd, capture_output=True, text=True).stdout
+
+
 def run(*args):
-    return subprocess.run(args, cwd=ROOT, capture_output=True, text=True).stdout
+    return run_in(ROOT, *args)
 
 
-def read_intent():
+def read_intent(path=INTENT):
     """Every statement with its section and line span.  A statement is a
     paragraph: consecutive non-blank, non-heading lines."""
-    with open(INTENT) as f:
+    with open(path) as f:
         lines = f.read().splitlines()
     stmts, sec, i = [], None, 0
     while i < len(lines):
@@ -141,9 +145,27 @@ def read_intent():
     return lines, stmts
 
 
-def write_intent(lines):
-    with open(INTENT, "w") as f:
+def write_intent(lines, path=INTENT):
+    with open(path, "w") as f:
         f.write("\n".join(lines) + "\n")
+
+
+def linked_intents():
+    """Statements from every linked folder's intent.md (the registry is
+    the link): outside work lives with its project, so each statement
+    carries its project's name, folder, and file — ratifying it edits and
+    commits there, never here."""
+    out = []
+    for b in ledger(REGISTRY):
+        name = b["lines"][0][3:].strip()
+        root = os.path.expanduser(b["fields"].get("path", ""))
+        path = os.path.join(root, "intent.md")
+        if os.path.isfile(path):
+            _, stmts = read_intent(path)
+            for s in stmts:
+                s["project"], s["root"], s["file"] = name, root, path
+            out += stmts
+    return out
 
 
 def ledger(path):
@@ -239,53 +261,79 @@ def head(text, n=8):
     return " ".join(words[:n]) + ("…" if len(words) > n else "")
 
 
-def commit(subject, body, paths=("intent.md", "queue.md")):
+def commit(subject, body, paths=("intent.md", "queue.md"), root=ROOT):
     track = [p for p in paths
-             if os.path.exists(os.path.join(ROOT, p)) or run("git", "ls-files", p).strip()]
+             if os.path.exists(os.path.join(root, p))
+             or run_in(root, "git", "ls-files", p).strip()]
     if track:
-        run("git", "add", "--", *track)
-    run("git", "commit", "-m", subject, "-m", body)
-    return run("git", "log", "-1", "--format=%h").strip()
+        run_in(root, "git", "add", "--", *track)
+    run_in(root, "git", "commit", "-m", subject, "-m", body)
+    return run_in(root, "git", "log", "-1", "--format=%h").strip()
 
 
-def find(text):
-    _, stmts = read_intent()
+def find(text, path=INTENT):
+    _, stmts = read_intent(path)
     return next((s for s in stmts if s["text"] == text), None)
 
 
-def approve(text, has_card):
-    st = find(text)
-    if st is None:
+def drop_card(text, subject, linked_hash, project):
+    """A linked statement's card lives in hypercore's queue.md while its
+    words live in the linked repo: the intent edit commits there, the
+    card's exit commits here, each naming the other."""
+    if not any(b["quote"] == text for b in ledger(QUEUE)):
+        return
+    write_ledger(QUEUE, "queue", [b for b in ledger(QUEUE) if b["quote"] != text])
+    commit(subject + " — the card leaves the queue",
+           "the statement lives in the linked repo %s; its intent commit "
+           "there is %s." % (project, linked_hash), ("queue.md",))
+
+
+def approve(st, has_card):
+    text, path, root = st["text"], st.get("file", INTENT), st.get("root", ROOT)
+    cur = find(text, path)
+    if cur is None:
         return None
-    lines, _ = read_intent()
-    end = st["span"][1]
+    lines, _ = read_intent(path)
+    end = cur["span"][1]
     if lines[end - 1].endswith(MARKER):
         lines[end - 1] = lines[end - 1][: -len(MARKER)]
-    write_intent(lines)
-    write_ledger(QUEUE, "queue", [b for b in ledger(QUEUE) if b["quote"] != text])
+    write_intent(lines, path)
     grounds = ("grounds: the operator pressed approve in hyper with the card's entailments on screen."
                if has_card else
                "grounds: the operator pressed approve in hyper; no card was on file and the interface said so.")
-    return commit("approved by the operator in the interface: " + head(text),
-                  text.replace(MARKER, "") + "\n\n" + grounds)
+    subject = "approved by the operator in the interface: " + head(text)
+    if root == ROOT:
+        write_ledger(QUEUE, "queue", [b for b in ledger(QUEUE) if b["quote"] != text])
+        return commit(subject, text.replace(MARKER, "") + "\n\n" + grounds)
+    h = commit(subject, text.replace(MARKER, "") + "\n\n" + grounds
+               + "\n\nratified from hyper; hypercore's registry links this folder.",
+               ("intent.md",), root)
+    drop_card(text, subject, h, st.get("project", "?"))
+    return h
 
 
-def cut(text, card):
-    st = find(text)
-    if st is None:
+def cut(st, card):
+    text, path, root = st["text"], st.get("file", INTENT), st.get("root", ROOT)
+    cur = find(text, path)
+    if cur is None:
         return None
-    lines, _ = read_intent()
-    s, e = st["span"]
+    lines, _ = read_intent(path)
+    s, e = cur["span"]
     del lines[s:e]
     if 0 < s < len(lines) and not lines[s - 1].strip() and not lines[s].strip():
         del lines[s]
-    write_intent(lines)
-    write_ledger(QUEUE, "queue", [b for b in ledger(QUEUE) if b["quote"] != text])
+    write_intent(lines, path)
     breaks = card["fields"].get("cut") if card else None
     body = ('the words that left: "' + text.replace(MARKER, "") + '"\n\n'
             + ("what it breaks, as drafted on the card: " + breaks if breaks else
                "no drafted entailments were on file; the interface said so before the pick."))
-    return commit("cut by the operator in the interface: " + head(text), body)
+    subject = "cut by the operator in the interface: " + head(text)
+    if root == ROOT:
+        write_ledger(QUEUE, "queue", [b for b in ledger(QUEUE) if b["quote"] != text])
+        return commit(subject, body)
+    h = commit(subject, body, ("intent.md",), root)
+    drop_card(text, subject, h, st.get("project", "?"))
+    return h
 
 
 def explain(st, words):
@@ -295,6 +343,8 @@ def explain(st, words):
         blk = {"quote": st["text"],
                "lines": ["## " + head(st["text"]), "", "> " + st["text"], "",
                          "- section: " + (st["section"] or "—")]}
+        if st.get("project", "hypercore") != "hypercore":
+            blk["lines"].append("- project: " + st["project"])
         cards.append(blk)
     if blk["lines"] and blk["lines"][-1].strip():
         blk["lines"].append("")
@@ -828,7 +878,12 @@ def main(scr):
 
     while True:
         _, stmts = read_intent()
-        pend = [s for s in stmts if s["pending"]]
+        for s in stmts:
+            s["project"], s["root"], s["file"] = "hypercore", ROOT, INTENT
+        lstmts = linked_intents()
+        # hypercore's statements keep the head of the queue; a linked
+        # project's pending statements follow, each wearing its name
+        pend = [s for s in stmts + lstmts if s["pending"]]
         cards = ledger(QUEUE)
         exchanges = ledger(WORDS)
         work = ledger(WORK)
@@ -1011,6 +1066,8 @@ def main(scr):
                     if kind == "decide":
                         text = obj["text"].replace(MARKER, "")
                         tag = obj["section"] or ""
+                        if obj.get("project", "hypercore") != "hypercore":
+                            tag = obj["project"] + (" · " + tag if tag else "")
                     else:
                         text = obj["lines"][0][3:].strip()
                         tag = ""
@@ -1066,8 +1123,11 @@ def main(scr):
         elif view == "card":
             st = pend[ci]
             card = card_for(st, cards)
+            sec = st["section"] or "—"
+            if st.get("project", "hypercore") != "hypercore":
+                sec = st["project"] + " · " + sec
             put(scr, top, LM,
-                ("%s . %d of %d" % (st["section"] or "—", ci + 1, len(pend))).upper(), DIM)
+                ("%s . %d of %d" % (sec, ci + 1, len(pend))).upper(), DIM)
             rows = [[(LM, ln, BOLD)] for ln in wrap(st["text"].replace(MARKER, ""), width)]
             rows += [[(LM, "[machine]", DIM)], []]
             drafted = False
@@ -1504,8 +1564,8 @@ def main(scr):
                              else "approved . committed %s . git keeps the entry" % hsh)
                 else:
                     card = card_for(payload, cards)
-                    hsh = (approve(payload["text"], card is not None) if kind == "approve"
-                           else cut(payload["text"], card))
+                    hsh = (approve(payload, card is not None) if kind == "approve"
+                           else cut(payload, card))
                     flash = ("that statement is no longer on disk — refreshed" if hsh is None
                              else "%s . committed %s" % ("approved" if kind == "approve" else "cut", hsh))
             continue

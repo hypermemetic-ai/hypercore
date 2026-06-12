@@ -17,6 +17,25 @@ per_sec=$(awk '
 next=$(grep -m1 ' \[machine\]$' "$doc" 2>/dev/null) || next=""
 recent=$(git log --oneline -3 2>/dev/null) || recent="(no git history)"
 
+# linked projects (registry.md): their intent ratifies from hyper, but the
+# words and the commits live in their own repos — the brief carries the
+# pending counts so a summoned session knows the whole queue, not just ours.
+linked_block=""
+if [ -f registry.md ]; then
+  linked_summary=$(awk '/^## /{name=substr($0,4)} /^- path: /{print name "\t" substr($0,9)}' registry.md 2>/dev/null \
+    | while IFS="$(printf '\t')" read -r lname lpath; do
+        case "$lpath" in "~/"*) lpath="$HOME/${lpath#\~/}";; esac
+        [ -f "$lpath/intent.md" ] || continue
+        lc=$(grep -c ' \[machine\]$' "$lpath/intent.md" 2>/dev/null) || lc=0
+        printf '  %s: %s pending — %s/intent.md\n' "$lname" "$lc" "$lpath"
+      done) || linked_summary=""
+  [ -n "$linked_summary" ] && linked_block="
+Linked projects (registry.md — their intent ratifies from hyper; approve
+and cut commit in the linked repo itself):
+${linked_summary}
+"
+fi
+
 # a dead session can strand changes between writing and committing; the
 # brief flags it so every session, typed or summoned, trues it up first.
 behind=$(git status --porcelain 2>/dev/null) || behind=""
@@ -101,7 +120,7 @@ context="hypercore session brief — generated from disk by .claude/hooks/sessio
 Re-ratification queue: ${total} statements still marked [machine] in ${doc}.
 ${per_sec}
 Next pending: ${next:-none — the queue is clear}
-${behind_block}${words_block}${work_block}${graphs_block}
+${linked_block}${behind_block}${words_block}${work_block}${graphs_block}
 
 Recent commits:
 ${recent}
