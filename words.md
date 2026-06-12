@@ -8,3 +8,7 @@ machine (2026-06-11): all three landed on the slice, still yours to accept: your
 
 operator (2026-06-11): we're closer, but "the thing it is about" is almost as important as the text we're writing at the start.
 
+## from the queue . 2026-06-11
+
+operator (2026-06-11): I don't like the m:ss format. I think I would prefer something like 1m 50s
+
