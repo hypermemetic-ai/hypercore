@@ -1,15 +1,5 @@
 # words
 
-## from the acceptance card, on "log entries run whole" . 2026-06-11
-
-operator (2026-06-11): we're part of the way there. the next part is actually shortening long entries so I get the idea. this fix should help short-ish ones get their point across when all they need is a little more space.
-
-machine (2026-06-11): Agreed — past the column edge the cut is blind, and getting the idea across takes a gist someone writes. Who writes it is yours to call, since every real writer binds future sessions or spends mini calls: a decision card is on the queue (gist notes on the record . mini gists the display . sharper mechanical cut). I lean gist notes — the record stays verbatim, the gist rides the repo, and the session each speech already summons holds the pen. This card stays open for the short-ish relief.
-
-operator (2026-06-11): this appears to have been superceded. didn't appear to get caught automatically. how do we make that a reliable catch?
-
-machine (2026-06-11): Right — the source-legibility slice you accepted replaced this card's display half outright, and its other half (speech subjects at twenty-four words) rode along; the card outlived its substance. It's retired now with grounds. The reliable catch: supersession is a judgment, so the catch is a standing duty, not a tripwire — the orders now say every landed slice ends with a sweep of standing cards, and any card the slice supersedes retires in the same commit, named in the grounds. The card you're reading this on is the first one swept.
-
 ## from the acceptance card, on "the acceptance card wears its own title" . 2026-06-11
 
 operator (2026-06-11): why did this happen and how do we ensure it doesn't happen going forward?
