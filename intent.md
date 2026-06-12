@@ -126,6 +126,8 @@ Folding preserves relations. A folded graph keeps its nodes and the relations be
 
 A folded graph's folder holds its history, kept whole; everything else the work made lands in the parent as if made there directly.
 
+An open graph's folder sits under work in its parent's folder; the act that folds it moves it under history. Either folder exists only while it holds a graph. [machine]
+
 A folding condition is what makes a graph ready to fold. Its ask is met, or it is abandoned. Until then the graph stays open.
 
 A graph that cannot meet its folding condition does not fold dirty: it returns as a decision — abandon, re-cut, or change the ask — and a changed ask that touches endorsed intent is the operator's.
