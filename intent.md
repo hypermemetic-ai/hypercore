@@ -68,7 +68,7 @@ Work that is not about hypercore lives with its project: the project's folder ca
 
 A statement is plain, declarative, and strong enough to be wrong — wrong against material, evidence, or later judgment.
 
-A statement reads as if written from scratch: no trace of the conversation that produced it survives in the words. [machine]
+A statement reads as if written from scratch: no trace of the conversation that produced it survives in the words.
 
 Every statement should be ownable: one party can put their name on it and answer for changing it.
 
