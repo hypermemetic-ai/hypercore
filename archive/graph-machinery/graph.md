@@ -3,8 +3,8 @@
 ## build the essentials for execution graphs
 
 - ask: a very big ask will outrun single episodes; give the ratified doctrine its machinery — graphs born on disk with their ask and named check, readable in the work view and the session brief — built cheap, features emerging from what already exists
-- check: the operator accepts the slice from its acceptance card
-- result: accepted by the operator in the interface at 16:37 (c9b028b) — the check was met then, but the fold lagged: no session updated this root, and the stale "awaits acceptance" stood in the work view until the operator asked about it; trued up and folded the same day
+- check: the graph reads in the work view and the brief, and a summoned session can work from it
+- result: the check was met node by node — work view verified in a pty (f3bfb9d), brief in both modes (f514406) — and the operator accepted the slice at 16:37 (c9b028b); the fold lagged: no session updated this root, and the stale "awaits acceptance" stood in the work view until the operator asked about it; trued up and folded the same day. the check originally read "the operator accepts the slice from its acceptance card" — trued up on the operator's word (2026-06-11): acceptance is an act of trust, not an observation about the work
 - state: folded
 - since: 2026-06-11
 - of: hypercore
