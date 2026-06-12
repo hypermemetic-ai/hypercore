@@ -62,7 +62,7 @@ The surfacing bar has a written floor no model may miss: at one named moment —
 
 Intent starts work; material is what the work makes. Intent comes whole from the operator — rarely — or out of back-and-forth with the machine. It constrains the problem space; decisions along the way narrow it further. Finished material is validated against both. The point is operator knowledge: their model of the system matches what gets built and what reaches the real world.
 
-Intent-setting is extraction, not transcription: while a project's intent is forming, the machine works the gap between what the operator wants and what it knows — requirements drawn out of the operator, facts fetched from the world — and that work is visible as open asks and proposed research on the queue. A quiet queue during intent-setting signals stalled extraction, not finished work. [machine]
+Intent-setting is extraction, not transcription: while a project's intent is forming, the machine works the gap between what the operator wants and what it knows — requirements drawn out of the operator, facts fetched from the world — and that work is visible as open asks and proposed research on the queue. A quiet queue during intent-setting signals stalled extraction, not finished work.
 
 Intent lives relative to an execution graph, folded or unfolded: the graph's folder contains its intent. hypercore is itself a folded execution graph; this repository is its folder. Everything in it that is not intent is material.
 
