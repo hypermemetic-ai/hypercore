@@ -18,3 +18,5 @@ operator (2026-06-11): I don't know if I understand the difference between 1 and
 
 machine (2026-06-11): now that archive/ exists, very little. 2's ledger would be one file where every ask hypercore spawned is a node carrying its fold's result — one place to read instead of three. but ls archive/ already lists every folded graph, each graph.md carries its own ask and result, and work.md carries what awaits you; the ledger would restate all three and be one more file to keep true on every spawn and fold — and the first fold already lagged once. what 1 adds is the only thing actually missing: hypercore's graphs shown under it instead of beside it, every root naming its parent. the machine's read: 1, and a ledger can earn itself later if its absence ever blocks work twice. the pick stays yours on the card.
 
+operator (2026-06-11): option 1 — subgraph, made visible — open graphs of hypercore appear under the hypercore line, reached by unfolding it, never beside it; every root names its parent (of: hypercore); the fold stays as it is, since the graph's folder already sits inside hypercore's — display and convention, one redo to take back
+
