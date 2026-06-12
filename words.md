@@ -24,6 +24,8 @@ machine (2026-06-11): rethought from your question, still yours to accept: what 
 
 operator (2026-06-11): I say this - if the logs track different types of events, the difference between these types should be represented by something other than text. probably color, but tasteful and subtle. same with the alternate styling per row - subtle.
 
+machine (2026-06-11): landed, still yours to accept: the event type now reads in muted color on the act, not in louder text — sand for your speech, moss for your decisions, plain dim for the machine's own moves — and the stripe shade dropped a step fainter. the substance keeps the line. the card's try line names the relaunch.
+
 ## from the queue . 2026-06-11
 
 operator (2026-06-11): I don't like the m:ss format. I think I would prefer something like 1m 50s

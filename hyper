@@ -858,12 +858,17 @@ def main(scr):
     ACCENT = curses.color_pair(2) | curses.A_BOLD
     DIM, BOLD, REV = curses.A_DIM, curses.A_BOLD, curses.A_REVERSE
     # the log's rows alternate a faint shade for multiline readability
-    # (the operator's word, 2026-06-11 — the traditional approach); the
-    # cyan left with it, too blue on the operator's screen
-    ZEBRA = 0
+    # (the operator's word, 2026-06-11 — the traditional approach, kept
+    # subtle); event types tell apart by color, not text (their word,
+    # seventh round) — tasteful and muted: sand for the operator's
+    # speech, moss for their decisions, plain dim for the machine
+    ZEBRA, SPEAK, DECIDE = 0, curses.A_DIM, curses.A_DIM
     if curses.COLORS >= 256:
-        curses.init_pair(4, -1, 235)
+        curses.init_pair(4, -1, 234)
+        curses.init_pair(5, 180, -1)
+        curses.init_pair(6, 108, -1)
         ZEBRA = curses.color_pair(4)
+        SPEAK, DECIDE = curses.color_pair(5), curses.color_pair(6)
     # the queue leads each entry with its kind — what kind of call the
     # operator faces reads before any title does
     KINDS = {"decide": ("decide", BOLD), "settle": ("decide", BOLD),
@@ -911,9 +916,15 @@ def main(scr):
             subject, actor = act, "machine"
         acol = x + room - AGE_W
         hcol = (acol - 2 if age else x + room) - len(hsh)
+        if actor.startswith(("operator speaks", "operator asks")):
+            aattr = SPEAK
+        elif "operator" in actor:
+            aattr = DECIDE
+        else:
+            aattr = DIM
         pieces = [(subject, 0)]
         if actor:
-            pieces += [(" · ", DIM), (actor, DIM)]
+            pieces += [(" · ", DIM), (actor, aattr)]
         segs, pos, text_room = [], x, hcol - x - 2
         for i, (txt, attr) in enumerate(pieces):
             left = text_room - (pos - x)

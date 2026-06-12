@@ -2,8 +2,8 @@
 
 ## the log reads at a glance
 
-- ask: from your words, six rounds now — last round: the bold too bright and noisy, rows cut short, the content itself questioned. answer: what the operator wants to see is the substance, so it leads — the words spoken, the statement approved, the slice built, at normal weight, no bold anywhere; the act follows dim; hash and age keep their right-aligned columns; and the record uses the whole screen's width instead of the 76-column prose measure. the stripes stay.
-- try: relaunch hyper (q, then the menu) — g: a row reads like — I don't like m:ss format · operator speaks — full-width, striped, columns aligned, nothing bright
+- ask: from your words, seven rounds now — last round: event types should tell apart by something other than text, color but tasteful and subtle, the stripes subtle too. each line still leads with the substance at normal weight; the act after it now carries the type in muted color — sand for your speech, moss for your decisions, plain dim for the machine — and the stripe shade dropped a step fainter.
+- try: relaunch hyper (q, then the menu) — g: speak rows wear a sand-toned act, approve/accept rows a moss-toned one, machine rows stay gray; the stripes barely-there
 - blocks: until accepted, the record stays as the version you called closer-but-not-there
 - state: awaiting acceptance
 - since: 2026-06-11
