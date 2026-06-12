@@ -14,6 +14,8 @@ operator (2026-06-11): I'll add. I wrote text under a decision, but it's still b
 
 machine (2026-06-11): Right on both counts — the dot was the slice you've since accepted, and the bold was a real gap: work cards you speak on already drop to a dim "spoken" row below the fold, but statement cards didn't. Fixed (8697cfa): a statement whose card ends with your unanswered words now sorts with the waiting items and reads "spoken", dim; the bold decide returns only when the machine's answer lands and the pick is yours again. Awaiting acceptance in work.md; relaunch hyper to see it. The card that prompted this resolved itself — you cut the statement — but the fix covers every future one.
 
+operator (2026-06-11): I think I want more proactive requirement extraction in this initial intent setting phase. sts2 shows it: there's still a lot to settle but I don't see new opens. I'd like to be asked for approval to send out an independent research panel for instance. overall, I would like to be gifted the feeling that the machine is working to extract all the requirements and information it needs from me and the world to build what I ultimately want. I'm also not confident I've seen mid-work questions come up much if at all. do we have data on that? and what would it say if the number were really low?
+
 ## from the log . 2026-06-11
 
 operator (2026-06-11): I'm not liking this new log structure. first, "the" "a" etc. are back and to no positive effect. second, now that most of the screen is colored it looks like a mess again. what we had earlier was more sensible.
