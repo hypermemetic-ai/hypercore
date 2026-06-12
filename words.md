@@ -38,3 +38,7 @@ machine (2026-06-11): agreed — the queue is the main screen, and words spoken 
 
 operator (2026-06-11): I can't select discuss under w. what's up with that?
 
+## words . 2026-06-11
+
+operator (2026-06-11): space/b behave strangley at times, I think because they're jumps rather than traditional up/down. I think I would rather they were up/down. also, we probably want a single button to jump home and then back to wherever we last were if pressed from home. h likely.
+
