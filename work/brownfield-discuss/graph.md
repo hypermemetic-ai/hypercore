@@ -12,6 +12,16 @@
 
 - op: decide
 - ask: discuss's repo already governs itself (constitution.md, contract.md, method/); what the machine may land in the operator's repo is theirs to call before any of it exists — the floor's second test
-- state: awaiting your decision (the card is on the queue)
+- result: the operator settled the card (2026-06-11, 738e1f0) — option 1: a machine-drafted intent.md distilled from discuss's own docs, [machine]-marked and ratified from hyper, with work/ growing as asks arrive — the full hypercore shape, versioned in discuss's repo
+- state: done
+- since: 2026-06-11
+- of: brownfield-discuss
+
+## discuss is linked in the interface
+
+- op: do
+- ask: build the registry of linked folders the interface reads (ratified structure statement; deferred to the first real outside ask — this one), discuss its first entry
+- check: a fresh hyper's work view shows the discuss line under hypercore's, reading "linked · ~/projects/discuss" — verified in a pty before the slice landed
+- state: awaiting acceptance (the card is on the queue)
 - since: 2026-06-11
 - of: brownfield-discuss

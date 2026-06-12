@@ -61,10 +61,11 @@ WORDS = os.path.join(ROOT, "words.md")
 WORK = os.path.join(ROOT, "work.md")
 WORKDIR = os.path.join(ROOT, "work")      # open graphs — current work only
 ARCHDIR = os.path.join(ROOT, "archive")   # folded graphs — the fold moves them here
+REGISTRY = os.path.join(ROOT, "registry.md")  # linked folders — outside work lives with its project
 MARKER = " [machine]"
 LM = 3  # left margin
 
-LEDGERS = ("intent.md", "queue.md", "words.md", "work.md")
+LEDGERS = ("intent.md", "queue.md", "words.md", "work.md", "registry.md")
 GUARD = "the record is behind — m summons the machine to true it up"
 
 MACHINE_LOG = os.path.join(ROOT, ".hyper-machine.log")
@@ -837,6 +838,7 @@ def main(scr):
         # are hypercore's children and show under its line, never beside
         # it (the operator's pick, 2026-06-11)
         projects = [("hypercore", None)] + gs
+        linked = ledger(REGISTRY)
         gopen = sum(1 for _, blks in gs
                     if "folded" not in blks[0]["fields"].get("state", ""))
         dirty = run("git", "status", "--porcelain").strip()
@@ -1256,6 +1258,18 @@ def main(scr):
             put(scr, top + 2, LM, ("hypercore" + " " * width)[:width], REV)
             if len(summary) <= width - len("hypercore") - 2:
                 put(scr, top + 2, LM + width - len(summary), summary, REV)
+            # linked folders from the registry — outside work lives with
+            # its project (ratified), so each reads as a peer line, never
+            # a child; the line is the link and no more until the first
+            # linked project carries hypercore-shaped state to read
+            for i, b in enumerate(linked):
+                if i + 1 >= view_h:
+                    break
+                lname = b["lines"][0][3:].strip()
+                lsum = "linked · " + b["fields"].get("path", "?")
+                put(scr, top + 3 + i, LM, lname, BOLD)
+                if len(lsum) <= width - len(lname) - 2:
+                    put(scr, top + 3 + i, LM + width - len(lsum), lsum, DIM)
 
         elif view == "work":
             put(scr, top, LM, "STANDING WORK", DIM)
