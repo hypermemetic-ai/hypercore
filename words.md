@@ -22,3 +22,5 @@ operator (2026-06-11): some log entries are being cut short with much room to sp
 
 operator (2026-06-11): option 1 — revise — on your word the machine drafts a replacement that keeps the link sentence and "work/ grows as asks arrive" and drops the fulfilled absorption clause, returning [machine] for ratification
 
+operator (2026-06-11): this this above here. by me, option 1. we've talked about it. it's a decision, not a conversation. what happened the last time I brought this up? where's the gap? was my request ignored, not implemented, or implemented poorly?
+
