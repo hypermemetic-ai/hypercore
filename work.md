@@ -11,7 +11,7 @@
 ## long entries shorten to their idea
 
 - ask: your words (2026-06-11, on the log-width card — the next part is actually shortening long entries so I get the idea). every log change so far rearranged text already in the record — mechanical, free, no card. this is the first one code alone can't make: shortening to the idea means someone writes a summary. the cost is small either way; the card asks only who holds the pen
-- options: sessions leave gists — the session each speech already summons writes one more line (a git note on any long entry), one pass backfills history, the log prefers the gist when the line would overflow; subjects stay verbatim, no new spend . mini gists the display — hyper hands each overflowing entry to mini once and caches the gist by hash; record untouched, pennies per long entry, but the gist lives outside the record
+- options: written legible — your suggestion: every subject is composed to fit a log line from the start (the full story rides the commit body), the display's manipulation logic retires to a plain cut, the simplest system; entries already in history stay as written, and your own long speeches still cut at a word boundary . sessions leave gists — one extra line (a git note) from the session each speech already summons, covering history by one backfill pass and your long speeches too; subjects stay verbatim, no new spend, but a second channel to maintain . mini gists the display — hyper hands overflowing entries to mini once, cached by hash; record untouched, pennies per entry, gist lives outside the record
 - blocks: nothing built yet — until decided, long entries keep the blind edge cut
 - state: awaiting your decision
 - since: 2026-06-11
