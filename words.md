@@ -20,6 +20,8 @@ operator (2026-06-11): so what keeps sessions running when there's open work? be
 
 machine (2026-06-11): Nothing did — summons fired on words alone. And the open work you saw wasn't waiting on a session: model-routing's check was met when you accepted the effort-tier slice; only the fold never happened — the same lag graph-machinery hit, twice now, the rebuild bar. Folded (426230b), open subgraphs read 0. The bigger gap went to you as a decision card; you picked unattended summons, and it's built — see that card's block below.
 
+operator (2026-06-11): I miss the old space/b behavior.. I think it comes down to what page I'm on. on some, normal up/down is best. on others, page is best. on others still, snap to top/bottom is best.
+
 ## from the decision card, on "what runs when work is open" . 2026-06-11
 
 operator (2026-06-11): option 3 — unattended summons — hyper summons the machine when open nodes sit unworked and no words wait; work moves by itself, sessions run and spend without you watching
