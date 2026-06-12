@@ -8,3 +8,5 @@ machine (2026-06-11): Right — the count was hypercore-only; discuss's open gra
 
 operator (2026-06-11): what card stays up for my acceptance? I see no card. I think we should send sessions into a linked repo too.
 
+operator (2026-06-11): linked project discuss has less data on it than hypercore in w view.
+
