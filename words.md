@@ -8,3 +8,5 @@ machine (2026-06-11): no. acceptance is the release act, and every slice gets on
 
 operator (2026-06-11): both. proceed.
 
+machine (2026-06-11): done, both. the archived root's check now reads "the graph reads in the work view and the brief, and a summoned session can work from it" — what its last node actually verified — and the result line records the old wording and why it changed (a639307). intent gained, operator-owned in work: "A check names an observation about the work, not an act of trust in it." (7a680f2), placed beside the fold-trust statement it grounds. nothing waits on this.
+
