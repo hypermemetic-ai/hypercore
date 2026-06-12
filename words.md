@@ -18,6 +18,8 @@ operator (2026-06-11): I don't like the off color, too blue on my screen. also I
 
 machine (2026-06-11): landed, still yours to accept: color left the log entirely — rows alternate a faint shade instead, the traditional way, and hash and age sit in their own right-aligned columns at the edge. the line itself stays act in bold · the thing at full weight. the queue's since-you-last-acted head wears the same stripes. the card's try line names the relaunch.
 
+operator (2026-06-11): no dice. the alternating styling works but the bright parts are too bright. it's very visually noisy. shouldn't have to be. we'll want to give the rows more room, too many are cut short now. and the content still doesn't convince me. imagine, what does the operator really want to see in the log?
+
 ## from the queue . 2026-06-11
 
 operator (2026-06-11): I don't like the m:ss format. I think I would prefer something like 1m 50s
