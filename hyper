@@ -221,14 +221,15 @@ def graph_folder(name):
     return os.path.join(WORKDIR, name)
 
 
-def graphs():
-    """Every execution graph on disk, read fresh: <name>/graph.md, a
-    ledger of nodes whose first block is the root ask born with its check.
-    Open graphs live under work/, folded ones under archive/ — folded
-    graphs stay listed, finishing the work must not cost the operator the
-    view of it — only the open counts treat them as closed."""
+def graphs_in(root):
+    """Every execution graph under a folder, read fresh:
+    <root>/work/<name>/graph.md open, <root>/archive/<name>/graph.md
+    folded — a ledger of nodes whose first block is the root ask born
+    with its check. Folded graphs stay listed: finishing the work must
+    not cost the operator the view of it."""
     out = []
-    for base in (WORKDIR, ARCHDIR):
+    for sub in ("work", "archive"):
+        base = os.path.join(root, sub)
         if not os.path.isdir(base):
             continue
         for name in sorted(os.listdir(base)):
@@ -238,6 +239,11 @@ def graphs():
                 if blocks:
                     out.append((name, blocks))
     return out
+
+
+def graphs():
+    """hypercore's own execution graphs — see graphs_in."""
+    return graphs_in(ROOT)
 
 
 def since_last_act():
@@ -863,12 +869,19 @@ def main(scr):
     # seventh round) — tasteful and muted: sand for the operator's
     # speech, moss for their decisions, plain dim for the machine
     ZEBRA, SPEAK, DECIDE = 0, curses.A_DIM, curses.A_DIM
+    # color pairs do not OR together — a colored act on a shaded row
+    # needs its own on-shade pair, or it paints a black block (the
+    # operator saw it); ZMAP carries each colored attr to its shaded twin
+    ZMAP = {}
     if curses.COLORS >= 256:
-        curses.init_pair(4, -1, 234)
+        curses.init_pair(4, -1, 233)
         curses.init_pair(5, 180, -1)
         curses.init_pair(6, 108, -1)
+        curses.init_pair(7, 180, 233)
+        curses.init_pair(8, 108, 233)
         ZEBRA = curses.color_pair(4)
         SPEAK, DECIDE = curses.color_pair(5), curses.color_pair(6)
+        ZMAP = {SPEAK: curses.color_pair(7), DECIDE: curses.color_pair(8)}
     # the queue leads each entry with its kind — what kind of call the
     # operator faces reads before any title does
     KINDS = {"decide": ("decide", BOLD), "settle": ("decide", BOLD),
@@ -876,6 +889,7 @@ def main(scr):
              "read": ("answered", DIM), "sent": ("sent", DIM)}
 
     AGE_W = 14  # the age column — wide enough for "13 minutes ago"
+    ACT_W = 24  # the act column — the act is a column of its own
 
     def log_segs(line, x, room):
         # a log entry is one calm line, no bold anywhere (the operator's
@@ -922,23 +936,17 @@ def main(scr):
             aattr = DECIDE
         else:
             aattr = DIM
-        pieces = [(subject, 0)]
-        if actor:
-            pieces += [(" · ", DIM), (actor, aattr)]
-        segs, pos, text_room = [], x, hcol - x - 2
-        for i, (txt, attr) in enumerate(pieces):
-            left = text_room - (pos - x)
-            if left < (1 if i == 0 else 8):
-                break
-            clipped = len(txt) > left
-            if clipped:
-                txt = txt[: max(1, left - 1)] + "…"
-            segs.append((pos, txt, attr))
-            pos += len(txt)
-            if clipped:
-                break
-        while segs and segs[-1][1] == " · ":
-            segs.pop()
+        # the act is a dedicated column (the operator's word), not a
+        # trailer on the substance; narrow rooms drop it whole
+        ccol = hcol - 2 - ACT_W if room >= 80 and actor else hcol
+        segs = []
+        text_room = ccol - x - 2
+        subj = (subject if len(subject) <= text_room
+                else subject[: max(1, text_room - 1)] + "…")
+        segs.append((x, subj, 0))
+        if ccol < hcol:
+            a = actor if len(actor) <= ACT_W else actor[: ACT_W - 1] + "…"
+            segs.append((ccol, a, aattr))
         if hcol > x:
             segs.append((hcol, hsh, DIM))
         if age:
@@ -984,6 +992,21 @@ def main(scr):
         # it (the operator's pick, 2026-06-11)
         projects = [("hypercore", None)] + gs
         linked = ledger(REGISTRY)
+        # a linked project is a unit of its own (the operator's word,
+        # 2026-06-11): its folder carries its work.md and graphs, read
+        # live — outside work lives with its project (ratified). each
+        # unit's graph entries follow its own entry, so a graph's
+        # project index sits just past its parent's.
+        lidx = []
+        for b in linked:
+            lname = b["lines"][0][3:].strip()
+            lpath = os.path.expanduser(b["fields"].get("path", ""))
+            lwpath = os.path.join(lpath, "work.md")
+            lwork = ledger(lwpath) if os.path.exists(lwpath) else []
+            lgs = graphs_in(lpath)
+            lidx.append(len(projects))
+            projects.append((lname, ("linked", lpath, lwork, lgs)))
+            projects.extend(lgs)
         gopen = sum(1 for _, blks in gs
                     if "folded" not in blks[0]["fields"].get("state", ""))
         dirty = run("git", "status", "--porcelain").strip()
@@ -1157,7 +1180,8 @@ def main(scr):
                     if shade:
                         put(scr, y, LM + 2, " " * (width - 2), shade)
                     for x, txt, attr in log_segs(ln, LM + 2, width - 2):
-                        put(scr, y, x, txt, attr | shade)
+                        put(scr, y, x, txt,
+                            ZMAP.get(attr, attr | shade) if shade else attr)
                     y += 1
                 if len(moves) > 4:
                     put(scr, y, LM + 2,
@@ -1579,7 +1603,8 @@ def main(scr):
                 if shade:
                     put(scr, top + 2 + i, LM, " " * (w - 2 * LM), shade)
                 for x, txt, attr in segs:
-                    put(scr, top + 2 + i, x, txt, attr | shade)
+                    put(scr, top + 2 + i, x, txt,
+                        ZMAP.get(attr, attr | shade) if shade else attr)
             below = len(rows) - view_h - scroll
             if below > 0:
                 put(scr, top + 2 + view_h, LM,

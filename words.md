@@ -28,3 +28,5 @@ machine (2026-06-11): landed, still yours to accept: the event type now reads in
 
 operator (2026-06-11): almost. but the alternating style is still too visible. the second text unit is now a black block over that which is ugly. and it should be a dedicated column, not attached to the first block.
 
+machine (2026-06-11): landed, still yours to accept: the black block was a real bug — a colored act on a shaded row needs its own on-shade color pair, and it has one now. the act sits in a dedicated aligned column between the substance and the hash, and the stripe shade dropped to barely-there. four columns: substance, act, hash, age. the card's try line names the relaunch.
+

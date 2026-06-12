@@ -2,8 +2,8 @@
 
 ## the log reads at a glance
 
-- ask: from your words, seven rounds now — last round: event types should tell apart by something other than text, color but tasteful and subtle, the stripes subtle too. each line still leads with the substance at normal weight; the act after it now carries the type in muted color — sand for your speech, moss for your decisions, plain dim for the machine — and the stripe shade dropped a step fainter.
-- try: relaunch hyper (q, then the menu) — g: speak rows wear a sand-toned act, approve/accept rows a moss-toned one, machine rows stay gray; the stripes barely-there
+- ask: from your words, eight rounds now — last round: the stripes still too visible, the colored act painting a black block over them, and the act wanting a dedicated column. the black block was a real bug — color pairs don't combine — fixed with on-shade twins; the stripe shade dropped to barely-there; and the act now sits in its own aligned column between the substance and the hash, muted sand for your speech, moss for your decisions, gray for the machine.
+- try: relaunch hyper (q, then the menu) — g: four aligned columns — substance, act, hash, age — no block over the stripes, the stripes faint
 - blocks: until accepted, the record stays as the version you called closer-but-not-there
 - state: awaiting acceptance
 - since: 2026-06-11
