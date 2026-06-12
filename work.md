@@ -2,9 +2,9 @@
 
 ## a pick reads as a decision, not your speech
 
-- ask: your words (2026-06-11, twice — "I pick a decision, I see it here as if I had written something. this should not happen."). settling a card used to land the pick as an operator speech line, as if you had typed the option's prose; now it lands as "the operator decides (date): option N — …" — a narrated act, worn in the exchange in decision color, never your voice. the standing sts2 pick line is trued up the same way
-- try: relaunch hyper (q, then the menu) — the sts2 exchange shows "the operator decides …" in decision color; any future settle lands the same way
-- blocks: nothing — record voice and display
+- ask: your words (2026-06-11, three rounds — "I pick a decision, I see it here as if I had written something", then "it shouldn't be an exchange at all… the decision just is the decision, recorded but not conversation-spawning"). built as you said: settling a card no longer writes the conversation ledger at all — the entry's state flips to "decided — option N …" in the settle commit, the machine executes the word and clears the entry with the executing commit, and no exchange exists unless you actually speak
+- try: relaunch hyper (q, then the menu) — settle any decision card: no exchange appears anywhere; the entry reads "decided" in w until the machine's executing commit clears it
+- blocks: nothing — record shape and display
 - state: awaiting acceptance
 - since: 2026-06-11
 

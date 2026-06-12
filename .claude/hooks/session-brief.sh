@@ -132,6 +132,15 @@ if [ -f work.md ]; then
   [ -n "$work_summary" ] && work_block="
 Standing work (work.md — keep it true; the operator reads it in hyper):
 ${work_summary}"
+  decided=$(awk '
+    /^## /                { name = substr($0, 4) }
+    /^- state: decided /  { printf "  %s — %s\n", name, substr($0, 10) }
+  ' work.md 2>/dev/null) || decided=""
+  [ -n "$decided" ] && work_block="${work_block}
+Settled decisions awaiting execution (a decision is not a conversation —
+execute each word under the standing orders, then remove its entry from
+work.md with the executing commit):
+${decided}"
 fi
 
 context="hypercore session brief — generated from disk by .claude/hooks/session-brief.sh

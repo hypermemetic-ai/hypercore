@@ -516,45 +516,30 @@ def accept(name, root=ROOT):
 
 
 def settle_card(name, word, root=ROOT):
-    """A decisive word on a decision card settles it on the spot: the word
-    lands on the card's block and the entry leaves work.md in the same
-    commit — nothing is left for the operator to do, so the card does not
-    stay up. git keeps the entry; the machine executes the word. root is
-    the repo the card's work.md lives in: the words always land here (the
-    speech ledger is hypercore's), a linked entry leaves its own repo in a
-    commit there."""
+    """A decisive word on a decision card settles it on the spot, and the
+    decision just is the decision (the operator's word, 2026-06-11): no
+    exchange spawns, no line lands in the conversation ledger. The entry's
+    state flips to decided in the same commit; the machine executes the
+    word and clears the entry with the executing commit. root is the repo
+    the card's work.md lives in — a linked entry settles in a commit
+    there."""
     stamp = date.today().isoformat()
-    headline = '## from the decision card, on "%s" . %s' % (name, stamp)
-    blocks = ledger(WORDS)
-    blk = next((b for b in blocks if b["lines"][0] == headline), None)
-    if blk is None:
-        blk = {"lines": [headline]}
-        blocks.append(blk)
-    if blk["lines"][-1].strip():
-        blk["lines"].append("")
-    blk["lines"].append("the operator decides (%s): %s" % (stamp, word.strip()))
-    write_ledger(WORDS, "words", blocks)
     wpath = os.path.join(root, "work.md")
     wblocks = ledger(wpath)
     entry = next((b for b in wblocks
                   if b["lines"][0][3:].strip() == name), None)
-    if entry is not None:
-        write_ledger(wpath, "work", [b for b in wblocks if b is not entry])
-    body = (word.strip() + "\n\nthe word settles the card: the entry leaves "
-            "work.md in this commit, git keeps it; the machine reads "
-            "words.md and executes the decision.")
-    if entry is not None:
-        body += "\n\n" + "\n".join(entry["lines"])
-    if root != ROOT and entry is not None:
-        # the entry's exit commits in its own repo; the word's commit here
-        # carries the whole story either way
-        commit('the operator settles a decision card in the interface — '
-               '"%s": %s' % (name, head(word)), body, ("work.md",), root)
-    return commit('the operator settles a decision card in the interface — '
-                  '"%s": %s' % (name, head(word)),
-                  body,
-                  ("words.md", "work.md") if entry and root == ROOT
-                  else ("words.md",))
+    if entry is None:
+        return None
+    entry["lines"] = [("- state: decided (%s) — %s" % (stamp, word.strip()))
+                      if l.startswith("- state:") else l
+                      for l in entry["lines"]]
+    write_ledger(wpath, "work", wblocks)
+    body = (word.strip() + "\n\nthe decision just is the decision (the "
+            "operator's word, 2026-06-11): recorded, not conversation-"
+            "spawning. the entry stands decided until the machine executes "
+            "the word and clears it with the executing commit.")
+    return commit('the operator decides — "%s": %s' % (name, head(word)),
+                  body, ("work.md",), root)
 
 
 # ----- speech (from anywhere; the place travels with the words) ---------
