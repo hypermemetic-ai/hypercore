@@ -32,7 +32,7 @@ The interface opens fullscreen at login: the day starts where the decisions are.
 
 The interface is high contrast and set in deliberate type, with color spent only where it earns its place.
 
-The main screen is the face of the system and wears its best design — immaculate, tasteful. What lands there preserves that bar and carries it forward; reference detail lives in the views built for reading it. [machine]
+The main screen is the face of the system and wears its best design — immaculate, tasteful. What lands there preserves that bar and carries it forward; reference detail lives in the views built for reading it.
 
 Everything that crosses the operator–machine boundary crosses through the interface and lands on disk; a crossing that left no record did not happen.
 
