@@ -987,33 +987,57 @@ def main(scr):
              "read": ("answered", DIM), "sent": ("sent", DIM)}
 
     AGE_W = 14  # the age column — wide enough for "13 minutes ago"
+    ACT_W = 24  # the act column — the act is a column of its own
 
     def log_segs(line, x, room):
-        # the subject is written for the log (the operator's word,
-        # 2026-06-11: whatever the log pulls from is written in the
-        # first place to be maximally clear and concise) — the display
-        # adds columns, never rewrites. one calm line: the subject whole
-        # to the edge, hash and age right-aligned, operator acts in
-        # their colors.
+        # the earlier structure, recalled by the operator (their word,
+        # 2026-06-11 — the articles add nothing, a screen mostly colored
+        # is a mess): the substance leads plain with articles dropped,
+        # the act alone wears color in its own column, hash and age
+        # right-aligned at the edge. the subjects stay written legible
+        # at the source; only the display condenses them.
         hsh, _, rest = line.partition(" ")
         sub, sep, age = rest.rpartition(" . ")
         if not sep or not age.endswith("ago"):
             sub, age = rest, ""
-        if sub.startswith(("the operator speaks", "the operator asks",
-                           "the operator folds")):
-            attr = SPEAK
-        elif (sub.startswith("the operator")
-              or ("the operator" in sub and "in the interface" in sub)):
-            attr = DECIDE
+        sub = sub.replace(" in the interface", "")
+        sub = " ".join(w for w in sub.split(" ") if w not in ("the", "a", "an"))
+
+        def joint(s):
+            cut = len(s)
+            for sp in (": ", " — ", ", ", " . ", ". "):
+                i = s.find(sp)
+                if 0 <= i < cut:
+                    cut = i
+            return cut
+
+        act, tail = sub[: joint(sub)], sub[joint(sub):]
+        tail = tail.lstrip(":,—. ").rstrip(":,. ")
+        # an act with a named actor yields the line to everything after
+        # it; a machine build's whole subject is the substance
+        if "operator" in act or act.startswith(("machine", "mini", "trued")):
+            subject, actor = (tail, act) if tail else (act, "")
         else:
-            attr = 0
+            subject, actor = sub, "machine"
         acol = x + room - AGE_W
         hcol = (acol - 2 if age else x + room) - len(hsh)
+        if actor.startswith(("operator speaks", "operator asks")):
+            aattr = SPEAK
+        elif "operator" in actor:
+            aattr = DECIDE
+        else:
+            aattr = DIM
+        # the act is a dedicated column, not a trailer on the substance;
+        # narrow rooms drop it whole
+        ccol = hcol - 2 - ACT_W if room >= 80 and actor else hcol
         segs = []
-        text_room = hcol - x - 2
-        subj = (sub if len(sub) <= text_room
-                else sub[: max(1, text_room - 1)] + "…")
-        segs.append((x, subj, attr))
+        text_room = ccol - x - 2
+        subj = (subject if len(subject) <= text_room
+                else subject[: max(1, text_room - 1)] + "…")
+        segs.append((x, subj, 0))
+        if ccol < hcol:
+            a = actor if len(actor) <= ACT_W else actor[: ACT_W - 1] + "…"
+            segs.append((ccol, a, aattr))
         if hcol > x:
             segs.append((hcol, hsh, DIM))
         if age:
