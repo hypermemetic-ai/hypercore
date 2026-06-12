@@ -18,9 +18,3 @@ operator (2026-06-11): it's taxing to follow conversations under all these diffe
 
 operator (2026-06-11): adding a couple findings. one, the highlighter obscures the status of the selected queue item. maybe not completely, but enough that it's an issue. two, items that don't need my input until I get a response should be sorted below items that do need my input.
 
-## from the acceptance card, on "a pick reads as a decision, not your speech" . 2026-06-11
-
-operator (2026-06-11): this is an improvement, but really it shouldn't be an exchange at all I think. why should it not be treated the same as other cards? where the decision just is the decision, recorded but not conversation-spawning?
-
-machine (2026-06-11): You're right, and it's built that way now (2798ec5): settling a card writes nothing to the conversation ledger. The pick flips the entry's state to "decided — option N …" in the settle commit; the machine executes the word and clears the entry with the executing commit. The only reason a pick ever landed in the exchange was as the machine's reading queue — the work entry itself now carries that job. This card is reworked to the new shape; same acceptance, after a relaunch.
-
