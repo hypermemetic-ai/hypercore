@@ -10,3 +10,5 @@ operator (2026-06-11): looking at the queue, a few notes. first, I like the dot 
 
 machine (2026-06-11): Done (53a839b) — the dot now means one thing, an unread answer, and sits at the right edge of the row. Decides lost it as you said; accept cards lost it too, on the same grounds — they wear their own bold label — one word brings it back. Awaiting acceptance in work.md; relaunch hyper to see it, and if the right side reads worse, it moves back.
 
+operator (2026-06-11): I'll add. I wrote text under a decision, but it's still bold and marked with the dot. assuming the dot clears based on the previous request, the bold is still probably wrong. the fact that I responded puts the onus on the machine to do something from there, not me.
+
