@@ -280,6 +280,39 @@ def since_last_act():
     return out
 
 
+def gist(line):
+    """The latest move as one quiet clause — the act up to its first
+    joint, with the thing it concerned when one is named, and the age.
+    Carefully selected, not the whole subject: the main screen's last
+    line wears this (the operator's word, 2026-06-11 — function and
+    beauty shouldn't compete).  Returns (text, age)."""
+    rest = line.partition(" ")[2]
+    sub, sep, age = rest.rpartition(" . ")
+    if not sep or not age.endswith("ago"):
+        sub, age = rest, ""
+    sub = sub.replace(" in the interface", "")
+
+    def first_joint(s):
+        cut = len(s)
+        for sp in (": ", " — ", ", ", ". "):
+            i = s.find(sp)
+            if 0 <= i < cut:
+                cut = i
+        return cut
+
+    cut = first_joint(sub)
+    head, tail = sub[:cut], sub[cut:]
+    m = re.search('"[^"]+"', tail)
+    if m:
+        thing = m.group(0)
+    elif tail.startswith(": "):
+        t = tail[2:]
+        thing = t[: first_joint(t)].rstrip(":,. ")
+    else:
+        thing = ""
+    return (head + " — " + thing if thing else head, age)
+
+
 # ----- decisions (each one lands on disk and commits) -------------------
 
 def head(text, n=8):
@@ -1021,6 +1054,10 @@ def main(scr):
         # unit's graph entries follow its own entry, so a graph's
         # project index sits just past its parent's.
         lidx = []
+        # the standing-work line counts everything the work view shows —
+        # linked ledgers and open graphs included (the operator's word,
+        # 2026-06-11: discuss stood invisible in a count of 0)
+        lwork_n = lgopen = 0
         for b in linked:
             lname = b["lines"][0][3:].strip()
             lpath = os.path.expanduser(b["fields"].get("path", ""))
@@ -1030,6 +1067,11 @@ def main(scr):
             lidx.append(len(projects))
             projects.append((lname, ("linked", lpath, lwork, lgs)))
             projects.extend(lgs)
+            lwork_n += len(lwork)
+            lgopen += sum(1 for _, blks in lgs
+                          if "folded" not in blks[0]["fields"].get("state", ""))
+        # gopen is hypercore's own — the unattended summons works this
+        # repo; what a linked project's graphs wait on lives with them
         gopen = sum(1 for _, blks in gs
                     if "folded" not in blks[0]["fields"].get("state", ""))
         dirty = run("git", "status", "--porcelain").strip()
@@ -1289,17 +1331,22 @@ def main(scr):
             y += 1
             # the standing-work line, in the operator's own words
             # (2026-06-11): the line below the queue, and only that one —
-            # the counts, then the key that opens them ("your" stays cut)
+            # the counts, then the key that opens them ("your" stays cut).
+            # the counts span the linked projects too
             put(scr, y, LM,
                 ("standing work: %d . awaiting acceptance: %d . "
                  "open subgraphs: %d . w opens the view"
-                 % (len(work), len(accepts), gopen))[: w - 2 * LM], DIM)
+                 % (len(work) + lwork_n, len(accepts), gopen + lgopen))
+                [: w - 2 * LM], DIM)
             y += 1
-            # the line below reads as quiet prose too — the latest
-            # commit and its age, no hash, nothing tabular on this
-            # screen (the operator's word, 2026-06-11)
+            # the line below is one quiet clause — the act, the thing it
+            # concerned, the age; carefully selected, never the whole
+            # subject (the operator's word, 2026-06-11: function and
+            # beauty shouldn't compete)
+            ltxt, lage = gist(last)
             put(scr, y, LM,
-                ("last  " + last.partition(" ")[2])[: w - 2 * LM], DIM)
+                ("last  " + ltxt + (" . " + lage if lage else ""))
+                [: w - 2 * LM], DIM)
 
         elif view == "card":
             st = pend[ci]
