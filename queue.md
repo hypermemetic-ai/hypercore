@@ -11,3 +11,12 @@ operator (2026-06-11): work/ grows as asks arrive, sure, but also shrinks as the
 
 machine (2026-06-11): Right — naming only the growth told half the story and made the mention odd. Redrafted in discuss (5cc6285) to carry the whole picture: "discuss is linked to hypercore as an external project: intent.md is its single source of truth, and work/ holds the open asks — growing as they arrive, shrinking as they settle." Still [machine]; it returns to the queue for your pick.
 
+## The operator plays; the overlay only informs. It never acts in the game — no clicks, no keys, no writes into the game's process…
+
+> The operator plays; the overlay only informs. It never acts in the game — no clicks, no keys, no writes into the game's process or saves — and every pick is the operator's own. [machine]
+
+- section: foundations
+- project: sts2-overlay
+
+operator (2026-06-11): weird import from discuss. I don't see how that's relevant here, in a single player game.
+
