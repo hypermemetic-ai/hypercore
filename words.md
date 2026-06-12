@@ -8,6 +8,8 @@ machine (2026-06-11): Agreed — past the column edge the cut is blind, and gett
 
 operator (2026-06-11): this appears to have been superceded. didn't appear to get caught automatically. how do we make that a reliable catch?
 
+machine (2026-06-11): Right — the source-legibility slice you accepted replaced this card's display half outright, and its other half (speech subjects at twenty-four words) rode along; the card outlived its substance. It's retired now with grounds. The reliable catch: supersession is a judgment, so the catch is a standing duty, not a tripwire — the orders now say every landed slice ends with a sweep of standing cards, and any card the slice supersedes retires in the same commit, named in the grounds. The card you're reading this on is the first one swept.
+
 ## from the acceptance card, on "the acceptance card wears its own title" . 2026-06-11
 
 operator (2026-06-11): why did this happen and how do we ensure it doesn't happen going forward?

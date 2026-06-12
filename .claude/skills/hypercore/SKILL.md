@@ -97,6 +97,11 @@ graph's intent document is singular, and this repo is hypercore's folder.
   line.
 - Anti-ceremony holds: new machinery only after its absence blocks work
   twice.
+- Landing a slice ends with a supersession sweep (the operator's word,
+  2026-06-11: a replaced card "didn't appear to get caught
+  automatically"): reread every standing work.md card; any card the new
+  slice replaces or absorbs retires in the same commit, named in the
+  grounds. Supersession is a judgment call, so the catch is this duty.
 - The log is the record read raw (the operator's word, 2026-06-11: a
   single solution for logging — whatever the log pulls from is written
   in the first place to be maximally clear and concise): the log pulls
