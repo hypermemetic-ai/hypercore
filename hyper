@@ -97,6 +97,25 @@ SUMMON = (
     "once at the end — a session can die mid-flight, and only what is "
     "committed survives it. then stop."
 )
+WORK = (
+    "the interface summoned you: open work stands and no words wait "
+    "(option 3 on the what-runs-when-work-is-open card, the operator's "
+    "pick, 2026-06-11). read brief.md — the session brief, written fresh "
+    "at this summon — then every open graph named there, each graph.md "
+    "in full. but first: if the record is behind — git status shows "
+    "uncommitted changes — true it up before anything else and commit "
+    "with grounds. then move the open work under the standing orders: "
+    "fold what has met its folding condition; grow and work what a "
+    "node's ask already authorizes, committing after every file you "
+    "finish; what waits on the operator — a decision, an acceptance — "
+    "leave standing, the cards already carry it. decisions before "
+    "material, every slice landed with its explanation and acceptance "
+    "question in work.md. decisions that are the operator's land on "
+    "cards, never assumed; never use AskUserQuestion: nobody can see "
+    "it. if nothing is yours to move, write one line saying why to "
+    "stdout and stop — the interface holds further summons until the "
+    "record moves. then stop."
+)
 TRUE_UP = (
     "the interface summoned you as the mini-machine. the record is behind, "
     "and your only task is to true it up: read git status and the diff, "
@@ -528,17 +547,19 @@ def fill(cmd, prompt):
     return argv
 
 
-def machine_command():
+def machine_command(task=SUMMON):
     """The machine file at the root, {prompt} standing for the summon
     instruction — any harness that takes a prompt slots in.  HYPER_MACHINE
-    in the environment overrides it (testing); with neither, claude."""
+    in the environment overrides it (testing); with neither, claude.
+    task is the instruction handed in: SUMMON for words, WORK for open
+    work standing with none."""
     cmd = harness_line("HYPER_MACHINE", MACHINE_FILE)
     if not cmd:
         exe = shutil.which("claude") or os.path.expanduser("~/.local/bin/claude")
         if not os.path.exists(exe):
             return None
         cmd = shlex.quote(exe) + " -p {prompt} --dangerously-skip-permissions"
-    return fill(cmd, SUMMON)
+    return fill(cmd, task)
 
 
 def mini_command():
@@ -600,14 +621,15 @@ def locked_machine():
         return None
 
 
-def summon(kind="machine"):
+def summon(kind="machine", task=None):
     """A headless machine session in this repo: it trues up the record if
     it is behind, answers the operator's words onto the blocks that carry
     them, may build under the standing orders, commits as it goes, and
     stops.  The contract is files and git; the brief lands in brief.md so
     any harness reads the same bearings.  kind "mini" is the small machine
-    on the bare true-up — no brief, its whole task is in the prompt."""
-    argv = mini_command() if kind == "mini" else machine_command()
+    on the bare true-up — no brief, its whole task is in the prompt.
+    task overrides the instruction (WORK for open work, no words)."""
+    argv = mini_command() if kind == "mini" else machine_command(task or SUMMON)
     if argv is None:
         return None
     if kind != "mini":
@@ -625,7 +647,7 @@ def summon(kind="machine"):
         return None
 
 
-def start_machine(machine, kind="machine"):
+def start_machine(machine, kind="machine", task=None):
     """Summon unless one is already working — this hyper's own, or one
     another hyper summoned, adopted from the lock file (it reads from
     disk, so words that land mid-answer wait visibly and m summons
@@ -640,7 +662,7 @@ def start_machine(machine, kind="machine"):
         except OSError:
             started = time.time()
         return (Foreign(pid), started, "machine")
-    p = summon(kind)
+    p = summon(kind, task)
     if not p:
         return None
     with open(MACHINE_PID, "w") as f:
@@ -963,6 +985,7 @@ def main(scr):
     escalate = False  # a mini left work behind — the next summon goes to the full machine
     boot = True  # the first frame summons the machine itself when the record calls
     resummon = False  # words landed mid-answer — one more summon when this one ends
+    worked_head = None  # the head the last unattended summon worked from
     flash = ensure_launcher() or flash
     fs_left = (FS_TRIES if os.environ.get("HYPER_FULLSCREEN")
                and os.environ.get("WINDOWID") else 0)
@@ -1057,6 +1080,21 @@ def main(scr):
                                   "working — adopted, not doubled")
                              if isinstance(machine[0], Foreign) else
                              "the record called — the %s is summoned" % kind)
+
+        # unattended summons (option 3, the operator's pick 2026-06-11):
+        # open work with no machine running and no words waiting summons
+        # the machine itself — work moves without the operator watching.
+        # progress is the guard: one summon per head, so a session that
+        # leaves the work standing (it waits on the operator, or it made
+        # no move) cannot loop the spend; m is the manual override
+        head = last.partition(" ")[0]
+        if (gopen and not machine and not awaits and not dirty
+                and head != worked_head):
+            machine = start_machine(None, task=WORK)
+            if machine:
+                worked_head = head
+                flash = note("open work stands — the machine is "
+                             "summoned to it")
 
         accepts = [b for b in work
                    if "awaiting acceptance" in b["fields"].get("state", "")]
@@ -1175,21 +1213,21 @@ def main(scr):
             y = top
             # the queue wears a head: what the machine did since the
             # operator's last act, read live from git each tick — the
-            # transparency record, without leaving the queue; its rows
-            # follow the refined log structure, full width
+            # transparency record, without leaving the queue. the main
+            # screen speaks in calm prose (the operator's word,
+            # 2026-06-11 — immaculate, tasteful, never tarnished);
+            # columns, hashes, and stripes stay in the log view
             moves = since_last_act()
             if moves:
                 put(scr, y, LM, "SINCE YOU LAST ACTED — %d MOVE%s"
                     % (len(moves), "" if len(moves) == 1 else "S"), DIM)
                 y += 1
                 hw = w - 2 * LM - 2
-                for i, ln in enumerate(moves[:4]):
-                    shade = ZEBRA if i % 2 else 0
-                    if shade:
-                        put(scr, y, LM + 2, " " * hw, shade)
-                    for x, txt, attr in log_segs(ln, LM + 2, hw):
-                        put(scr, y, x, txt,
-                            ZMAP.get(attr, attr | shade) if shade else attr)
+                for ln in moves[:4]:
+                    subj = ln.partition(" ")[2].strip()
+                    if len(subj) > hw:
+                        subj = subj[: max(1, hw - 1)] + "…"
+                    put(scr, y, LM + 2, subj, DIM)
                     y += 1
                 if len(moves) > 4:
                     put(scr, y, LM + 2,
@@ -1257,11 +1295,11 @@ def main(scr):
                  "open subgraphs: %d . w opens the view"
                  % (len(work), len(accepts), gopen))[: w - 2 * LM], DIM)
             y += 1
-            # the log line below it follows the refined log structure
-            # (part of the same ask): the latest commit as one calm row,
-            # same columns as the since-you-last-acted rows, full width
-            for x, txt, attr in log_segs(last, LM, w - 2 * LM):
-                put(scr, y, x, txt, attr)
+            # the line below reads as quiet prose too — the latest
+            # commit and its age, no hash, nothing tabular on this
+            # screen (the operator's word, 2026-06-11)
+            put(scr, y, LM,
+                ("last  " + last.partition(" ")[2])[: w - 2 * LM], DIM)
 
         elif view == "card":
             st = pend[ci]
@@ -1657,7 +1695,8 @@ def main(scr):
 
         hints = {
             "home": (("enter open . j/k move . " if entries else "")
-                     + ("m summon . " if (awaits or dirty) and not machine else "")
+                     + ("m summon . " if (awaits or dirty or gopen)
+                        and not machine else "")
                      + ("h back . " if back else "")
                      + "s speak . w work . g log . q quit"),
             "card": "a approve . c cut . e explain . s speak . j/k statements . space/b scroll . h home . esc back",
@@ -1830,12 +1869,17 @@ def main(scr):
                     view, ai, scroll = "accept", accepts.index(obj), 0
                 else:
                     view, exkey, scroll = "exchange", obj["lines"][0], -1
-            elif ch == ord("m") and (awaits or dirty) and not machine:
+            elif ch == ord("m") and (awaits or dirty or gopen) and not machine:
                 # busywork goes to the mini: a bare true-up — record behind,
-                # no words waiting, nothing escalated — is its whole class
+                # no words waiting, nothing escalated — is its whole class;
+                # open work with neither gets the work summons by hand —
+                # the override when the progress guard holds the automatic one
                 kind = ("mini" if dirty and not awaits and not escalate
                         and mini_command() else "machine")
-                machine = start_machine(machine, kind)
+                task = WORK if gopen and not awaits and not dirty else None
+                machine = start_machine(machine, kind, task)
+                if machine and task is not None:
+                    worked_head = last.partition(" ")[0]
                 flash = ("the %s is summoned" % kind if machine else
                          "no machine to summon — the machine file names the command")
             elif ch == ord("w"):
