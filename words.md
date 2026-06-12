@@ -24,3 +24,5 @@ operator (2026-06-11): option 1 — revise — on your word the machine drafts a
 
 operator (2026-06-11): this this above here. by me, option 1. we've talked about it. it's a decision, not a conversation. what happened the last time I brought this up? where's the gap? was my request ignored, not implemented, or implemented poorly?
 
+operator (2026-06-11): I'll add to this: this worry over my judgement not resulting in a concrete change is fundamental. it cuts to the very core of this project. I need a rock solid guarantee that if I said something, something will be done about it. and when something is done about it, I can find out what that was.
+
