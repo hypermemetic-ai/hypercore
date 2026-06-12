@@ -14,11 +14,3 @@
 - state: awaiting acceptance
 - since: 2026-06-11
 
-## the main screen wears the standing-work row
-
-- ask: corrected on your words through five rounds (2026-06-11, the last two: the last line carried too much unselected text — function and beauty shouldn't compete — and standing work read 0 while discuss held an open graph) — the main screen speaks in calm prose: the since-you-last-acted rows are full sentences, dim, no stripes or columns; the standing-work line counts across the linked projects too; the last line is one selected clause — the act, the thing it concerned, the age ("accepted by the operator — open work summons the machine . 2 minutes ago"), never the whole subject. Columns, hashes, and stripes live in the log view (g).
-- try: relaunch hyper (q, then the menu) — standing work counts discuss's open graph; the last line reads as one short clause with its age; nothing tabular anywhere on the main screen
-- blocks: nothing — display only
-- state: awaiting acceptance
-- since: 2026-06-11
-
