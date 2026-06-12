@@ -14,7 +14,3 @@ operator (2026-06-11): I see, I understand now. I think if we treat that folder 
 
 operator (2026-06-11): I don't know if I understand the difference between 1 and 2 now that we've clarified this. 2 seems to want to add a ledger. what does that do for us?
 
-## from the acceptance card, on "folded graphs live under history" . 2026-06-11
-
-operator (2026-06-11): I think I prefer archive over history
-
