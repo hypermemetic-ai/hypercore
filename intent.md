@@ -40,6 +40,8 @@ The operator can speak from anywhere in the interface: their words land on disk 
 
 Reading the operator's words is machine work. Whether they are new intent, a new ask, an answer, or a redirect is the machine's call to make and answer for; what it made of them returns through the queue.
 
+Every operator word lands a concrete, findable consequence: a change, a decision returned to them, or a written reason nothing moved — and the record leads from the word to what was done about it. A word that produced none of these is a system failure, not a judgment call. [machine]
+
 The conversation is live: words spoken in the interface summon the machine on the spot, and the answer lands while the operator watches. An answer that waits for a restart is a defect.
 
 Until sent, words bind nothing: the operator sees everything they have typed and can change any of it before it crosses.
