@@ -12,5 +12,9 @@ machine (2026-06-11): agreed — and that is already what happened. graph-machin
 
 operator (2026-06-11): I see, I understand now. I think if we treat that folder as history then we should name it as such. either history or archive. current work can go under work. if no work is current, we can lose the work folder. if no work is archived, then we don't need history/archive.
 
+machine (2026-06-11): done, and you already accepted it from its card while this session ran: folded graphs live in archive/ — your pick over my first choice, history — graph-machinery sits there now, work/ is gone until work is current, and hyper's fold moves every future folder in the act that folds it. the rule returns through the queue as a statement: "An open graph's folder sits in its parent's work/; the act that folds it moves it to archive/. Neither exists empty."
+
 operator (2026-06-11): I don't know if I understand the difference between 1 and 2 now that we've clarified this. 2 seems to want to add a ledger. what does that do for us?
+
+machine (2026-06-11): now that archive/ exists, very little. 2's ledger would be one file where every ask hypercore spawned is a node carrying its fold's result — one place to read instead of three. but ls archive/ already lists every folded graph, each graph.md carries its own ask and result, and work.md carries what awaits you; the ledger would restate all three and be one more file to keep true on every spawn and fold — and the first fold already lagged once. what 1 adds is the only thing actually missing: hypercore's graphs shown under it instead of beside it, every root naming its parent. the machine's read: 1, and a ledger can earn itself later if its absence ever blocks work twice. the pick stays yours on the card.
 
