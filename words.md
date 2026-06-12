@@ -8,6 +8,8 @@ machine (2026-06-11): Nothing did — summons fired on words alone. And the open
 
 operator (2026-06-11): I miss the old space/b behavior.. I think it comes down to what page I'm on. on some, normal up/down is best. on others, page is best. on others still, snap to top/bottom is best.
 
+machine (2026-06-11): Built on that principle (2cf06d8): space/b page in the reading views — cards, exchanges, documents, the log — and keep the one-line walk in the lists; in an exchange, space pages toward the tail and pins there, the snap where it's best. Arrows stay one line everywhere, home/end the edges. The card is up for your acceptance; relaunch shows it. If a view's assignment feels wrong in the hand, name it and it moves.
+
 ## from the decision card, on "what runs when work is open" . 2026-06-11
 
 operator (2026-06-11): option 3 — unattended summons — hyper summons the machine when open nodes sit unworked and no words wait; work moves by itself, sessions run and spend without you watching
