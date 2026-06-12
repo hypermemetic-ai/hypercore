@@ -14,3 +14,7 @@ operator (2026-06-11): we're part of the way there. the next part is actually sh
 
 operator (2026-06-11): why did this happen and how do we ensure it doesn't happen going forward?
 
+## from the decision card, on "a new project asks to open: the sts2 overlay" . 2026-06-11
+
+operator (2026-06-11): option 1 — open it now — the machine creates ~/projects/sts2-overlay as its own repo, links it in the registry, and drafts founding foundations [machine] from your words and a first read of the jorbs site, returning through the queue for the rotation
+
