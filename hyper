@@ -652,6 +652,53 @@ def fullscreen_tick(left):
     return left, ""
 
 
+def focus_taken(wid):
+    """Whether the window manager shows the keyboard in the window yet;
+    None when xprop is not there to ask."""
+    try:
+        r = subprocess.run(["xprop", "-root", "_NET_ACTIVE_WINDOW"],
+                           capture_output=True, text=True)
+        if r.returncode == 0 and "window id #" in r.stdout:
+            active = r.stdout.rsplit("#", 1)[1].split()[0].rstrip(",")
+            return int(active, 16) == int(wid)
+    except (FileNotFoundError, ValueError, IndexError):
+        pass
+    return None
+
+
+def focus_tick(left):
+    """The window manager can take the window fullscreen and still leave
+    the keyboard elsewhere: focus-stealing prevention rejects ghostty's
+    timestamp-0 activation, the interface fills the screen, and every
+    keystroke lands in the window behind it (2026-06-11 — the operator
+    typed at a dead screen and the keys went to the browser under it).
+    So, beside the fullscreen retries: confirm the focus, and where it
+    was refused take it directly — XSetInputFocus, which the activation
+    politics cannot veto — until the window manager shows it held.
+    Returns (tries left, flash)."""
+    wid = os.environ["WINDOWID"]
+    taken = focus_taken(wid)
+    if taken:
+        note("keyboard focus confirmed by the window manager")
+        return 0, ""
+    try:
+        r = subprocess.run(["xdotool", "windowfocus", wid],
+                           capture_output=True, text=True)
+    except FileNotFoundError:
+        return 0, note("xdotool is not installed — keyboard focus could "
+                       "not be taken")
+    if r.returncode != 0:
+        return 0, note("the focus request failed — "
+                       + (r.stderr.strip() or "no reason given"))
+    left -= 1
+    if left == 0 and taken is False:
+        return 0, note("the focus request was sent %d times and never stuck"
+                       % FS_TRIES)
+    if taken is None:
+        return min(left, 2), ""  # nobody to confirm — ask thrice and rest
+    return left, ""
+
+
 # ----- screen -----------------------------------------------------------
 
 def put(scr, y, x, s, attr=0):
@@ -755,8 +802,12 @@ def main(scr):
     flash = ensure_launcher() or flash
     fs_left = (FS_TRIES if os.environ.get("HYPER_FULLSCREEN")
                and os.environ.get("WINDOWID") else 0)
+    foc_left = fs_left
     if fs_left:
         fs_left, flash = fullscreen_tick(fs_left)
+    if foc_left:
+        foc_left, msg = focus_tick(foc_left)
+        flash = flash or msg
     scr.timeout(1000)  # the screen re-reads disk on its own — no restart anywhere
 
     while True:
@@ -1342,9 +1393,14 @@ def main(scr):
         ch = scr.getch()
         if ch == -1:
             # the tick: re-read disk, redraw, touch nothing — except the
-            # fullscreen request, retried until the window manager confirms
+            # fullscreen and focus requests, retried until the window
+            # manager confirms each
             if fs_left:
                 fs_left, msg = fullscreen_tick(fs_left)
+                if msg:
+                    flash = msg
+            if foc_left:
+                foc_left, msg = focus_tick(foc_left)
                 if msg:
                     flash = msg
             continue
