@@ -1205,20 +1205,28 @@ def main(scr):
                 if any(x["words"] and x["words"][-1].startswith(OP_LINES)
                        for x in exchanges if x["lines"][0].startswith(key)):
                     spoken.add(b["lines"][0])
+        # a statement the operator wrote under is spoken the same way:
+        # their words end its card unanswered, so the next move is the
+        # machine's, not theirs (the operator's word, 2026-06-11)
+        for s in pend:
+            c = card_for(s, cards)
+            s["spoken"] = bool(c and c["words"]
+                               and c["words"][-1].startswith(OP_LINES))
         answered = [b for b in standalone
                     if b["words"] and b["words"][-1].startswith("machine (")]
         sent = [b for b in standalone if b not in answered]
         # what needs the operator sorts above what waits on the machine
         # (the operator's word, 2026-06-11): a spoken-on card and an
         # unanswered exchange need nothing until the response lands
-        attention = ([("decide", s) for s in pend]
+        attention = ([("decide", s) for s in pend if not s["spoken"]]
                      + [("settle", b) for b in decides
                         if b["lines"][0] not in spoken]
                      + [("accept", b) for b in accepts
                         if b["lines"][0] not in spoken]
                      + [("read", b) for b in answered])
-        waiting = ([("settle", b) for b in decides
-                    if b["lines"][0] in spoken]
+        waiting = ([("decide", s) for s in pend if s["spoken"]]
+                   + [("settle", b) for b in decides
+                      if b["lines"][0] in spoken]
                    + [("accept", b) for b in accepts
                       if b["lines"][0] in spoken]
                    + [("sent", b) for b in sent])
@@ -1335,8 +1343,9 @@ def main(scr):
             if entries:
                 for i, (kind, obj) in enumerate(entries):
                     label, lattr = KINDS[kind]
-                    if (kind in ("settle", "accept")
-                            and obj["lines"][0] in spoken):
+                    if ((kind in ("settle", "accept")
+                            and obj["lines"][0] in spoken)
+                            or (kind == "decide" and obj.get("spoken"))):
                         label, lattr = "spoken", DIM
                     if kind == "decide":
                         text = obj["text"].replace(MARKER, "")
