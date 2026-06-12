@@ -10,6 +10,8 @@ operator (2026-06-11): doesn't address the log line below it. that was part of t
 
 machine (2026-06-11): Right — "second row should follow newly refined log structure" was in your original words and I dropped it. Fixed (48a81b7): the last-commit line below the standing-work line now renders through the same path as every log row — substance leading, act dim in its column, hash and age at the right edge; the flat "last  …" text is gone. Relaunch shows it; the card stays up for your acceptance.
 
+operator (2026-06-11): I don't know. I don't like the look of these log lines on this screen here. it's the main screen, it ought to look the best. immaculate, tasteful design. we can't tarnish that. we must preserve it and bring it forward.
+
 ## words . 2026-06-11
 
 operator (2026-06-11): so what keeps sessions running when there's open work? because there's open work but I don't think anything is working it?
