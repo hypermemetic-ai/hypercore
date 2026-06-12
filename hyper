@@ -455,8 +455,12 @@ def settle_card(name, word):
 # ----- speech (from anywhere; the place travels with the words) ---------
 
 def speak(place, words):
+    # the queue is the main screen — words spoken there are the default
+    # channel, not a place worth naming (the operator's word,
+    # 2026-06-11); the place travels only when it narrows context
     stamp = date.today().isoformat()
-    headline = "## from %s . %s" % (place, stamp)
+    headline = ("## from %s . %s" % (place, stamp) if place
+                else "## words . %s" % stamp)
     blocks = ledger(WORDS)
     blk = next((b for b in blocks if b["lines"][0] == headline), None)
     if blk is None:
@@ -466,7 +470,8 @@ def speak(place, words):
         blk["lines"].append("")
     blk["lines"].append("operator (%s): %s" % (stamp, words.strip()))
     write_ledger(WORDS, "words", blocks)
-    return commit("the operator speaks in the interface, from %s: %s" % (place, head(words)),
+    return commit("the operator speaks in the interface%s: %s"
+                  % (", from %s" % place if place else "", head(words)),
                   words.strip() + "\n\nthe machine reads words.md at next session start and answers.",
                   ("words.md",))
 
@@ -1691,10 +1696,10 @@ def main(scr):
                 if "words.md" in dirty_files:
                     flash = held
                 else:
-                    wd = read_words(scr, h, w, "your words, from the queue "
+                    wd = read_words(scr, h, w, "your words "
                                                "(enter sends . esc abandons): ")
                     if wd and wd.strip():
-                        hsh = speak("the queue", wd)
+                        hsh = speak("", wd)
                         resummon = resummon or machine is not None
                         machine = start_machine(machine)
                         flash = ("on disk . committed %s . the machine is working" % hsh

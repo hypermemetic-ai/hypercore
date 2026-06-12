@@ -8,3 +8,11 @@
 - state: awaiting acceptance
 - since: 2026-06-11
 
+## speech from the main screen is just speech
+
+- ask: from your words — the queue is the main screen, and "from the queue" miscaptured what speaking there means. words from the main screen now travel placeless: the prompt reads plain "your words", the block heads "words . <date>", the commit says "the operator speaks in the interface: …". the place is named only where it narrows context — a card, a graph, a document.
+- try: relaunch hyper (q, then the menu) — s on the main screen: the prompt reads "your words", and the landed block heads "words . 2026-06-11"
+- blocks: nothing — the old "from the queue" blocks stand as written; until accepted the change stays machine-owned
+- state: awaiting acceptance
+- since: 2026-06-11
+
