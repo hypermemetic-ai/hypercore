@@ -16,3 +16,5 @@ machine (2026-06-11): On the card you couldn't see: there was no new one — tha
 
 operator (2026-06-11): these cards you mention are not visible.
 
+operator (2026-06-11): some log entries are being cut short with much room to spare
+
