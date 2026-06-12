@@ -1257,7 +1257,11 @@ def main(scr):
                  "open subgraphs: %d . w opens the view"
                  % (len(work), len(accepts), gopen))[: w - 2 * LM], DIM)
             y += 1
-            put(scr, y, LM, ("last  " + last)[: w - 2 * LM], DIM)
+            # the log line below it follows the refined log structure
+            # (part of the same ask): the latest commit as one calm row,
+            # same columns as the since-you-last-acted rows, full width
+            for x, txt, attr in log_segs(last, LM, w - 2 * LM):
+                put(scr, y, x, txt, attr)
 
         elif view == "card":
             st = pend[ci]
