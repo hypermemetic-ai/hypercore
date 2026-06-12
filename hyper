@@ -116,6 +116,30 @@ WORK = (
     "stdout and stop — the interface holds further summons until the "
     "record moves. then stop."
 )
+LINKED = (
+    "the interface summoned you into %(name)s — a project linked to "
+    "hypercore; open work stands here and no words wait (the operator's "
+    "word, 2026-06-11: sessions go into linked repos too). the standing "
+    "orders travel with the summons: read %(hyper)s/CLAUDE.md and "
+    "%(hyper)s/.claude/skills/hypercore/SKILL.md first, and "
+    "%(hyper)s/brief.md for the wider state. then this repo: intent.md — "
+    "its single source of truth — and every open graph under work/, each "
+    "graph.md in full. but first: if this repo's record is behind — git "
+    "status shows uncommitted changes — true it up and commit with "
+    "grounds, here. then move the open work under the standing orders: "
+    "fold what has met its folding condition; grow and work what a "
+    "node's ask already authorizes, committing in this repo after every "
+    "file you finish; what waits on the operator — a decision, an "
+    "acceptance — lands as an entry in this repo's work.md (state "
+    "awaiting your decision with options, or awaiting acceptance with "
+    "ask and try fields) — hyper reads this folder and carries the "
+    "cards. new intent lands ' [machine]' in this repo's intent.md and "
+    "ratifies through hyper. decisions that are the operator's land on "
+    "cards, never assumed; never use AskUserQuestion: nobody can see "
+    "it. if nothing is yours to move, write one line saying why to "
+    "stdout and stop — the interface holds further summons until this "
+    "repo's record moves. then stop."
+)
 TRUE_UP = (
     "the interface summoned you as the mini-machine. the record is behind, "
     "and your only task is to true it up: read git status and the diff, "
@@ -416,14 +440,15 @@ def explain(st, words):
                   ("queue.md",))
 
 
-def fold_root(gname):
+def fold_root(gname, root=ROOT):
     """The fold rides the acceptance: when an accepted slice was a graph's
     folding condition (the card names it in a graph field), the result lands
     on the root, the state turns folded, and the folder moves under
     archive/ in the same act — a folded graph is history, archived; work/
-    holds only current work and is gone when none is. Returns
+    holds only current work and is gone when none is. root is the repo the
+    graph lives in — a linked card folds in its own project. Returns
     the edited path (at its new home), or None."""
-    src = os.path.join(WORKDIR, gname)
+    src = os.path.join(root, "work", gname)
     path = os.path.join(src, "graph.md")
     if not os.path.exists(path):
         return None
@@ -443,28 +468,31 @@ def fold_root(gname):
                               "slice's card (%s)" % date.today().isoformat())
             with open(path, "w") as f:
                 f.write("\n".join(raw) + "\n")
-            dst = os.path.join(ARCHDIR, gname)
-            os.makedirs(ARCHDIR, exist_ok=True)
-            run("git", "mv", src, dst)
+            dst = os.path.join(root, "archive", gname)
+            os.makedirs(os.path.join(root, "archive"), exist_ok=True)
+            run_in(root, "git", "mv", src, dst)
             try:
-                os.rmdir(WORKDIR)
+                os.rmdir(os.path.join(root, "work"))
             except OSError:
                 pass  # other work is current — the folder stays
-            return os.path.relpath(os.path.join(dst, "graph.md"), ROOT)
+            return os.path.relpath(os.path.join(dst, "graph.md"), root)
     return None
 
 
-def accept(name):
+def accept(name, root=ROOT):
     """One frictionless act: the slice leaves work.md, git keeps the entry,
     and the commit is the operator's acceptance. A card carrying a graph
-    field folds that graph in the same commit."""
-    blocks = ledger(WORK)
+    field folds that graph in the same commit. root is the repo the card's
+    work.md lives in — a linked slice is accepted from hyper and commits
+    in its own project (outside work lives with its project, ratified)."""
+    wpath = os.path.join(root, "work.md")
+    blocks = ledger(wpath)
     blk = next((b for b in blocks if b["lines"][0][3:].strip() == name), None)
     if blk is None:
         return None
-    write_ledger(WORK, "work", [b for b in blocks if b is not blk])
+    write_ledger(wpath, "work", [b for b in blocks if b is not blk])
     gname = blk["fields"].get("graph")
-    folded = fold_root(gname) if gname else None
+    folded = fold_root(gname, root) if gname else None
     body = ("\n".join(blk["lines"])
             + "\n\ngrounds: the operator pressed approve on the card, with what "
               "the slice does and how to try it on screen. git keeps the entry.")
@@ -475,14 +503,17 @@ def accept(name):
     return commit("accepted by the operator in the interface: " + name
                   + (" — %s folds" % gname if folded else ""),
                   body,
-                  ("work.md", folded) if folded else ("work.md",))
+                  ("work.md", folded) if folded else ("work.md",), root)
 
 
-def settle_card(name, word):
+def settle_card(name, word, root=ROOT):
     """A decisive word on a decision card settles it on the spot: the word
     lands on the card's block and the entry leaves work.md in the same
     commit — nothing is left for the operator to do, so the card does not
-    stay up. git keeps the entry; the machine executes the word."""
+    stay up. git keeps the entry; the machine executes the word. root is
+    the repo the card's work.md lives in: the words always land here (the
+    speech ledger is hypercore's), a linked entry leaves its own repo in a
+    commit there."""
     stamp = date.today().isoformat()
     headline = '## from the decision card, on "%s" . %s' % (name, stamp)
     blocks = ledger(WORDS)
@@ -494,20 +525,27 @@ def settle_card(name, word):
         blk["lines"].append("")
     blk["lines"].append("operator (%s): %s" % (stamp, word.strip()))
     write_ledger(WORDS, "words", blocks)
-    wblocks = ledger(WORK)
+    wpath = os.path.join(root, "work.md")
+    wblocks = ledger(wpath)
     entry = next((b for b in wblocks
                   if b["lines"][0][3:].strip() == name), None)
     if entry is not None:
-        write_ledger(WORK, "work", [b for b in wblocks if b is not entry])
+        write_ledger(wpath, "work", [b for b in wblocks if b is not entry])
     body = (word.strip() + "\n\nthe word settles the card: the entry leaves "
             "work.md in this commit, git keeps it; the machine reads "
             "words.md and executes the decision.")
     if entry is not None:
         body += "\n\n" + "\n".join(entry["lines"])
+    if root != ROOT and entry is not None:
+        # the entry's exit commits in its own repo; the word's commit here
+        # carries the whole story either way
+        commit('the operator settles a decision card in the interface — '
+               '"%s": %s' % (name, head(word)), body, ("work.md",), root)
     return commit('the operator settles a decision card in the interface — '
                   '"%s": %s' % (name, head(word)),
                   body,
-                  ("words.md", "work.md") if entry else ("words.md",))
+                  ("words.md", "work.md") if entry and root == ROOT
+                  else ("words.md",))
 
 
 # ----- speech (from anywhere; the place travels with the words) ---------
@@ -654,14 +692,17 @@ def locked_machine():
         return None
 
 
-def summon(kind="machine", task=None):
-    """A headless machine session in this repo: it trues up the record if
+def summon(kind="machine", task=None, cwd=None):
+    """A headless machine session: it trues up the record if
     it is behind, answers the operator's words onto the blocks that carry
     them, may build under the standing orders, commits as it goes, and
     stops.  The contract is files and git; the brief lands in brief.md so
     any harness reads the same bearings.  kind "mini" is the small machine
     on the bare true-up — no brief, its whole task is in the prompt.
-    task overrides the instruction (WORK for open work, no words)."""
+    task overrides the instruction (WORK for open work, no words; LINKED
+    filled per repo for open work in a linked project).  cwd sends the
+    session into a linked repo — the operator's word, 2026-06-11; the
+    brief and the log stay hypercore's, named by absolute path."""
     argv = mini_command() if kind == "mini" else machine_command(task or SUMMON)
     if argv is None:
         return None
@@ -670,17 +711,18 @@ def summon(kind="machine", task=None):
             f.write(run("bash", os.path.join(".claude", "hooks", "session-brief.sh"),
                         "--plain"))
     log = open(MACHINE_LOG, "ab", buffering=0)
-    log.write(("\n--- summoned %s (%s) ---\n"
-               % (datetime.now().isoformat(timespec="seconds"), kind)).encode())
+    log.write(("\n--- summoned %s (%s)%s ---\n"
+               % (datetime.now().isoformat(timespec="seconds"), kind,
+                  " in " + cwd if cwd else "")).encode())
     try:
-        return subprocess.Popen(argv, cwd=ROOT, stdin=subprocess.DEVNULL,
+        return subprocess.Popen(argv, cwd=cwd or ROOT, stdin=subprocess.DEVNULL,
                                 stdout=log, stderr=log, start_new_session=True)
     except FileNotFoundError:
         log.write(("the %s command was not found: %s\n" % (kind, argv[0])).encode())
         return None
 
 
-def start_machine(machine, kind="machine", task=None):
+def start_machine(machine, kind="machine", task=None, cwd=None, label=None):
     """Summon unless one is already working — this hyper's own, or one
     another hyper summoned, adopted from the lock file (it reads from
     disk, so words that land mid-answer wait visibly and m summons
@@ -695,12 +737,12 @@ def start_machine(machine, kind="machine", task=None):
         except OSError:
             started = time.time()
         return (Foreign(pid), started, "machine")
-    p = summon(kind, task)
+    p = summon(kind, task, cwd)
     if not p:
         return None
     with open(MACHINE_PID, "w") as f:
         f.write(str(p.pid))
-    return (p, time.time(), kind)
+    return (p, time.time(), label or kind)
 
 
 def note(msg):
@@ -1019,6 +1061,7 @@ def main(scr):
     boot = True  # the first frame summons the machine itself when the record calls
     resummon = False  # words landed mid-answer — one more summon when this one ends
     worked_head = None  # the head the last unattended summon worked from
+    lworked = {}  # the same guard per linked repo, keyed by project name
     flash = ensure_launcher() or flash
     fs_left = (FS_TRIES if os.environ.get("HYPER_FULLSCREEN")
                and os.environ.get("WINDOWID") else 0)
@@ -1056,20 +1099,29 @@ def main(scr):
         lidx = []
         # the standing-work line counts everything the work view shows —
         # linked ledgers and open graphs included (the operator's word,
-        # 2026-06-11: discuss stood invisible in a count of 0)
+        # 2026-06-11: discuss stood invisible in a count of 0). a linked
+        # entry awaiting the operator is a queue card like hypercore's
+        # own — each block wears its project and root so the act commits
+        # in the right repo; lunits feeds the linked summons
         lwork_n = lgopen = 0
+        lflat, lunits = [], []
         for b in linked:
             lname = b["lines"][0][3:].strip()
             lpath = os.path.expanduser(b["fields"].get("path", ""))
             lwpath = os.path.join(lpath, "work.md")
             lwork = ledger(lwpath) if os.path.exists(lwpath) else []
+            for x in lwork:
+                x["project"], x["root"] = lname, lpath
             lgs = graphs_in(lpath)
             lidx.append(len(projects))
             projects.append((lname, ("linked", lpath, lwork, lgs)))
             projects.extend(lgs)
             lwork_n += len(lwork)
-            lgopen += sum(1 for _, blks in lgs
+            lopen_n = sum(1 for _, blks in lgs
                           if "folded" not in blks[0]["fields"].get("state", ""))
+            lgopen += lopen_n
+            lflat += lwork
+            lunits.append((lname, lpath, lopen_n))
         # gopen is hypercore's own — the unattended summons works this
         # repo; what a linked project's graphs wait on lives with them
         gopen = sum(1 for _, blks in gs
@@ -1128,21 +1180,42 @@ def main(scr):
         # the machine itself — work moves without the operator watching.
         # progress is the guard: one summon per head, so a session that
         # leaves the work standing (it waits on the operator, or it made
-        # no move) cannot loop the spend; m is the manual override
+        # no move) cannot loop the spend; m is the manual override.
+        # the summons reaches linked repos too (the operator's word,
+        # 2026-06-11): hypercore's own open work first, then each linked
+        # project with an open graph, the session sent into that repo
+        # under the standing orders, guarded by its own head
         head = last.partition(" ")[0]
-        if (gopen and not machine and not awaits and not dirty
-                and head != worked_head):
-            machine = start_machine(None, task=WORK)
-            if machine:
-                worked_head = head
-                flash = note("open work stands — the machine is "
-                             "summoned to it")
+        if not machine and not awaits and not dirty:
+            if gopen and head != worked_head:
+                machine = start_machine(None, task=WORK)
+                if machine:
+                    worked_head = head
+                    flash = note("open work stands — the machine is "
+                                 "summoned to it")
+            else:
+                for lname, lpath, lopen_n in lunits:
+                    if not lopen_n:
+                        continue
+                    lhead = run_in(lpath, "git", "log", "-1",
+                                   "--format=%h").strip()
+                    if not lhead or lhead == lworked.get(lname):
+                        continue
+                    machine = start_machine(
+                        None, task=LINKED % {"name": lname, "hyper": ROOT},
+                        cwd=lpath, label="machine in " + lname)
+                    if machine:
+                        lworked[lname] = lhead
+                        flash = note("open work stands in %s — the machine "
+                                     "is summoned into it" % lname)
+                    break
 
-        accepts = [b for b in work
+        accepts = [b for b in work + lflat
                    if "awaiting acceptance" in b["fields"].get("state", "")]
         # standing work is the operator's action list: an entry awaiting
-        # their decision is a queue card like any other call they face
-        decides = [b for b in work
+        # their decision is a queue card like any other call they face —
+        # a linked project's entries included, each wearing its name
+        decides = [b for b in work + lflat
                    if "awaiting your decision" in b["fields"].get("state", "")]
         # words spoken on a work card ride that card: they show below it,
         # not as their own queue item, while the card stands
@@ -1291,7 +1364,9 @@ def main(scr):
                             tag = obj["project"] + (" · " + tag if tag else "")
                     else:
                         text = obj["lines"][0][3:].strip()
-                        tag = ""
+                        tag = (obj["project"]
+                               if obj.get("project", "hypercore") != "hypercore"
+                               else "")
                     room = width - GUT - (len(tag) + 2 if tag else 0)
                     if len(text) > room:
                         text = text[: max(1, room - 1)] + "…"
@@ -1396,9 +1471,10 @@ def main(scr):
             # the operator's word settles it
             blk = decides[si]
             name = blk["lines"][0][3:].strip()
-            put(scr, top, LM,
-                ("awaiting your decision . %d of %d" % (si + 1, len(decides))).upper(),
-                DIM)
+            shead = "awaiting your decision . %d of %d" % (si + 1, len(decides))
+            if blk.get("project", "hypercore") != "hypercore":
+                shead = blk["project"] + " . " + shead
+            put(scr, top, LM, shead.upper(), DIM)
             rows = [[(LM, ln, BOLD)] for ln in wrap(name, width)]
             rows.append([])
             opts = [o.strip() for o in blk["fields"].get("options", "").split(" . ")
@@ -1460,9 +1536,10 @@ def main(scr):
         elif view == "accept":
             blk = accepts[ai]
             name = blk["lines"][0][3:].strip()
-            put(scr, top, LM,
-                ("awaiting your acceptance . %d of %d" % (ai + 1, len(accepts))).upper(),
-                DIM)
+            ahead = "awaiting your acceptance . %d of %d" % (ai + 1, len(accepts))
+            if blk.get("project", "hypercore") != "hypercore":
+                ahead = blk["project"] + " . " + ahead
+            put(scr, top, LM, ahead.upper(), DIM)
             rows = [[(LM, ln, BOLD)] for ln in wrap(name, width)]
             rows.append([])
             for key, label in (("ask", "it does"), ("blocks", "blocks"),
@@ -1830,17 +1907,25 @@ def main(scr):
                 if dirty_files.intersection(needs):
                     flash = held
                     continue
+                # a linked card's act writes its own repo's work.md too —
+                # the same per-act guard, scoped to that repo
+                root = (payload[-1] if kind in ("go", "cut-card", "pick",
+                                                "accept") else ROOT)
+                if root != ROOT and run_in(root, "git", "status",
+                                           "--porcelain", "work.md").strip():
+                    flash = held
+                    continue
                 if kind in ("go", "cut-card", "pick"):
                     # the key is the word, and the word is decisive: it
                     # lands on the card, the card settles in the same
                     # commit, and the machine executes it
                     if kind == "pick":
-                        name, n, opt = payload
+                        name, n, opt, root = payload
                         word = "option %d — %s" % (n, opt)
                     else:
-                        name = payload
+                        name, root = payload
                         word = "approve" if kind == "go" else "cut"
-                    hsh = settle_card(name, word)
+                    hsh = settle_card(name, word, root)
                     resummon = resummon or machine is not None
                     machine = start_machine(machine)
                     flash = ("%s . settled . committed %s . the machine is working" % (word, hsh)
@@ -1852,7 +1937,7 @@ def main(scr):
                              else "folded . committed %s" % hsh)
                     view = "home"
                 elif kind == "accept":
-                    hsh = accept(payload)
+                    hsh = accept(*payload)
                     flash = ("that slice is no longer on disk — refreshed" if hsh is None
                              else "approved . committed %s . git keeps the entry" % hsh)
                 else:
@@ -1934,18 +2019,34 @@ def main(scr):
                     view, ai, scroll = "accept", accepts.index(obj), 0
                 else:
                     view, exkey, scroll = "exchange", obj["lines"][0], -1
-            elif ch == ord("m") and (awaits or dirty or gopen) and not machine:
+            elif (ch == ord("m") and not machine
+                  and (awaits or dirty or gopen or lgopen)):
                 # busywork goes to the mini: a bare true-up — record behind,
                 # no words waiting, nothing escalated — is its whole class;
                 # open work with neither gets the work summons by hand —
-                # the override when the progress guard holds the automatic one
+                # the override when the progress guard holds the automatic
+                # one. with only a linked repo's work open, the session
+                # goes into that repo (the operator's word, 2026-06-11)
                 kind = ("mini" if dirty and not awaits and not escalate
                         and mini_command() else "machine")
-                task = WORK if gopen and not awaits and not dirty else None
-                machine = start_machine(machine, kind, task)
+                task, cwd, label = None, None, None
+                if not awaits and not dirty:
+                    if gopen:
+                        task = WORK
+                    else:
+                        lname, lpath, _ = next(
+                            (u for u in lunits if u[2]), (None, None, 0))
+                        if lname:
+                            task = LINKED % {"name": lname, "hyper": ROOT}
+                            cwd, label = lpath, "machine in " + lname
+                machine = start_machine(machine, kind, task, cwd, label)
                 if machine and task is not None:
-                    worked_head = last.partition(" ")[0]
-                flash = ("the %s is summoned" % kind if machine else
+                    if cwd:
+                        lworked[lname] = run_in(
+                            cwd, "git", "log", "-1", "--format=%h").strip()
+                    else:
+                        worked_head = last.partition(" ")[0]
+                flash = ("the %s is summoned" % (label or kind) if machine else
                          "no machine to summon — the machine file names the command")
             elif ch == ord("w"):
                 # always open — finished work stays visible, its list and
@@ -2007,9 +2108,11 @@ def main(scr):
             elif ch == curses.KEY_UP:
                 scroll -= 1
             elif ch == ord("a"):
-                confirm = ("go", decides[si]["lines"][0][3:].strip())
+                confirm = ("go", (decides[si]["lines"][0][3:].strip(),
+                                  decides[si].get("root", ROOT)))
             elif ch == ord("c"):
-                confirm = ("cut-card", decides[si]["lines"][0][3:].strip())
+                confirm = ("cut-card", (decides[si]["lines"][0][3:].strip(),
+                                        decides[si].get("root", ROOT)))
             elif ord("1") <= ch <= ord("9"):
                 opts = [o.strip() for o in
                         decides[si]["fields"].get("options", "").split(" . ")
@@ -2017,7 +2120,8 @@ def main(scr):
                 n = ch - ord("0")
                 if n <= len(opts):
                     confirm = ("pick", (decides[si]["lines"][0][3:].strip(),
-                                        n, opts[n - 1]))
+                                        n, opts[n - 1],
+                                        decides[si].get("root", ROOT)))
             elif ch == ord("s"):
                 if "words.md" in dirty_files:
                     flash = held
@@ -2048,7 +2152,8 @@ def main(scr):
             elif ch == curses.KEY_UP:
                 scroll -= 1
             elif ch == ord("a"):
-                confirm = ("accept", accepts[ai]["lines"][0][3:].strip())
+                confirm = ("accept", (accepts[ai]["lines"][0][3:].strip(),
+                                      accepts[ai].get("root", ROOT)))
             elif ch == ord("s"):
                 if "words.md" in dirty_files:
                     flash = held

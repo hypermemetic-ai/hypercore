@@ -28,6 +28,24 @@ if [ -f registry.md ]; then
         [ -f "$lpath/intent.md" ] || continue
         lc=$(grep -c ' \[machine\]$' "$lpath/intent.md" 2>/dev/null) || lc=0
         printf '  %s: %s pending — %s/intent.md\n' "$lname" "$lc" "$lpath"
+        # the project's standing work and open graphs ride along — a
+        # session summoned into the repo, or answering words about it,
+        # sees the whole unit (sessions go into linked repos too — the
+        # operator's word, 2026-06-11)
+        [ -f "$lpath/work.md" ] && awk '
+          /^## /       { name = substr($0, 4) }
+          /^- state: / { printf "    standing: %s — %s\n", name, substr($0, 10) }
+        ' "$lpath/work.md" 2>/dev/null
+        for g in "$lpath"/work/*/graph.md; do
+          [ -f "$g" ] || continue
+          awk -v name="$(basename "$(dirname "$g")")" '
+            /^## /       { n++ }
+            /^- state: / { if (root == "") root = substr($0, 10) }
+            END { if (root !~ /folded/)
+                    printf "    open graph: %s — %d node%s · root: %s\n", \
+                           name, n, (n == 1 ? "" : "s"), root }
+          ' "$g"
+        done
       done) || linked_summary=""
   [ -n "$linked_summary" ] && linked_block="
 Linked projects (registry.md — their intent ratifies from hyper; approve
