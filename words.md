@@ -12,3 +12,5 @@ operator (2026-06-11): very confusing. I was talking about the line below the qu
 
 machine (2026-06-11): My misread — your words named the line below the queue, and the slice added a second row at the top instead. Fixed (5269de2): the top row is gone; the line below the queue is the one standing-work line, in the format from your words ("your" stays cut). Relaunch shows it; the card stays up for your acceptance.
 
+operator (2026-06-11): doesn't address the log line below it. that was part of the original ask.
+
