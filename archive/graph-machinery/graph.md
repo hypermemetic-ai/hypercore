@@ -7,6 +7,7 @@
 - result: accepted by the operator in the interface at 16:37 (c9b028b) — the check was met then, but the fold lagged: no session updated this root, and the stale "awaits acceptance" stood in the work view until the operator asked about it; trued up and folded the same day
 - state: folded
 - since: 2026-06-11
+- of: hypercore
 
 ## the operator settles the scope
 

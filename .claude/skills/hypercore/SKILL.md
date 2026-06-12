@@ -138,8 +138,10 @@ graph's intent document is singular, and this repo is hypercore's folder.
 - graph.md is a ledger of '## ' node blocks with '- key: value' fields,
   the same shape hyper reads everywhere. The first block is the root
   node: the ask that spawned the graph, born with its check (the folding
-  condition) — fields ask, check, state, since. An ask whose check
-  cannot be named is not ready to spawn.
+  condition) — fields ask, check, state, since, and of: the parent the
+  graph belongs to (of: hypercore for the repo's own graphs — every
+  root names its parent; operator's pick, 2026-06-11). An ask whose
+  check cannot be named is not ready to spawn.
 - Further blocks are nodes earned only the two ways doctrine names: the
   operation crossed the operator–machine boundary, or the fold's trust
   rests on it. Fields: op (ask / check / decide / do), ask, check,
@@ -159,5 +161,8 @@ graph's intent document is singular, and this repo is hypercore's folder.
   such a card writes the graph field; any other fold the machine lands by
   editing graph.md and committing. A graph that cannot meet its check
   never folds dirty — it returns as a decision card in work.md.
-- hyper's work view lists every open graph beside hypercore and unfolds
-  to its nodes; the session brief carries them to every summoned session.
+- hyper's work view shows a graph under its parent's line, never beside
+  it: unfolding hypercore lists its work entries with its graphs below
+  them, and enter on a graph line opens its nodes, headed by the parent
+  the root names; the session brief carries open graphs to every
+  summoned session.
