@@ -16,3 +16,7 @@ operator (2026-06-11): I don't know. I don't like the look of these log lines on
 
 operator (2026-06-11): so what keeps sessions running when there's open work? because there's open work but I don't think anything is working it?
 
+## from the decision card, on "what runs when work is open" . 2026-06-11
+
+operator (2026-06-11): option 3 — unattended summons — hyper summons the machine when open nodes sit unworked and no words wait; work moves by itself, sessions run and spend without you watching
+
