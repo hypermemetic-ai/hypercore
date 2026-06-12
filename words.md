@@ -12,3 +12,5 @@ operator (2026-06-11): why did this happen and how do we ensure it doesn't happe
 
 operator (2026-06-11): option 1 — open it now — the machine creates ~/projects/sts2-overlay as its own repo, links it in the registry, and drafts founding foundations [machine] from your words and a first read of the jorbs site, returning through the queue for the rotation
 
+operator (2026-06-11): again, I pick a decision, I see it here as if I had written something. this should not happen. what happened with my last request about this? is work regarding it underway?
+
