@@ -25,12 +25,13 @@ Accept   a approve then y on an acceptance card — confirmed like every
          other release; s speaks reservations
 Speak    s anywhere — words land verbatim, the place travels with them,
          and the machine is summoned to work while you watch
-Graphs   the work view lists every execution graph beside hypercore —
-         folded ones included, marked folded — and unfolds to its nodes:
-         <name>/graph.md, read live; open graphs live under work/, folded
-         ones under archive/ — the fold moves the folder; the unit on
-         disk is the graph; d on a project line opens that unit's
-         documents — intent.md for hypercore, the graph's folder else
+Graphs   hypercore's execution graphs are its children and sit under
+         its line, never beside it — unfold hypercore to reach them
+         below its work entries; enter on a graph line opens its nodes
+         (<name>/graph.md, read live), headed by the parent its root
+         names (of: hypercore), d opens its documents; open graphs live
+         under work/, folded ones under archive/ — the fold moves the
+         folder; folded graphs stay listed, marked folded
 Machine  the record calling is the summons — at launch, a behind record
          or waiting words start the machine without m, and words landing
          mid-answer summon it once more when the run ends; m stays as
@@ -765,8 +766,10 @@ def main(scr):
         exchanges = ledger(WORDS)
         work = ledger(WORK)
         gs = graphs()
-        # the work view's project lines: the repo's own standing work
-        # first, then every execution graph — folded ones too — read live
+        # the work view's units: the repo's own standing work first, then
+        # every execution graph — folded ones too — read live; the graphs
+        # are hypercore's children and show under its line, never beside
+        # it (the operator's pick, 2026-06-11)
         projects = [("hypercore", None)] + gs
         gopen = sum(1 for _, blks in gs
                     if "folded" not in blks[0]["fields"].get("state", ""))
@@ -855,12 +858,13 @@ def main(scr):
         ci = max(0, min(ci, len(pend) - 1))
         ai = max(0, min(ai, len(accepts) - 1))
         si = max(0, min(si, len(decides) - 1))
-        gsel = max(0, min(gsel, len(projects) - 1))
+        gsel = 0  # one top-level line today — hypercore; its graphs nest under it
         dunit = max(0, min(dunit, len(projects) - 1))
         if wexp is not None and wexp >= len(projects):
             wexp = None
-        witems = work if wexp in (None, 0) else projects[wexp][1]
-        wsel = max(0, min(wsel, len(witems) - 1))
+        nwitems = (len(work) + len(gs) if wexp in (None, 0)
+                   else len(projects[wexp][1]))
+        wsel = max(0, min(wsel, nwitems - 1))
         exb, exmax = None, 0
         if view == "card" and not pend:
             view = "home"
@@ -1148,41 +1152,31 @@ def main(scr):
 
         elif view == "work" and wexp is None:
             put(scr, top, LM, "STANDING WORK", DIM)
-            # the view opens folded to the project lines — the repo's own
-            # work first, then every open execution graph; enter unfolds
-            # the selected one
-            y = top + 2
-            for i, (pname, pblocks) in enumerate(projects):
-                if pblocks is None:
-                    summary = ("%d entr%s · %d await your acceptance"
-                               % (len(work), "y" if len(work) == 1 else "ies",
-                                  len(accepts)))
-                else:
-                    nodes = "%d node%s" % (len(pblocks),
-                                           "" if len(pblocks) == 1 else "s")
-                    if "folded" in pblocks[0]["fields"].get("state", ""):
-                        summary = "folded · " + nodes
-                    else:
-                        open_n = sum(1 for b in pblocks
-                                     if "open" in b["fields"].get("state", ""))
-                        summary = "%s · %d open" % (nodes, open_n)
-                if i == gsel:
-                    put(scr, y, LM, (pname + " " * width)[:width], REV)
-                    if len(summary) <= width - len(pname) - 2:
-                        put(scr, y, LM + width - len(summary), summary, REV)
-                else:
-                    put(scr, y, LM, pname[:width], BOLD)
-                    if len(summary) <= width - len(pname) - 2:
-                        put(scr, y, LM + width - len(summary), summary, DIM)
-                y += 1
+            # the view opens folded to one line per top-level unit — today
+            # hypercore alone; its graphs are children, reached by
+            # unfolding it, never beside it
+            summary = ("%d entr%s · %d await your acceptance"
+                       % (len(work), "y" if len(work) == 1 else "ies",
+                          len(accepts)))
+            if gs:
+                summary += " · %d graph%s, %d open" % (
+                    len(gs), "" if len(gs) == 1 else "s", gopen)
+            put(scr, top + 2, LM, ("hypercore" + " " * width)[:width], REV)
+            if len(summary) <= width - len("hypercore") - 2:
+                put(scr, top + 2, LM + width - len(summary), summary, REV)
 
         elif view == "work":
             put(scr, top, LM, "STANDING WORK", DIM)
-            # one project unfolded: work.md entries under hypercore, an
-            # execution graph's nodes under its name — same shape, read live
+            # one unit unfolded: under hypercore, work.md entries first and
+            # its execution graphs below them — children under their
+            # parent; a graph unfolds further to its nodes, its head
+            # naming the parent its root's of: field records
             pname, pblocks = projects[wexp]
             items = work if pblocks is None else pblocks
-            rows, marks = [[(LM, pname, BOLD)], []], []
+            glines = gs if pblocks is None else []
+            headline = (pname if pblocks is None else
+                        pblocks[0]["fields"].get("of", "hypercore") + " › " + pname)
+            rows, marks = [[(LM, headline, BOLD)], []], []
             iw = width - 2
             for i, b in enumerate(items):
                 # the title owns its row; the state sits beside it only when
@@ -1216,6 +1210,29 @@ def main(scr):
                 if waits:
                     rows += [[(LM + 4, ln, DIM)]
                              for ln in wrap("waits on " + waits, iw - 2)]
+                rows.append([])
+            for j, (gname, gblocks) in enumerate(glines):
+                i = len(items) + j
+                nodes = "%d node%s" % (len(gblocks),
+                                       "" if len(gblocks) == 1 else "s")
+                if "folded" in gblocks[0]["fields"].get("state", ""):
+                    gsum = "folded · " + nodes
+                else:
+                    gsum = "%s · %d open" % (nodes, sum(
+                        1 for b in gblocks
+                        if "open" in b["fields"].get("state", "")))
+                shown = gname if len(gname) <= iw else gname[: iw - 1] + "…"
+                inline = gsum if len(gsum) <= iw - len(shown) - 2 else ""
+                marks.append(len(rows))
+                if i == wsel:
+                    row = [(LM + 2, (shown + " " * iw)[:iw], REV)]
+                    if inline:
+                        row.append((LM + 2 + iw - len(inline), inline, REV))
+                else:
+                    row = [(LM + 2, shown, BOLD)]
+                    if inline:
+                        row.append((LM + 2 + iw - len(inline), inline, DIM))
+                rows.append(row)
                 rows.append([])
             if marks:
                 mark = marks[wsel]
@@ -1280,9 +1297,12 @@ def main(scr):
             "settle": "a approve . c cut . 1–9 pick . s speak . j/k cards . space/b page . esc back",
             "accept": "a approve . s speak . j/k slices . space/b page . esc back",
             "exchange": "s speak . c fold away . space/b page . esc back",
-            "work": ("j/k move . s speak on it . space/b page . esc fold"
-                     if wexp is not None
-                     else "enter unfold . j/k move . d document . s speak . esc back"),
+            "work": ("enter unfold . d document . s speak . esc back"
+                     if wexp is None else
+                     "enter unfold graph . j/k move . d document . "
+                     "s speak on it . space/b page . esc fold"
+                     if wexp == 0 else
+                     "j/k move . s speak on it . space/b page . esc back"),
             "doc": "space/b page . s speak . esc back",
             "log": "space/b page . s speak . esc back",
         }[view]
@@ -1565,16 +1585,27 @@ def main(scr):
 
         elif view == "work":
             if ch == 27:
-                if wexp is not None:
+                if wexp is None:
+                    view = "home"
+                elif wexp == 0:
                     wexp, scroll = None, 0
                 else:
-                    view = "home"
-            elif ch in (10, 13, curses.KEY_ENTER) and wexp is None:
-                wexp, wsel, scroll = gsel, 0, 0
+                    # a graph backs out to its own line under hypercore —
+                    # the same path that reached it
+                    wexp, wsel, scroll = 0, len(work) + (wexp - 1), 0
+            elif ch in (10, 13, curses.KEY_ENTER):
+                if wexp is None:
+                    wexp, wsel, scroll = gsel, 0, 0
+                elif wexp == 0 and wsel >= len(work) and gs:
+                    # enter on a graph line unfolds the graph to its nodes
+                    wexp, wsel, scroll = 1 + (wsel - len(work)), 0, 0
             elif ch == ord("d") and wexp is None:
                 # the selection is the unit: d opens the documents of the
-                # project line under the cursor
+                # line under the cursor — intent.md for hypercore
                 dunit, view, scroll = gsel, "doc", 0
+            elif ch == ord("d") and wexp == 0 and wsel >= len(work) and gs:
+                # d on a graph line opens that graph's documents
+                dunit, view, scroll = 1 + (wsel - len(work)), "doc", 0
             elif ch in (curses.KEY_DOWN, ord("k")):
                 if wexp is None:
                     gsel += 1
@@ -1600,12 +1631,17 @@ def main(scr):
                         name, place = pname, 'the work view, on "%s"' % pname
                     else:
                         pname, pblocks = projects[wexp]
-                        items = work if pblocks is None else pblocks
-                        name = (items[wsel]["lines"][0][3:].strip() if items
-                                else pname)
-                        place = ('the work view, on "%s"' % name
-                                 if pblocks is None else
-                                 'the graph "%s", on "%s"' % (pname, name))
+                        if pblocks is None and wsel >= len(work) and gs:
+                            name = gs[wsel - len(work)][0]
+                            place = 'the work view, on the graph "%s"' % name
+                        elif pblocks is None:
+                            name = (work[wsel]["lines"][0][3:].strip()
+                                    if work else pname)
+                            place = 'the work view, on "%s"' % name
+                        else:
+                            name = (pblocks[wsel]["lines"][0][3:].strip()
+                                    if pblocks else pname)
+                            place = 'the graph "%s", on "%s"' % (pname, name)
                     wd = read_words(scr, h, w, 'your words, on "%s" '
                                                "(enter sends . esc abandons): " % name)
                     if wd and wd.strip():
@@ -1620,11 +1656,15 @@ def main(scr):
 
         elif view in ("doc", "log"):
             if ch in (27, ord("q"), ord("d") if view == "doc" else ord("g")):
-                # the document came from the work view's project lines and
-                # goes back there; the log still backs out to the queue
+                # the document goes back where its line lives: intent to
+                # the folded view, a graph's folder to its line under
+                # hypercore; the log still backs out to the queue
                 view = "work" if view == "doc" else "home"
                 if view == "work":
-                    wexp, scroll = None, 0
+                    if dunit > 0:
+                        wexp, wsel, scroll = 0, len(work) + dunit - 1, 0
+                    else:
+                        wexp, scroll = None, 0
             elif ch == curses.KEY_DOWN:
                 scroll += 1
             elif ch == curses.KEY_UP:
