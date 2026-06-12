@@ -20,3 +20,5 @@ operator (2026-06-11): I think I want more proactive requirement extraction in t
 
 operator (2026-06-11): I'm not liking this new log structure. first, "the" "a" etc. are back and to no positive effect. second, now that most of the screen is colored it looks like a mess again. what we had earlier was more sensible.
 
+machine (2026-06-11): Restored (7499d12) — the display condenses again: articles dropped, substance leading plain, the act alone colored in its own column, hash and age at the edge. To be plain about what this supersedes: the written-at-the-source decision still holds for what git records — subjects stay full prose there — but its render-as-written half steps back on your word. Awaiting acceptance in work.md; relaunch hyper, then g.
+
