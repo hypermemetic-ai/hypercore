@@ -1384,10 +1384,11 @@ def main(scr):
                                 " — " + cost, DIM)
                         if tag:
                             put(scr, y, LM + width - len(tag), tag, DIM)
-                    if i < nattn:
-                        # the white dot: this item needs the operator now
-                        # (their word, 2026-06-11, borrowing modern ux)
-                        put(scr, y, LM - 2, "●", BOLD)
+                    if kind == "read":
+                        # the white dot marks an unread answer, on the
+                        # right (their word, 2026-06-11 — kinds that wear
+                        # a bold label need no second flag)
+                        put(scr, y, LM + width + 1, "●", BOLD)
                     y += 1
             else:
                 put(scr, y, LM, "nothing waits on you.", DIM)
