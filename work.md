@@ -8,11 +8,3 @@
 - state: awaiting acceptance
 - since: 2026-06-11
 
-## the timer and the pointer
-
-- ask: from your queue words — the working clock read m:ss, and the mouse pointer earns no place in a keyboard-only interface. the clock now reads like speech: 1m 50s, bare seconds under a minute. the pointer hides at the first keystroke (ghostty's mouse-hide-while-typing, in hyper.ghostty) — and every move here is a keystroke.
-- try: relaunch hyper (q, then the menu — the ghostty config loads at launch): with the machine working the clock reads 50s, then 1m 05s; touch any key and the pointer is gone until the mouse moves again
-- blocks: nothing — display only; until accepted both stay machine-owned
-- state: awaiting acceptance
-- since: 2026-06-11
-
