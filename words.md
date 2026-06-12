@@ -10,3 +10,7 @@ operator (2026-06-11): I can't handle the red text cutting me off from being abl
 
 operator (2026-06-11): better, but we can do better still. first, the yellow is hideous. second, we can cut "the" and similar non-load-bearing words. third, more context would be helpful (perhaps using the space we save by cutting fluff). .
 
+## from the decision card, on "seamless operation while the machine writes" . 2026-06-11
+
+operator (2026-06-11): do you stand by 1? it looks smart but there's a complexity tradeoff.
+
