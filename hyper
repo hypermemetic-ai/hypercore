@@ -1173,13 +1173,6 @@ def main(scr):
 
         if view == "home":
             y = top
-            # the standing-work row, in the operator's own words
-            # (2026-06-11): the counts, then the key that opens them
-            put(scr, y, LM,
-                ("standing work: %d . awaiting acceptance: %d . "
-                 "open subgraphs: %d . w opens the view"
-                 % (len(work), len(accepts), gopen))[: w - 2 * LM], DIM)
-            y += 2
             # the queue wears a head: what the machine did since the
             # operator's last act, read live from git each tick — the
             # transparency record, without leaving the queue; its rows
@@ -1256,16 +1249,14 @@ def main(scr):
                 put(scr, y, LM, "nothing waits on you.", DIM)
                 y += 1
             y += 1
-            if work or gopen:
-                bits = []
-                if work:
-                    bits.append("standing work: %d . awaiting your acceptance: %d"
-                                % (len(work), len(accepts)))
-                if gopen:
-                    bits.append("open subgraphs: %d" % gopen)
-                put(scr, y, LM,
-                    (" . ".join(bits) + " . w opens the view")[: w - 2 * LM], DIM)
-                y += 1
+            # the standing-work line, in the operator's own words
+            # (2026-06-11): the line below the queue, and only that one —
+            # the counts, then the key that opens them ("your" stays cut)
+            put(scr, y, LM,
+                ("standing work: %d . awaiting acceptance: %d . "
+                 "open subgraphs: %d . w opens the view"
+                 % (len(work), len(accepts), gopen))[: w - 2 * LM], DIM)
+            y += 1
             put(scr, y, LM, ("last  " + last)[: w - 2 * LM], DIM)
 
         elif view == "card":
