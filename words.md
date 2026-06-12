@@ -16,12 +16,6 @@ machine (2026-06-11): Right on both counts — the dot was the slice you've sinc
 
 operator (2026-06-11): I think I want more proactive requirement extraction in this initial intent setting phase. sts2 shows it: there's still a lot to settle but I don't see new opens. I'd like to be asked for approval to send out an independent research panel for instance. overall, I would like to be gifted the feeling that the machine is working to extract all the requirements and information it needs from me and the world to build what I ultimately want. I'm also not confident I've seen mid-work questions come up much if at all. do we have data on that? and what would it say if the number were really low?
 
-## from the log . 2026-06-11
-
-operator (2026-06-11): I'm not liking this new log structure. first, "the" "a" etc. are back and to no positive effect. second, now that most of the screen is colored it looks like a mess again. what we had earlier was more sensible.
-
-machine (2026-06-11): Restored (7499d12) — the display condenses again: articles dropped, substance leading plain, the act alone colored in its own column, hash and age at the edge. To be plain about what this supersedes: the written-at-the-source decision still holds for what git records — subjects stay full prose there — but its render-as-written half steps back on your word. Awaiting acceptance in work.md; relaunch hyper, then g.
-
 ## from the acceptance card, on "the log returns to the earlier structure" . 2026-06-11
 
 operator (2026-06-11): no, I'm not looking to combine the two approaches. if I suggest a change to the logs, the change should occur at time of generation.
