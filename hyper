@@ -216,6 +216,21 @@ def graphs():
     return out
 
 
+def since_last_act():
+    """What the machine did since the operator last acted — read live
+    from git every time, no state kept anywhere.  An operator act is a
+    commit hyper made in the operator's name, and every such subject says
+    so ("the operator … in the interface"); everything newer is the
+    machine's, returned newest first as 'hash subject' lines."""
+    out = []
+    for line in run("git", "log", "-100", "--format=%h %s").splitlines():
+        subject = line.split(" ", 1)[1] if " " in line else ""
+        if "the operator" in subject and "in the interface" in subject:
+            return out
+        out.append(line)
+    return out
+
+
 # ----- decisions (each one lands on disk and commits) -------------------
 
 def head(text, n=8):
@@ -964,8 +979,27 @@ def main(scr):
                  % files)[: max(0, room)], ALERT)
 
         if view == "home":
-            put(scr, top, LM, "THE QUEUE", DIM)
-            y = top + 2
+            y = top
+            # the queue wears a head: what the machine did since the
+            # operator's last act, read live from git each tick — the
+            # transparency record, without leaving the queue
+            moves = since_last_act()
+            if moves:
+                put(scr, y, LM, "SINCE YOU LAST ACTED — %d MOVE%s"
+                    % (len(moves), "" if len(moves) == 1 else "S"), DIM)
+                y += 1
+                for ln in moves[:4]:
+                    put(scr, y, LM + 2,
+                        ln if len(ln) <= width - 2 else ln[: width - 3] + "…",
+                        DIM)
+                    y += 1
+                if len(moves) > 4:
+                    put(scr, y, LM + 2,
+                        "… %d more — g opens the log" % (len(moves) - 4), DIM)
+                    y += 1
+                y += 1
+            put(scr, y, LM, "THE QUEUE", DIM)
+            y += 2
             if entries:
                 for i, (kind, obj) in enumerate(entries):
                     label, lattr = KINDS[kind]
