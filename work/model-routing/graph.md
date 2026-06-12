@@ -13,6 +13,16 @@
 - op: check
 - ask: survey what exists — cascades and routers, speculative decoding, difficulty estimation, the conditions under which routing is genuinely free — and write it down with sources
 - check: research.md in this folder carries the survey; the exchange answer distills it
+- result: done 2026-06-11 — research.md stands with sources (RouteLLM, FrugalGPT, cascade routing at ICLR 2025, the 2026 survey); the finding: the only unconditional free lunch (speculative decoding) is already provider-side, and the conditional one — route by structural signal where a mechanical check catches misses — is the mini, already built and accepted
+- state: done
+- since: 2026-06-11
+- of: model-routing
+
+## the fold-in is the operator's call
+
+- op: decide
+- ask: widening the structural route commits quality risk on the operator's behalf — theirs to settle before machinery exists. the card stands in work.md with three options: leave it, widen the mini's class, or an effort tier on one model
+- check: the card settles; the root folds on the answer, machinery (if any) following as its own slice
 - state: open
 - since: 2026-06-11
 - of: model-routing
