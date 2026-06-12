@@ -12,3 +12,5 @@ machine (2026-06-11): agreed — and that is already what happened. graph-machin
 
 operator (2026-06-11): I see, I understand now. I think if we treat that folder as history then we should name it as such. either history or archive. current work can go under work. if no work is current, we can lose the work folder. if no work is archived, then we don't need history/archive.
 
+operator (2026-06-11): I don't know if I understand the difference between 1 and 2 now that we've clarified this. 2 seems to want to add a ledger. what does that do for us?
+
