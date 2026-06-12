@@ -15,6 +15,9 @@ minimum-contrast = 1
 bold-is-bright = false
 
 cursor-style = block
+# the interface is keyboard-only — the pointer serves no purpose and
+# hides at the first keystroke (the operator's word, 2026-06-11)
+mouse-hide-while-typing = true
 fullscreen = true
 window-decoration = false
 window-padding-x = 28

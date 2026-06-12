@@ -1090,8 +1090,12 @@ def main(scr):
         put(scr, 1, LM, "─" * max(0, w - 2 * LM), DIM)
         mtxt = ""
         if machine:
-            mtxt = ("the %s is working · %d:%02d"
-                    % ((machine[2],) + divmod(int(time.time() - machine[1]), 60)))
+            # the clock reads like speech — 1m 50s, not 1:50 (the
+            # operator's word, 2026-06-11); under a minute the minutes go
+            mins, secs = divmod(int(time.time() - machine[1]), 60)
+            mtxt = ("the %s is working · %s"
+                    % (machine[2],
+                       "%dm %02ds" % (mins, secs) if mins else "%ds" % secs))
             put(scr, 2, max(LM, w - len(mtxt) - LM), mtxt, BOLD)
         elif awaits:
             mtxt = ("%d word%s the machine — m summons it"
