@@ -14,14 +14,6 @@
 - state: awaiting acceptance
 - since: 2026-06-11
 
-## the last line reads latest:
-
-- ask: your words (2026-06-11 — last could be "latest:". I like the newspaper vibe) — the main screen's bottom line now opens with "latest:" instead of "last", same selected clause and age after it; landed as its own card this time, since the earlier cleanup rode another card's corrections and stood invisible to you
-- try: relaunch hyper (q, then the menu) — the bottom line of the main screen reads latest: <the act — the thing> . <age>
-- blocks: nothing — one word of display
-- state: awaiting acceptance
-- since: 2026-06-11
-
 ## sessions go into linked repos
 
 - ask: your words (2026-06-11 — I think we should send sessions into a linked repo too) — the unattended summons now reaches the linked projects: when no machine runs, no words wait, and hypercore's own open work has had its turn, a linked project with an open graph summons a session into its own repo — it works there, commits there, carries the standing orders by path, one summon per head of that repo. what such a session lands awaiting you in the linked work.md surfaces on hyper's queue as a card wearing the project's name, and the act on it (a accept, a word on a decision) commits in the linked repo, the same way its intent already ratifies. m covers linked work when the head guard holds the automatic summons; the session brief carries each linked project's standing work and open graphs
