@@ -522,6 +522,21 @@ def fold_root(gname, root=ROOT):
     return None
 
 
+def clear_rider(kind, name):
+    """A card's exchange serves the act it informs (the operator's word,
+    2026-06-12): once the decision or acceptance lands, an answered rider
+    clears with it. A block still ending in operator words awaits the
+    machine and stays. Returns the cleared block, or None."""
+    key = '## from the %s card, on "%s"' % (kind, name)
+    blocks = ledger(WORDS)
+    blk = next((b for b in blocks if b["lines"][0].startswith(key)), None)
+    if (blk is None or not blk["words"]
+            or not blk["words"][-1].startswith("machine (")):
+        return None
+    write_ledger(WORDS, "words", [b for b in blocks if b is not blk])
+    return blk
+
+
 def accept(name, root=ROOT):
     """One frictionless act: the slice leaves work.md, git keeps the entry,
     and the commit is the operator's acceptance. A card carrying a graph
@@ -536,6 +551,7 @@ def accept(name, root=ROOT):
     write_ledger(wpath, "work", [b for b in blocks if b is not blk])
     gname = blk["fields"].get("graph")
     folded = fold_root(gname, root) if gname else None
+    cleared = clear_rider("acceptance", name)
     body = ("\n".join(blk["lines"])
             + "\n\ngrounds: the operator pressed approve on the card, with what "
               "the slice does and how to try it on screen. git keeps the entry.")
@@ -543,10 +559,21 @@ def accept(name, root=ROOT):
         body += ("\n\nthe slice was %s's folding condition; the fold rides "
                  "this commit — result on the root, state folded, the "
                  "folder moved under archive/." % gname)
-    return commit("the operator accepts: " + name
-                  + (" — %s folds" % gname if folded else ""),
-                  body,
-                  ("work.md", folded) if folded else ("work.md",), root)
+    if cleared:
+        body += ("\n\nthe answered exchange on the card served the "
+                 "acceptance and clears with it (the operator's word, "
+                 "2026-06-12). git keeps the words.")
+    paths = ["work.md"] + ([folded] if folded else [])
+    if cleared and root == ROOT:
+        paths.append("words.md")
+    h = commit("the operator accepts: " + name
+               + (" — %s folds" % gname if folded else ""),
+               body, tuple(paths), root)
+    if cleared and root != ROOT:
+        commit('exchange on "%s" cleared with the acceptance' % name,
+               "\n".join(cleared["lines"]) + "\n\ngit keeps the words.",
+               ("words.md",))
+    return h
 
 
 def settle_card(name, word, root=ROOT):
@@ -568,12 +595,24 @@ def settle_card(name, word, root=ROOT):
                       if l.startswith("- state:") else l
                       for l in entry["lines"]]
     write_ledger(wpath, "work", wblocks)
+    cleared = clear_rider("decision", name)
     body = (word.strip() + "\n\nthe decision just is the decision (the "
             "operator's word, 2026-06-11): recorded, not conversation-"
             "spawning. the entry stands decided until the machine executes "
             "the word and clears it with the executing commit.")
-    return commit('the operator decides — "%s": %s' % (name, head(word)),
-                  body, ("work.md",), root)
+    if cleared:
+        body += ("\n\nthe answered exchange on the card informed the "
+                 "decision and clears with it (the operator's word, "
+                 "2026-06-12). git keeps the words.")
+    h = commit('the operator decides — "%s": %s' % (name, head(word)),
+               body,
+               ("work.md", "words.md") if cleared and root == ROOT
+               else ("work.md",), root)
+    if cleared and root != ROOT:
+        commit('exchange on "%s" cleared with the decision' % name,
+               "\n".join(cleared["lines"]) + "\n\ngit keeps the words.",
+               ("words.md",))
+    return h
 
 
 # ----- speech (from anywhere; the place travels with the words) ---------
