@@ -1094,12 +1094,18 @@ def main(scr):
         ci = max(0, min(ci, len(pend) - 1))
         ai = max(0, min(ai, len(accepts) - 1))
         si = max(0, min(si, len(decides) - 1))
-        gsel = 0  # one top-level line today — hypercore; its graphs nest under it
+        # the top-level lines: hypercore, then each linked project —
+        # all selectable (the operator's word, 2026-06-11)
+        gsel = max(0, min(gsel, len(lidx)))
         dunit = max(0, min(dunit, len(projects) - 1))
         if wexp is not None and wexp >= len(projects):
             wexp = None
-        nwitems = (len(work) + len(gs) if wexp in (None, 0)
-                   else len(projects[wexp][1]))
+        if wexp in (None, 0):
+            nwitems = len(work) + len(gs)
+        else:
+            pdata = projects[wexp][1]
+            nwitems = (len(pdata[2]) + len(pdata[3])
+                       if isinstance(pdata, tuple) else len(pdata))
         wsel = max(0, min(wsel, nwitems - 1))
         exb, exmax = None, 0
         if view == "card" and not pend:
@@ -1448,21 +1454,33 @@ def main(scr):
                 else:
                     summary += " · %d folded subgraph%s" % (
                         len(gs), "" if len(gs) == 1 else "s")
-            put(scr, top + 2, LM, ("hypercore" + " " * width)[:width], REV)
-            if len(summary) <= width - len("hypercore") - 2:
-                put(scr, top + 2, LM + width - len(summary), summary, REV)
-            # linked folders from the registry — outside work lives with
-            # its project (ratified), so each reads as a peer line, never
-            # a child; the line is the link and no more until the first
-            # linked project carries hypercore-shaped state to read
-            for i, b in enumerate(linked):
-                if i + 1 >= view_h:
-                    break
+            # one selectable line per top-level unit: hypercore first,
+            # then every linked project — outside work lives with its
+            # project (ratified), each a peer, never a child; enter
+            # unfolds the line under the cursor, d opens its documents
+            tops = [("hypercore", summary)]
+            for n, b in enumerate(linked):
                 lname = b["lines"][0][3:].strip()
+                lgs = projects[lidx[n]][1][3]
                 lsum = "linked · " + b["fields"].get("path", "?")
-                put(scr, top + 3 + i, LM, lname, BOLD)
-                if len(lsum) <= width - len(lname) - 2:
-                    put(scr, top + 3 + i, LM + width - len(lsum), lsum, DIM)
+                if lgs:
+                    lopen = sum(1 for _, blks in lgs
+                                if "folded" not in blks[0]["fields"].get("state", ""))
+                    lsum += " · %d graph%s, %d open" % (
+                        len(lgs), "" if len(lgs) == 1 else "s", lopen)
+                tops.append((lname, lsum))
+            for i, (tname, tsum) in enumerate(tops):
+                if i >= view_h:
+                    break
+                y = top + 2 + i
+                if i == gsel:
+                    put(scr, y, LM, (tname + " " * width)[:width], REV)
+                    if len(tsum) <= width - len(tname) - 2:
+                        put(scr, y, LM + width - len(tsum), tsum, REV)
+                else:
+                    put(scr, y, LM, tname, BOLD)
+                    if len(tsum) <= width - len(tname) - 2:
+                        put(scr, y, LM + width - len(tsum), tsum, DIM)
 
         elif view == "work":
             put(scr, top, LM, "STANDING WORK", DIM)
@@ -1470,11 +1488,18 @@ def main(scr):
             # its execution graphs below them — children under their
             # parent; a graph unfolds further to its nodes, its head
             # naming the parent its root's of: field records
-            pname, pblocks = projects[wexp]
-            items = work if pblocks is None else pblocks
-            glines = gs if pblocks is None else []
-            headline = (pname if pblocks is None else
-                        pblocks[0]["fields"].get("of", "hypercore") + " › " + pname)
+            pname, pdata = projects[wexp]
+            if pdata is None:
+                items, glines, headline = work, gs, pname
+            elif isinstance(pdata, tuple):
+                # a linked project unfolds to its own work and graphs,
+                # read live from its folder
+                items, glines = pdata[2], pdata[3]
+                headline = pname + " · linked"
+            else:
+                items, glines = pdata, []
+                headline = (pdata[0]["fields"].get("of", "hypercore")
+                            + " › " + pname)
             rows, marks = [[(LM, headline, BOLD)], []], []
             iw = width - 2
             for i, b in enumerate(items):
@@ -1572,12 +1597,34 @@ def main(scr):
                     attr = DIM if st["pending"] else 0
                     rows += [(ln, attr) for ln in wrap(st["text"], width)]
                     rows.append(("", 0))
+            elif view == "doc" and isinstance(projects[dunit][1], tuple):
+                # a linked project's document is its intent.md, read live
+                # from its own folder
+                rows = []
+                ipath = os.path.join(projects[dunit][1][1], "intent.md")
+                if os.path.isfile(ipath):
+                    with open(ipath, encoding="utf-8") as f:
+                        for ln in f.read().splitlines():
+                            rows += ([(wl, 0) for wl in wrap(ln, width)]
+                                     or [("", 0)])
+                else:
+                    rows = [("no intent.md in " + projects[dunit][1][1], DIM)]
             elif view == "doc":
                 # a graph's documents are its folder, read live — under
                 # work/ while open, under archive/ once folded — every
-                # file in it, led by its name
-                rows, folder = [], graph_folder(dname)
-                for fn in sorted(os.listdir(folder)):
+                # file in it, led by its name; a linked graph's folder
+                # sits under its own project
+                folder = graph_folder(dname)
+                if not os.path.isdir(folder):
+                    for b in linked:
+                        lp = os.path.expanduser(b["fields"].get("path", ""))
+                        for sub in ("work", "archive"):
+                            cand = os.path.join(lp, sub, dname)
+                            if os.path.isdir(cand):
+                                folder = cand
+                rows = []
+                for fn in (sorted(os.listdir(folder))
+                           if os.path.isdir(folder) else []):
                     fpath = os.path.join(folder, fn)
                     if not os.path.isfile(fpath):
                         continue
@@ -1932,27 +1979,54 @@ def main(scr):
 
         elif view == "work":
             if ch == 27:
+                pdata = projects[wexp][1] if wexp is not None else None
                 if wexp is None:
                     view = "home"
-                elif wexp == 0:
+                elif wexp == 0 or isinstance(pdata, tuple):
+                    # a unit folds back to its own top line
+                    gsel = 0 if wexp == 0 else 1 + lidx.index(wexp)
                     wexp, scroll = None, 0
                 else:
-                    # a graph backs out to its own line under hypercore —
+                    # a graph backs out to its own line under its parent —
                     # the same path that reached it
-                    wexp, wsel, scroll = 0, len(work) + (wexp - 1), 0
+                    parent = 0
+                    for li in lidx:
+                        if wexp > li:
+                            parent = li
+                    if parent == 0:
+                        wexp, wsel, scroll = 0, len(work) + (wexp - 1), 0
+                    else:
+                        plw = len(projects[parent][1][2])
+                        wexp, wsel, scroll = (parent,
+                                              plw + (wexp - parent - 1), 0)
             elif ch in (10, 13, curses.KEY_ENTER):
                 if wexp is None:
-                    wexp, wsel, scroll = gsel, 0, 0
-                elif wexp == 0 and wsel >= len(work) and gs:
-                    # enter on a graph line unfolds the graph to its nodes
-                    wexp, wsel, scroll = 1 + (wsel - len(work)), 0, 0
+                    # enter unfolds the top line under the cursor
+                    wexp = 0 if gsel == 0 else lidx[gsel - 1]
+                    wsel, scroll = 0, 0
+                else:
+                    pdata = projects[wexp][1]
+                    if wexp == 0 and wsel >= len(work) and gs:
+                        # enter on a graph line unfolds it to its nodes
+                        wexp, wsel, scroll = 1 + (wsel - len(work)), 0, 0
+                    elif (isinstance(pdata, tuple)
+                          and wsel >= len(pdata[2]) and pdata[3]):
+                        wexp, wsel, scroll = (
+                            wexp + 1 + (wsel - len(pdata[2])), 0, 0)
             elif ch == ord("d") and wexp is None:
                 # the selection is the unit: d opens the documents of the
-                # line under the cursor — intent.md for hypercore
-                dunit, view, scroll = gsel, "doc", 0
-            elif ch == ord("d") and wexp == 0 and wsel >= len(work) and gs:
-                # d on a graph line opens that graph's documents
-                dunit, view, scroll = 1 + (wsel - len(work)), "doc", 0
+                # line under the cursor — intent.md for a project
+                dunit = 0 if gsel == 0 else lidx[gsel - 1]
+                view, scroll = "doc", 0
+            elif ch == ord("d") and wexp is not None:
+                pdata = projects[wexp][1]
+                if wexp == 0 and wsel >= len(work) and gs:
+                    # d on a graph line opens that graph's documents
+                    dunit, view, scroll = 1 + (wsel - len(work)), "doc", 0
+                elif isinstance(pdata, tuple):
+                    dunit = (wexp + 1 + (wsel - len(pdata[2]))
+                             if wsel >= len(pdata[2]) and pdata[3] else wexp)
+                    view, scroll = "doc", 0
             elif ch in (curses.KEY_DOWN, ord("k")):
                 if wexp is None:
                     gsel += 1
@@ -1974,20 +2048,31 @@ def main(scr):
                     # the place travels with the words: a project line, a
                     # work.md entry, or a node of the graph it belongs to
                     if wexp is None:
-                        pname, pblocks = projects[gsel]
-                        name, place = pname, 'the work view, on "%s"' % pname
+                        name = ("hypercore" if gsel == 0
+                                else projects[lidx[gsel - 1]][0])
+                        place = 'the work view, on "%s"' % name
                     else:
-                        pname, pblocks = projects[wexp]
-                        if pblocks is None and wsel >= len(work) and gs:
+                        pname, pdata = projects[wexp]
+                        if pdata is None and wsel >= len(work) and gs:
                             name = gs[wsel - len(work)][0]
                             place = 'the work view, on the graph "%s"' % name
-                        elif pblocks is None:
+                        elif pdata is None:
                             name = (work[wsel]["lines"][0][3:].strip()
                                     if work else pname)
                             place = 'the work view, on "%s"' % name
+                        elif isinstance(pdata, tuple):
+                            litems, lgs = pdata[2], pdata[3]
+                            if wsel >= len(litems) and lgs:
+                                name = lgs[wsel - len(litems)][0]
+                                place = ('the work view, on the graph "%s"'
+                                         % name)
+                            else:
+                                name = (litems[wsel]["lines"][0][3:].strip()
+                                        if litems else pname)
+                                place = 'the work view, on "%s"' % name
                         else:
-                            name = (pblocks[wsel]["lines"][0][3:].strip()
-                                    if pblocks else pname)
+                            name = (pdata[wsel]["lines"][0][3:].strip()
+                                    if pdata else pname)
                             place = 'the graph "%s", on "%s"' % (pname, name)
                     wd = read_words(scr, h, w, 'your words, on "%s" '
                                                "(enter sends . esc abandons): " % name)
@@ -2005,13 +2090,27 @@ def main(scr):
             if ch in (27, ord("q"), ord("d") if view == "doc" else ord("g")):
                 # the document goes back where its line lives: intent to
                 # the folded view, a graph's folder to its line under
-                # hypercore; the log still backs out to the queue
+                # its parent; the log still backs out to the queue
                 view = "work" if view == "doc" else "home"
                 if view == "work":
-                    if dunit > 0:
-                        wexp, wsel, scroll = 0, len(work) + dunit - 1, 0
-                    else:
+                    pdata = projects[dunit][1]
+                    if dunit == 0:
                         wexp, scroll = None, 0
+                    elif isinstance(pdata, tuple):
+                        gsel = 1 + lidx.index(dunit)
+                        wexp, scroll = None, 0
+                    else:
+                        parent = 0
+                        for li in lidx:
+                            if dunit > li:
+                                parent = li
+                        if parent == 0:
+                            wexp, wsel, scroll = (0, len(work) + dunit - 1,
+                                                  0)
+                        else:
+                            plw = len(projects[parent][1][2])
+                            wexp, wsel, scroll = (
+                                parent, plw + (dunit - parent - 1), 0)
             elif ch == curses.KEY_DOWN:
                 scroll += 1
             elif ch == curses.KEY_UP:
