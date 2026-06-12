@@ -12,3 +12,5 @@ operator (2026-06-11): we're closer, but "the thing it is about" is almost as im
 
 operator (2026-06-11): I don't like the m:ss format. I think I would prefer something like 1m 50s
 
+operator (2026-06-11): we should hide the mouse cursor in the interface. it serves no purpose.
+
