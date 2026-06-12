@@ -22,6 +22,8 @@ operator (2026-06-11): no dice. the alternating styling works but the bright par
 
 machine (2026-06-11): rethought from your question, still yours to accept: what the operator wants in the log is the substance — the words spoken, the statement approved, the slice built — so it leads every line now, at normal weight, no bold anywhere; the act that produced it follows dim. hash and age keep their columns, the stripes stay faint, and the record uses the whole screen instead of the 76-column prose measure, so rows stop getting cut. a row reads like — I don't like m:ss format · operator speaks. the card's try line names the relaunch.
 
+operator (2026-06-11): I say this - if the logs track different types of events, the difference between these types should be represented by something other than text. probably color, but tasteful and subtle. same with the alternate styling per row - subtle.
+
 ## from the queue . 2026-06-11
 
 operator (2026-06-11): I don't like the m:ss format. I think I would prefer something like 1m 50s
