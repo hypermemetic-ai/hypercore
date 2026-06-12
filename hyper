@@ -936,6 +936,7 @@ def main(scr):
     GUT = 10  # the kind column
 
     view, sel, ci, ai, si, wsel, gsel = "home", 0, 0, 0, 0, 0, 0
+    back = None  # where h left from — h on home returns there
     wexp = None  # the work view opens folded; set, it names the unfolded project
     dunit = 0  # the project whose documents the document view shows
     scroll, flash, confirm, exkey = 0, "", None, None
@@ -1576,19 +1577,20 @@ def main(scr):
         hints = {
             "home": (("enter open . j/k move . " if entries else "")
                      + ("m summon . " if (awaits or dirty) and not machine else "")
+                     + ("h back . " if back else "")
                      + "s speak . w work . g log . q quit"),
-            "card": "a approve . c cut . e explain . s speak . j/k statements . space/b page . esc back",
-            "settle": "a approve . c cut . 1–9 pick . s speak . j/k cards . space/b page . esc back",
-            "accept": "a approve . s speak . j/k slices . space/b page . esc back",
-            "exchange": "s speak . c fold away . space/b page . esc back",
-            "work": ("enter unfold . d document . s speak . esc back"
+            "card": "a approve . c cut . e explain . s speak . j/k statements . space/b scroll . h home . esc back",
+            "settle": "a approve . c cut . 1–9 pick . s speak . j/k cards . space/b scroll . h home . esc back",
+            "accept": "a approve . s speak . j/k slices . space/b scroll . h home . esc back",
+            "exchange": "s speak . c fold away . space/b scroll . h home . esc back",
+            "work": ("enter unfold . d document . s speak . h home . esc back"
                      if wexp is None else
                      "enter unfold graph . j/k move . d document . "
-                     "s speak on it . space/b page . esc fold"
+                     "s speak on it . space/b scroll . h home . esc fold"
                      if wexp == 0 else
-                     "j/k move . s speak on it . space/b page . esc back"),
-            "doc": "space/b page . s speak . esc back",
-            "log": "space/b page . s speak . esc back",
+                     "j/k move . s speak on it . space/b scroll . h home . esc back"),
+            "doc": "space/b scroll . s speak . h home . esc back",
+            "log": "space/b scroll . s speak . h home . esc back",
         }[view]
         put(scr, h - 3, LM, "─" * max(0, w - 2 * LM), DIM)
         if confirm:
@@ -1686,6 +1688,19 @@ def main(scr):
                              else "%s . committed %s" % ("approved" if kind == "approve" else "cut", hsh))
             continue
 
+        if ch == ord("h"):
+            # h jumps home from anywhere; from home it returns to where
+            # you last were (the operator's word, 2026-06-11)
+            if view != "home":
+                back = (view, sel, ci, ai, si, wsel, gsel, wexp, dunit,
+                        scroll, exkey)
+                view, scroll = "home", 0
+            elif back:
+                (view, sel, ci, ai, si, wsel, gsel, wexp, dunit,
+                 scroll, exkey) = back
+                back = None
+            continue
+
         if view == "home":
             if ch == ord("q"):
                 return
@@ -1745,9 +1760,9 @@ def main(scr):
             elif ch == curses.KEY_UP:
                 scroll -= 1
             elif ch == ord(" "):
-                scroll += view_h
+                scroll += 1
             elif ch == ord("b"):
-                scroll -= view_h
+                scroll -= 1
             elif ch == ord("a"):
                 confirm = ("approve", pend[ci])
             elif ch == ord("c"):
@@ -1775,9 +1790,9 @@ def main(scr):
             elif ch == curses.KEY_UP:
                 scroll -= 1
             elif ch == ord(" "):
-                scroll += view_h
+                scroll += 1
             elif ch == ord("b"):
-                scroll -= view_h
+                scroll -= 1
             elif ch == ord("a"):
                 confirm = ("go", decides[si]["lines"][0][3:].strip())
             elif ch == ord("c"):
@@ -1820,9 +1835,9 @@ def main(scr):
             elif ch == curses.KEY_UP:
                 scroll -= 1
             elif ch == ord(" "):
-                scroll += view_h
+                scroll += 1
             elif ch == ord("b"):
-                scroll -= view_h
+                scroll -= 1
             elif ch == ord("a"):
                 confirm = ("accept", accepts[ai]["lines"][0][3:].strip())
             elif ch == ord("s"):
@@ -1855,11 +1870,11 @@ def main(scr):
                 scroll = max(0, (exmax if scroll == -1 else scroll) - 1)
             elif ch == ord(" "):
                 if scroll != -1:
-                    scroll += view_h
+                    scroll += 1
                     if scroll >= exmax:
                         scroll = -1
             elif ch == ord("b"):
-                scroll = max(0, (exmax if scroll == -1 else scroll) - view_h)
+                scroll = max(0, (exmax if scroll == -1 else scroll) - 1)
             elif ch == ord("c"):
                 confirm = ("fold", exb)
             elif ch == ord("s"):
@@ -1913,9 +1928,9 @@ def main(scr):
                 else:
                     wsel -= 1
             elif ch == ord(" ") and wexp is not None:
-                scroll += view_h
+                scroll += 1
             elif ch == ord("b") and wexp is not None:
-                scroll -= view_h
+                scroll -= 1
             elif ch == ord("s"):
                 if "words.md" in dirty_files:
                     flash = held
@@ -1966,9 +1981,9 @@ def main(scr):
             elif ch == curses.KEY_UP:
                 scroll -= 1
             elif ch == ord(" "):
-                scroll += view_h
+                scroll += 1
             elif ch == ord("b"):
-                scroll -= view_h
+                scroll -= 1
             elif ch == ord("s"):
                 if "words.md" in dirty_files:
                     flash = held

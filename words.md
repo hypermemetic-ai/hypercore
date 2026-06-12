@@ -48,3 +48,5 @@ machine (2026-06-11): deliberate, and now outgrown: when the registry landed, a 
 
 operator (2026-06-11): space/b behave strangley at times, I think because they're jumps rather than traditional up/down. I think I would rather they were up/down. also, we probably want a single button to jump home and then back to wherever we last were if pressed from home. h likely.
 
+machine (2026-06-11): both landed as a slice, yours to accept: space and b now scroll one line in every view — no more screenful jumps — and h jumps home from anywhere; h again on the main screen returns you exactly where you left, view, selection and scroll intact. the key hints name them. the card's try line names the relaunch.
+

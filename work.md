@@ -8,6 +8,14 @@
 - state: awaiting acceptance
 - since: 2026-06-11
 
+## the keys move like they read
+
+- ask: from your words — space/b jumped a screenful and felt strange; you wanted plain up/down, and one key to jump home and back. space and b now scroll a single line, in every view; h jumps home from anywhere, and h on the main screen returns you exactly where you left — view, selection, scroll and all.
+- try: relaunch hyper (q, then the menu) — open the log: space walks down one line, b walks up; h lands you home, h again puts you back in the log where you stood
+- blocks: nothing — keys only; until accepted the change stays machine-owned
+- state: awaiting acceptance
+- since: 2026-06-11
+
 ## linked projects open under w
 
 - ask: from your words — discuss could not be selected: when the registry landed, a linked line was deliberately the link and no more, deferred until a linked project carried hypercore-shaped state to read. discuss now does (a ratified intent, the absorb-old-governance graph). the build: the work view's top-level lines become selectable — enter on a linked project unfolds its work and graphs, d opens its documents, all read live from its own folder.
