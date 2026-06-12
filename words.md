@@ -16,3 +16,7 @@ operator (2026-06-11): option 1 — open it now — the machine creates ~/projec
 
 operator (2026-06-11): again, I pick a decision, I see it here as if I had written something. this should not happen. what happened with my last request about this? is work regarding it underway?
 
+## from the decision card, on "long entries shorten to their idea" . 2026-06-11
+
+operator (2026-06-11): I don't like any of these frankly. what have we been doing so far? all the log changes so far have been great and I wasn't consulted in this way about them. so I assumed they weren't as expensive as options 1 and 2 make it seem here.
+
