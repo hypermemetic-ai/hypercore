@@ -6,3 +6,7 @@ operator (2026-06-11): I think the log should be more readable at a glance. appl
 
 operator (2026-06-11): I can't handle the red text cutting me off from being able to operate. I don't know what kind of miracle we have to run to make this seamless but we have to cross that bridge. give me some ideas and a sober rundown of the challenges.
 
+## from the acceptance card, on "the log reads at a glance" . 2026-06-11
+
+operator (2026-06-11): better, but we can do better still. first, the yellow is hideous. second, we can cut "the" and similar non-load-bearing words. third, more context would be helpful (perhaps using the space we save by cutting fluff). .
+
