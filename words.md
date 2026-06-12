@@ -10,3 +10,5 @@ operator (2026-06-11): what card stays up for my acceptance? I see no card. I th
 
 operator (2026-06-11): linked project discuss has less data on it than hypercore in w view.
 
+operator (2026-06-11): I see no hypercore work on this but I thought I had mentioned cleaning up the "last" line. if that was already done then we need to do more. if not, same idea. it's quite close to useful right now I must say. last could be "latest:". I like the newspaper vibe.
+
