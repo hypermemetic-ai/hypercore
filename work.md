@@ -1,9 +1,9 @@
 # work
 
-## folded graphs live under history
+## folded graphs live under archive
 
-- ask: from your word on the graphs card — a folded graph's folder is history and is named as such. open graphs live under work/, the fold moves the folder under history/, and either folder exists only while it holds a graph. hyper reads both homes now: the work view, the document view, and the fold-at-accept all follow the folder. of the two names you offered, history is the pick — it is the word the doctrine already uses
-- try: ls at the root — graph-machinery sits in history/, the work folder is gone; in hyper the work view still lists graph-machinery, marked folded, and d on its line still opens its ledger
+- ask: from your words on the graphs card and this one — a folded graph's folder is history and the folder is named archive, your pick over the machine's first choice. open graphs live under work/, the fold moves the folder under archive/, and either folder exists only while it holds a graph. hyper reads both homes: the work view, the document view, and the fold-at-accept all follow the folder
+- try: ls at the root — graph-machinery sits in archive/, the work folder is gone; in hyper the work view still lists graph-machinery, marked folded, and d on its line still opens its ledger
 - state: awaiting acceptance
 - since: 2026-06-11
 
