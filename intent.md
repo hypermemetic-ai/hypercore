@@ -64,6 +64,12 @@ An execution graph's intent document is that graph's current intended reality.
 
 Work that is not about hypercore lives with its project: the project's folder carries its own intent and graphs, versioned in its own repository, and hypercore keeps a registry of linked folders the interface reads.
 
+Brownfielding an external project is distillation, then ratification: the folder enters the registry, the machine drafts intent.md from the project's own documents — machine-owned to the last word — and the operator's picks decide what survives; the project keeps running on its old documents until intent supplants them. [machine]
+
+A linked project's intent ratifies from hyper, and every ratifying commit lands in the project's own repository — hypercore holds the link, never the words. [machine]
+
+What a brownfield's cuts leave unbacked — documents, gates, machinery with no statement behind them — becomes the project's first absorption work, opened as a graph in its own folder. [machine]
+
 ## statements
 
 A statement is plain, declarative, and strong enough to be wrong — wrong against material, evidence, or later judgment.

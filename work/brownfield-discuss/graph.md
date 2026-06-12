@@ -37,6 +37,16 @@
 - since: 2026-06-11
 - of: what brownfielding writes into discuss
 
+## the brownfielding procedure is drafted into intent
+
+- op: do
+- ask: distill the procedure the test case proved — link, distill, ratify from hyper, supplant on the operator's word, absorption work for what cuts leave unbacked — into hypercore's intent.md as statements
+- check: three [machine] statements stand in intent.md's structure section and surface on the queue; the root folds only when the operator has ratified them
+- result: drafted 2026-06-11, after the operator's supplant ruling (843d9c6) settled the procedure's shape — coexistence fell, absorption stands; discuss's absorb-old-governance graph (its 6dc955c) is the procedure's third statement live
+- state: done
+- since: 2026-06-11
+- of: brownfield-discuss
+
 ## the queue ratifies linked intent
 
 - op: ask
