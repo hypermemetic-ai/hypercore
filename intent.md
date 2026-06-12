@@ -68,6 +68,8 @@ Work that is not about hypercore lives with its project: the project's folder ca
 
 A statement is plain, declarative, and strong enough to be wrong — wrong against material, evidence, or later judgment.
 
+A statement reads as if written from scratch: no trace of the conversation that produced it survives in the words. [machine]
+
 Every statement should be ownable: one party can put their name on it and answer for changing it.
 
 If it doesn't matter enough for the operator to hear about it, it isn't a statement.
@@ -122,7 +124,7 @@ When the work is done, the execution graph folds into the node whose ask spawned
 
 Folding preserves relations. A folded graph keeps its nodes and the relations between them, so the history reads as the graph it was, not a flat log.
 
-A folded graph's folder is history, kept whole; its products land where they belong — on the parent's files directly, or as new folders earned in their own right. That the work ran in a subgraph never decides where its results end. [machine]
+A folded graph's folder holds its history, kept whole; everything else the work made lands in the parent as if made there directly. [machine]
 
 A folding condition is what makes a graph ready to fold. Its ask is met, or it is abandoned. Until then the graph stays open.
 
