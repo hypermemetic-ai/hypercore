@@ -97,7 +97,7 @@ SUMMON = (
     "once at the end — a session can die mid-flight, and only what is "
     "committed survives it. then stop."
 )
-WORK = (
+OPEN_WORK = (  # the summon task — never WORK, which names the ledger path
     "the interface summoned you: open work stands and no words wait "
     "(option 3 on the what-runs-when-work-is-open card, the operator's "
     "pick, 2026-06-11). read brief.md — the session brief, written fresh "
@@ -622,8 +622,8 @@ def machine_command(task=SUMMON):
     """The machine file at the root, {prompt} standing for the summon
     instruction — any harness that takes a prompt slots in.  HYPER_MACHINE
     in the environment overrides it (testing); with neither, claude.
-    task is the instruction handed in: SUMMON for words, WORK for open
-    work standing with none."""
+    task is the instruction handed in: SUMMON for words, OPEN_WORK for
+    open work standing with none."""
     cmd = harness_line("HYPER_MACHINE", MACHINE_FILE)
     if not cmd:
         exe = shutil.which("claude") or os.path.expanduser("~/.local/bin/claude")
@@ -699,7 +699,7 @@ def summon(kind="machine", task=None, cwd=None):
     stops.  The contract is files and git; the brief lands in brief.md so
     any harness reads the same bearings.  kind "mini" is the small machine
     on the bare true-up — no brief, its whole task is in the prompt.
-    task overrides the instruction (WORK for open work, no words; LINKED
+    task overrides the instruction (OPEN_WORK for open work, no words; LINKED
     filled per repo for open work in a linked project).  cwd sends the
     session into a linked repo — the operator's word, 2026-06-11; the
     brief and the log stay hypercore's, named by absolute path."""
@@ -1188,7 +1188,7 @@ def main(scr):
         head = last.partition(" ")[0]
         if not machine and not awaits and not dirty:
             if gopen and head != worked_head:
-                machine = start_machine(None, task=WORK)
+                machine = start_machine(None, task=OPEN_WORK)
                 if machine:
                     worked_head = head
                     flash = note("open work stands — the machine is "
@@ -2032,7 +2032,7 @@ def main(scr):
                 task, cwd, label = None, None, None
                 if not awaits and not dirty:
                     if gopen:
-                        task = WORK
+                        task = OPEN_WORK
                     else:
                         lname, lpath, _ = next(
                             (u for u in lunits if u[2]), (None, None, 0))

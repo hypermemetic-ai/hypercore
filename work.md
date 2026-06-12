@@ -1,5 +1,13 @@
 # work
 
+## the standing work returns to the queue
+
+- ask: your words (2026-06-11 — these cards you mention are not visible) — they were not: the linked-repos slice (1b4a8c9) reused the name WORK for its summon prose, shadowing the path to work.md, so every hyper launched since reads hypercore's own ledger as empty — no acceptance cards on the queue, no entries under hypercore in w, standing work counted without them. the constant is renamed (OPEN_WORK) and the ledger reads whole again; nothing in work.md was lost, only unread
+- try: relaunch hyper (q, then the menu) — the queue shows the acceptance cards again (this one among them) and w unfolds hypercore to its entries
+- blocks: every acceptance card on the queue — invisible until relaunch
+- state: awaiting acceptance
+- since: 2026-06-11
+
 ## the last line reads latest:
 
 - ask: your words (2026-06-11 — last could be "latest:". I like the newspaper vibe) — the main screen's bottom line now opens with "latest:" instead of "last", same selected clause and age after it; landed as its own card this time, since the earlier cleanup rode another card's corrections and stood invisible to you
