@@ -20,7 +20,11 @@ machine (2026-06-11): now that archive/ exists, very little. 2's ledger would be
 
 operator (2026-06-11): option 1 — subgraph, made visible — open graphs of hypercore appear under the hypercore line, reached by unfolding it, never beside it; every root names its parent (of: hypercore); the fold stays as it is, since the graph's folder already sits inside hypercore's — display and convention, one redo to take back
 
+machine (2026-06-11): built, and you accepted it from its card while I worked (61bc55a) — relaunch hyper to see it, since the one open started before the code landed. w now shows one line, hypercore, its counts on the right; enter unfolds to the work entries with the graphs below them; enter on a graph line opens its nodes, headed hypercore › graph-machinery; esc walks back the same path. every root names its parent: of: hypercore sits on graph-machinery's root and the format in SKILL.md carries the rule. your pick also settled this card at last — the entry left work.md (a4982be); why it ever outlived the pick is answered on your other word.
+
 ## from the queue . 2026-06-11
 
 operator (2026-06-11): once again I selected an option and still see the card in the queue.
+
+machine (2026-06-11): your pick landed — the card just outlived it, and here is why: settle-at-word was accepted at 18:50, but the hyper you picked in was started before that, and a running hyper re-reads the ledgers every second while its own code it reads only at launch. the old pick path spoke the word without dropping the entry. the hyper you opened at 19:22 wears the fix — your next pick settles on the spot — and I have dropped the entry your pick earned (a4982be). the gap is general: every accepted slice stays invisible on screen until you relaunch. whether hyper should notice its own staleness is on a decision card — a notice line with a relaunch key, an automatic re-exec, or leave the relaunch yours.
 
