@@ -122,6 +122,8 @@ When the work is done, the execution graph folds into the node whose ask spawned
 
 Folding preserves relations. A folded graph keeps its nodes and the relations between them, so the history reads as the graph it was, not a flat log.
 
+A folded graph's folder is history, kept whole; its products land where they belong — on the parent's files directly, or as new folders earned in their own right. That the work ran in a subgraph never decides where its results end. [machine]
+
 A folding condition is what makes a graph ready to fold. Its ask is met, or it is abandoned. Until then the graph stays open.
 
 A graph that cannot meet its folding condition does not fold dirty: it returns as a decision — abandon, re-cut, or change the ask — and a changed ask that touches endorsed intent is the operator's.
