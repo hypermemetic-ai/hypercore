@@ -18,3 +18,7 @@ operator (2026-06-11): these cards you mention are not visible.
 
 operator (2026-06-11): some log entries are being cut short with much room to spare
 
+## from the decision card, on "the link statement still says "awaiting absorption"" . 2026-06-11
+
+operator (2026-06-11): option 1 — revise — on your word the machine drafts a replacement that keeps the link sentence and "work/ grows as asks arrive" and drops the fulfilled absorption clause, returning [machine] for ratification
+
