@@ -106,9 +106,13 @@ graph's intent document is singular, and this repo is hypercore's folder.
   single solution for logging — whatever the log pulls from is written
   in the first place to be maximally clear and concise): the log pulls
   git commit subjects, so write every subject for the log — the point
-  first, sized to one log line, the full story in the body. Subjects
-  beginning "the operator" are hyper's signature for acts in the
-  operator's name; a session never starts a subject with those words.
+  first, sized to one log line, the full story in the body, and never
+  changed at display. Subjects carry no bare articles — no "the", "a",
+  "an" as their own words (the operator's word, 2026-06-11: they add
+  nothing); hyper's commit() strips them from interface acts, sessions
+  write theirs that way. Subjects beginning "operator" or "the
+  operator" are hyper's signature for acts in the operator's name; a
+  session never starts a subject with those words.
 - Standing work is the operator's action list (operator's word,
   2026-06-11): every work.md entry names a clear operator act in its
   state — "awaiting your decision" surfaces a decision card on the

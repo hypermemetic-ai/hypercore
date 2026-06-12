@@ -299,13 +299,13 @@ def since_last_act():
     """What the machine did since the operator last acted — read live
     from git every time, no state kept anywhere.  An operator act is a
     commit hyper made in the operator's name, and every such subject says
-    so (the subject leads with "the operator …"; older history said
-    "… in the interface"); everything newer is the machine's, returned
-    newest first as 'hash subject' lines."""
+    so (the subject leads with "operator …"; older generations said
+    "the operator …" and "… in the interface"); everything newer is the
+    machine's, returned newest first as 'hash subject' lines."""
     out = []
     for line in run("git", "log", "-100", "--format=%h %s").splitlines():
         subject = line.split(" ", 1)[1] if " " in line else ""
-        if (subject.startswith("the operator ")
+        if (subject.startswith(("operator ", "the operator "))
                 or ("the operator" in subject
                     and "in the interface" in subject)):
             return out
@@ -357,6 +357,11 @@ def head(text, n=24):
 
 
 def commit(subject, body, paths=("intent.md", "queue.md"), root=ROOT):
+    # the log is changed at generation, never at display (the operator's
+    # word, 2026-06-11): every subject leaves here without the articles
+    # that carry nothing — the full words always ride in the body
+    subject = " ".join(w for w in subject.split(" ")
+                       if w not in ("the", "a", "an"))
     track = [p for p in paths
              if os.path.exists(os.path.join(root, p))
              or run_in(root, "git", "ls-files", p).strip()]
@@ -987,57 +992,47 @@ def main(scr):
              "read": ("answered", DIM), "sent": ("sent", DIM)}
 
     AGE_W = 14  # the age column — wide enough for "13 minutes ago"
-    ACT_W = 24  # the act column — the act is a column of its own
 
     def log_segs(line, x, room):
-        # the earlier structure, recalled by the operator (their word,
-        # 2026-06-11 — the articles add nothing, a screen mostly colored
-        # is a mess): the substance leads plain with articles dropped,
-        # the act alone wears color in its own column, hash and age
-        # right-aligned at the edge. the subjects stay written legible
-        # at the source; only the display condenses them.
+        # the log is changed at generation, never at display (the
+        # operator's word, 2026-06-11 — no combining the two approaches):
+        # subjects arrive article-free from commit(), and the display
+        # renders them as written — columns for hash and age, color held
+        # to the act phrase so the substance stays plain ink.
         hsh, _, rest = line.partition(" ")
         sub, sep, age = rest.rpartition(" . ")
         if not sep or not age.endswith("ago"):
             sub, age = rest, ""
-        sub = sub.replace(" in the interface", "")
-        sub = " ".join(w for w in sub.split(" ") if w not in ("the", "a", "an"))
-
-        def joint(s):
-            cut = len(s)
-            for sp in (": ", " — ", ", ", " . ", ". "):
-                i = s.find(sp)
-                if 0 <= i < cut:
-                    cut = i
-            return cut
-
-        act, tail = sub[: joint(sub)], sub[joint(sub):]
-        tail = tail.lstrip(":,—. ").rstrip(":,. ")
-        # an act with a named actor yields the line to everything after
-        # it; a machine build's whole subject is the substance
-        if "operator" in act or act.startswith(("machine", "mini", "trued")):
-            subject, actor = (tail, act) if tail else (act, "")
+        cut = len(sub)
+        for sp in (": ", " — "):
+            i = sub.find(sp)
+            if 0 <= i < cut:
+                cut = i
+        act = sub[:cut]
+        if act.startswith(("operator speaks", "operator asks",
+                           "operator folds", "the operator speaks",
+                           "the operator asks", "the operator folds")):
+            aattr = SPEAK
+        elif (act.startswith(("operator ", "the operator "))
+              or ("the operator" in act and "in the interface" in act)):
+            aattr = DECIDE
+        elif act.startswith(("machine", "mini", "trued",
+                             "the machine", "the mini")):
+            aattr = DIM
         else:
-            subject, actor = sub, "machine"
+            aattr, cut = 0, 0
         acol = x + room - AGE_W
         hcol = (acol - 2 if age else x + room) - len(hsh)
-        if actor.startswith(("operator speaks", "operator asks")):
-            aattr = SPEAK
-        elif "operator" in actor:
-            aattr = DECIDE
-        else:
-            aattr = DIM
-        # the act is a dedicated column, not a trailer on the substance;
-        # narrow rooms drop it whole
-        ccol = hcol - 2 - ACT_W if room >= 80 and actor else hcol
         segs = []
-        text_room = ccol - x - 2
-        subj = (subject if len(subject) <= text_room
-                else subject[: max(1, text_room - 1)] + "…")
-        segs.append((x, subj, 0))
-        if ccol < hcol:
-            a = actor if len(actor) <= ACT_W else actor[: ACT_W - 1] + "…"
-            segs.append((ccol, a, aattr))
+        text_room = hcol - x - 2
+        subj = (sub if len(sub) <= text_room
+                else sub[: max(1, text_room - 1)] + "…")
+        if cut and aattr:
+            segs.append((x, subj[:cut], aattr))
+            if len(subj) > cut:
+                segs.append((x + cut, subj[cut:], 0))
+        else:
+            segs.append((x, subj, 0))
         if hcol > x:
             segs.append((hcol, hsh, DIM))
         if age:
