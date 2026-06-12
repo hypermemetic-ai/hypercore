@@ -8,3 +8,5 @@ machine (2026-06-11): four, in order of pull. (1) a "since you last looked" head
 
 operator (2026-06-11): 1 2 and 3 are very interesting. we'll tackle 4 once these are done.
 
+machine (2026-06-11): taken up, in that order, this session — each lands as its own slice with an acceptance card: (1) the since-you-last-acted head on the queue, (2) the standing rule that evidence against a statement files a decision card (it binds future sessions, so the floor fired — your pick of 2 is the settled decision; CLAUDE.md and the skill will carry it), (3) archived graph lines wearing their root's check. 4 waits as agreed; git keeps the thinking until you call it.
+
