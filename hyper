@@ -28,7 +28,7 @@ Speak    s anywhere — words land verbatim, the place travels with them,
 Graphs   the work view lists every execution graph beside hypercore —
          folded ones included, marked folded — and unfolds to its nodes:
          <name>/graph.md, read live; open graphs live under work/, folded
-         ones under history/ — the fold moves the folder; the unit on
+         ones under archive/ — the fold moves the folder; the unit on
          disk is the graph; d on a project line opens that unit's
          documents — intent.md for hypercore, the graph's folder else
 Machine  the record calling is the summons — at launch, a behind record
@@ -59,7 +59,7 @@ QUEUE = os.path.join(ROOT, "queue.md")
 WORDS = os.path.join(ROOT, "words.md")
 WORK = os.path.join(ROOT, "work.md")
 WORKDIR = os.path.join(ROOT, "work")      # open graphs — current work only
-HISTDIR = os.path.join(ROOT, "history")   # folded graphs — the fold moves them here
+ARCHDIR = os.path.join(ROOT, "archive")   # folded graphs — the fold moves them here
 MARKER = " [machine]"
 LM = 3  # left margin
 
@@ -188,8 +188,8 @@ def card_for(st, cards):
 
 def graph_folder(name):
     """Where a graph's folder is today: under work/ while open, under
-    history/ once folded. Either parent exists only while it holds one."""
-    for base in (WORKDIR, HISTDIR):
+    archive/ once folded. Either parent exists only while it holds one."""
+    for base in (WORKDIR, ARCHDIR):
         d = os.path.join(base, name)
         if os.path.isdir(d):
             return d
@@ -199,11 +199,11 @@ def graph_folder(name):
 def graphs():
     """Every execution graph on disk, read fresh: <name>/graph.md, a
     ledger of nodes whose first block is the root ask born with its check.
-    Open graphs live under work/, folded ones under history/ — folded
+    Open graphs live under work/, folded ones under archive/ — folded
     graphs stay listed, finishing the work must not cost the operator the
     view of it — only the open counts treat them as closed."""
     out = []
-    for base in (WORKDIR, HISTDIR):
+    for base in (WORKDIR, ARCHDIR):
         if not os.path.isdir(base):
             continue
         for name in sorted(os.listdir(base)):
@@ -294,8 +294,8 @@ def fold_root(gname):
     """The fold rides the acceptance: when an accepted slice was a graph's
     folding condition (the card names it in a graph field), the result lands
     on the root, the state turns folded, and the folder moves under
-    history/ in the same act — a folded graph is history and is named as
-    such; work/ holds only current work and is gone when none is. Returns
+    archive/ in the same act — a folded graph is history, archived; work/
+    holds only current work and is gone when none is. Returns
     the edited path (at its new home), or None."""
     src = os.path.join(WORKDIR, gname)
     path = os.path.join(src, "graph.md")
@@ -317,8 +317,8 @@ def fold_root(gname):
                               "slice's card (%s)" % date.today().isoformat())
             with open(path, "w") as f:
                 f.write("\n".join(raw) + "\n")
-            dst = os.path.join(HISTDIR, gname)
-            os.makedirs(HISTDIR, exist_ok=True)
+            dst = os.path.join(ARCHDIR, gname)
+            os.makedirs(ARCHDIR, exist_ok=True)
             run("git", "mv", src, dst)
             try:
                 os.rmdir(WORKDIR)
@@ -345,7 +345,7 @@ def accept(name):
     if folded:
         body += ("\n\nthe slice was %s's folding condition; the fold rides "
                  "this commit — result on the root, state folded, the "
-                 "folder moved under history/." % gname)
+                 "folder moved under archive/." % gname)
     return commit("accepted by the operator in the interface: " + name
                   + (" — %s folds" % gname if folded else ""),
                   body,
@@ -1249,7 +1249,7 @@ def main(scr):
                     rows.append(("", 0))
             elif view == "doc":
                 # a graph's documents are its folder, read live — under
-                # work/ while open, under history/ once folded — every
+                # work/ while open, under archive/ once folded — every
                 # file in it, led by its name
                 rows, folder = [], graph_folder(dname)
                 for fn in sorted(os.listdir(folder)):
