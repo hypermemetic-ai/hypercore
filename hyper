@@ -1699,18 +1699,18 @@ def main(scr):
                         and not machine else "")
                      + ("h back . " if back else "")
                      + "s speak . w work . g log . q quit"),
-            "card": "a approve . c cut . e explain . s speak . j/k statements . space/b scroll . h home . esc back",
-            "settle": "a approve . c cut . 1–9 pick . s speak . j/k cards . space/b scroll . h home . esc back",
-            "accept": "a approve . s speak . j/k slices . space/b scroll . h home . esc back",
-            "exchange": "s speak . c fold away . space/b scroll . h home . esc back",
+            "card": "a approve . c cut . e explain . s speak . j/k statements . space/b page . h home . esc back",
+            "settle": "a approve . c cut . 1–9 pick . s speak . j/k cards . space/b page . h home . esc back",
+            "accept": "a approve . s speak . j/k slices . space/b page . h home . esc back",
+            "exchange": "s speak . c fold away . space/b page . h home . esc back",
             "work": ("enter unfold . d document . s speak . h home . esc back"
                      if wexp is None else
                      "enter unfold graph . j/k move . d document . "
                      "s speak on it . space/b scroll . h home . esc fold"
                      if wexp == 0 else
                      "j/k move . s speak on it . space/b scroll . h home . esc back"),
-            "doc": "space/b scroll . s speak . h home . esc back",
-            "log": "space/b scroll . s speak . h home . esc back",
+            "doc": "space/b page . s speak . h home . esc back",
+            "log": "space/b page . s speak . h home . esc back",
         }[view]
         put(scr, h - 3, LM, "─" * max(0, w - 2 * LM), DIM)
         if confirm:
@@ -1821,12 +1821,22 @@ def main(scr):
                 back = None
             continue
 
+        # space/b adapt to the page (the operator's word, 2026-06-11 —
+        # what reads best comes down to the view): the reading views
+        # page; the lists keep their one-line walk; arrows stay the fine
+        # grain everywhere, home/end the snap to the edges. in an
+        # exchange, space pages toward the tail and pins there
+        if view in ("card", "settle", "accept", "exchange", "doc", "log"):
+            if ch == ord(" "):
+                ch = curses.KEY_NPAGE
+            elif ch == ord("b"):
+                ch = curses.KEY_PPAGE
+
         if ch in (curses.KEY_NPAGE, curses.KEY_PPAGE,
                   curses.KEY_HOME, curses.KEY_END):
             # the jumps live on their own keys (the operator's word,
-            # 2026-06-11): space/b walk one line, pgup/pgdn jump a
-            # screenful, home/end jump to the edges — generalized from
-            # the main page to every view
+            # 2026-06-11): pgup/pgdn jump a screenful, home/end jump to
+            # the edges — generalized from the main page to every view
             step = {curses.KEY_NPAGE: view_h, curses.KEY_PPAGE: -view_h,
                     curses.KEY_HOME: -10 ** 6, curses.KEY_END: 10 ** 6}[ch]
             if view == "home":
@@ -1915,10 +1925,6 @@ def main(scr):
                 scroll += 1
             elif ch == curses.KEY_UP:
                 scroll -= 1
-            elif ch == ord(" "):
-                scroll += 1
-            elif ch == ord("b"):
-                scroll -= 1
             elif ch == ord("a"):
                 confirm = ("approve", pend[ci])
             elif ch == ord("c"):
@@ -1944,10 +1950,6 @@ def main(scr):
             elif ch == curses.KEY_DOWN:
                 scroll += 1
             elif ch == curses.KEY_UP:
-                scroll -= 1
-            elif ch == ord(" "):
-                scroll += 1
-            elif ch == ord("b"):
                 scroll -= 1
             elif ch == ord("a"):
                 confirm = ("go", decides[si]["lines"][0][3:].strip())
@@ -1990,10 +1992,6 @@ def main(scr):
                 scroll += 1
             elif ch == curses.KEY_UP:
                 scroll -= 1
-            elif ch == ord(" "):
-                scroll += 1
-            elif ch == ord("b"):
-                scroll -= 1
             elif ch == ord("a"):
                 confirm = ("accept", accepts[ai]["lines"][0][3:].strip())
             elif ch == ord("s"):
@@ -2023,13 +2021,6 @@ def main(scr):
                     if scroll >= exmax:
                         scroll = -1
             elif ch == curses.KEY_UP:
-                scroll = max(0, (exmax if scroll == -1 else scroll) - 1)
-            elif ch == ord(" "):
-                if scroll != -1:
-                    scroll += 1
-                    if scroll >= exmax:
-                        scroll = -1
-            elif ch == ord("b"):
                 scroll = max(0, (exmax if scroll == -1 else scroll) - 1)
             elif ch == ord("c"):
                 confirm = ("fold", exb)
@@ -2187,10 +2178,6 @@ def main(scr):
             elif ch == curses.KEY_DOWN:
                 scroll += 1
             elif ch == curses.KEY_UP:
-                scroll -= 1
-            elif ch == ord(" "):
-                scroll += 1
-            elif ch == ord("b"):
                 scroll -= 1
             elif ch == ord("s"):
                 if "words.md" in dirty_files:
