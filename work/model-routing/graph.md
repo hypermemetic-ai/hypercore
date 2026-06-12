@@ -23,6 +23,7 @@
 - op: decide
 - ask: widening the structural route commits quality risk on the operator's behalf — theirs to settle before machinery exists. the card stands in work.md with three options: leave it, widen the mini's class, or an effort tier on one model
 - check: the card settles; the root folds on the answer, machinery (if any) following as its own slice
-- state: open
+- result: settled 2026-06-11 (957d80b) — option 3, the effort tier: no-words summons keep the full machine's model at low effort. executed the same hour (the mini file); the slice awaits acceptance, and the root folds when it lands
+- state: done
 - since: 2026-06-11
 - of: model-routing
