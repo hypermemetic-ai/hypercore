@@ -860,15 +860,14 @@ def main(scr):
              "read": ("answered", DIM), "sent": ("sent", DIM)}
 
     def log_segs(line, x, room):
-        # a log entry reads act · thing · detail (the operator's word,
-        # 2026-06-11, three times over): the act leads and pops, the
-        # thing it is about — the statement or card the act concerns,
-        # its quoted name or the first segment past the act — follows at
-        # full weight (almost as important, the operator's word), pulled
-        # forward even when the subject buried it; only the detail stays
-        # dim, and the hash and age trail at the end, where reference,
-        # not reading, looks for them.  non-load-bearing words go; the
-        # operator's acts read cyan, the machine's bold.
+        # a log entry reads act · thing, then hash and age — nothing
+        # else (the operator's word, 2026-06-11, four rounds): the act
+        # leads and pops, the thing it concerns follows at full weight
+        # in minimal words — the quoted card or statement name when the
+        # subject carries one, else the head of what follows the act's
+        # colon — and the detail is cut; it barely fit and was never
+        # critical.  non-load-bearing words go; the operator's acts
+        # read cyan, the machine's bold.
         hsh, _, rest = line.partition(" ")
         sub, sep, age = rest.rpartition(" . ")
         if not sep or not age.endswith("ago"):
@@ -879,31 +878,23 @@ def main(scr):
 
         def joint(s):
             cut = len(s)
-            for sp in (": ", " — ", ", ", " . "):
+            for sp in (": ", " — ", ", ", " . ", ". "):
                 i = s.find(sp)
                 if 0 <= i < cut:
                     cut = i
             return cut
 
-        cut = joint(sub)
-        act, tail = sub[:cut], sub[cut:]
+        act, tail = sub[: joint(sub)], sub[joint(sub):]
         m = re.search('"[^"]+"', tail)
         if m:
             thing = m.group(0)
-            pre, post = tail[: m.start()], tail[m.end():]
         else:
-            t0 = len(tail) - len(tail.lstrip(":,— "))
-            thing = tail[t0: t0 + joint(tail[t0:])]
-            pre, post = "", tail[t0 + len(thing):]
-        # the trail the thing left behind keeps its place in the detail,
-        # minus the preposition that pointed at it
-        pre = re.sub(r",?\s*(on|of|from|in)\s*$", "", pre).strip(":,— ")
-        detail = (pre + post).lstrip(":,—. ")
+            i = tail.find(": ")
+            t = (tail[i + 2:] if i >= 0 else tail).lstrip(":,—. ")
+            thing = t[: joint(t)].rstrip(":,. ")
         pieces = [(act, MARK if op_act else BOLD)]
         if thing:
             pieces += [(" · ", DIM), (thing, 0)]
-        if detail:
-            pieces += [(" · ", DIM), (detail, DIM)]
         meta = " · " + hsh + (" · " + age if age else "")
         segs, pos = [], x
         for i, (txt, attr) in enumerate(pieces):

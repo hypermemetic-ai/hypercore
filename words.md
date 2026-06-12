@@ -12,6 +12,8 @@ machine (2026-06-11): landed on the slice, still yours to accept: every log line
 
 operator (2026-06-11): still not quite there. think harder about what exactly should go in the "thing this concerns" field. it should be exceedingly clear with minimal words. the dim details should just be cut. they barely fit anyway and aren't critical.
 
+machine (2026-06-11): cut and sharpened, still yours to accept: every line now reads act · thing and stops. the thing is the one name the act concerns — the card or statement's quoted name when the act carries one, the statement's head on an approve or cut, your words' own first clause on a speak (operator speaks · I don't like m:ss format). the dim details are gone. the card's try line names the relaunch.
+
 ## from the queue . 2026-06-11
 
 operator (2026-06-11): I don't like the m:ss format. I think I would prefer something like 1m 50s
