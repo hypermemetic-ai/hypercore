@@ -1208,11 +1208,22 @@ def main(scr):
         answered = [b for b in standalone
                     if b["words"] and b["words"][-1].startswith("machine (")]
         sent = [b for b in standalone if b not in answered]
-        entries = ([("decide", s) for s in pend]
-                   + [("settle", b) for b in decides]
-                   + [("accept", b) for b in accepts]
-                   + [("read", b) for b in answered]
+        # what needs the operator sorts above what waits on the machine
+        # (the operator's word, 2026-06-11): a spoken-on card and an
+        # unanswered exchange need nothing until the response lands
+        attention = ([("decide", s) for s in pend]
+                     + [("settle", b) for b in decides
+                        if b["lines"][0] not in spoken]
+                     + [("accept", b) for b in accepts
+                        if b["lines"][0] not in spoken]
+                     + [("read", b) for b in answered])
+        waiting = ([("settle", b) for b in decides
+                    if b["lines"][0] in spoken]
+                   + [("accept", b) for b in accepts
+                      if b["lines"][0] in spoken]
                    + [("sent", b) for b in sent])
+        entries = attention + waiting
+        nattn = len(attention)
         sel = max(0, min(sel, len(entries) - 1))
         ci = max(0, min(ci, len(pend) - 1))
         ai = max(0, min(ai, len(accepts) - 1))
@@ -1352,14 +1363,18 @@ def main(scr):
                     else:
                         cost = ""
                     if i == sel:
-                        put(scr, y, LM, " " * width, REV)
-                        put(scr, y, LM, label, lattr | REV)
-                        put(scr, y, LM + GUT, text, REV)
+                        # selection is a bar beside the line, not a wash
+                        # over it (the operator's word, 2026-06-11 — the
+                        # highlighter obscured the status): every color
+                        # on the row stays its own
+                        put(scr, y, 0, "▌", ACCENT)
+                        put(scr, y, LM, label, lattr | BOLD)
+                        put(scr, y, LM + GUT, text, BOLD)
                         if cost:
                             put(scr, y, LM + GUT + len(text),
-                                " — " + cost, DIM | REV)
+                                " — " + cost, DIM | BOLD)
                         if tag:
-                            put(scr, y, LM + width - len(tag), tag, REV)
+                            put(scr, y, LM + width - len(tag), tag, BOLD)
                     else:
                         put(scr, y, LM, label, lattr)
                         put(scr, y, LM + GUT, text,
@@ -1369,6 +1384,10 @@ def main(scr):
                                 " — " + cost, DIM)
                         if tag:
                             put(scr, y, LM + width - len(tag), tag, DIM)
+                    if i < nattn:
+                        # the white dot: this item needs the operator now
+                        # (their word, 2026-06-11, borrowing modern ux)
+                        put(scr, y, LM - 2, "●", BOLD)
                     y += 1
             else:
                 put(scr, y, LM, "nothing waits on you.", DIM)
