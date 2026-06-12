@@ -10,14 +10,6 @@ machine (2026-06-11): Agreed — past the column edge the cut is blind, and gett
 
 operator (2026-06-11): why did this happen and how do we ensure it doesn't happen going forward?
 
-## from the decision card, on "a new project asks to open: the sts2 overlay" . 2026-06-11
-
-the operator decides (2026-06-11): option 1 — open it now — the machine creates ~/projects/sts2-overlay as its own repo, links it in the registry, and drafts founding foundations [machine] from your words and a first read of the jorbs site, returning through the queue for the rotation
-
-operator (2026-06-11): again, I pick a decision, I see it here as if I had written something. this should not happen. what happened with my last request about this? is work regarding it underway?
-
-machine (2026-06-11): Built, as of this hour. The accounting: your last word on this was read too narrowly — the answer fixed the evidence-card loop (drafts now ride the card) but let the display half pass with no work entry and no change. Under your guarantee that is a system failure, plainly. Now a pick lands as "the operator decides (date): option N — …" — a narrated act, worn in decision color, never your voice — and the pick line above is trued up to match. The slice awaits your acceptance after a relaunch (a7c135d).
-
 ## from the decision card, on "long entries shorten to their idea" . 2026-06-11
 
 operator (2026-06-11): I don't like any of these frankly. what have we been doing so far? all the log changes so far have been great and I wasn't consulted in this way about them. so I assumed they weren't as expensive as options 1 and 2 make it seem here.
