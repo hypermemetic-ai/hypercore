@@ -26,3 +26,5 @@ machine (2026-06-12): Reworked (1d637d1) — the change moved to generation: eve
 
 operator (2026-06-12): I think I prefer the unread dot on the left after all.
 
+machine (2026-06-12): Moved back (34ac720) — the dot sits just left of the row again, still meaning one thing, an unread answer. Awaiting acceptance in work.md; relaunch hyper to see it.
+
