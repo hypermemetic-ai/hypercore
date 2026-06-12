@@ -1,5 +1,13 @@
 # work
 
+## a pick reads as a decision, not your speech
+
+- ask: your words (2026-06-11, twice — "I pick a decision, I see it here as if I had written something. this should not happen."). settling a card used to land the pick as an operator speech line, as if you had typed the option's prose; now it lands as "the operator decides (date): option N — …" — a narrated act, worn in the exchange in decision color, never your voice. the standing sts2 pick line is trued up the same way
+- try: relaunch hyper (q, then the menu) — the sts2 exchange shows "the operator decides …" in decision color; any future settle lands the same way
+- blocks: nothing — record voice and display
+- state: awaiting acceptance
+- since: 2026-06-11
+
 ## long entries shorten to their idea
 
 - ask: your words (2026-06-11, on the log-width card — the next part is actually shortening long entries so I get the idea). every log change so far rearranged text already in the record — mechanical, free, no card. this is the first one code alone can't make: shortening to the idea means someone writes a summary. the cost is small either way; the card asks only who holds the pen

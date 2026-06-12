@@ -212,6 +212,12 @@ def linked_intents():
     return out
 
 
+# a pick is a decision, not speech: the settle line narrates the act
+# instead of quoting the operator (their word, 2026-06-11, twice — "I
+# pick a decision, I see it here as if I had written something")
+OP_LINES = ("operator (", "the operator decides (")
+
+
 def ledger(path):
     """A ledger file as raw '## ' blocks: the head line, '- key: value'
     fields, spoken operator/machine lines, and the blockquote if any."""
@@ -228,7 +234,7 @@ def ledger(path):
             if ln.startswith("- ") and ": " in ln:
                 k, v = ln[2:].split(": ", 1)
                 fields[k.strip()] = v.strip()
-            elif ln.startswith(("operator (", "machine (")):
+            elif ln.startswith(OP_LINES + ("machine (",)):
                 words.append(ln)
         blocks.append({"quote": " ".join(l[2:].strip() for l in block if l.startswith("> ")),
                        "fields": fields, "words": words, "lines": block})
@@ -526,7 +532,7 @@ def settle_card(name, word, root=ROOT):
         blocks.append(blk)
     if blk["lines"][-1].strip():
         blk["lines"].append("")
-    blk["lines"].append("operator (%s): %s" % (stamp, word.strip()))
+    blk["lines"].append("the operator decides (%s): %s" % (stamp, word.strip()))
     write_ledger(WORDS, "words", blocks)
     wpath = os.path.join(root, "work.md")
     wblocks = ledger(wpath)
@@ -1127,7 +1133,7 @@ def main(scr):
         last = run("git", "log", "-1", "--format=%h %s . %cr").strip()
 
         awaits = [b for b in cards + exchanges
-                  if b["words"] and b["words"][-1].startswith("operator (")]
+                  if b["words"] and b["words"][-1].startswith(OP_LINES)]
         if machine and machine[0].poll() is not None:
             rc, kind = machine[0].returncode, machine[2]
             if locked_machine() == machine[0].pid:
@@ -1229,7 +1235,7 @@ def main(scr):
             for b in blks:
                 key = ('## from the %s card, on "%s"'
                        % (kind, b["lines"][0][3:].strip()))
-                if any(x["words"] and x["words"][-1].startswith("operator (")
+                if any(x["words"] and x["words"][-1].startswith(OP_LINES)
                        for x in exchanges if x["lines"][0].startswith(key)):
                     spoken.add(b["lines"][0])
         answered = [b for b in standalone
@@ -1450,7 +1456,8 @@ def main(scr):
             if card and card["words"]:
                 rows += [[], [(LM, "THE EXCHANGE SO FAR", DIM)]]
                 for wln in card["words"]:
-                    attr = DIM if wln.startswith("operator (") else 0
+                    attr = (DECIDE if wln.startswith("the operator decides (")
+                            else DIM if wln.startswith("operator (") else 0)
                     rows.append([])
                     rows += [[(LM + 2, ln, attr)] for ln in wrap(wln, width - 2)]
             scroll = max(0, min(scroll, max(0, len(rows) - view_h)))
@@ -1509,7 +1516,8 @@ def main(scr):
             if chat:
                 rows += [[(LM, "THE EXCHANGE SO FAR", DIM)]]
                 for wln in chat:
-                    attr = DIM if wln.startswith("operator (") else 0
+                    attr = (DECIDE if wln.startswith("the operator decides (")
+                            else DIM if wln.startswith("operator (") else 0)
                     rows.append([])
                     rows += [[(LM + 2, ln, attr)] for ln in wrap(wln, width - 2)]
                 rows.append([])
@@ -1560,7 +1568,8 @@ def main(scr):
             if chat:
                 rows += [[(LM, "THE EXCHANGE SO FAR", DIM)]]
                 for wln in chat:
-                    attr = DIM if wln.startswith("operator (") else 0
+                    attr = (DECIDE if wln.startswith("the operator decides (")
+                            else DIM if wln.startswith("operator (") else 0)
                     rows.append([])
                     rows += [[(LM + 2, ln, attr)] for ln in wrap(wln, width - 2)]
                 rows.append([])
@@ -1584,7 +1593,8 @@ def main(scr):
             put(scr, top, LM, exb["lines"][0][3:].strip().upper(), DIM)
             rows = []
             for wln in exb["words"]:
-                attr = DIM if wln.startswith("operator (") else 0
+                attr = (DECIDE if wln.startswith("the operator decides (")
+                        else DIM if wln.startswith("operator (") else 0)
                 rows.append([])
                 rows += [[(LM, ln, attr)] for ln in wrap(wln, width)]
             exmax = max(0, len(rows) - view_h)

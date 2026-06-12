@@ -80,6 +80,7 @@ if [ -n "$ledgers" ]; then
     function flush() { if (pending != "") out = out pending; pending = "" }
     /^## /        { flush(); src = $0 }
     /^operator \(/ { pending = pending "  [" FILENAME " . " substr(src, 4) "]\n  " $0 "\n" }
+    /^the operator decides \(/ { pending = pending "  [" FILENAME " . " substr(src, 4) "]\n  " $0 "\n" }
     /^machine \(/  { pending = "" }
     END { flush(); printf "%s", out }
   ' $ledgers 2>/dev/null) || words=""
