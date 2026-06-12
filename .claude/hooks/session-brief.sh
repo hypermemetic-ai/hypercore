@@ -62,7 +62,7 @@ made of them return through the queue.
 fi
 
 # open execution graphs: work/<name>/graph.md, the first block the root
-# ask born with its check. folded graphs live under history/ — the fold
+# ask born with its check. folded graphs live under archive/ — the fold
 # moves the folder — so work/ holds only current work; the folded-root
 # filter below stays as a net for a fold caught mid-move.
 graphs_block=""
