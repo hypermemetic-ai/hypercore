@@ -66,8 +66,8 @@ REGISTRY = os.path.join(ROOT, "registry.md")  # linked folders — outside work 
 MARKER = " [machine]"
 LM = 3  # left margin
 
-LEDGERS = ("intent.md", "queue.md", "words.md", "work.md", "registry.md")
 GUARD = "the record is behind — m summons the machine to true it up"
+MIDWRITE = "the machine is mid-write there — a moment, then the key again"
 
 MACHINE_LOG = os.path.join(ROOT, ".hyper-machine.log")
 MACHINE_PID = os.path.join(ROOT, ".hyper-machine.pid")
@@ -1074,8 +1074,13 @@ def main(scr):
         width = min(w - 2 * LM, 76)
         top = 4
         view_h = max(1, h - top - 6)
-        guarded = any(l.split()[-1] in LEDGERS or l.split()[-1].endswith("graph.md")
-                      for l in dirty.splitlines())
+        # the guard is scoped per act (the operator's pick, 2026-06-11):
+        # each act blocks only on the files its own commit writes —
+        # speech on words.md, ratification on intent or queue, cards on
+        # work.md and words.md — so the machine mid-write on one ledger
+        # never locks the others
+        dirty_files = {l.split()[-1] for l in dirty.splitlines()}
+        held = MIDWRITE if machine else GUARD
 
         put(scr, 0, LM, "H Y P E R C O R E", BOLD)
         parts = []
@@ -1102,11 +1107,19 @@ def main(scr):
                     % (len(awaits), " awaits" if len(awaits) == 1 else "s await"))
             put(scr, 2, max(LM, w - len(mtxt) - LM), mtxt, DIM)
         if dirty:
+            # red is reserved for a dead session's leavings — the one
+            # state that needs the operator; a working machine's dirty
+            # tree is just the work happening, and reads dim
             files = ", ".join(l.split()[-1] for l in dirty.splitlines())
             room = w - 2 * LM - (len(mtxt) + 2 if mtxt else 0)
-            put(scr, 2, LM,
-                ("the record is behind — uncommitted: %s — m trues it up"
-                 % files)[: max(0, room)], ALERT)
+            if machine:
+                put(scr, 2, LM,
+                    ("the machine is mid-write: %s" % files)[: max(0, room)],
+                    DIM)
+            else:
+                put(scr, 2, LM,
+                    ("the record is behind — uncommitted: %s — m trues it up"
+                     % files)[: max(0, room)], ALERT)
 
         if view == "home":
             y = top
@@ -1609,8 +1622,15 @@ def main(scr):
             kind, payload = confirm
             confirm = None
             if ch in (ord("y"), ord("Y")):
-                if guarded:
-                    flash = GUARD
+                needs = {"go": ("words.md", "work.md"),
+                         "cut-card": ("words.md", "work.md"),
+                         "pick": ("words.md", "work.md"),
+                         "fold": ("words.md",),
+                         "accept": ("work.md",),
+                         "approve": ("intent.md", "queue.md"),
+                         "cut": ("intent.md", "queue.md")}[kind]
+                if dirty_files.intersection(needs):
+                    flash = held
                     continue
                 if kind in ("go", "cut-card", "pick"):
                     # the key is the word, and the word is decisive: it
@@ -1677,8 +1697,8 @@ def main(scr):
             elif ch == ord("g"):
                 view, scroll = "log", 0
             elif ch == ord("s"):
-                if guarded:
-                    flash = GUARD
+                if "words.md" in dirty_files:
+                    flash = held
                 else:
                     wd = read_words(scr, h, w, "your words, from the queue "
                                                "(enter sends . esc abandons): ")
@@ -1750,8 +1770,8 @@ def main(scr):
                     confirm = ("pick", (decides[si]["lines"][0][3:].strip(),
                                         n, opts[n - 1]))
             elif ch == ord("s"):
-                if guarded:
-                    flash = GUARD
+                if "words.md" in dirty_files:
+                    flash = held
                 else:
                     name = decides[si]["lines"][0][3:].strip()
                     wd = read_words(scr, h, w,
@@ -1785,8 +1805,8 @@ def main(scr):
             elif ch == ord("a"):
                 confirm = ("accept", accepts[ai]["lines"][0][3:].strip())
             elif ch == ord("s"):
-                if guarded:
-                    flash = GUARD
+                if "words.md" in dirty_files:
+                    flash = held
                 else:
                     name = accepts[ai]["lines"][0][3:].strip()
                     wd = read_words(scr, h, w,
@@ -1822,8 +1842,8 @@ def main(scr):
             elif ch == ord("c"):
                 confirm = ("fold", exb)
             elif ch == ord("s"):
-                if guarded:
-                    flash = GUARD
+                if "words.md" in dirty_files:
+                    flash = held
                 else:
                     wd = read_words(scr, h, w, "your words, into this exchange "
                                                "(enter sends . esc abandons): ")
@@ -1876,8 +1896,8 @@ def main(scr):
             elif ch == ord("b") and wexp is not None:
                 scroll -= view_h
             elif ch == ord("s"):
-                if guarded:
-                    flash = GUARD
+                if "words.md" in dirty_files:
+                    flash = held
                 else:
                     # the place travels with the words: a project line, a
                     # work.md entry, or a node of the graph it belongs to
@@ -1929,8 +1949,8 @@ def main(scr):
             elif ch == ord("b"):
                 scroll -= view_h
             elif ch == ord("s"):
-                if guarded:
-                    flash = GUARD
+                if "words.md" in dirty_files:
+                    flash = held
                 else:
                     place = (("the document" if dunit == 0 else
                               'the documents of "%s"' % projects[dunit][0])

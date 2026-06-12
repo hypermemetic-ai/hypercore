@@ -8,3 +8,11 @@
 - state: awaiting acceptance
 - since: 2026-06-11
 
+## seamless operation while the machine writes
+
+- ask: your pick, option 1, executed — the guard is scoped per act: speech blocks only while words.md itself is dirty, ratification only on a dirty intent or queue, card acts only on a dirty work.md (or words.md, where the word lands too), so the machine mid-write on one ledger never locks the others. while a machine runs, a dirty tree reads dim — "the machine is mid-write" — and a blocked key answers "a moment, then the key again"; the red alert now means exactly one thing: a dead session's leavings, with no machine to clean them.
+- try: relaunch hyper (q, then the menu) — speak from the queue while the machine answers: the words land, no red, the line under the title reads dim mid-write; red shows only when a session died with the tree dirty
+- blocks: nothing runs unbacked — the settled card (8e03a6d) is the decision; until accepted the scoping stays machine-owned
+- state: awaiting acceptance
+- since: 2026-06-11
+
