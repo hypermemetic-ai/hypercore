@@ -97,6 +97,13 @@ graph's intent document is singular, and this repo is hypercore's folder.
   line.
 - Anti-ceremony holds: new machinery only after its absence blocks work
   twice.
+- The log is the record read raw (the operator's word, 2026-06-11: a
+  single solution for logging — whatever the log pulls from is written
+  in the first place to be maximally clear and concise): the log pulls
+  git commit subjects, so write every subject for the log — the point
+  first, sized to one log line, the full story in the body. Subjects
+  beginning "the operator" are hyper's signature for acts in the
+  operator's name; a session never starts a subject with those words.
 - Standing work is the operator's action list (operator's word,
   2026-06-11): every work.md entry names a clear operator act in its
   state — "awaiting your decision" surfaces a decision card on the

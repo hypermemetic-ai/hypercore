@@ -1,11 +1,11 @@
 # work
 
-## long entries shorten to their idea
+## the log is written legible at the source
 
-- ask: your words (2026-06-11, on the log-width card — the next part is actually shortening long entries so I get the idea). every log change so far rearranged text already in the record — mechanical, free, no card. this is the first one code alone can't make: shortening to the idea means someone writes a summary. the cost is small either way; the card asks only who holds the pen
-- options: written legible — your suggestion: every subject is composed to fit a log line from the start (the full story rides the commit body), the display's manipulation logic retires to a plain cut, the simplest system; entries already in history stay as written, and your own long speeches still cut at a word boundary . sessions leave gists — one extra line (a git note) from the session each speech already summons, covering history by one backfill pass and your long speeches too; subjects stay verbatim, no new spend, but a second channel to maintain . mini gists the display — hyper hands overflowing entries to mini once, cached by hash; record untouched, pennies per entry, gist lives outside the record
-- blocks: nothing built yet — until decided, long entries keep the blind edge cut
-- state: awaiting your decision
+- ask: your words (2026-06-11 — a single solution for logging going forward: whatever the log pulls from is what should be written in the first place to be maximally clear and concise). the log pulls git commit subjects, and they are now written for the log: hyper's own subjects lead with the act and drop the boilerplate ("the operator approves: …", "the operator speaks on "card": …"), sessions are bound by the standing orders to write the point first at log-line size with the full story in the commit body, and the display's manipulation logic (word-stripping, clause surgery, the act column) retires — the line shows the subject whole, hash and age at the edge. entries already in history stay as written
+- try: relaunch hyper (q, then the menu) — act once, then g: new lines read whole and plain, exactly as committed; older lines stay as they were written
+- blocks: nothing — record voice at the source
+- state: awaiting acceptance
 - since: 2026-06-11
 
 ## log entries run whole
