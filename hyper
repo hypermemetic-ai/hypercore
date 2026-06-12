@@ -1413,10 +1413,10 @@ def main(scr):
                         if tag:
                             put(scr, y, LM + width - len(tag), tag, DIM)
                     if kind == "read":
-                        # the white dot marks an unread answer, on the
-                        # right (their word, 2026-06-11 — kinds that wear
-                        # a bold label need no second flag)
-                        put(scr, y, LM + width + 1, "●", BOLD)
+                        # the white dot marks an unread answer, back on
+                        # the left (their word, 2026-06-12 — the right
+                        # side was tried and read worse)
+                        put(scr, y, LM - 2, "●", BOLD)
                     y += 1
             else:
                 put(scr, y, LM, "nothing waits on you.", DIM)
