@@ -855,6 +855,37 @@ def main(scr):
     KINDS = {"decide": ("decide", BOLD), "settle": ("decide", BOLD),
              "accept": ("accept", ACCENT),
              "read": ("answered", DIM), "sent": ("sent", DIM)}
+
+    def log_segs(line, x, room):
+        # a log entry reads at a glance (the operator's word, 2026-06-11):
+        # the act — the subject's head, up to its first ': ' or ' — ' —
+        # comes first and pops, the rest stays dim, and the hash and age
+        # trail at the end, where reference, not reading, looks for them.
+        # the operator's own acts wear the accent; the machine's read bold.
+        hsh, _, rest = line.partition(" ")
+        sub, _, age = rest.partition(" . ")
+        cut = len(sub)
+        for sep in (": ", " — "):
+            i = sub.find(sep)
+            if 0 <= i < cut:
+                cut = i
+        head, tail = sub[:cut], sub[cut:]
+        meta = " · " + hsh + (" · " + age if age else "")
+        op_act = "the operator" in sub and "in the interface" in sub
+        segs, pos = [], x
+        h = head[: max(1, room - 1)] + "…" if len(head) > room else head
+        segs.append((pos, h, ACCENT if op_act else BOLD))
+        pos += len(h)
+        left = room - (pos - x)
+        if tail and left > len(meta) + 8:
+            t = (tail[: left - len(meta) - 1] + "…"
+                 if len(tail) > left - len(meta) else tail)
+            segs.append((pos, t, DIM))
+            pos += len(t)
+            left = room - (pos - x)
+        if left >= len(meta):
+            segs.append((pos, meta, DIM))
+        return segs
     GUT = 10  # the kind column
 
     view, sel, ci, ai, si, wsel, gsel = "home", 0, 0, 0, 0, 0, 0
@@ -1046,9 +1077,8 @@ def main(scr):
                     % (len(moves), "" if len(moves) == 1 else "S"), DIM)
                 y += 1
                 for ln in moves[:4]:
-                    put(scr, y, LM + 2,
-                        ln if len(ln) <= width - 2 else ln[: width - 3] + "…",
-                        DIM)
+                    for x, txt, attr in log_segs(ln, LM + 2, width - 2):
+                        put(scr, y, x, txt, attr)
                     y += 1
                 if len(moves) > 4:
                     put(scr, y, LM + 2,
@@ -1453,12 +1483,15 @@ def main(scr):
                         for ln in f.read().splitlines():
                             rows += [(wl, 0) for wl in wrap(ln, width)]
             else:
-                rows = [((e if len(e) <= width else e[: width - 1] + "…"), 0)
+                rows = [log_segs(e, LM, width)
                         for e in run("git", "log", "-200",
                                      "--format=%h %s . %cr").splitlines()]
+            if view == "doc":
+                rows = [[(LM, txt, attr)] if txt else [] for txt, attr in rows]
             scroll = max(0, min(scroll, max(0, len(rows) - view_h)))
-            for i, (txt, attr) in enumerate(rows[scroll: scroll + view_h]):
-                put(scr, top + 2 + i, LM, txt, attr)
+            for i, segs in enumerate(rows[scroll: scroll + view_h]):
+                for x, txt, attr in segs:
+                    put(scr, top + 2 + i, x, txt, attr)
             below = len(rows) - view_h - scroll
             if below > 0:
                 put(scr, top + 2 + view_h, LM,
