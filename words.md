@@ -10,3 +10,7 @@ machine (2026-06-11): Right — the log-width slice had been filed under the sts
 
 operator (2026-06-11): we're part of the way there. the next part is actually shortening long entries so I get the idea. this fix should help short-ish ones get their point across when all they need is a little more space.
 
+## from the acceptance card, on "the acceptance card wears its own title" . 2026-06-11
+
+operator (2026-06-11): why did this happen and how do we ensure it doesn't happen going forward?
+
