@@ -24,3 +24,5 @@ operator (2026-06-11): do our changes to red text affect "the record is behind -
 
 operator (2026-06-11): is there anything like a free lunch when model routing? and if so, can we fold it in as a structural element buying us speed without accuracy loss? talk to me about this, and conduct extensive research.
 
+machine (2026-06-11): in order: the clock and the pointer landed and you accepted them — 1m 50s, and a pointer that dies at the first keystroke. and yes — that red line is exactly what your option-1 pick softened: while a machine works, a dirty tree reads dim ("the machine is mid-write"), each key blocks only on the one ledger its act writes, and red is reserved for a dead session's leavings; you accepted that slice too, so the next launch wears it. the routing question opens as its own work (model-routing, under hypercore's line) — the research is running now, and the full answer lands in this exchange before the session ends.
+
