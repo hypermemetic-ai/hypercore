@@ -20,3 +20,7 @@ operator (2026-06-11): I think I want more proactive requirement extraction in t
 
 operator (2026-06-11): no, I'm not looking to combine the two approaches. if I suggest a change to the logs, the change should occur at time of generation.
 
+## words . 2026-06-12
+
+operator (2026-06-12): I think I prefer the unread dot on the left after all.
+
