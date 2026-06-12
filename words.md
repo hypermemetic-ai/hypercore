@@ -20,3 +20,7 @@ machine (2026-06-11): now that archive/ exists, very little. 2's ledger would be
 
 operator (2026-06-11): option 1 — subgraph, made visible — open graphs of hypercore appear under the hypercore line, reached by unfolding it, never beside it; every root names its parent (of: hypercore); the fold stays as it is, since the graph's folder already sits inside hypercore's — display and convention, one redo to take back
 
+## from the queue . 2026-06-11
+
+operator (2026-06-11): once again I selected an option and still see the card in the queue.
+
