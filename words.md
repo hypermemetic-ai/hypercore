@@ -8,3 +8,5 @@ machine (2026-06-12): Pushed — hypercore to hypermemetic-ai/hypercore (afe4e63
 
 operator (2026-06-12): under qqp-dev, private.
 
+machine (2026-06-12): Created and pushed — qqp-dev/sts2-overlay, private, main tracking origin. Seat three also reported meanwhile (a8f967b, pushed with it): Muffin has no fullscreen layer so an always-on-top click-through window works even over fullscreen, and you already play STS2 windowed at 967x543 on a 1600x900 screen — a plain companion window in the free margin may beat a true overlay. One seat still out: jorbs's site.
+
