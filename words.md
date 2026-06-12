@@ -14,3 +14,5 @@ operator (2026-06-11): I don't like the m:ss format. I think I would prefer some
 
 operator (2026-06-11): we should hide the mouse cursor in the interface. it serves no purpose.
 
+operator (2026-06-11): do our changes to red text affect "the record is behind - uncommitted" messages? it's the most common and annoying.
+
