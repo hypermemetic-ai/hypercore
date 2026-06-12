@@ -1416,11 +1416,11 @@ def main(scr):
             y += 1
             # the line below is one quiet clause — the act, the thing it
             # concerned, the age; carefully selected, never the whole
-            # subject (the operator's word, 2026-06-11: function and
-            # beauty shouldn't compete)
+            # subject. it reads "latest:" — the newspaper vibe (the
+            # operator's word, 2026-06-11)
             ltxt, lage = gist(last)
             put(scr, y, LM,
-                ("last  " + ltxt + (" . " + lage if lage else ""))
+                ("latest: " + ltxt + (" . " + lage if lage else ""))
                 [: w - 2 * LM], DIM)
 
         elif view == "card":
