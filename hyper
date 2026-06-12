@@ -1055,7 +1055,7 @@ def main(scr):
                     bits.append("standing work: %d . awaiting your acceptance: %d"
                                 % (len(work), len(accepts)))
                 if gopen:
-                    bits.append("open graphs: %d" % gopen)
+                    bits.append("open subgraphs: %d" % gopen)
                 put(scr, y, LM,
                     (" . ".join(bits) + " . w opens the view")[: w - 2 * LM], DIM)
                 y += 1
@@ -1244,8 +1244,15 @@ def main(scr):
                        % (len(work), "y" if len(work) == 1 else "ies",
                           len(accepts)))
             if gs:
-                summary += " · %d graph%s, %d open" % (
-                    len(gs), "" if len(gs) == 1 else "s", gopen)
+                # the graphs are hypercore's children — on its own line
+                # they count as subgraphs, and when none is open the line
+                # says folded instead of "0 open"
+                if gopen:
+                    summary += " · %d subgraph%s, %d open" % (
+                        len(gs), "" if len(gs) == 1 else "s", gopen)
+                else:
+                    summary += " · %d folded subgraph%s" % (
+                        len(gs), "" if len(gs) == 1 else "s")
             put(scr, top + 2, LM, ("hypercore" + " " * width)[:width], REV)
             if len(summary) <= width - len("hypercore") - 2:
                 put(scr, top + 2, LM + width - len(summary), summary, REV)
