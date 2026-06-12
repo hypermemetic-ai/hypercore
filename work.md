@@ -1,5 +1,13 @@
 # work
 
+## log entries get their room
+
+- ask: your words (2026-06-11 — some log entries are being cut short with much room to spare) — two cuts, both gone: the log view kept only the first clause of every subject and dropped the rest into empty space (now the substance runs whole, cut only at the column edge), and speech committed its subject at eight words, baking "…" into the record (now twenty-four; the full words always ride in the commit body). entries committed before today keep their short subjects — git history holds them as written
+- try: relaunch hyper (q, then the menu) — g: every entry's substance runs the width of the line; speak something long and its log line carries far more of it
+- blocks: nothing — display and subject width
+- state: awaiting acceptance
+- since: 2026-06-11
+
 ## the standing work returns to the queue
 
 - ask: your words (2026-06-11 — these cards you mention are not visible) — they were not: the linked-repos slice (1b4a8c9) reused the name WORK for its summon prose, shadowing the path to work.md, so every hyper launched since reads hypercore's own ledger as empty — no acceptance cards on the queue, no entries under hypercore in w, standing work counted without them. the constant is renamed (OPEN_WORK) and the ledger reads whole again; nothing in work.md was lost, only unread

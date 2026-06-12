@@ -339,7 +339,10 @@ def gist(line):
 
 # ----- decisions (each one lands on disk and commits) -------------------
 
-def head(text, n=8):
+def head(text, n=24):
+    # the record is read on a wide screen — a subject cut at eight words
+    # left entries short with much room to spare (the operator's word,
+    # 2026-06-11); the full words always ride in the commit body
     words = text.replace(MARKER, "").split()
     return " ".join(words[:n]) + ("…" if len(words) > n else "")
 
@@ -1009,22 +1012,16 @@ def main(scr):
             return cut
 
         act, tail = sub[: joint(sub)], sub[joint(sub):]
-        m = re.search('"[^"]+"', tail)
-        if m:
-            thing = m.group(0)
-        else:
-            i = tail.find(": ")
-            t = (tail[i + 2:] if i >= 0 else tail).lstrip(":,—. ")
-            thing = t[: joint(t)].rstrip(":,. ")
-        # what the operator really wants to see (their word, six rounds):
-        # the substance — what was said, decided, or built — leads at
-        # normal weight; the act that produced it follows dim. an act
-        # with a named actor yields the line to its thing; a machine
-        # build's own name is the substance.
+        tail = tail.lstrip(":,—. ").rstrip(":,. ")
+        # the substance is the whole of it (the operator's word,
+        # 2026-06-11 — entries were cut short with much room to spare):
+        # an act with a named actor yields the line to everything after
+        # it; a machine build's whole subject is the substance. the only
+        # cut left is the column edge.
         if "operator" in act or act.startswith(("machine", "mini", "trued")):
-            subject, actor = (thing, act) if thing else (act, "")
+            subject, actor = (tail, act) if tail else (act, "")
         else:
-            subject, actor = act, "machine"
+            subject, actor = sub, "machine"
         acol = x + room - AGE_W
         hcol = (acol - 2 if age else x + room) - len(hsh)
         if actor.startswith(("operator speaks", "operator asks")):
