@@ -32,3 +32,5 @@ operator (2026-06-11): I think of the queue as the main screen. if you agree, I 
 
 machine (2026-06-11): agreed — the queue is the main screen, and words spoken there are the default channel, not a place worth naming. landed as a slice, yours to accept: the prompt reads plain "your words", the block heads "words . <date>", the commit drops "from the queue"; the place still travels where it narrows context — a card, a graph, a document. the card's try line names the relaunch.
 
+operator (2026-06-11): I can't select discuss under w. what's up with that?
+
