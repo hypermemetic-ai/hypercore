@@ -1298,9 +1298,10 @@ def main(scr):
                 rows.append([])
             for j, (gname, gblocks) in enumerate(glines):
                 i = len(items) + j
+                folded = "folded" in gblocks[0]["fields"].get("state", "")
                 nodes = "%d node%s" % (len(gblocks),
                                        "" if len(gblocks) == 1 else "s")
-                if "folded" in gblocks[0]["fields"].get("state", ""):
+                if folded:
                     gsum = "folded · " + nodes
                 else:
                     gsum = "%s · %d open" % (nodes, sum(
@@ -1318,6 +1319,14 @@ def main(scr):
                     if inline:
                         row.append((LM + 2 + iw - len(inline), inline, DIM))
                 rows.append(row)
+                if folded:
+                    # a fold can be trusted only as far as its checks
+                    # reach (ratified): the archived line wears its
+                    # root's check, so that reach reads from the list
+                    chk = gblocks[0]["fields"].get("check")
+                    if chk:
+                        rows += [[(LM + 4, ln, DIM)]
+                                 for ln in wrap("check: " + chk, iw - 2)]
                 rows.append([])
             if marks:
                 mark = marks[wsel]
