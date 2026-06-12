@@ -28,23 +28,3 @@ machine (2026-06-11): landed, still yours to accept: the event type now reads in
 
 operator (2026-06-11): almost. but the alternating style is still too visible. the second text unit is now a black block over that which is ugly. and it should be a dedicated column, not attached to the first block.
 
-## from the queue . 2026-06-11
-
-operator (2026-06-11): I don't like the m:ss format. I think I would prefer something like 1m 50s
-
-operator (2026-06-11): we should hide the mouse cursor in the interface. it serves no purpose.
-
-operator (2026-06-11): do our changes to red text affect "the record is behind - uncommitted" messages? it's the most common and annoying.
-
-operator (2026-06-11): is there anything like a free lunch when model routing? and if so, can we fold it in as a structural element buying us speed without accuracy loss? talk to me about this, and conduct extensive research.
-
-machine (2026-06-11): in order: the clock and the pointer landed and you accepted them — 1m 50s, and a pointer that dies at the first keystroke. and yes — that red line is exactly what your option-1 pick softened: while a machine works, a dirty tree reads dim ("the machine is mid-write"), each key blocks only on the one ledger its act writes, and red is reserved for a dead session's leavings; you accepted that slice too, so the next launch wears it. the routing question opens as its own work (model-routing, under hypercore's line) — the research is running now, and the full answer lands in this exchange before the session ends.
-
-operator (2026-06-11): I think of the queue as the main screen. if you agree, I think typing my text to "the queue" doesn't quite capture what that means. if I have anything to say at all I'm likely writing it from this screen.
-
-machine (2026-06-11): agreed — the queue is the main screen, and words spoken there are the default channel, not a place worth naming. landed as a slice, yours to accept: the prompt reads plain "your words", the block heads "words . <date>", the commit drops "from the queue"; the place still travels where it narrows context — a card, a graph, a document. the card's try line names the relaunch.
-
-operator (2026-06-11): I can't select discuss under w. what's up with that?
-
-machine (2026-06-11): deliberate, and now outgrown: when the registry landed, a linked line was the link and no more — nothing stood behind it to read, so w never made it selectable. discuss has since grown the state worth reading: a fully ratified intent and its absorb-old-governance graph. the build opens as work and lands this session: the top-level lines become selectable, enter on discuss unfolds its work and graphs read live from its own folder, d opens its documents. it comes to you as a slice with its own card.
-
