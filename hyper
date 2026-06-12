@@ -1173,19 +1173,28 @@ def main(scr):
 
         if view == "home":
             y = top
+            # the standing-work row, in the operator's own words
+            # (2026-06-11): the counts, then the key that opens them
+            put(scr, y, LM,
+                ("standing work: %d . awaiting acceptance: %d . "
+                 "open subgraphs: %d . w opens the view"
+                 % (len(work), len(accepts), gopen))[: w - 2 * LM], DIM)
+            y += 2
             # the queue wears a head: what the machine did since the
             # operator's last act, read live from git each tick — the
-            # transparency record, without leaving the queue
+            # transparency record, without leaving the queue; its rows
+            # follow the refined log structure, full width
             moves = since_last_act()
             if moves:
                 put(scr, y, LM, "SINCE YOU LAST ACTED — %d MOVE%s"
                     % (len(moves), "" if len(moves) == 1 else "S"), DIM)
                 y += 1
+                hw = w - 2 * LM - 2
                 for i, ln in enumerate(moves[:4]):
                     shade = ZEBRA if i % 2 else 0
                     if shade:
-                        put(scr, y, LM + 2, " " * (width - 2), shade)
-                    for x, txt, attr in log_segs(ln, LM + 2, width - 2):
+                        put(scr, y, LM + 2, " " * hw, shade)
+                    for x, txt, attr in log_segs(ln, LM + 2, hw):
                         put(scr, y, x, txt,
                             ZMAP.get(attr, attr | shade) if shade else attr)
                     y += 1
@@ -1441,19 +1450,13 @@ def main(scr):
             # the view opens folded to one line per top-level unit — today
             # hypercore alone; its graphs are children, reached by
             # unfolding it, never beside it
-            summary = ("%d entr%s · %d await your acceptance"
-                       % (len(work), "y" if len(work) == 1 else "ies",
-                          len(accepts)))
+            # the summary speaks the operator's format (their word,
+            # 2026-06-11 — "your" is cut)
+            summary = ("standing work: %d . awaiting acceptance: %d"
+                       % (len(work), len(accepts)))
             if gs:
-                # the graphs are hypercore's children — on its own line
-                # they count as subgraphs, and when none is open the line
-                # says folded instead of "0 open"
-                if gopen:
-                    summary += " · %d subgraph%s, %d open" % (
-                        len(gs), "" if len(gs) == 1 else "s", gopen)
-                else:
-                    summary += " · %d folded subgraph%s" % (
-                        len(gs), "" if len(gs) == 1 else "s")
+                summary += (" . open subgraphs: %d" % gopen if gopen
+                            else " . folded subgraphs: %d" % len(gs))
             # one selectable line per top-level unit: hypercore first,
             # then every linked project — outside work lives with its
             # project (ratified), each a peer, never a child; enter
@@ -1782,6 +1785,37 @@ def main(scr):
                 (view, sel, ci, ai, si, wsel, gsel, wexp, dunit,
                  scroll, exkey) = back
                 back = None
+            continue
+
+        if ch in (curses.KEY_NPAGE, curses.KEY_PPAGE,
+                  curses.KEY_HOME, curses.KEY_END):
+            # the jumps live on their own keys (the operator's word,
+            # 2026-06-11): space/b walk one line, pgup/pgdn jump a
+            # screenful, home/end jump to the edges — generalized from
+            # the main page to every view
+            step = {curses.KEY_NPAGE: view_h, curses.KEY_PPAGE: -view_h,
+                    curses.KEY_HOME: -10 ** 6, curses.KEY_END: 10 ** 6}[ch]
+            if view == "home":
+                sel = max(0, min(sel + step, len(entries) - 1))
+            elif view == "exchange":
+                if ch == curses.KEY_END:
+                    scroll = -1
+                elif ch == curses.KEY_HOME:
+                    scroll = 0
+                elif ch == curses.KEY_NPAGE and scroll != -1:
+                    scroll += view_h
+                    if scroll >= exmax:
+                        scroll = -1
+                elif ch == curses.KEY_PPAGE:
+                    scroll = max(0, (exmax if scroll == -1 else scroll)
+                                 - view_h)
+            elif view == "work":
+                if wexp is None:
+                    gsel = max(0, min(gsel + step, len(lidx)))
+                else:
+                    wsel = max(0, min(wsel + step, nwitems - 1))
+            else:
+                scroll = max(0, scroll + step)
             continue
 
         if view == "home":
