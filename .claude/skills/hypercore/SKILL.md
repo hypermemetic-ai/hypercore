@@ -109,6 +109,12 @@ graph's intent document is singular, and this repo is hypercore's folder.
   ratified order statement is the measure) — and the queue line and the
   card wear it. Work that waits on no operator act does not stand in
   work.md; git keeps the thinking until its forcing event arrives.
+  One heading, one card: a new entry is inserted whole — its own "## "
+  heading with its own fields — never anchored by replacing an existing
+  heading line (an edit that swapped a heading for a new card orphaned
+  the old entry's fields under the wrong title, 2026-06-11). After any
+  work.md write, read the file back and check every heading still owns
+  exactly one set of fields.
 - Decisions before material (operator's word, 2026-06-11): a call that
   commits the operator's resources or changes what they must later judge
   is settled by the operator before the material exists — surfaced live,
