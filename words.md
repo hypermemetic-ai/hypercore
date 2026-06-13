@@ -18,3 +18,7 @@ operator (2026-06-13): is this coming up as a card? if it isn't we have a proble
 
 operator (2026-06-13): two issues. one, I'm approving three but the card isn't disappearing. two, what does a for approve even do for these? if I need to pick an option or talk there's nothing for approve to do.
 
+## from the acceptance card, on "the work list carries a dim gist under each title" . 2026-06-13
+
+operator (2026-06-13): I don't like it. new direction entirely - I saw the work view and there's more than enough room for a full panel for each entry on the right. let's just design in that direction instead.
+
