@@ -8,3 +8,7 @@ operator (2026-06-13): describe the issue we ran into with trak (empty session i
 
 operator (2026-06-13): share your findings about the claude usage endpoint so I can share. in another md document in home documents
 
+## I want better thread labels. short, clear. also…
+
+operator (2026-06-13): I want better thread labels. short, clear. also the notification sound isn't loud enough.
+
