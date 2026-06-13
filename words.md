@@ -6,3 +6,7 @@ operator (2026-06-13): several of my recently folded speech resulted in response
 
 machine (2026-06-13): Taken — and applied, not promised. Inscribed it into SKILL.md rebuild-discipline: "actionable speech becomes a card, not a prose answer asking whether you want one" (your word, 2026-06-13). This session I acted instead of asking: the sound cue you settled is executed — three gentle candidates sit in sounds/ and the card now offers them as a pick (hear one with `paplay sounds/cue-1-rising.wav`); the STS2 overlay is out of hypercore per your word. Two settled cards still stand for execution and are queued, not waiting on you — trak option 2 (clone+build plexus-idp, a heavy multi-repo Rust build) and utilization option 1 (the credential'd endpoint probe); I kept those two out of this already-long thread so reasoning doesn't fray, and they run next.
 
+## from the decision card, on "hyper: a sound cue when a card needs you" . 2026-06-13
+
+operator (2026-06-13): none of these convince me. I want a nice, professional sound. something luxurious but still simple.
+
