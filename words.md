@@ -8,6 +8,8 @@ machine (2026-06-13): Built both — two acceptance cards now on the queue, both
 
 operator (2026-06-13): good as is, manual rename is fine for now
 
+operator (2026-06-13): changed my mind.. I do want auto thread rename but only if the operator does not manually rename.
+
 ## move plan use % to the empty space on…
 
 operator (2026-06-13): move plan use % to the empty space on the bottom of the screen, but make it compact, clean and legible at a glance.
