@@ -8,11 +8,3 @@
 - since: 2026-06-13
 - blocks: the standup's write-confirmation and through it the whole switch — the client (synapse-cc) and the document→facet mapping can't be built or tested against a trak that won't accept writes. Nothing compounds: the filesystem backend keeps running untouched, so hypercore loses nothing while it waits.
 
-## Claude plan utilization — no rate-limit state on disk; what's buildable is token volume
-
-- ask: built — and the probe answered the open question: there IS an Anthropic endpoint that returns true plan-%. Your stored OAuth token GETs /api/oauth/usage (the same endpoint Claude Code itself reads, found in its binary, no blind guessing), which returns your rolling caps as percentages — right now 5-hour at 20%, 7-day at 3%, each with its reset time, plus a 7-day Opus figure when present. hyper now shows this as a quiet line at the bottom of the queue screen, e.g. "plan (max) · 5h 20% (resets 2h 25m) · 7d 3% (resets 2d 16h)". A small background fetcher (hyper-usage) refreshes it every 4 minutes; the network never blocks the UI, and a dead token or down network only ages the readout (it says so past 30 min), never breaks it. Your token never leaves that one request, and only the percentages — no secret — are cached (gitignored).
-- try: relaunch hyper (interface code loads at launch). The plan line shows at the bottom of the home screen, under "latest:", and refreshes itself. On demand, `python3 hyper-usage && cat .hyper-usage.json` fetches and shows the raw numbers.
-- state: awaiting acceptance
-- since: 2026-06-13
-- blocks: additive to the queue screen; nothing compounds. The screen works unchanged without it; the readout is pure addition.
-
