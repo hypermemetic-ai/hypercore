@@ -12,7 +12,7 @@
 
 - ask: I started executing your option 2 (build trak locally, single-user) and staged the whole workspace — plexus-trak on its default legacy-HS256 branch plus its four path-deps (plexus-core/-macros/-transport/-auth-core), all cloned in ~/projects. Then it hit a prerequisite the foothold options didn't name: there is no Rust toolchain on this machine (no cargo, rustc, or rustup), and trak builds only from source with one. Installing a toolchain leaves the project folder and touches the machine you use, so under the surfacing floor it's your call before I install. Which path?
 - options: install rustup current-stable into ~/.cargo + ~/.rustup, then build and run trak — the standard, reversible path (rustup self uninstall, or rm the two dirs; ~hundreds of MB), and the build proceeds immediately since the workspace is staged . use the system apt rustc 1.75 instead — lighter, no rustup, but likely too old for trak's deps (schemars 1, thiserror 2, jsonrpsee 0.26) and may stall the build on version walls . reconsider — if you'd rather not put a toolchain on this machine at all, fall back to the old option 3 and target a trak you already run: give me an endpoint and how to authenticate, no local build
-- state: awaiting your decision
+- state: decided (2026-06-13) — option 1 — install rustup current-stable into ~/.cargo + ~/.rustup, then build and run trak — the standard, reversible path (rustup self uninstall, or rm the two dirs; ~hundreds of MB), and the build proceeds immediately since the workspace is staged
 - since: 2026-06-13
 - blocks: the standup, and through it the whole switch — the client and mapping can't be built or tested until a trak runs on :44107. Nothing compounds: the filesystem backend keeps running untouched.
 
