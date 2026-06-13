@@ -996,11 +996,12 @@ def fmt_left(secs):
 
 
 def usage_line(u):
-    """The plan-% as one tight line pinned to the foot of the home screen
-    (the operator's word, 2026-06-13 — compact, clean, legible at a
-    glance): percentages lead, each window's reset trails as a bare
-    parenthesised countdown — no 'resets' word, no subscription clutter; a
-    stale readout still says its age so a dead token never reads fresh."""
+    """The plan utilization as one lean line pinned to the foot of the home
+    screen — only what the operator keeps (their word, 2026-06-13): the 5h
+    and 7d windows, each its percent with its reset trailing as a bare
+    parenthesised countdown. No prefix, no per-model breakdown — utility lost
+    is nil; a stale readout still says its age so a dead token never reads
+    fresh."""
     if not u:
         return ""
 
@@ -1023,12 +1024,9 @@ def usage_line(u):
         parts.append("5h " + fh)
     if sd:
         parts.append("7d " + sd)
-    opus = u.get("seven_day_opus")
-    if opus and opus.get("utilization"):
-        parts.append("opus %g%%" % opus["utilization"])
     if not parts:
         return ""
-    line = "plan · " + " · ".join(parts)
+    line = " · ".join(parts)
     age = time.time() - u.get("fetched", 0)
     if age > 1800:  # over half an hour stale — say so, the token may be dead
         line += " · %s old" % fmt_left(age)
