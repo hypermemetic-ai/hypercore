@@ -8,10 +8,3 @@
 - since: 2026-06-13
 - blocks: nothing compounds — today's interface works; this is a new direction, so the only cost of waiting is the time before threads show what's being worked. Once built, the per-thread indicator replaces the top-right "the machine is working".
 
-## a long entry opens to its top, not its bottom
-
-- ask: from your word on the trak-backend graph (2026-06-13) — opening a long node entry snapped the view to its bottom, hiding the entry's own head. The work view bottom-anchored any entry whose end ran past the screen; an opened entry should anchor to its top.
-- try: relaunch hyper (the running process holds the old code), open the trak-backend graph and enter the synapse-cc node (a long one) — the view now sits at the node's title with its body running below and "… N more below", instead of jumping to the tail. Move between long nodes to confirm each opens at its head.
-- state: awaiting acceptance
-- since: 2026-06-13
-
