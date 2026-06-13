@@ -26,3 +26,11 @@
 - since: 2026-06-13
 - blocks: external to hypercore — nothing compounds; the overlay runs as-is meanwhile. This is your external STS2 project, carded here in hypercore's work.md for now; its proper home is its own linked-project repo (that registry isn't built yet — say the word and it becomes the first linked project).
 
+## hyper: a sound cue when a card needs you
+
+- ask: Your word (2026-06-13) — an audible cue when a card needs you, so you don't have to watch the screen; gentle, pleasant, clear. Feasible: pipewire is running and paplay/pw-play are available; hyper has no audio today but can shell out to play a short file when the queue turns actionable. Two design points. Firing (my proposed default, refine on your word): play once when the queue goes from nothing-for-you to something-for-you, and once when a new actionable card arrives — never repeating while items just sit, so it cues you, never nags. The sound itself is your aesthetic, and that is the fork:
+- options: I pick a gentle chime and land it for acceptance — a soft, clear notification tone (a mellow freedesktop sound or a custom two-note chime) wired to the actionable transition; you hear it next time a card lands and speak if it is not right . you give me the sound — point me at a file or a freedesktop sound name you like and I wire exactly that . I generate 2-3 candidate chimes first — short soft files in the repo you play and pick from before I wire one in
+- state: awaiting your decision — pick a gentle chime (I choose, you accept) / you provide the file / generate candidates first
+- since: 2026-06-13
+- blocks: additive to hyper's queue screen; nothing compounds. Build follows your pick and lands for acceptance (you will relaunch hyper to get it — interface code loads at launch).
+
