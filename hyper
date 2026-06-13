@@ -2029,17 +2029,34 @@ def main(scr):
             # wsel spans both in the same order it always did. each carries
             # the block its panel renders (a graph carries its blocks + the
             # one-line summary the list used to show inline)
+            # each left item carries a type sigil and a short status tag so
+            # the kinds read apart at a glance (the operator's word,
+            # 2026-06-13): ▸ a subgraph you can descend, ▪ a folded one, · a
+            # terminal entry or node — without widening the column. titles
+            # are kept short at generation, so the tag fits beside them
+            innodes = isinstance(pdata, list)
             left = []
             for b in items:
-                left.append((b["lines"][0][3:].strip(), b, None))
+                st = b["fields"].get("state", "")
+                if innodes:
+                    tag = ("folded" if "folded" in st else "done" if "done" in st
+                           else "await" if "awaiting" in st else "open")
+                else:
+                    tag = ("decide" if "awaiting your decision" in st
+                           else "accept" if "awaiting acceptance" in st
+                           else (st.split()[0] if st else ""))
+                left.append((b["lines"][0][3:].strip(), b, None, "·", tag))
             for gname, gblocks in glines:
                 folded = "folded" in gblocks[0]["fields"].get("state", "")
                 nodes = "%d node%s" % (len(gblocks),
                                        "" if len(gblocks) == 1 else "s")
-                gsum = ("folded · " + nodes if folded else "%s · %d open"
-                        % (nodes, sum(1 for b in gblocks
-                                      if "open" in b["fields"].get("state", ""))))
-                left.append((gname, None, (gblocks, gsum)))
+                if folded:
+                    gsum, sig, tag = "folded · " + nodes, "▪", "folded"
+                else:
+                    op = sum(1 for b in gblocks
+                             if "open" in b["fields"].get("state", ""))
+                    gsum, sig, tag = "%s · %d open" % (nodes, op), "▸", "%d/%d" % (op, len(gblocks))
+                left.append((gname, None, (gblocks, gsum), sig, tag))
             put(scr, top + 1, LM, headline[:width], BOLD)
             cy = top + 3
             colh = max(1, view_h - 1)
@@ -2052,14 +2069,24 @@ def main(scr):
             lscroll = wsel - colh + 1 if wsel >= colh else 0
             lscroll = max(0, min(lscroll, max(0, len(left) - colh)))
             for vi in range(lscroll, min(len(left), lscroll + colh)):
-                name = left[vi][0]
+                name, _, _, sig, tag = left[vi]
                 yy = cy + (vi - lscroll)
-                shown = name if len(name) <= leftw else name[: leftw - 1] + "…"
+                # sigil (2 cols) + title, the status tag right-aligned and dim
+                # when the title leaves it room
+                body = leftw - 2
+                room = body - len(tag) - 1 if tag else body
+                shown = name if len(name) <= room else name[: max(1, room - 1)] + "…"
+                fits = bool(tag) and len(shown) <= room
                 if vi == wsel:
                     put(scr, yy, 0, "▌", ACCENT)
-                    put(scr, yy, LM, (shown + " " * leftw)[:leftw], REV)
+                    put(scr, yy, LM, (sig + " " + shown + " " * leftw)[:leftw], REV)
+                    if fits:
+                        put(scr, yy, LM + leftw - len(tag), tag, REV)
                 else:
-                    put(scr, yy, LM, shown, BOLD)
+                    put(scr, yy, LM, sig, DIM)
+                    put(scr, yy, LM + 2, shown, BOLD)
+                    if fits:
+                        put(scr, yy, LM + leftw - len(tag), tag, DIM)
             if len(left) > lscroll + colh:
                 put(scr, cy + colh, LM,
                     "… %d more" % (len(left) - lscroll - colh), DIM)
@@ -2071,7 +2098,7 @@ def main(scr):
             # sectioning the inline expand used to show, now always present)
             prows = []
             if left:
-                name, b, g = left[wsel]
+                name, b, g = left[wsel][:3]
                 prows.append((0, name, BOLD))
                 if g is not None:
                     # a graph line: its summary, then its root node's fields
