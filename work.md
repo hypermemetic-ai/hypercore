@@ -8,14 +8,6 @@
 - since: 2026-06-13
 - blocks: the standup's write-confirmation and through it the whole switch — the client (synapse-cc) and the document→facet mapping can't be built or tested against a trak that won't accept writes. Nothing compounds: the filesystem backend keeps running untouched, so hypercore loses nothing while it waits.
 
-## thread labels: short, clean phrases
-
-- ask: from the operator's words (2026-06-13) — "I want better thread labels. short, clear." The old label took the first words and hard-cut at 48 chars on a word boundary, so a heading could trail off mid-sentence ("share your findings about the claude usage…"). thread_label() now keeps just the first sentence when that reads as a phrase, tightens to a 40-char cap cut on a clause-then-word boundary, and strips trailing punctuation — shorter, and cut where a phrase ends, not mid-thought. A pure heuristic shortens and cleans but cannot summarize: "share your findings about the claude usage endpoint…" becomes "share your findings about the claude…", not "Claude usage endpoint". A truly crisp topic label would need the machine to relabel a thread when it answers it (a thread can already be renamed by hand from its own view) — that is the operator's call, posed in the answer line; this slice is the heuristic alone.
-- try: relaunch hyper (interface code loads only at launch). New main-screen speech opens a thread with a short, clean label; existing headings keep their old text until renamed. The labels in the queue show the tighter cut after relaunch.
-- state: awaiting acceptance
-- since: 2026-06-13
-- blocks: nothing — labels are display only; the queue and threads work unchanged, this only changes how a new heading reads.
-
 ## louder attention cue
 
 - ask: from the operator's words (2026-06-13) — "the notification sound isn't loud enough." play_cue() now passes paplay --volume=131072 (≈200% of the file's recorded level), so the actionable-card cue is louder. It amplifies only the cue's own playback stream — the system volume is untouched, so nothing else on the machine gets louder. The source .oga can't be re-mastered here (no ffmpeg/sox), and raising the system sink was off-limits (it touches what the operator owns), so stream-volume amplification is the lever; if it is still short, the value bumps.
