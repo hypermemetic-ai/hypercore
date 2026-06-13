@@ -10,6 +10,8 @@ operator (2026-06-13): is this coming up as a card? if it isn't we have a proble
 
 machine (2026-06-13): Yes — as a thread, not a queue card. Your own pick (2026-06-13): exchanges are a first-class panel below the queue, never interleaved. Every words.md block you speak shows there — "sent" while it waits on the machine, "read" once answered. This exchange is in that panel now, answered. If it is not showing below the queue for you, that is a real bug — say so and I'll chase it. Whether spoken items should also be queue cards is the threads design just above.
 
+operator (2026-06-13): no, you wrote "your calls, execute the etc. and/or etc." I'll record whatever. that's what I meant should come up as a card.
+
 ## from the decision card, on ""it asks" reuses ASK as a verb — which congruent voice for the field labels" . 2026-06-13
 
 operator (2026-06-13): two issues. one, I'm approving three but the card isn't disappearing. two, what does a for approve even do for these? if I need to pick an option or talk there's nothing for approve to do.
