@@ -18,14 +18,6 @@
 - since: 2026-06-13
 - blocks: nothing compounds — additive to the queue screen, independent of the trak switch; it waits only on which source feeds it.
 
-## hyper: a sound cue when a card needs you
-
-- ask: built (your pick, option 2) — hyper plays a short sound the moment the queue turns actionable, so you need not watch the screen. It fires once when something first needs you (the queue goes from nothing-for-you to something-for-you) and once each time a new card arrives that needs you — a decision to make, a slice to accept, or a machine answer to read — and never repeats while items just sit. The sound is cue-attention.oga, your pick: a gentle 0.50s attention tone, played fire-and-forget through paplay (no audio device is a silent no-op, never an error). An open hyper at launch stays silent — only a genuine new arrival cues.
-- try: relaunch hyper (interface code loads only at launch), then leave it on the queue and let a card land — speak something so the machine answers, or wait for a decision/acceptance card — and the cue sounds once as it arrives. `paplay sounds/cue-attention.oga` plays the tone on demand; the volume rides your normal system mixer.
-- state: awaiting acceptance
-- since: 2026-06-13
-- blocks: additive to hyper's queue screen; nothing compounds. The screen works unchanged without sound; the cue is pure addition.
-
 ## hyper: topic separation for main-screen speech
 
 - ask: You caught it right — main-screen speech all lands in one dated thread (hyper's speak() appends every place-less utterance to "## words . DATE"), so a single exchange's follow-ups and unrelated new topics pile together and the machine answers them as one thread. You want separation, and proposed labelled threads in the space below the queue with `s` starting a new one — a sound design. Options (lead is my recommendation, yours):
