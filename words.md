@@ -24,3 +24,5 @@ operator (2026-06-13): I don't like it. new direction entirely - I saw the work 
 
 machine (2026-06-13): Fair — reverted; the list is back to plain titles, the dim gist gone (it had also shadowed the gist() function and crashed launch, patched to gline, now dropped). The new direction is better: a two-column work view — the entry list stays compact on the left, the selected entry's full content fills a panel on the right, updating as you move, no expand/collapse. It uses the room you saw and gives the double win outright. Recorded it as the w-view's new ask in work.md with the shape to confirm (left-column width, whether enter still does anything, how the right panel scrolls). Confirm the shape or redirect and I build it — I'd rather not land a big layout blind right after this one.
 
+operator (2026-06-13): the language here implies I didn't get a card about it. we need to make it clear to the machine that threads and cards are different surfaces. threads are not for decisions, decisions are in the queue. thread can REFER to the queue if relevant but should not supplant it.
+
