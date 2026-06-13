@@ -7,4 +7,6 @@ scratch/
 .hyper-machine.pid
 .hyper.log
 .hyper-read
+.hyper-usage.json
+.hyper-usage.*
 brief.md

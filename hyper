@@ -46,12 +46,14 @@ Move     arrows . left/right across cards (j previous, k next) . up/down
 
 import curses
 import hashlib
+import json
 import locale
 import os
 import re
 import shlex
 import shutil
 import subprocess
+import sys
 import textwrap
 import time
 from datetime import date, datetime
@@ -78,6 +80,9 @@ MINI_FILE = os.path.join(ROOT, "mini")
 BRIEF = os.path.join(ROOT, "brief.md")
 HYPER_LOG = os.path.join(ROOT, ".hyper.log")
 READ_FILE = os.path.join(ROOT, ".hyper-read")  # answers the operator has read
+USAGE_CACHE = os.path.join(ROOT, ".hyper-usage.json")  # cached plan-% (gitignored)
+USAGE_FETCHER = os.path.join(ROOT, "hyper-usage")      # the background plan-% fetch
+USAGE_REFRESH = 240  # seconds — refresh the readout this often, gentle on the endpoint
 FS_TRIES = 10
 SUMMON = (
     "the interface summoned you. read brief.md — the session brief, "
@@ -901,6 +906,86 @@ def attn_key(kind, obj):
     return (kind, obj["text"] if kind == "decide" else obj["lines"][0])
 
 
+def read_usage():
+    """The cached Claude plan utilization, or None if never fetched. Only a
+    file read — the UI loop never blocks on the network; refresh_usage keeps
+    the cache live in the background."""
+    try:
+        with open(USAGE_CACHE) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return None
+
+
+def refresh_usage(last_spawn):
+    """Spawn the plan-% fetcher when the cache is stale, at most once per
+    interval — fire-and-forget, so the tick never waits on it. Returns the
+    spawn time to carry forward, unchanged when nothing was spawned."""
+    now = time.time()
+    if now - last_spawn < USAGE_REFRESH:
+        return last_spawn
+    cached = read_usage()
+    if cached and now - cached.get("fetched", 0) < USAGE_REFRESH:
+        return last_spawn
+    try:
+        subprocess.Popen([sys.executable, USAGE_FETCHER],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except OSError:
+        pass
+    return now
+
+
+def fmt_left(secs):
+    """A reset countdown in calm units — 2h 05m, 3d 4h, now."""
+    secs = int(secs)
+    if secs <= 0:
+        return "now"
+    mins = secs // 60
+    h, m = divmod(mins, 60)
+    if h >= 24:
+        d, h = divmod(h, 24)
+        return "%dd %dh" % (d, h)
+    return "%dh %02dm" % (h, m) if h else "%dm" % m
+
+
+def usage_line(u):
+    """One quiet line: the plan-% the operator asked for (2026-06-13) — the
+    rolling 5-hour and 7-day caps, each with its reset, plus the readout's
+    own age once it has gone stale (a dead token only ages it)."""
+    if not u:
+        return ""
+
+    def win(w):
+        if not w or w.get("utilization") is None:
+            return None
+        s = "%g%%" % w["utilization"]
+        ra = w.get("resets_at")
+        if ra:
+            try:
+                s += " (resets %s)" % fmt_left(
+                    datetime.fromisoformat(ra).timestamp() - time.time())
+            except ValueError:
+                pass
+        return s
+    parts = []
+    fh, sd = win(u.get("five_hour")), win(u.get("seven_day"))
+    if fh:
+        parts.append("5h " + fh)
+    if sd:
+        parts.append("7d " + sd)
+    opus = u.get("seven_day_opus")
+    if opus and opus.get("utilization"):
+        parts.append("7d opus %g%%" % opus["utilization"])
+    if not parts:
+        return ""
+    sub = u.get("subscription")
+    line = "plan" + (" (%s)" % sub if sub else "") + " · " + " · ".join(parts)
+    age = time.time() - u.get("fetched", 0)
+    if age > 1800:  # over half an hour stale — say so, the token may be dead
+        line += " · %s old" % fmt_left(age)
+    return line
+
+
 def ensure_launcher():
     """The menu entry that launches hyper without a fresh login: a symlink
     in the applications directory to the repo's hyper.desktop, kept by
@@ -1190,6 +1275,7 @@ def main(scr):
     scroll, flash, confirm, exkey = 0, "", None, None
     prev_attn = None  # the last tick's set of items needing the operator — the
                       # cue fires on new arrivals; None until the first tick seeds it
+    last_usage_spawn = 0.0  # last time the plan-% fetcher was spawned (throttle)
     machine = None  # (Popen, started, kind) while a summoned session is working
     escalate = False  # a mini left work behind — the next summon goes to the full machine
     boot = True  # the first frame summons the machine itself when the record calls
@@ -1262,6 +1348,10 @@ def main(scr):
                     if "folded" not in blks[0]["fields"].get("state", ""))
         dirty = run("git", "status", "--porcelain").strip()
         last = run("git", "log", "-1", "--format=%h %s . %cr").strip()
+        # the plan-% the operator asked for (2026-06-13): the fetcher refreshes
+        # the cache in the background, the tick only reads it
+        last_usage_spawn = refresh_usage(last_usage_spawn)
+        usage = read_usage()
 
         awaits = [b for b in cards + exchanges
                   if b["words"] and b["words"][-1].startswith(OP_LINES)]
@@ -1622,6 +1712,11 @@ def main(scr):
             put(scr, y, LM,
                 ("latest: " + ltxt + (" . " + lage if lage else ""))
                 [: w - 2 * LM], DIM)
+            # the plan-% line sits with the other ambient status, below latest
+            uline = usage_line(usage)
+            if uline:
+                y += 1
+                put(scr, y, LM, uline[: w - 2 * LM], DIM)
 
         elif view == "card":
             st = pend[ci]

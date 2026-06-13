@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+"""Fetch the operator's Claude plan utilization and cache it for hyper.
+
+The operator authorized this credential'd read (2026-06-13, option 1): their
+stored OAuth token GETs Anthropic's /api/oauth/usage — the same endpoint
+Claude Code itself reads — and the plan-% is written here for hyper to show.
+hyper runs this in the background; the token never leaves this request, and
+only the utilization numbers (no secret) reach the cache. Any failure exits
+non-zero and leaves the last good cache untouched, so a dead token or a down
+network only ages the readout, never breaks it.
+"""
+import json
+import os
+import tempfile
+import time
+import urllib.request
+
+ROOT = os.path.dirname(os.path.abspath(__file__))
+CACHE = os.path.join(ROOT, ".hyper-usage.json")
+CREDS = os.path.expanduser("~/.claude/.credentials.json")
+URL = "https://api.anthropic.com/api/oauth/usage"
+
+
+def main():
+    creds = json.load(open(CREDS))["claudeAiOauth"]
+    req = urllib.request.Request(URL, headers={
+        "Authorization": "Bearer " + creds["accessToken"],
+        "anthropic-beta": "oauth-2025-04-20",
+        "anthropic-version": "2023-06-01",
+        "User-Agent": "claude-cli (hyper plan readout)",
+        "Accept": "application/json",
+    })
+    with urllib.request.urlopen(req, timeout=20) as r:
+        data = json.loads(r.read().decode("utf-8"))
+    out = {
+        "fetched": time.time(),
+        "subscription": creds.get("subscriptionType"),
+        "five_hour": data.get("five_hour"),
+        "seven_day": data.get("seven_day"),
+        "seven_day_opus": data.get("seven_day_opus"),
+        "seven_day_sonnet": data.get("seven_day_sonnet"),
+        "extra_usage": data.get("extra_usage"),
+    }
+    fd, tmp = tempfile.mkstemp(dir=ROOT, prefix=".hyper-usage.")
+    with os.fdopen(fd, "w") as f:
+        json.dump(out, f)
+    os.replace(tmp, CACHE)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception:
+        raise SystemExit(1)  # leave the last good cache in place
