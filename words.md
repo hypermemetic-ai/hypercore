@@ -34,6 +34,8 @@ operator (2026-06-13): the language here implies I didn't get a card about it. w
 
 machine (2026-06-13): Understood — and it is already the rule in the ground rules: threads and cards are different surfaces, threads carry the thinking, the queue carries the decisions, a thread may refer to a card but never hold the call. The gap was me following it, not the rule missing — I broke it with the "your calls" line and have owned it. Holding to it: decisions land as cards, threads point at them.
 
+operator (2026-06-13): the point is good intentions won't help here. we need to make this consistent.
+
 ## what happened to the sts2 work
 
 operator (2026-06-13): what happened to the sts2 work? doesn't appear under w, appears to have been dropped?
