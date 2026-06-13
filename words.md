@@ -22,3 +22,7 @@ operator (2026-06-13): is the trak work still going on or what? if not, we need 
 
 operator (2026-06-13): new idea, which I like: some kind of "working on it" indicator for open threads. some looping animation maybe, unsure. this ends up touching on some complicated stuff. like, if the working indicator is associated with a thread, closing the thread would lose me information. maybe we keep threads open visually (cannot close?) while work is being done on them? if we do that, maybe we can walk back some of the action oriented language. I wouldn't mind getting a good response to chew on, clearing any doubts as to what the machine is thinking and planning while routing decisions to the queue so I think of the two interaction modes separately. this appears to make the "the machine is working" on the top right redundant. it would just be a global indicator, largely redundant if I can see all the open threads. if we pursue this, it might be nice to link threads to the work associated with them (w view), both ways via a keypress? think this out yourself, it's a change with big implications, exciting but nor something we should rush.
 
+## work view is hard to navigate…
+
+operator (2026-06-13): work view is hard to navigate, mostly due to the size of the node text blocks. if they all started collapsed it would be much easier to navigate at the cost of an extra keypress. another idea might be using empty space if available to display the text block there instead of under the node/graph label.
+
