@@ -16,11 +16,3 @@
 - since: 2026-06-13
 - blocks: nothing breaks — the list works as plain titles today; this is the redesign you asked for, held only until the shape is confirmed so I do not land a big layout twice.
 
-## approve/cut are dead keys on a decision card — what replaces them
-
-- ask: on a decision card you pick an option (1–9) or speak (s); pressing a settles it with the literal word "approve" and c with "cut", neither of which is one of your options — so on an options decision they do nothing meaningful (you flagged this), and a stray a-then-y can mis-settle the card with a non-option word. They are vestigial from statement cards, where approve/cut are the whole point. The fix is the decision card's key set; the call is how far to cut, since "one verb set on every card" is yours.
-- options: drop a/c from decision cards — the live keys are pick (1–9) and speak only, and a bare yes/no call becomes a two-option decision (go / don't); cleanest, fully congruent . keep a/c only when a decision has no options (a true yes/no call) and hide them whenever options are present; approve/cut survive where they mean something . leave it — a/c stay on every card as today, the one verb set unbroken
-- state: decided (2026-06-13) — option 1 — drop a/c from decision cards — the live keys are pick (1–9) and speak only, and a bare yes/no call becomes a two-option decision (go / don't); cleanest, fully congruent
-- since: 2026-06-13
-- blocks: nothing breaks — but until it settles every decision card offers two keys with nothing to do, and a careless a-then-y mis-settles the decision.
-
