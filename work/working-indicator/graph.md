@@ -13,6 +13,6 @@
 - op: do
 - ask: the first slice of the arc — a per-thread "working" indicator (a thread reads as worked when a session is running and its last word is yours) plus fold-protection so a thread being worked can't be folded away and lose that fact.
 - check: the operator accepts the card "the working indicator + fold-protection" — a sent thread's label reads "working" while a session is on it and falls back to "sent" with no session, and c on a worked thread refuses the fold with a word instead of closing it. How to try it: speak to a thread, watch its label turn "working" while the machine runs; open it and press c — it holds until the answer lands.
-- result: built this session — draw_entry overrides the "sent" label to "working" (accent) when a machine runs; the exchange-view c blocks the fold for a thread whose last word is the operator's while a machine runs. The global top-right "the machine is working" indicator is left standing — retiring it is a later slice, once the per-thread one is lived with. Awaiting the operator's acceptance.
-- state: awaiting acceptance
+- result: accepted by the operator from the card (2254d2b, 2026-06-13). draw_entry overrides the "sent" label to "working" (accent) when a machine runs; the exchange-view c blocks the fold for a thread whose last word is the operator's while a machine runs. The global top-right "the machine is working" indicator is left standing — retiring it is a later slice, once the per-thread one is lived with. Next on the arc: thread↔work linking (a graph root records the thread that spawned it).
+- state: done
 - of: the per-thread working indicator
