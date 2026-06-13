@@ -1,0 +1,1 @@
+freedesktop stereo sound theme (system /usr/share/sounds/freedesktop), professionally designed standard notification sounds — copied as the known-good cue candidates.
