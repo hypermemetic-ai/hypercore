@@ -23,7 +23,7 @@
 - op: decide
 - ask: nothing serves trak locally and the build pulls in the whole plexus workspace plus plexus-idp; whether to stand that full stack up here or target a trak the operator already runs is a resource call only they can settle. the card stands in work.md.
 - check: the card settles; with a reachable trak the next seams open — the client's shape, then the document→facet mapping — each surfaced as its own decision before its material exists
-- state: awaiting your decision
+- state: decided (2026-06-13) — option 2 (operator, settled in hyper, commit 4254a3f): build trak on its single-user path, skip plexus-idp, defer real OIDC to the network phase, confirm writes work before relying on it. The decided card stands in work.md until the machine executes and clears it; execution is the standup node below.
 - since: 2026-06-13
 - of: switch hypercore's document backend to trak
 
@@ -33,6 +33,6 @@
 - ask: the operator steered the client's shape (2026-06-13, words.md): use synapse-cc for client generation. synapse-cc (in hypermemetic-ai/synapse, pulled to ~/projects/synapse) is Plexus's build-time client compiler — live schema → IR → hub-codegen renders a typed client written into hyper; at runtime that client talks JSON-RPC straight to :44107 with no synapse process in the loop (the "direct and fast" path already asked for), the backend url lives in config with per-target override (the root's "network by configuration alone"), and integration mode writes only the generated files and leaves build to the host. The fork: hyper is Python and synapse-cc's proven, exercised target is TypeScript. Its config lists language = typescript | python | rust and the docs sketch a Python client (asyncio + websockets, dataclasses/Pydantic), but that sits under "Future Extensions," the renderer hub-codegen is a separate repo not pulled, and every concrete example is TS — Python is declared, not confirmed built. So: (a) if hub-codegen emits a usable Python client, generate and import it — cleanest; (b) if not, add a Python target to hub-codegen, or hand-write a thin client over trak's ~15-method facet surface (cheap; codegen may be more than hyper needs).
 - check: with a reachable trak, hub-codegen is confirmed to emit (or not) a usable Python client; the path is chosen and a generated-or-handwritten client connects to :44107 and round-trips a facet
 - state: blocked
-- blocked-by: the foothold — no live schema to introspect and nothing to test against until a trak listens on :44107; this decision returns through the queue once that card settles
+- blocked-by: the standup — no live schema to introspect and nothing to test against until a trak listens on :44107; the foothold is decided (option 2, 2026-06-13) but a trak is not yet running, so this returns through the queue once the standup node lands a reachable trak
 - since: 2026-06-13
 - of: switch hypercore's document backend to trak
