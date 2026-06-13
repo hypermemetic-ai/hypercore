@@ -63,9 +63,19 @@
 - check: with a reachable trak, hub-codegen is confirmed to emit (or not) a usable Python client; the path is chosen and a generated-or-handwritten client connects to :44107 and round-trips a facet
 - progress (2026-06-13): unblocked — a writable trak now listens on :44107 (the standup node landed via option 3). The next step is a check: does hub-codegen emit a usable Python client? That check, and the fork it resolves (generate it / add a Python target to hub-codegen / hand-write a thin client over trak's ~15-method facet surface), is the next live work on this graph and returns through the queue on the next summon.
 - progress (2026-06-13, surfaced): the fork is now a decision card on the queue ("the trak client — synapse-cc or hand-write") — the next step (clone hub-codegen into ~/projects to confirm a usable Python client) trips the surfacing floor, so the client's shape is the operator's call before that material exists; the node stays open until they settle it.
-- state: open
+- result: operator chose option 2 — hand-write, skip codegen (settled in hyper, 67979bb). Executed this session in the do node "the trak client" below: a thin stdlib client, trak.py in hyper's repo, talking JSON-RPC over a hand-written WebSocket to :44107 — no synapse-cc, no hub-codegen clone, no dependency, so the floor stays untripped and hyper stays stdlib-only. With the client landed the next seam opens: the document→facet mapping.
+- state: done
 - since: 2026-06-13
 - of: switch the document backend to trak
+
+## the trak client
+
+- op: do
+- ask: execute the decision (option 2 — hand-write). A thin client over trak's facet surface, living in hyper's repo, stdlib only: a minimal RFC-6455 WebSocket carrying Plexus's `trak.call` subscription, no third-party dependency so hyper stays one file, stdlib only when this becomes its backend. Maps trak's ~13-method surface — create/get/update/delete/move_to/list/tree/link/unlink/links/blocked/search/grep — plus identity.login, to plain Python methods.
+- check (acceptance): the operator accepts the card "the trak client" — `python3 trak.py` round-trips against the live trak. How to try it: with trak running on :44107, run `python3 trak.py` from the repo and read the PASS line.
+- result: built — trak.py (the client + its self-test). Param shapes read from trak's source (src/hubs/facet.rs), event shapes from src/events.rs (snake_case-tagged); errors caught at all three layers (jsonrpc, transport envelope, app event). Ran live against trak on :44107 this session: login → create → get → update → list → delete, ROUND-TRIP PASS. Awaiting the operator's acceptance; on acceptance the document→facet mapping node opens.
+- state: awaiting acceptance
+- of: the client — synapse-cc or hand-write
 
 ## the OIDC version set was never published
 
