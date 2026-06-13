@@ -26,3 +26,13 @@
 - state: awaiting your decision
 - since: 2026-06-13
 - of: switch hypercore's document backend to trak
+
+## the client is generated, not hand-written: synapse-cc
+
+- op: decide
+- ask: the operator steered the client's shape (2026-06-13, words.md): use synapse-cc for client generation. synapse-cc (in hypermemetic-ai/synapse, pulled to ~/projects/synapse) is Plexus's build-time client compiler — live schema → IR → hub-codegen renders a typed client written into hyper; at runtime that client talks JSON-RPC straight to :44107 with no synapse process in the loop (the "direct and fast" path already asked for), the backend url lives in config with per-target override (the root's "network by configuration alone"), and integration mode writes only the generated files and leaves build to the host. The fork: hyper is Python and synapse-cc's proven, exercised target is TypeScript. Its config lists language = typescript | python | rust and the docs sketch a Python client (asyncio + websockets, dataclasses/Pydantic), but that sits under "Future Extensions," the renderer hub-codegen is a separate repo not pulled, and every concrete example is TS — Python is declared, not confirmed built. So: (a) if hub-codegen emits a usable Python client, generate and import it — cleanest; (b) if not, add a Python target to hub-codegen, or hand-write a thin client over trak's ~15-method facet surface (cheap; codegen may be more than hyper needs).
+- check: with a reachable trak, hub-codegen is confirmed to emit (or not) a usable Python client; the path is chosen and a generated-or-handwritten client connects to :44107 and round-trips a facet
+- state: blocked
+- blocked-by: the foothold — no live schema to introspect and nothing to test against until a trak listens on :44107; this decision returns through the queue once that card settles
+- since: 2026-06-13
+- of: switch hypercore's document backend to trak
