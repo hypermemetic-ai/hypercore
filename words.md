@@ -16,3 +16,5 @@ operator (2026-06-13): I have some anxiety about context usage. does our session
 
 operator (2026-06-13): is our model routing philosophy inscribed anywhere? we want to take all the free speed wins we can get without paying with accuracy.
 
+operator (2026-06-13): my sts2 jorbs overlay should a couple datapoints (war for a10 >50% and >75%wr). this isn't a gamechanger I think. what else could we put there to actually help improve play?
+
