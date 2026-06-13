@@ -45,7 +45,8 @@
 - op: decide
 - ask: standing trak up (foothold option 2) reached a running daemon on :44107 with identity working, but facet writes fail — stock trak on feature/AUTHZ-TENANT-GATE-trak-facets is internally inconsistent: TrakAuth issues an empty session_id, the tenant gate requires a non-empty one for writes. The minimal one-line auth fix is demonstrated to make writes round-trip, but adopting it makes hyper rely on a patched trak, so the path is the operator's. Full card in work.md.
 - check: a writable trak is reachable on :44107 under single-user auth — a facet create then get round-trips — by a path the operator has chosen (patch / different branch / pause); then the standup node clears and the client-shape (synapse-cc) node unblocks
-- state: awaiting the operator (card filed in work.md, 2026-06-13)
+- progress (2026-06-13): operator picked option 2 (target a stock branch). Executing it: trak has NO main — the remote has exactly two branches, this one (the default/origin-HEAD) and feature/UT-wave3-oidc-cutover. UT-wave3 FIXES the write wall (real session_id) but is OIDC-only — HS256/local validation removed, requires --oidc-issuer (plexus-idp). So no stock branch is both writable AND legacy-single-user. Re-surfaced to the operator with the true landscape: patch branch A (only legacy+writable path) / move to the OIDC branch + stand up an issuer (reverses skip-idp) / pause. Card in work.md re-opened to awaiting-decision.
+- state: awaiting the operator (re-opened 2026-06-13 — option 2's premise, a stock main without the wall, does not exist)
 - since: 2026-06-13
 - of: switch hypercore's document backend to trak
 
