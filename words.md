@@ -14,6 +14,8 @@ operator (2026-06-13): changed my mind.. I do want auto thread rename but only i
 
 operator (2026-06-13): move plan use % to the empty space on the bottom of the screen, but make it compact, clean and legible at a glance.
 
+machine (2026-06-13): Built — acceptance card on the queue. The plan-% leaves the queue's flow and pins to the empty space at the foot of the home screen, just above the footer rule. Compact form, e.g. "plan · 5h 12% (2h05m) · 7d 8% (3d4h) · opus 5%": percentages lead, each reset in bare parens, the "resets" word and the subscription tag dropped; a stale readout still says its age. Relaunch hyper to see it — the running copy reads its own code only at launch.
+
 ## is the trak work still going on or what
 
 operator (2026-06-13): is the trak work still going on or what? if not, we need to figure out what went wrong causing it to stop or hang and address it so it doesn't happen again.

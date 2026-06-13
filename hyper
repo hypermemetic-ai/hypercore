@@ -966,9 +966,11 @@ def fmt_left(secs):
 
 
 def usage_line(u):
-    """One quiet line: the plan-% the operator asked for (2026-06-13) — the
-    rolling 5-hour and 7-day caps, each with its reset, plus the readout's
-    own age once it has gone stale (a dead token only ages it)."""
+    """The plan-% as one tight line pinned to the foot of the home screen
+    (the operator's word, 2026-06-13 — compact, clean, legible at a
+    glance): percentages lead, each window's reset trails as a bare
+    parenthesised countdown — no 'resets' word, no subscription clutter; a
+    stale readout still says its age so a dead token never reads fresh."""
     if not u:
         return ""
 
@@ -979,8 +981,9 @@ def usage_line(u):
         ra = w.get("resets_at")
         if ra:
             try:
-                s += " (resets %s)" % fmt_left(
-                    datetime.fromisoformat(ra).timestamp() - time.time())
+                s += " (%s)" % fmt_left(
+                    datetime.fromisoformat(ra).timestamp()
+                    - time.time()).replace(" ", "")
             except ValueError:
                 pass
         return s
@@ -992,11 +995,10 @@ def usage_line(u):
         parts.append("7d " + sd)
     opus = u.get("seven_day_opus")
     if opus and opus.get("utilization"):
-        parts.append("7d opus %g%%" % opus["utilization"])
+        parts.append("opus %g%%" % opus["utilization"])
     if not parts:
         return ""
-    sub = u.get("subscription")
-    line = "plan" + (" (%s)" % sub if sub else "") + " · " + " · ".join(parts)
+    line = "plan · " + " · ".join(parts)
     age = time.time() - u.get("fetched", 0)
     if age > 1800:  # over half an hour stale — say so, the token may be dead
         line += " · %s old" % fmt_left(age)
@@ -1729,11 +1731,14 @@ def main(scr):
             put(scr, y, LM,
                 ("latest: " + ltxt + (" . " + lage if lage else ""))
                 [: w - 2 * LM], DIM)
-            # the plan-% line sits with the other ambient status, below latest
+            # the plan-% is pinned to the empty space at the foot of the
+            # home screen (the operator's word, 2026-06-13) — out of the
+            # queue's flow, just above the footer rule, read at a glance;
+            # it drops to just below the content only if the queue ran long
             uline = usage_line(usage)
             if uline:
-                y += 1
-                put(scr, y, LM, uline[: w - 2 * LM], DIM)
+                uy = h - 4 if h - 4 > y else y + 1
+                put(scr, uy, LM, uline[: w - 2 * LM], DIM)
 
         elif view == "card":
             st = pend[ci]
