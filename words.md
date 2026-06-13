@@ -12,3 +12,5 @@ machine (2026-06-13): Looked — pulled the synapse repo to ~/projects/synapse t
 
 operator (2026-06-13): new hopefully small project: I'd like to see utilization for my claude subscription plan somewhere on my home (queue) screen. session, weekly, monthly I assume are the important splits? I want it to be clean, small, elegant, easily readable at a glance.
 
+operator (2026-06-13): I have some anxiety about context usage. does our session-spinning-up model naturally produce session clears or is there a hidden risk that some session might max out its context over multiple conversation turns? also, what about within a conversation turn? I know that one-shotting work (if possible for the model) is often preferred in the literature to premature decomposition, but I assume reaching the point where reasoning might degrade due to context utilization would also be a negative. lesser evil. that being said, fable 5, when it was out, often reached 100% context usage and still chugged along like a champ. I think that's fable-5 being special though, and unfortunately no longer with us. opus 4.8, I never expected the same long-running abilities from.
+
