@@ -27,6 +27,15 @@
 - since: 2026-06-13
 - of: switch hypercore's document backend to trak
 
+## stand up a local trak on :44107, single-user, and confirm a write
+
+- op: do
+- ask: execute the foothold decision (option 2). Stand up a local trak the work can build against: build the plexus workspace trak needs (plexus-trak + path deps plexus-core/-macros/-transport/-auth-core), run trak on :44107 in its single-user / legacy-HS256 path — the default branch carries the legacy validator, so register a local user → HS256 token, no plexus-idp — and confirm a facet write round-trips. trak's auth branch does not touch the facet RPC surface (identical on both branches), so this standup serves the client and mapping work unchanged; real OIDC is deferred to the network phase per the decision.
+- check (acceptance): a trak daemon listens on :44107; under single-user auth a facet create then get round-trips (the operator's own bar — "confirm writes work before relying on it"); the bring-up path is written down so any session can start trak again; then the foothold work.md card is cleared in the executing commit. How to try it: with trak running, a create+get against :44107 returns the same facet.
+- state: open
+- since: 2026-06-13
+- of: switch hypercore's document backend to trak
+
 ## the client is generated, not hand-written: synapse-cc
 
 - op: decide
