@@ -7,6 +7,13 @@
 - state: awaiting acceptance
 - blocks: nothing compounds — the change is on disk and reverts in one git command; until you accept, it stays machine-owned material and the old single-column list is one revert away.
 
+## the thread↔work link
+
+- ask: the second slice of the working-indicator arc (slice one, the working indicator, you accepted). Threads are the open thinking channel; when a thread's thinking becomes work, a graph is born from it — and now the two point at each other. A graph root records the thread that spawned it in a `thread:` field, and the link reads both ways: the work view shows a graph's origin thread on the root's panel, and a live thread that became a graph names that work on its own exchange view. The working-indicator graph's own root now records the thread it came from, "new idea, which I like…", as the worked example.
+- try: relaunch hyper (a running hyper reads its own code only at launch), press w, enter on hypercore, and select the working-indicator graph line — its panel now carries a THREAD row naming the thread that spawned it (the graph→thread half, visible today). The thread→work half shows on a thread's own view whenever that thread's heading matches a graph root's record; today's spawning threads have folded past their graphs, so it lights the next time a thread you speak becomes a graph.
+- state: awaiting acceptance
+- blocks: nothing compounds — the change is on disk and reverts in one git command; until you accept it stays machine-owned material, and slice three of the arc (the session-owns-thread model) waits, since each slice is accepted before the next.
+
 ## the trak client — synapse-cc or hand-write
 
 - ask: trak now writes on :44107 (the standup landed via the branch-A patch), and the client that talks to it is the trak-backend graph's next step. You steered toward synapse-cc (Plexus's build-time client compiler), but its Python target is declared, not confirmed — every working example is TypeScript, Python sits under "Future Extensions," and the renderer (hub-codegen) is a separate repo not yet pulled. Confirming whether codegen emits a usable Python client means cloning hub-codegen into ~/projects and building it — a fetch that leaves the project folder and adds a repo to your environment (the surfacing floor), spent on a capability that is only declared. So the call, before that material exists.
