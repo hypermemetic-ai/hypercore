@@ -32,3 +32,5 @@ machine (2026-06-13): Good constraint — it pins the source. "The jorbs website
 
 operator (2026-06-13): look at what's running right now. it's a plugin or mod and I think the data backing is the spirebird website. I'm assuming the decision you're showing me here will be surfaced as a card. if not, we need to understand why so that happens on its own next time.
 
+operator (2026-06-13): new feature: make a sound when I need to take action. I want a good sound for this. gentle, pleasant but clear. so I don't have to look at the screen to know I have to act.
+
