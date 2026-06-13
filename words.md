@@ -8,3 +8,7 @@ machine (2026-06-13): Built both — two acceptance cards now on the queue, both
 
 operator (2026-06-13): good as is, manual rename is fine for now
 
+## move plan use % to the empty space on…
+
+operator (2026-06-13): move plan use % to the empty space on the bottom of the screen, but make it compact, clean and legible at a glance.
+
