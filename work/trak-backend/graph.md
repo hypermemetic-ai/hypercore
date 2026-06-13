@@ -1,6 +1,6 @@
 # graph: trak-backend
 
-## switch hypercore's document backend to trak
+## switch the document backend to trak
 
 - ask: from the operator's words (2026-06-13): switch hypercore's document backend from filesystem I/O to trak (hypermemetic's plexus-trak, a Plexus RPC facet store), through a direct and fast JSON-RPC client rather than the synapse CLI; it works today against a locally hosted trak and later a network-hosted one. trak is not the project — the switch is, and it is non-trivial.
 - check: hypercore's documents — intent, the work graphs, the queue, the exchanges — live in trak as facets and are read and written through the direct client; the interface and a summoned session operate against a local trak with the operator seeing no loss, and the same client reaches a network server by configuration alone; the filesystem backend is retired only once trak carries the full state with no lingering doubt.
@@ -8,7 +8,7 @@
 - since: 2026-06-13
 - of: hypercore
 
-## survey trak's model, surface, and the standing-up cost
+## survey trak's model and standup cost
 
 - op: check
 - ask: pull hypermemetic's trak and read enough to ground the switch — its data model, its RPC surface, its transport and auth, and what a local server costs
@@ -16,18 +16,18 @@
 - result: pulled to ~/projects/plexus-trak this session, unregistered — trak is a dependency, not a linked project. trak's primitive is the facet (id, parent_id, title, body, free-text status, owner, meta{priority,tags,extra}, timestamps) joined by four typed edges (depends_on, blocks, relates_to, duplicates); containment is parent_id, not an edge. This is hypercore's own model — nodes, relations, material on nodes — almost one-to-one. Facet methods: create/get/update/delete/move_to/list/tree/link/unlink/links/blocked/search/grep, plus checkout/diff/flush (a markdown round-trip to disk) and import_plans; a discuss activation gives threaded markdown comments on a facet. Wire: Plexus streaming JSON-RPC 2.0 over WebSocket on :44107, responses newline-delimited event envelopes ({type:data}…{type:done}); state in SQLite at ~/.config/trak/trak.db. Auth: OIDC/RS256 — short-lived tokens from plexus-idp (:4460/:4461), no shared secret. Standing-up cost is real: nothing listens locally, no synapse, no creds, and plexus-trak builds only against the whole plexus workspace (path deps on plexus-core/-macros/-transport/-auth-core) plus plexus-idp to issue tokens.
 - state: done
 - since: 2026-06-13
-- of: switch hypercore's document backend to trak
+- of: switch the document backend to trak
 
-## the foothold is the operator's: where today's local trak comes from
+## where local trak comes from
 
 - op: decide
 - ask: nothing serves trak locally and the build pulls in the whole plexus workspace plus plexus-idp; whether to stand that full stack up here or target a trak the operator already runs is a resource call only they can settle. the card stands in work.md.
 - check: the card settles; with a reachable trak the next seams open — the client's shape, then the document→facet mapping — each surfaced as its own decision before its material exists
 - state: decided (2026-06-13) — option 2 (operator, settled in hyper, commit 4254a3f): build trak on its single-user path, skip plexus-idp, defer real OIDC to the network phase, confirm writes work before relying on it. The decided card stands in work.md until the machine executes and clears it; execution is the standup node below.
 - since: 2026-06-13
-- of: switch hypercore's document backend to trak
+- of: switch the document backend to trak
 
-## stand up a local trak on :44107, single-user, and confirm a write
+## stand up local trak, confirm a write
 
 - op: do
 - ask: execute the foothold decision (option 2). Stand up a local trak the work can build against: build the plexus workspace trak needs (plexus-trak + path deps plexus-core/-macros/-transport/-auth-core), run trak on :44107 in its single-user / legacy-HS256 path — the default branch carries the legacy validator, so register a local user → HS256 token, no plexus-idp — and confirm a facet write round-trips. trak's auth branch does not touch the facet RPC surface (identical on both branches), so this standup serves the client and mapping work unchanged; real OIDC is deferred to the network phase per the decision.
@@ -41,9 +41,9 @@
 - result: a writable trak listens on :44107 under single-user HS256 auth — a facet create then get round-trips (the operator's acceptance bar). Bring-up, repeatable by any session: the clone ~/projects/plexus-trak on branch feature/AUTHZ-TENANT-GATE-trak-facets carries the session_id patch (committed 2bcfc6d), plexus-auth-core checked out at tag plexus-auth-core-v0.1.0; `PATH=~/.cargo/bin:$PATH cargo build` then `./target/debug/plexus-trak --port 44107` (db ~/.config/trak/trak.db, HS256 jwt_secret auto-generated); auth is `Authorization: Bearer <JWT>` from identity.login on the WS upgrade, facet RPC via trak.call. /tmp/trak_roundtrip3.py is the write probe.
 - state: done
 - since: 2026-06-13
-- of: switch hypercore's document backend to trak
+- of: switch the document backend to trak
 
-## stock trak can't write facets on this branch — the write path is the operator's
+## the write path is the operator's
 
 - op: decide
 - ask: standing trak up (foothold option 2) reached a running daemon on :44107 with identity working, but facet writes fail — stock trak on feature/AUTHZ-TENANT-GATE-trak-facets is internally inconsistent: TrakAuth issues an empty session_id, the tenant gate requires a non-empty one for writes. The minimal one-line auth fix is demonstrated to make writes round-trip, but adopting it makes hyper rely on a patched trak, so the path is the operator's. Full card in work.md.
@@ -54,9 +54,9 @@
 - result: superseded by option 3 — the OIDC pick (option 2, b49ef49) couldn't build because its version set was never published, so the operator settled option 3 (the branch-A session_id patch). That patch makes facet writes round-trip on :44107; the write-path question is resolved on the legacy HS256 path, no issuer.
 - state: done
 - since: 2026-06-13
-- of: switch hypercore's document backend to trak
+- of: switch the document backend to trak
 
-## the client is generated, not hand-written: synapse-cc
+## the client — synapse-cc or hand-write
 
 - op: decide
 - ask: the operator steered the client's shape (2026-06-13, words.md): use synapse-cc for client generation. synapse-cc (in hypermemetic-ai/synapse, pulled to ~/projects/synapse) is Plexus's build-time client compiler — live schema → IR → hub-codegen renders a typed client written into hyper; at runtime that client talks JSON-RPC straight to :44107 with no synapse process in the loop (the "direct and fast" path already asked for), the backend url lives in config with per-target override (the root's "network by configuration alone"), and integration mode writes only the generated files and leaves build to the host. The fork: hyper is Python and synapse-cc's proven, exercised target is TypeScript. Its config lists language = typescript | python | rust and the docs sketch a Python client (asyncio + websockets, dataclasses/Pydantic), but that sits under "Future Extensions," the renderer hub-codegen is a separate repo not pulled, and every concrete example is TS — Python is declared, not confirmed built. So: (a) if hub-codegen emits a usable Python client, generate and import it — cleanest; (b) if not, add a Python target to hub-codegen, or hand-write a thin client over trak's ~15-method facet surface (cheap; codegen may be more than hyper needs).
@@ -64,9 +64,9 @@
 - progress (2026-06-13): unblocked — a writable trak now listens on :44107 (the standup node landed via option 3). The next step is a check: does hub-codegen emit a usable Python client? That check, and the fork it resolves (generate it / add a Python target to hub-codegen / hand-write a thin client over trak's ~15-method facet surface), is the next live work on this graph and returns through the queue on the next summon.
 - state: open
 - since: 2026-06-13
-- of: switch hypercore's document backend to trak
+- of: switch the document backend to trak
 
-## the OIDC version set (core 0.6 / transport 0.4) was never published — forge it, fall back, or pause
+## the OIDC version set was never published
 
 - op: decide
 - ask: you chose option 2 (commit b49ef49) — clone + build plexus-idp as the real OIDC issuer — costed on the card as "workspace version bump (coordinated checkouts) + a second heavy build." Executing it, the version bump is not a checkout. trak's OIDC branch (feature/UT-wave3-oidc-cutover) requires plexus-core ^0.6 and plexus-transport ^0.4, and no ref of those repos carries them — cargo refuses outright: `failed to select a version for the requirement plexus-core = "^0.6"` (candidate 0.5.3); plexus-transport tops out at 0.3.0. The UT-1/UT-wave3 wave was published for auth-core (0.2.0) and macros (0.6.0) but never for core/transport; they sit at the older versions, which still pin auth-core 0.1 (conflicting with trak's auth-core 0.2). So the workspace can't build before plexus-idp ever enters the picture; the decision rested on a cost that's now proven false. Full card in work.md.
@@ -74,4 +74,4 @@
 - result: operator picked option 3 (2026-06-13, commit 6dfdfd8) — fall back to the one-line session_id patch on branch A rather than chase the unpublished OIDC version set. Executed in the standup node above: trak writes round-trip on :44107. The forge / point-at-the-real-set / pause paths are closed.
 - state: done
 - since: 2026-06-13
-- of: switch hypercore's document backend to trak
+- of: switch the document backend to trak

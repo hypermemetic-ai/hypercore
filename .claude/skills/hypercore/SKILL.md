@@ -238,6 +238,13 @@ graph's intent document is singular, and this repo is hypercore's folder.
   be — hyper's work view sections fields under their own labels, so a
   field need not carry its own structure or repeat what another holds. A
   node whose ask has become a wall is worth rewriting clean, not growing.
+  Titles are capped at generation, not at display (the operator's word,
+  2026-06-13 — the work view's left column is about a third wide, and
+  widening it was rejected): a node's '## ' heading, and a work.md card's
+  heading the same, is a short phrase and not a sentence — kept inside
+  that column so it reads whole instead of trailing off under a '…', the
+  detail left to the fields and the panel. A heading that has grown into a
+  sentence is renamed clean.
 - States are plain words: open, done, folded. A node waiting on an
   operator act names the act, exactly as work.md entries do — but the
   operator's cards stay in work.md; a graph never asks the operator
