@@ -1867,13 +1867,11 @@ def main(scr):
                     rows += [[(LM + 2, ln, attr)] for ln in wrap(wln, width - 2)]
                 rows.append([])
             rows += [[(LM, ln, DIM)]
-                     for ln in wrap("a approves . c cuts"
-                                    + (" . 1–%d picks an option" % len(opts)
-                                       if opts else "")
-                                    + " — y confirms any, and the word lands "
-                                    "on the card for the machine to execute; "
-                                    "s speaks anything else in your own "
-                                    "words.", width)]
+                     for ln in wrap(
+                         ("1–%d picks an option — y confirms it and the word "
+                          "lands on the card for the machine to execute; "
+                          % len(opts) if opts else "")
+                         + "s speaks your words on this call.", width)]
             scroll = max(0, min(scroll, max(0, len(rows) - view_h)))
             for i, segs in enumerate(rows[scroll: scroll + view_h]):
                 for x, txt, attr in segs:
@@ -2198,7 +2196,7 @@ def main(scr):
                      + ("h back . " if back else "")
                      + "s speak . w work . g log . q quit"),
             "card": "a approve . c cut . e explain . s speak . j/k statements . space/b page . h home . esc back",
-            "settle": "a approve . c cut . 1–9 pick . s speak . j/k cards . space/b page . h home . esc back",
+            "settle": "1–9 pick . s speak . j/k cards . space/b page . h home . esc back",
             "accept": "a approve . s speak . j/k slices . space/b page . h home . esc back",
             "exchange": "s speak . r rename . c fold away . space/b page . h home . esc back",
             "work": ("enter unfold . d document . s speak . h home . esc back"
@@ -2476,12 +2474,6 @@ def main(scr):
                 scroll += 1
             elif ch == curses.KEY_UP:
                 scroll -= 1
-            elif ch == ord("a"):
-                confirm = ("go", (decides[si]["lines"][0][3:].strip(),
-                                  decides[si].get("root", ROOT)))
-            elif ch == ord("c"):
-                confirm = ("cut-card", (decides[si]["lines"][0][3:].strip(),
-                                        decides[si].get("root", ROOT)))
             elif ord("1") <= ch <= ord("9"):
                 opts = [o.strip() for o in
                         decides[si]["fields"].get("options", "").split(" . ")
