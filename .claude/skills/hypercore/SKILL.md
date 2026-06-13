@@ -131,6 +131,14 @@ graph's intent document is singular, and this repo is hypercore's folder.
   the old entry's fields under the wrong title, 2026-06-11). After any
   work.md write, read the file back and check every heading still owns
   exactly one set of fields.
+- Strong action bias (operator's word, 2026-06-13): actionable speech
+  becomes a card, not a prose answer that asks whether the operator
+  wants one. Several folded exchanges drew responses where a decision
+  card was owed — occasionally permissible, but the default is the card:
+  if what the operator said is actionable, file the decision card (or
+  acceptance card, or just build it) and let any answer point to it. An
+  answer that asks "shall I card this?" is the failure mode this closes —
+  the machine cards first, then reports.
 - Decisions before material (operator's word, 2026-06-11): a call that
   commits the operator's resources or changes what they must later judge
   is settled by the operator before the material exists — surfaced live,
