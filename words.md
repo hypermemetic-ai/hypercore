@@ -42,3 +42,5 @@ operator (2026-06-13): what happened to the sts2 work? doesn't appear under w, a
 
 machine (2026-06-13): Not dropped — removed, and recoverable. On your word that outside work shouldn't live under hypercore, a session removed the STS2 overlay card from work.md (52f0652); that is why it is gone from w. Nothing is lost: the card and your settled config-tuning decision stand in git (602a33c, 2c8484b, the full card in 52f0652's parent). What did not happen is the move — the STS2 project was never stood up (no folder, not in registry.md), so the work has no home now; that is the dropped feeling. To restore it: stand up an STS2 project (folder + registry entry) and the work moves there, or re-card it in hypercore if you want it here. Your call — say the word and I set it up; I won't author your project's intent unprompted.
 
+operator (2026-06-13): let's stand up the project so we can track the work and pick up where we left off.
+
