@@ -8,3 +8,11 @@
 - since: 2026-06-13
 - blocks: nothing compounds — today's interface works; this is a new direction, so the only cost of waiting is the time before threads show what's being worked. Once built, the per-thread indicator replaces the top-right "the machine is working".
 
+## "it asks" reuses ASK as a verb — which congruent voice for the field labels
+
+- ask: a decision card labels its first field "it asks" — reusing ASK, our word for work (the ask of a node, the first of ask/check/decide/do), as a verb that says the card poses a question. That is the overload you flagged, and it is not a reason but drift: "it asks"/"it does" were written to read on a card before ASK settled as the work-word. It applies in two more places of the same kind — the same first field wears three names across surfaces (ASK in the work view, "it asks" on a decision card, "it does" on an acceptance card), and the commit head "the operator asks explain" (with its log colouring) reuses "asks" for "requests". The rest of the label drift is cosmetic only — TRY vs "try it", WAITS ON vs "waits", case — not a meaning collision. The call is which congruent voice to settle on; the rename is small and reversible once the voice is chosen.
+- options: ASK means work everywhere — drop the card verbs so the first field reads "the ask" (or ASK) on every card and view, and the explain head loses "asks" too (e.g. "the operator opens explain"); one word, one meaning, straight from "we use ASK for work" . keep the readable card voice, kill only the clash — the decision card's first field becomes "the call" (a decision is a call in our words), the acceptance card keeps "it does", the work view keeps ASK, and the explain head drops "asks"; the overload goes but surfaces still differ in voice . smallest change — only the "it asks" you flagged becomes "the call", leaving "it does", the explain head, and the case drift as they are
+- state: awaiting your decision
+- since: 2026-06-13
+- blocks: nothing breaks — the labels read fine, this is a legibility pass. Until it settles, "it asks" keeps reusing the work-word ASK on every decision card you open, and the same field keeps wearing three names across the three card surfaces.
+
