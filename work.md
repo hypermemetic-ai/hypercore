@@ -7,3 +7,11 @@
 - state: awaiting acceptance
 - blocks: nothing compounds — the change is on disk and reverts in one git command; until you accept, it stays machine-owned material and the old single-column list is one revert away.
 
+## the trak client — synapse-cc or hand-write
+
+- ask: trak now writes on :44107 (the standup landed via the branch-A patch), and the client that talks to it is the trak-backend graph's next step. You steered toward synapse-cc (Plexus's build-time client compiler), but its Python target is declared, not confirmed — every working example is TypeScript, Python sits under "Future Extensions," and the renderer (hub-codegen) is a separate repo not yet pulled. Confirming whether codegen emits a usable Python client means cloning hub-codegen into ~/projects and building it — a fetch that leaves the project folder and adds a repo to your environment (the surfacing floor), spent on a capability that is only declared. So the call, before that material exists.
+- options: clone hub-codegen and check — follow your synapse-cc steer: pull hub-codegen into ~/projects, build it, and see whether it emits a usable Python client; generate and import that client if it does, otherwise the fork reopens (add a Python target to hub-codegen, or hand-write); faithful to the steer, but spends a clone and a build on a capability that is only declared . hand-write the thin client now — skip codegen: a small direct JSON-RPC client over trak's ~15-method facet surface (create/get/update/list/tree/link/…), talking to :44107, living entirely in hyper's repo; cheapest and floor-free, but gives up the generated-from-schema guarantee synapse-cc would bring (you noted codegen may be more than hyper needs) . pause the client — leave trak writable on :44107 and the client unbuilt; come back when you want to push on the backend switch
+- state: awaiting your decision
+- since: 2026-06-13
+- blocks: the trak-backend graph's whole forward path — the document→facet mapping, then retiring the filesystem backend — waits on a client; nothing else in hypercore depends on it, so the only cost of waiting is the backend switch staying parked.
+
