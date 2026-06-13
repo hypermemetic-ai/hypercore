@@ -8,3 +8,10 @@
 - since: 2026-06-13
 - blocks: nothing compounds — today's interface works; this is a new direction, so the only cost of waiting is the time before threads show what's being worked. Once built, the per-thread indicator replaces the top-right "the machine is working".
 
+## the work list carries a dim gist under each title
+
+- ask: from your word (2026-06-13) — the work list was a column of bold-only lines. Each entry now wears a quiet dim line under its title carrying its substance at a glance (its check, else the first line of its ask) — the bold-over-dim texture you liked on the folded-graph rows, so the list gains variety and each row says what it is about without opening the block.
+- try: relaunch hyper, press w, unfold hypercore and enter the trak-backend graph — each entry and node now shows a dim gist line under its bold title (nodes show their check, work cards their ask). If the gist is not the useful info, say which field should earn the line.
+- state: awaiting acceptance
+- since: 2026-06-13
+
