@@ -8,11 +8,17 @@ machine (2026-06-13): Agreed, and half holds today: a decision or slice disappea
 
 operator (2026-06-13): is this coming up as a card? if it isn't we have a problem.
 
+machine (2026-06-13): Yes — as a thread, not a queue card. Your own pick (2026-06-13): exchanges are a first-class panel below the queue, never interleaved. Every words.md block you speak shows there — "sent" while it waits on the machine, "read" once answered. This exchange is in that panel now, answered. If it is not showing below the queue for you, that is a real bug — say so and I'll chase it. Whether spoken items should also be queue cards is the threads design just above.
+
 ## from the decision card, on ""it asks" reuses ASK as a verb — which congruent voice for the field labels" . 2026-06-13
 
 operator (2026-06-13): two issues. one, I'm approving three but the card isn't disappearing. two, what does a for approve even do for these? if I need to pick an option or talk there's nothing for approve to do.
 
+machine (2026-06-13): One — right, it's a lag: a pick flips the card to "decided" but it clears only when a machine executes the word, and none was mid-run, so option 3 sat decided until this session executed it (2832c9c) — decision cards now read "to decide" and the card has cleared. That lag is the smell from your queue-under-threads word; closing it lives in that design. Two — exactly: a settles the card with the literal word "approve", which isn't one of your options, so on an options decision a (and c) are dead keys; only pick (1–9) and speak do anything. That touches "one verb set on every card", which is yours, so I filed the fix as a decision (drop a/c from decision cards / keep them only for a bare yes-no call / leave it).
+
 ## from the acceptance card, on "the work list carries a dim gist under each title" . 2026-06-13
 
 operator (2026-06-13): I don't like it. new direction entirely - I saw the work view and there's more than enough room for a full panel for each entry on the right. let's just design in that direction instead.
+
+machine (2026-06-13): Fair — reverted; the list is back to plain titles, the dim gist gone (it had also shadowed the gist() function and crashed launch, patched to gline, now dropped). The new direction is better: a two-column work view — the entry list stays compact on the left, the selected entry's full content fills a panel on the right, updating as you move, no expand/collapse. It uses the room you saw and gives the double win outright. Recorded it as the w-view's new ask in work.md with the shape to confirm (left-column width, whether enter still does anything, how the right panel scrolls). Confirm the shape or redirect and I build it — I'd rather not land a big layout blind right after this one.
 
