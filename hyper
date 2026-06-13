@@ -2047,18 +2047,6 @@ def main(scr):
                     if inline:
                         row.append((LM + 2 + iw - len(inline), inline, DIM))
                 rows.append(row)
-                if not exp:
-                    # a quiet second line under the bold title — the entry's
-                    # substance (its check, else its ask) at a glance, so the
-                    # list reads as more than a column of bold lines and each
-                    # row says what it is about without opening it (the
-                    # operator's word, 2026-06-13)
-                    gline = (b["fields"].get("check")
-                             or b["fields"].get("ask") or "").split(". ")[0].strip()
-                    if gline:
-                        gw = iw - 4
-                        rows.append([(LM + 4, gline if len(gline) <= gw
-                                      else gline[: gw - 1] + "…", DIM)])
                 if exp:
                     # the text block, opened: each field is its own section —
                     # a dim label over a readable body, a blank line between —
