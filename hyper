@@ -670,6 +670,64 @@ def fold_exchange(blk):
                   ("words.md",))
 
 
+def thread_label(words):
+    """A thread's name from its first words — a short human phrase, not a
+    slug; capped so the panel stays legible, cut on a word boundary."""
+    phrase = " ".join(words.split())
+    if len(phrase) > 48:
+        phrase = phrase[:48].rsplit(" ", 1)[0].rstrip() + "…"
+    return phrase or "untitled"
+
+
+def unique_head(label, blocks, skip=None):
+    """A thread heading no other block owns — topics that open with the same
+    words still stand apart (the operator's pick, 2026-06-13)."""
+    head_ = "## " + label
+    heads = {b["lines"][0] for b in blocks if b is not skip}
+    n = 2
+    while head_ in heads:
+        head_ = "## %s (%d)" % (label, n)
+        n += 1
+    return head_
+
+
+def speak_new(words):
+    """Main-screen speech opens its OWN labelled thread (the operator's
+    pick, 2026-06-13) — no more piling every place-less utterance into one
+    dated block, so a topic's follow-ups and the next topic stop merging.
+    The label is the first words; continue a thread or rename it from its
+    own view."""
+    stamp = date.today().isoformat()
+    blocks = ledger(WORDS)
+    head_ = unique_head(thread_label(words), blocks)
+    blocks.append({"lines": [head_, "",
+                             "operator (%s): %s" % (stamp, words.strip())]})
+    write_ledger(WORDS, "words", blocks)
+    return commit("the operator speaks in a new thread: " + head(words),
+                  words.strip() + "\n\nthe machine reads words.md at next "
+                  "session start and answers.",
+                  ("words.md",))
+
+
+def rename_thread(blk, words):
+    """Re-label a thread — its first-words name is a default, not a
+    sentence (the operator's pick, 2026-06-13). The exchange keeps every
+    word; only the heading changes, deduped like a fresh one. Returns the
+    commit hash and the new heading so the open view follows it."""
+    key = blk["lines"][0]
+    blocks = ledger(WORDS)
+    tgt = next((b for b in blocks if b["lines"][0] == key), None)
+    if tgt is None:
+        return None, key
+    head_ = unique_head(thread_label(words), blocks, skip=tgt)
+    tgt["lines"][0] = head_
+    write_ledger(WORDS, "words", blocks)
+    return commit("the operator renames the thread: " + head(words),
+                  '"%s" → "%s"\n\ngit keeps the words.'
+                  % (key[3:].strip(), head_[3:].strip()),
+                  ("words.md",)), head_
+
+
 # ----- the machine (summoned by speech; answers onto the same block) -----
 
 def harness_line(envvar, path):
@@ -1327,20 +1385,29 @@ def main(scr):
         # what needs the operator sorts above what waits on the machine
         # (the operator's word, 2026-06-11): a spoken-on card and an
         # unanswered exchange need nothing until the response lands
-        attention = ([("decide", s) for s in pend if not s["spoken"]]
-                     + [("settle", b) for b in decides
-                        if b["lines"][0] not in spoken]
-                     + [("accept", b) for b in accepts
-                        if b["lines"][0] not in spoken]
-                     + [("read", b) for b in answered])
-        waiting = ([("decide", s) for s in pend if s["spoken"]]
-                   + [("settle", b) for b in decides
-                      if b["lines"][0] in spoken]
-                   + [("accept", b) for b in accepts
-                      if b["lines"][0] in spoken]
+        # the decision queue: what needs the operator (unspoken) above what
+        # waits on the machine (spoken-on). exchange threads are NOT in it —
+        # they are their own first-class panel now (the operator's pick,
+        # 2026-06-13), listed below the queue, never interleaved with it
+        qattn = ([("decide", s) for s in pend if not s["spoken"]]
+                 + [("settle", b) for b in decides
+                    if b["lines"][0] not in spoken]
+                 + [("accept", b) for b in accepts
+                    if b["lines"][0] not in spoken])
+        qwait = ([("decide", s) for s in pend if s["spoken"]]
+                 + [("settle", b) for b in decides
+                    if b["lines"][0] in spoken]
+                 + [("accept", b) for b in accepts
+                    if b["lines"][0] in spoken])
+        # the threads: a machine reply to read (answered) above one waiting
+        # on the machine (sent). the cue still sounds on a fresh answer, so
+        # attention carries the answered threads alongside the live queue
+        threads = ([("read", b) for b in answered]
                    + [("sent", b) for b in sent])
-        entries = attention + waiting
-        nattn = len(attention)
+        attention = qattn + [("read", b) for b in answered]
+        queue = qattn + qwait
+        entries = queue + threads
+        nqueue = len(queue)  # entries[:nqueue] are the queue, the rest threads
         # a sound when the queue turns actionable, so the operator need not
         # watch the screen (their word, 2026-06-13; cue-attention their pick):
         # cue on any newly-arrived item needing them — the nothing→something
@@ -1456,72 +1523,85 @@ def main(scr):
                         "… %d more — g opens the log" % (len(moves) - 4), DIM)
                     y += 1
                 y += 1
+            # the row painter — one entry, queue or thread, at row yy: the
+            # selection bar, the spoken/unread shading, the delay cost
+            def draw_entry(yy, i, kind, obj):
+                label, lattr = KINDS[kind]
+                if ((kind in ("settle", "accept")
+                        and obj["lines"][0] in spoken)
+                        or (kind == "decide" and obj.get("spoken"))):
+                    label, lattr = "spoken", DIM
+                if kind == "decide":
+                    text = obj["text"].replace(MARKER, "")
+                    tag = obj["section"] or ""
+                    if obj.get("project", "hypercore") != "hypercore":
+                        tag = obj["project"] + (" · " + tag if tag else "")
+                else:
+                    text = obj["lines"][0][3:].strip()
+                    tag = (obj["project"]
+                           if obj.get("project", "hypercore") != "hypercore"
+                           else "")
+                room = width - GUT - (len(tag) + 2 if tag else 0)
+                if len(text) > room:
+                    text = text[: max(1, room - 1)] + "…"
+                # every decision wears the cost of its own delay: a card
+                # filed with a blocks field carries it on the line itself
+                cost = (obj["fields"].get("blocks", "")
+                        if kind in ("settle", "accept") else "")
+                crm = room - len(text) - 3
+                if cost and crm >= 12:
+                    if len(cost) > crm:
+                        cost = cost[: max(1, crm - 1)] + "…"
+                else:
+                    cost = ""
+                if i == sel:
+                    # selection is a bar beside the line, not a wash over it
+                    # (the operator's word, 2026-06-11 — the highlighter
+                    # obscured the status): every color on the row stays its own
+                    put(scr, yy, 0, "▌", ACCENT)
+                    put(scr, yy, LM, label, lattr | BOLD)
+                    put(scr, yy, LM + GUT, text, BOLD)
+                    if cost:
+                        put(scr, yy, LM + GUT + len(text), " — " + cost, DIM | BOLD)
+                    if tag:
+                        put(scr, yy, LM + width - len(tag), tag, BOLD)
+                else:
+                    # an unread answer reads bold and clears once opened —
+                    # proper unread behavior, in place of the dot (their
+                    # word, 2026-06-12)
+                    if kind == "read" and obj.get("unread"):
+                        put(scr, yy, LM, label, BOLD)
+                        put(scr, yy, LM + GUT, text, BOLD)
+                    else:
+                        put(scr, yy, LM, label, lattr)
+                        put(scr, yy, LM + GUT, text,
+                            0 if kind in ("decide", "settle", "accept") else DIM)
+                    if cost:
+                        put(scr, yy, LM + GUT + len(text), " — " + cost, DIM)
+                    if tag:
+                        put(scr, yy, LM + width - len(tag), tag, DIM)
+
             put(scr, y, LM, "THE QUEUE", DIM)
             y += 2
-            if entries:
-                for i, (kind, obj) in enumerate(entries):
-                    label, lattr = KINDS[kind]
-                    if ((kind in ("settle", "accept")
-                            and obj["lines"][0] in spoken)
-                            or (kind == "decide" and obj.get("spoken"))):
-                        label, lattr = "spoken", DIM
-                    if kind == "decide":
-                        text = obj["text"].replace(MARKER, "")
-                        tag = obj["section"] or ""
-                        if obj.get("project", "hypercore") != "hypercore":
-                            tag = obj["project"] + (" · " + tag if tag else "")
-                    else:
-                        text = obj["lines"][0][3:].strip()
-                        tag = (obj["project"]
-                               if obj.get("project", "hypercore") != "hypercore"
-                               else "")
-                    room = width - GUT - (len(tag) + 2 if tag else 0)
-                    if len(text) > room:
-                        text = text[: max(1, room - 1)] + "…"
-                    # every decision wears the cost of its own delay: a
-                    # card filed with a blocks field carries it on the
-                    # queue line itself, dim after the title
-                    cost = (obj["fields"].get("blocks", "")
-                            if kind in ("settle", "accept") else "")
-                    crm = room - len(text) - 3
-                    if cost and crm >= 12:
-                        if len(cost) > crm:
-                            cost = cost[: max(1, crm - 1)] + "…"
-                    else:
-                        cost = ""
-                    if i == sel:
-                        # selection is a bar beside the line, not a wash
-                        # over it (the operator's word, 2026-06-11 — the
-                        # highlighter obscured the status): every color
-                        # on the row stays its own
-                        put(scr, y, 0, "▌", ACCENT)
-                        put(scr, y, LM, label, lattr | BOLD)
-                        put(scr, y, LM + GUT, text, BOLD)
-                        if cost:
-                            put(scr, y, LM + GUT + len(text),
-                                " — " + cost, DIM | BOLD)
-                        if tag:
-                            put(scr, y, LM + width - len(tag), tag, BOLD)
-                    else:
-                        # an unread answer reads bold and clears once
-                        # opened — proper unread behavior, in place of
-                        # the dot (their word, 2026-06-12)
-                        if kind == "read" and obj.get("unread"):
-                            put(scr, y, LM, label, BOLD)
-                            put(scr, y, LM + GUT, text, BOLD)
-                        else:
-                            put(scr, y, LM, label, lattr)
-                            put(scr, y, LM + GUT, text,
-                                0 if kind in ("decide", "settle", "accept")
-                                else DIM)
-                        if cost:
-                            put(scr, y, LM + GUT + len(text),
-                                " — " + cost, DIM)
-                        if tag:
-                            put(scr, y, LM + width - len(tag), tag, DIM)
+            for i in range(nqueue):
+                draw_entry(y, i, *entries[i])
+                y += 1
+            if nqueue == 0:
+                put(scr, y, LM, "nothing waits on you.", DIM)
+                y += 1
+            y += 1
+            # the named-thread panel below the queue (the operator's pick,
+            # 2026-06-13): your exchanges with the machine, each its own
+            # topic. s opens one, enter continues one, r renames it from
+            # its view — topics no longer pile into a single dated thread
+            put(scr, y, LM, "THREADS", DIM)
+            y += 2
+            if threads:
+                for i in range(nqueue, len(entries)):
+                    draw_entry(y, i, *entries[i])
                     y += 1
             else:
-                put(scr, y, LM, "nothing waits on you.", DIM)
+                put(scr, y, LM, "no threads yet — s opens one.", DIM)
                 y += 1
             y += 1
             # the standing-work line, in the operator's own words
@@ -1958,7 +2038,7 @@ def main(scr):
             "card": "a approve . c cut . e explain . s speak . j/k statements . space/b page . h home . esc back",
             "settle": "a approve . c cut . 1–9 pick . s speak . j/k cards . space/b page . h home . esc back",
             "accept": "a approve . s speak . j/k slices . space/b page . h home . esc back",
-            "exchange": "s speak . c fold away . space/b page . h home . esc back",
+            "exchange": "s speak . r rename . c fold away . space/b page . h home . esc back",
             "work": ("enter unfold . d document . s speak . h home . esc back"
                      if wexp is None else
                      "enter unfold graph . j/k move . d document . "
@@ -2184,10 +2264,10 @@ def main(scr):
                 if "words.md" in dirty_files:
                     flash = held
                 else:
-                    wd = read_words(scr, h, w, "your words "
+                    wd = read_words(scr, h, w, "your words — a new thread "
                                                "(enter sends . esc abandons): ")
                     if wd and wd.strip():
-                        hsh = speak("", wd)
+                        hsh = speak_new(wd)
                         resummon = resummon or machine is not None
                         machine = start_machine(machine)
                         flash = ("on disk . committed %s . the machine is working" % hsh
@@ -2326,6 +2406,20 @@ def main(scr):
                                  "on disk . committed %s . no machine to summon — the words wait" % hsh)
                     elif wd is not None:
                         flash = "no words — nothing landed"
+            elif ch == ord("r"):
+                # the thread's name is a default, not a sentence — rename it
+                # (the operator's pick, 2026-06-13); the view follows the head
+                if "words.md" in dirty_files:
+                    flash = held
+                else:
+                    wd = read_words(scr, h, w, "rename this thread "
+                                               "(enter renames . esc keeps it): ")
+                    if wd and wd.strip():
+                        hsh, exkey = rename_thread(exb, wd)
+                        flash = ("renamed . committed %s" % hsh if hsh
+                                 else "thread not found — nothing changed")
+                    elif wd is not None:
+                        flash = "no name — the thread keeps its label"
 
         elif view == "work":
             if ch == 27:
