@@ -8,11 +8,3 @@
 - since: 2026-06-13
 - blocks: the standup's write-confirmation and through it the whole switch — the client (synapse-cc) and the document→facet mapping can't be built or tested against a trak that won't accept writes. Nothing compounds: the filesystem backend keeps running untouched, so hypercore loses nothing while it waits.
 
-## louder attention cue
-
-- ask: from the operator's words (2026-06-13) — "the notification sound isn't loud enough." play_cue() now passes paplay --volume=131072 (≈200% of the file's recorded level), so the actionable-card cue is louder. It amplifies only the cue's own playback stream — the system volume is untouched, so nothing else on the machine gets louder. The source .oga can't be re-mastered here (no ffmpeg/sox), and raising the system sink was off-limits (it touches what the operator owns), so stream-volume amplification is the lever; if it is still short, the value bumps.
-- try: relaunch hyper (interface code loads only at launch). When the queue next turns actionable (a card or a fresh answer arrives), the cue sounds louder. On demand: `paplay --volume=131072 sounds/cue-attention.oga` plays it at the new level.
-- state: awaiting acceptance
-- since: 2026-06-13
-- blocks: nothing — the cue is additive; the silent fallback (no paplay/sink) is unchanged, and the louder volume can't break the loop.
-
