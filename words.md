@@ -14,3 +14,5 @@ operator (2026-06-13): none of these convince me. I want a nice, professional so
 
 machine (2026-06-13): Fair — the first batch was beepy sines. Regenerated as warm glass/bell tones: inharmonic partials for an expensive timbre, a soft bloom, a long graceful decay, and a gentle reverb tail for space — nicer and professional, still one or two notes. Three on the card now: cue-glass (one warm bell that blooms and fades), cue-fifth (two notes a perfect fifth apart, unhurried), cue-celesta (one bright music-box note with a faint shimmer). Hear them: `paplay sounds/cue-glass.wav` (or -fifth / -celesta). Pick one and I wire it in + land for acceptance; if these still miss, tell me the direction (warmer / shorter / a different instrument) and I retune.
 
+operator (2026-06-13): too long running. we need to pull something that's known to be good here.
+
