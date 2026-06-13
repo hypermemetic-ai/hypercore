@@ -16,10 +16,3 @@
 - since: 2026-06-13
 - blocks: nothing breaks — the labels read fine, this is a legibility pass. Until it settles, "it asks" keeps reusing the work-word ASK on every decision card you open, and the same field keeps wearing three names across the three card surfaces.
 
-## the plan readout shows only the 5h and 7d windows
-
-- ask: from your word (2026-06-13) — the foot-of-home plan utilization can be shrunk without utility loss to just the 5h and 7d windows, each its percent and time to reset. Drop the "plan ·" prefix and the per-model (opus) part.
-- try: relaunch hyper — the foot line now reads "5h 32% (56m) · 7d 5% (2d15h)" (was "plan · …", and an "opus N%" part appeared whenever opus usage was non-zero); only the two windows, each percent and reset, remain. A stale readout still trails its age.
-- state: awaiting acceptance
-- since: 2026-06-13
-
