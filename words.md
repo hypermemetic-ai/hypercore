@@ -38,3 +38,5 @@ machine (2026-06-13): On your process point — right, and it's the more importa
 
 operator (2026-06-13): new feature: make a sound when I need to take action. I want a good sound for this. gentle, pleasant but clear. so I don't have to look at the screen to know I have to act.
 
+operator (2026-06-13): the sts2 work should not go under hypercore. if it's not about hypercore it shouldn't be under hypercore.
+
