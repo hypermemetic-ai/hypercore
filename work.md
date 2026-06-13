@@ -21,8 +21,10 @@
 ## hyper: a sound cue when a card needs you
 
 - ask: Your word (2026-06-13) — an audible cue when a card needs you, so you don't have to watch the screen; gentle, pleasant, clear. Feasible: pipewire is running and paplay/pw-play are available; hyper has no audio today but can shell out to play a short file when the queue turns actionable. Two design points. Firing (my proposed default, refine on your word): play once when the queue goes from nothing-for-you to something-for-you, and once when a new actionable card arrives — never repeating while items just sit, so it cues you, never nags. The sound itself is your aesthetic, and that is the fork:
-- options: I pick a gentle chime and land it for acceptance — a soft, clear notification tone (a mellow freedesktop sound or a custom two-note chime) wired to the actionable transition; you hear it next time a card lands and speak if it is not right . you give me the sound — point me at a file or a freedesktop sound name you like and I wire exactly that . I generate 2-3 candidate chimes first — short soft files in the repo you play and pick from before I wire one in
-- state: decided (2026-06-13) — option 3 — I generate 2-3 candidate chimes first — short soft files in the repo you play and pick from before I wire one in
+- resolved fork (option 3 chosen — generate candidates): I pick a gentle chime + accept . you give me the sound . generate 2-3 candidates first
+- update (2026-06-13, candidates generated): three soft bell candidates are in sounds/ — play each with `paplay sounds/<file>` (pw-play works too): cue-1-rising (calm two-note lift), cue-2-mallet (one warm note that fades), cue-3-arp (three light notes). Pick one and I wire it to the actionable-card transition and land it for acceptance; re-running sounds/generate_cues.py tweaks any of them.
+- options: cue-1-rising — a calm two-note lift (paplay sounds/cue-1-rising.wav) . cue-2-mallet — one warm, clear note that fades (paplay sounds/cue-2-mallet.wav) . cue-3-arp — three light, unobtrusive notes (paplay sounds/cue-3-arp.wav)
+- state: awaiting your decision — which chime: cue-1-rising / cue-2-mallet / cue-3-arp (then I wire it and land for acceptance)
 - since: 2026-06-13
 - blocks: additive to hyper's queue screen; nothing compounds. Build follows your pick and lands for acceptance (you will relaunch hyper to get it — interface code loads at launch).
 
