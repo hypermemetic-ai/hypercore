@@ -164,6 +164,20 @@ graph's intent document is singular, and this repo is hypercore's folder.
   2026-06-11), barred only from the irreversibly destructive — what
   git or a redo cannot bring back; in doubt, the act is the
   operator's decision.
+- Standing work is picked up without the operator asking (option 3 of
+  the what-runs-when-work-is-open card, the operator's pick, 2026-06-11;
+  reaffirmed 2026-06-13 — "if there's any standing work it needs to be
+  picked up without my asking"). When open work stands — an open graph
+  node a session can move — with no machine running, no words waiting,
+  and a clean record, hyper summons the machine itself with the
+  open-work instruction; the summons reaches linked repos the same way.
+  The spend guard is one summon per record head: a session that makes no
+  commit leaves the head unmoved and the chain ends, so work that only
+  waits on the operator (a decision, an acceptance) is left standing on
+  its card, never looped. m is the manual override, never the
+  requirement. So a session never frames standing work as waiting on the
+  operator's summon — it is picked up on its own; an answer names what
+  runs next, not an act the operator must take.
 - A session that arrives to uncommitted changes trues up the record
   before anything else: read the diff, verify what it claims against
   what is on disk, finish or correct what the dead session left, commit
