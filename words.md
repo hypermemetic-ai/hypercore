@@ -28,3 +28,7 @@ machine (2026-06-13): Fair — reverted; the list is back to plain titles, the d
 
 operator (2026-06-13): the language here implies I didn't get a card about it. we need to make it clear to the machine that threads and cards are different surfaces. threads are not for decisions, decisions are in the queue. thread can REFER to the queue if relevant but should not supplant it.
 
+## what happened to the sts2 work
+
+operator (2026-06-13): what happened to the sts2 work? doesn't appear under w, appears to have been dropped?
+
