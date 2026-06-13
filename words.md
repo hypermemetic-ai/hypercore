@@ -12,3 +12,7 @@ operator (2026-06-13): good as is, manual rename is fine for now
 
 operator (2026-06-13): move plan use % to the empty space on the bottom of the screen, but make it compact, clean and legible at a glance.
 
+## is the trak work still going on or what
+
+operator (2026-06-13): is the trak work still going on or what? if not, we need to figure out what went wrong causing it to stop or hang and address it so it doesn't happen again.
+
