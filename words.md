@@ -1,11 +1,5 @@
 # words
 
-## under w I don't like what the list…
-
-operator (2026-06-13): under w I don't like what the list looks like with a single bold line. we need to add something to make it look better. main w view looks good because of the small non-bold check blocks. some visual variety like that might be what we want, but think creatively aiming for a double win: looks better + provides useful information without expanding.
-
-machine (2026-06-13): I see it — a column of bold-only lines is flat, and the folded-graph rows read better because the dim "check:" gives each a quieter second texture. The double win that mirrors it: under each entry's bold title, one dim line of its substance — its check if it has one, else the first line of its ask — so the list gains the bold-over-dim variety and each row says what it's about, no block opened. The taste call that's yours is which gist earns that line. I'll build a take (check/ask gist) and land it for acceptance so you can see it; redirect the gist if it's not the useful one.
-
 ## spoken items in the queue should…
 
 operator (2026-06-13): spoken items in the queue should somehow fall under the relevant thread. we have some big changes in the pipeline involving these threads so this should fall under that. point is, if a queue item becomes just a tracker for a conversation, the conversation should go under threads where appropriate. queue items should disappear when operator takes action.
