@@ -14,3 +14,7 @@ operator (2026-06-13): the utilization data can be shrunk without utility loss. 
 
 operator (2026-06-13): under w I don't like what the list looks like with a single bold line. we need to add something to make it look better. main w view looks good because of the small non-bold check blocks. some visual variety like that might be what we want, but think creatively aiming for a double win: looks better + provides useful information without expanding.
 
+## from the decision card, on ""it asks" reuses ASK as a verb — which congruent voice for the field labels" . 2026-06-13
+
+operator (2026-06-13): no, you're confused. ask does not mean work. the ask is the ask - it's intent, operator input guiding the work.
+
