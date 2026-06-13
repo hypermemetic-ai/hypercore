@@ -6,3 +6,7 @@ operator (2026-06-13): some left side entries are too long. let's cap the title 
 
 operator (2026-06-13): sorry, I wrote this under the wrong entry. it was meant for the other open entry.
 
+## from the acceptance card, on "two-column work view — list left, panel right" . 2026-06-13
+
+operator (2026-06-13): see comment on other card.
+
