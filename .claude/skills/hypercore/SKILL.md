@@ -178,20 +178,22 @@ graph's intent document is singular, and this repo is hypercore's folder.
   requirement. So a session never frames standing work as waiting on the
   operator's summon — it is picked up on its own; an answer names what
   runs next, not an act the operator must take.
-- The machine names the threads it answers (the operator's word,
-  2026-06-13 — auto thread rename, but only when they have not renamed
-  it by hand). When a session answers a thread whose heading is still
-  the raw first-words default (what thread_label would make of its first
-  operator line), it rewrites the heading to a short, true topic — the
-  summary the heuristic cannot reach. A manual rename (r in hyper) moves
-  the heading off that default, and a heading that is no longer the
-  first-words default is never overwritten, whoever set it — the
-  operator's label always wins. The label is set once, while the heading
-  is still the default; the machine does not churn it on every later
-  answer. One caution that keeps legibility first: a running hyper keys
-  an open thread by its heading, so renaming a thread the operator is
-  reading snaps their view home — a session renames as it lands the
-  answer, never a thread mid-exchange the operator is plainly working.
+- The machine names the threads it answers, and keeps the name current
+  as the thread grows (the operator's word, 2026-06-13 — auto thread
+  rename, refined each answer, but only when they have not renamed it by
+  hand). When a session answers a thread, it rewrites the heading to a
+  short, true topic — the summary the heuristic cannot reach — and does
+  so on every answer, so the label tracks where the thread has gone. The
+  one exception is the operator's hand: a manual rename (r in hyper)
+  stamps the block with a hidden marker (THREAD_NAMED, invisible in the
+  exchange view — the ledger parser keeps only operator/machine lines and
+  fields), and the machine never touches a thread carrying it. So the
+  operator's label always wins; thread_named(blk) is the check. Keep the
+  new heading short and unique (the unique_head shape). Renaming is
+  snap-safe: hyper keys an open thread by its first utterance
+  (thread_id), not its heading, so a refine never throws the operator's
+  view home — but still rename as the answer lands, in the same commit,
+  never as a separate churn.
 - A session that arrives to uncommitted changes trues up the record
   before anything else: read the diff, verify what it claims against
   what is on disk, finish or correct what the dead session left, commit

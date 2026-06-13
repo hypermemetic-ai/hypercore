@@ -700,6 +700,31 @@ def thread_label(words):
     return phrase or "untitled"
 
 
+# a thread the operator has renamed by hand carries this marker line in its
+# block; the ledger parser keeps only operator/machine lines and fields, so
+# it never shows in the exchange view, but it locks the heading — the
+# machine's auto-naming leaves a marked thread alone (the operator's word,
+# 2026-06-13: auto-rename, but only when they have not renamed it).
+THREAD_NAMED = "<!-- named by operator -->"
+
+
+def thread_id(blk):
+    """A thread's stable identity — its first operator utterance, which a
+    rename never changes. The open exchange is keyed by this, not the
+    heading, so a view survives a rename (by hand or by the machine)
+    instead of snapping home."""
+    for ln in blk["lines"]:
+        if ln.startswith("operator ("):
+            return ln
+    return blk["lines"][0]
+
+
+def thread_named(blk):
+    """True once the operator has renamed the thread by hand: the heading is
+    theirs, and the machine's auto-naming hands off."""
+    return THREAD_NAMED in blk["lines"]
+
+
 def unique_head(label, blocks, skip=None):
     """A thread heading no other block owns — topics that open with the same
     words still stand apart (the operator's pick, 2026-06-13)."""
@@ -742,6 +767,11 @@ def rename_thread(blk, words):
         return None, key
     head_ = unique_head(thread_label(words), blocks, skip=tgt)
     tgt["lines"][0] = head_
+    # the operator's hand locks the heading: the machine's auto-naming
+    # leaves a marked thread alone from here on (the operator's word,
+    # 2026-06-13)
+    if THREAD_NAMED not in tgt["lines"]:
+        tgt["lines"].insert(1, THREAD_NAMED)
     write_ledger(WORDS, "words", blocks)
     return commit("the operator renames the thread: " + head(words),
                   '"%s" → "%s"\n\ngit keeps the words.'
@@ -1554,7 +1584,7 @@ def main(scr):
         if view == "settle" and not decides:
             view = "home"
         if view == "exchange":
-            exb = next((b for b in exchanges if b["lines"][0] == exkey), None)
+            exb = next((b for b in exchanges if thread_id(b) == exkey), None)
             if exb is None:
                 view = "home"
 
@@ -2352,7 +2382,7 @@ def main(scr):
                 elif kind == "accept":
                     view, ai, scroll = "accept", accepts.index(obj), 0
                 else:
-                    view, exkey, scroll = "exchange", obj["lines"][0], -1
+                    view, exkey, scroll = "exchange", thread_id(obj), -1
                     if kind == "read":
                         mark_read(obj, answered)
             elif (ch == ord("m") and not machine
@@ -2538,14 +2568,17 @@ def main(scr):
                         flash = "no words — nothing landed"
             elif ch == ord("r"):
                 # the thread's name is a default, not a sentence — rename it
-                # (the operator's pick, 2026-06-13); the view follows the head
+                # (the operator's pick, 2026-06-13). the view is keyed by the
+                # thread's first utterance, so it holds across the rename; the
+                # rename also locks the heading against the machine's
+                # auto-naming (THREAD_NAMED)
                 if "words.md" in dirty_files:
                     flash = held
                 else:
                     wd = read_words(scr, h, w, "rename this thread "
                                                "(enter renames . esc keeps it): ")
                     if wd and wd.strip():
-                        hsh, exkey = rename_thread(exb, wd)
+                        hsh, _ = rename_thread(exb, wd)
                         flash = ("renamed . committed %s" % hsh if hsh
                                  else "thread not found — nothing changed")
                     elif wd is not None:
