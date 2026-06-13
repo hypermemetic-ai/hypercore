@@ -12,7 +12,7 @@
 
 - ask: redirect of your w-view word (2026-06-13) — you rejected the dim-gist line and saw the work view has room for a full panel per entry on the right. The direction: a two-column layout — the entry list stays compact on the left, and the selected entry's full content (its sections, as the inline expand shows now) fills a panel on the right, updating as you move j/k. No inline expand/collapse; the detail is always there for the selected entry. The list stays scannable, the detail rich — the double win, without expanding.
 - options: confirm the shape and I build it — left list about a third of the width, right panel the rest, enter drops (the panel replaces it), and the right panel scrolls with space/b when an entry runs long (top-anchored) . redirect — name what is off (proportions, what the panel shows, the keys) and I re-shape before building . not yet — leave the list as plain titles and come back to this
-- state: awaiting your decision
+- state: decided (2026-06-13) — option 1 — confirm the shape and I build it — left list about a third of the width, right panel the rest, enter drops (the panel replaces it), and the right panel scrolls with space/b when an entry runs long (top-anchored)
 - since: 2026-06-13
 - blocks: nothing breaks — the list works as plain titles today; this is the redesign you asked for, held only until the shape is confirmed so I do not land a big layout twice.
 
