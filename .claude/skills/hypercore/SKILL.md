@@ -226,7 +226,17 @@ graph's intent document is singular, and this repo is hypercore's folder.
   condition) — fields ask, check, state, since, and of: the parent the
   graph belongs to (of: hypercore for the repo's own graphs — every
   root names its parent; operator's pick, 2026-06-11). An ask whose
-  check cannot be named is not ready to spawn.
+  check cannot be named is not ready to spawn. A root born from a thread
+  also carries thread: the heading of the thread that spawned it (a graph
+  born from operator words records where they were said) — and the two
+  read across (working-indicator graph, second slice): the work view shows
+  the thread on the root's panel, and a live thread whose heading the root
+  recorded names that work on its own exchange view. Matched by the
+  recorded heading across hypercore's own graphs, where its threads live; a
+  thread that has folded away leaves the root's record standing as
+  provenance with no live mate. The field is best-effort — a rename of the
+  thread after the fact loosens the back-link until a session rerecords it;
+  the forward record on the root stays true.
 - Further blocks are nodes earned only the two ways doctrine names: the
   operation crossed the operator–machine boundary, or the fold's trust
   rests on it. Fields: op (ask / check / decide / do), ask, check,
