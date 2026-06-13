@@ -10,13 +10,3 @@ operator (2026-06-13): oh, so if something emerges from this single exchange it 
 
 machine (2026-06-13): True today — speak() drops every place-less utterance into one "## words . DATE" thread, so topics merge. Carded as "hyper: topic separation for main-screen speech" (work.md) with your proposal leading as the recommendation: first-class labelled threads below the queue (s starts a new one, select to continue) / auto-thread per utterance / attach-or-new (smart). Pick one and I build it and land for acceptance.
 
-## from the decision card, on "hyper: a sound cue when a card needs you" . 2026-06-13
-
-operator (2026-06-13): none of these convince me. I want a nice, professional sound. something luxurious but still simple.
-
-machine (2026-06-13): Fair — the first batch was beepy sines. Regenerated as warm glass/bell tones: inharmonic partials for an expensive timbre, a soft bloom, a long graceful decay, and a gentle reverb tail for space — nicer and professional, still one or two notes. Three on the card now: cue-glass (one warm bell that blooms and fades), cue-fifth (two notes a perfect fifth apart, unhurried), cue-celesta (one bright music-box note with a faint shimmer). Hear them: `paplay sounds/cue-glass.wav` (or -fifth / -celesta). Pick one and I wire it in + land for acceptance; if these still miss, tell me the direction (warmer / shorter / a different instrument) and I retune.
-
-operator (2026-06-13): too long running. we need to pull something that's known to be good here.
-
-machine (2026-06-13): Done — dropped the synth (too long, not landing) and pulled three short, known-good freedesktop notification sounds onto the card: cue-message (0.31s, soft — recommended), cue-attention (0.50s), cue-instant (1.03s). Hear them with `paplay sounds/cue-message.oga` (or -attention / -instant). Pick one and I wire it in and land for acceptance.
-

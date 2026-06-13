@@ -25,7 +25,7 @@
 - update (2026-06-13, batch 2 — luxurious, superseded): regenerated as warm glass/bell synth tones; you found them too long-running and asked for something known-good instead, so the synth approach is dropped (generate_cues.py removed).
 - update (2026-06-13, batch 3 — known-good, short): pulled three short, professionally-designed freedesktop notification sounds into sounds/ (the system sound theme — see SOURCES.txt). Play with `paplay sounds/<file>`. Pick one and I wire it to the actionable-card transition and land for acceptance.
 - options: cue-message — soft, short "message" tone, 0.31s (paplay sounds/cue-message.oga) — recommended . cue-attention — a gentle attention sound, 0.50s (paplay sounds/cue-attention.oga) . cue-instant — fuller classic notification, 1.03s (paplay sounds/cue-instant.oga)
-- state: awaiting your decision — which sound: cue-message (recommended) / cue-attention / cue-instant (then I wire it and land for acceptance)
+- state: decided (2026-06-13) — option 2 — cue-attention — a gentle attention sound, 0.50s (paplay sounds/cue-attention.oga)
 - since: 2026-06-13
 - blocks: additive to hyper's queue screen; nothing compounds. Build follows your pick and lands for acceptance (you will relaunch hyper to get it — interface code loads at launch).
 
