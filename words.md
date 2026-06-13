@@ -24,20 +24,6 @@ operator (2026-06-13): "to decide" looks bad atm. too long, touches the start of
 
 machine (2026-06-13): Right — labels sit in a 7-wide gutter with the body at column 9, so "to decide" (9) touches the text. Per your own rule I put it on the queue as a decision rather than settle it here — and you've already picked option 2 (cap labels at 7). Executing it: the decision card's first field becomes "decide". Every other card label already fits in 7, so that is the only one that moves.
 
-## from the acceptance card, on "the work list carries a dim gist under each title" . 2026-06-13
-
-operator (2026-06-13): I don't like it. new direction entirely - I saw the work view and there's more than enough room for a full panel for each entry on the right. let's just design in that direction instead.
-
-machine (2026-06-13): Fair — reverted; the list is back to plain titles, the dim gist gone (it had also shadowed the gist() function and crashed launch, patched to gline, now dropped). The new direction is better: a two-column work view — the entry list stays compact on the left, the selected entry's full content fills a panel on the right, updating as you move, no expand/collapse. It uses the room you saw and gives the double win outright. Recorded it as the w-view's new ask in work.md with the shape to confirm (left-column width, whether enter still does anything, how the right panel scrolls). Confirm the shape or redirect and I build it — I'd rather not land a big layout blind right after this one.
-
-operator (2026-06-13): the language here implies I didn't get a card about it. we need to make it clear to the machine that threads and cards are different surfaces. threads are not for decisions, decisions are in the queue. thread can REFER to the queue if relevant but should not supplant it.
-
-machine (2026-06-13): Understood — and it is already the rule in the ground rules: threads and cards are different surfaces, threads carry the thinking, the queue carries the decisions, a thread may refer to a card but never hold the call. The gap was me following it, not the rule missing — I broke it with the "your calls" line and have owned it. Holding to it: decisions land as cards, threads point at them.
-
-operator (2026-06-13): the point is good intentions won't help here. we need to make this consistent.
-
-machine (2026-06-13): Agreed — SKILL.md already carried the rule and I broke it anyway; that is the proof that a rule the machine must remember is the good intention you mean. The only real answer is structural: the threads redesign has to make the surfaces mechanically separate, so a decision has nowhere to land but a card and a thread is thinking-only. That is not a promise I keep by hand — it is a property the build must have. So it joins the scope of the threads work already on the queue (the working-indicator card) as a hard requirement: the surfaces enforce the separation. "Make it consistent" gets answered in the structure, not here.
-
 ## what happened to the sts2 work
 
 operator (2026-06-13): what happened to the sts2 work? doesn't appear under w, appears to have been dropped?
