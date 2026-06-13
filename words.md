@@ -18,3 +18,7 @@ operator (2026-06-13): move plan use % to the empty space on the bottom of the s
 
 operator (2026-06-13): is the trak work still going on or what? if not, we need to figure out what went wrong causing it to stop or hang and address it so it doesn't happen again.
 
+## new idea, which I like…
+
+operator (2026-06-13): new idea, which I like: some kind of "working on it" indicator for open threads. some looping animation maybe, unsure. this ends up touching on some complicated stuff. like, if the working indicator is associated with a thread, closing the thread would lose me information. maybe we keep threads open visually (cannot close?) while work is being done on them? if we do that, maybe we can walk back some of the action oriented language. I wouldn't mind getting a good response to chew on, clearing any doubts as to what the machine is thinking and planning while routing decisions to the queue so I think of the two interaction modes separately. this appears to make the "the machine is working" on the top right redundant. it would just be a global indicator, largely redundant if I can see all the open threads. if we pursue this, it might be nice to link threads to the work associated with them (w view), both ways via a keypress? think this out yourself, it's a change with big implications, exciting but nor something we should rush.
+
