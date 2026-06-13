@@ -18,11 +18,3 @@
 - since: 2026-06-13
 - blocks: nothing compounds — additive to the queue screen, independent of the trak switch; it waits only on which source feeds it.
 
-## hyper: topic separation for main-screen speech
-
-- ask: built (your pick, option 1 — first-class labelled threads). Main-screen speech no longer piles into one dated block: pressing s on the queue opens a NEW thread, auto-named from its first words, so a topic's follow-ups and the next topic stop merging and the machine answers each on its own. Your threads now live in their own named panel — "THREADS" — below the decision queue, listed by name with answered ones marked; the queue above holds only decisions and acceptances. Selecting a thread (enter) opens it; s there continues that thread, r renames it (the first-words name is only a default). The sound cue still sounds when a thread's answer lands.
-- try: relaunch hyper (interface code loads at launch). On the queue, press s and type a few words — a new named thread appears under THREADS. Press s again with an unrelated topic — a second, separate thread, not merged with the first. Enter a thread to read or continue it (s), or rename it (r). Old single-day threads still open and continue; only new speech splits by topic.
-- state: awaiting acceptance
-- since: 2026-06-13
-- blocks: additive to hyper's main screen; nothing compounds. Today's threads keep working unchanged; this only stops new topics from merging.
-
