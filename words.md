@@ -18,3 +18,7 @@ operator (2026-06-13): spoken items in the queue should somehow fall under the r
 
 machine (2026-06-13): Agreed, and half holds today: a decision or slice disappears the instant you act — settle and accept both clear the card in the same commit (the snap-fix and the plan-readout shrink vanished from the queue when you accepted them). The visible exception is a card you've decided but the machine hasn't executed yet: the working-indicator has sat "decided" on the queue since you picked option 2 — that lingering is the smell. The rest — a tracker's conversation living under its thread, not on the card — is structural, part of the threads changes you're steering, so I won't front-run the design. Your calls: execute the working-indicator now so it clears, and/or fold "a decided-but-unexecuted card lives as a thread" into the threads work. I'll record whichever.
 
+## from the decision card, on ""it asks" reuses ASK as a verb — which congruent voice for the field labels" . 2026-06-13
+
+operator (2026-06-13): two issues. one, I'm approving three but the card isn't disappearing. two, what does a for approve even do for these? if I need to pick an option or talk there's nothing for approve to do.
+
