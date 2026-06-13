@@ -10,3 +10,7 @@ machine (2026-06-13): No reason — drift, not a choice. "it asks"/"it does" wer
 
 operator (2026-06-13): the utilization data can be shrunk without utility loss. I think all we need is 5h percent as percent and time until reset, and same for 7d. with the space savings, let's think about what we can do about legibility without sacrificing taste.
 
+## under w I don't like what the list…
+
+operator (2026-06-13): under w I don't like what the list looks like with a single bold line. we need to add something to make it look better. main w view looks good because of the small non-bold check blocks. some visual variety like that might be what we want, but think creatively aiming for a double win: looks better + provides useful information without expanding.
+
