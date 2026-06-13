@@ -18,3 +18,7 @@ operator (2026-06-13): under w I don't like what the list looks like with a sing
 
 operator (2026-06-13): no, you're confused. ask does not mean work. the ask is the ask - it's intent, operator input guiding the work.
 
+## spoken items in the queue should…
+
+operator (2026-06-13): spoken items in the queue should somehow fall under the relevant thread. we have some big changes in the pipeline involving these threads so this should fall under that. point is, if a queue item becomes just a tracker for a conversation, the conversation should go under threads where appropriate. queue items should disappear when operator takes action.
+
