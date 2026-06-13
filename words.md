@@ -18,6 +18,8 @@ operator (2026-06-13): two issues. one, I'm approving three but the card isn't d
 
 machine (2026-06-13): One — right, it's a lag: a pick flips the card to "decided" but it clears only when a machine executes the word, and none was mid-run, so option 3 sat decided until this session executed it (2832c9c) — decision cards now read "to decide" and the card has cleared. That lag is the smell from your queue-under-threads word; closing it lives in that design. Two — exactly: a settles the card with the literal word "approve", which isn't one of your options, so on an options decision a (and c) are dead keys; only pick (1–9) and speak do anything. That touches "one verb set on every card", which is yours, so I filed the fix as a decision (drop a/c from decision cards / keep them only for a bare yes-no call / leave it).
 
+operator (2026-06-13): "to decide" looks bad atm. too long, touches the start of the block to its right. we need to rethink these labels for all cards generally. let's do that here in one go.
+
 ## from the acceptance card, on "the work list carries a dim gist under each title" . 2026-06-13
 
 operator (2026-06-13): I don't like it. new direction entirely - I saw the work view and there's more than enough room for a full panel for each entry on the right. let's just design in that direction instead.
