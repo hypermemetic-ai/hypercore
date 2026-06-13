@@ -12,12 +12,6 @@ operator (2026-06-13): under w I don't like what the list looks like with a sing
 
 machine (2026-06-13): I see it — a column of bold-only lines is flat, and the folded-graph rows read better because the dim "check:" gives each a quieter second texture. The double win that mirrors it: under each entry's bold title, one dim line of its substance — its check if it has one, else the first line of its ask — so the list gains the bold-over-dim variety and each row says what it's about, no block opened. The taste call that's yours is which gist earns that line. I'll build a take (check/ask gist) and land it for acceptance so you can see it; redirect the gist if it's not the useful one.
 
-## from the decision card, on ""it asks" reuses ASK as a verb — which congruent voice for the field labels" . 2026-06-13
-
-operator (2026-06-13): no, you're confused. ask does not mean work. the ask is the ask - it's intent, operator input guiding the work.
-
-machine (2026-06-13): You're right — I had it backwards. The ask is yours: intent, your input guiding the work, not "work". That narrows it cleanly: "the operator asks explain" is correct (you're the asker) and "it does" is fine (the machine does do the work). The one wrong note is "it asks" on a decision card — it casts the machine as the asker when the ask is yours; the machine only surfaces the decision. Reframed the decision card to that: the fix is just the label, the pick is which word names what it brings (the call / the decision / to decide).
-
 ## spoken items in the queue should…
 
 operator (2026-06-13): spoken items in the queue should somehow fall under the relevant thread. we have some big changes in the pipeline involving these threads so this should fall under that. point is, if a queue item becomes just a tracker for a conversation, the conversation should go under threads where appropriate. queue items should disappear when operator takes action.
