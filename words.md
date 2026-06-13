@@ -32,3 +32,5 @@ machine (2026-06-13): Not dropped — removed, and recoverable. On your word tha
 
 operator (2026-06-13): let's stand up the project so we can track the work and pick up where we left off.
 
+machine (2026-06-13): Done — stood up at ~/projects/sts2, its own git repo, registered in hypercore's registry.md so it shows under w as a linked project. Restored where you left off: the decided config-tuning-pass card (recovered from git 602a33c/2c8484b) sits in its work.md — the next step is my concrete spirebird_stats config.json diff for you to approve, then edit + relaunch. intent.md carries a [machine] seed of what the overlay is and the lever, yours to author or rewrite — I didn't endorse it. Say when you want the config diff and I'll bring it (it'll surface as a card there, not here).
+
