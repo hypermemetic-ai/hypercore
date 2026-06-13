@@ -16,11 +16,3 @@
 - since: 2026-06-13
 - blocks: nothing breaks — the list works as plain titles today; this is the redesign you asked for, held only until the shape is confirmed so I do not land a big layout twice.
 
-## card field labels collide — one format for all cards
-
-- ask: "to decide" overruns the settle card's label gutter — labels are right-justified in 7 columns with the body at column 9, so any label longer than 7 chars (it is 9) touches the text beside it. The cramped part is the inline label+body format, and it already differs by surface: the work-view expand puts each field's label on its own dim line above the body and never collides. The call is the label format across all cards.
-- options: own-line labels everywhere — each field's label on its own dim line above its body, as the expand already reads; no collision, room for any label, one format on every card (settle, accept, expand) . short inline labels — keep the inline gutter but cap every label at 7 chars, so a decision's first field becomes e.g. "decide" or "call" . leave it — inline as today, long labels touch the body
-- state: decided (2026-06-13) — option 2 — short inline labels — keep the inline gutter but cap every label at 7 chars, so a decision's first field becomes e.g. "decide" or "call"
-- since: 2026-06-13
-- blocks: nothing breaks — labels just crowd the body when long; until it settles, "to decide" and any 8+-char label touch the text beside them.
-

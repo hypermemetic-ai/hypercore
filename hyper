@@ -1828,7 +1828,7 @@ def main(scr):
             rows.append([])
             opts = [o.strip() for o in blk["fields"].get("options", "").split(" . ")
                     if o.strip()]
-            for key, label in (("ask", "to decide"), ("blocks", "blocks"),
+            for key, label in (("ask", "decide"), ("blocks", "blocks"),
                                ("options", None),
                                ("state", "state"), ("since", "since")):
                 if key == "options":
