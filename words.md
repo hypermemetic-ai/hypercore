@@ -14,13 +14,3 @@ operator (2026-06-13): no, you wrote "your calls, execute the etc. and/or etc." 
 
 machine (2026-06-13): Caught — and the ground rules already say it (2026-06-13): a decision goes to the queue as a card, never into a thread; a thread may point at a card but not hold the call. My "your calls… I'll record whichever" broke that. Holding to it now. Concretely: the working-indicator is already a decided card on the queue (option 2), so it was never a loose prose choice — it stands there as that card, awaiting its build.
 
-## from the decision card, on ""it asks" reuses ASK as a verb — which congruent voice for the field labels" . 2026-06-13
-
-operator (2026-06-13): two issues. one, I'm approving three but the card isn't disappearing. two, what does a for approve even do for these? if I need to pick an option or talk there's nothing for approve to do.
-
-machine (2026-06-13): One — right, it's a lag: a pick flips the card to "decided" but it clears only when a machine executes the word, and none was mid-run, so option 3 sat decided until this session executed it (2832c9c) — decision cards now read "to decide" and the card has cleared. That lag is the smell from your queue-under-threads word; closing it lives in that design. Two — exactly: a settles the card with the literal word "approve", which isn't one of your options, so on an options decision a (and c) are dead keys; only pick (1–9) and speak do anything. That touches "one verb set on every card", which is yours, so I filed the fix as a decision (drop a/c from decision cards / keep them only for a bare yes-no call / leave it).
-
-operator (2026-06-13): "to decide" looks bad atm. too long, touches the start of the block to its right. we need to rethink these labels for all cards generally. let's do that here in one go.
-
-machine (2026-06-13): Right — labels sit in a 7-wide gutter with the body at column 9, so "to decide" (9) touches the text. Per your own rule I put it on the queue as a decision rather than settle it here — and you've already picked option 2 (cap labels at 7). Executing it: the decision card's first field becomes "decide". Every other card label already fits in 7, so that is the only one that moves.
-
