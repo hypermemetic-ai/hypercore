@@ -1,11 +1,5 @@
 # words
 
-## words . 2026-06-13
-
-operator (2026-06-13): describe the issue we ran into with trak (empty session id) so owner can take a look. full rundown of our situation and findings so they can take action without a back and forth with us. write the results to a markdown file in home documents
-
-machine (2026-06-13): Written — ~/Documents/trak-empty-session-id.md. A self-contained bug report for the trak owner, source-verified this session: on the default branch (feature/AUTHZ-TENANT-GATE-trak-facets) TrakAuth builds every AuthContext with an empty session_id (auth.rs:76, :112), but is_authenticated() requires a non-empty one (plexus-auth-core/auth.rs:87) and the tenant gate maps any non-authenticated caller to anonymous, which can_write rejects (tenant_gate.rs:138, :185) — so every honest login can read public facets but no wire caller can ever write. The OIDC branch already mints a real sid (and names "it minted session_id = ''" as the bug) but dropped HS256, so no branch is both legacy-writable and session_id-correct. Doc carries exact files/lines, the table, the verified one-line fix, reproduction, and the one open question for the owner (is legacy HS256 meant to be write-capable — backport the fix, or document the branch as OIDC-write-only). No back-and-forth needed. Deliverable, not standing work; nothing left on the queue.
-
 ## share your findings about the claude usage…
 
 operator (2026-06-13): share your findings about the claude usage endpoint so I can share. in another md document in home documents
