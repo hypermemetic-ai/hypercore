@@ -67,6 +67,7 @@ WORKDIR = os.path.join(ROOT, "work")      # open graphs — current work only
 ARCHDIR = os.path.join(ROOT, "archive")   # folded graphs — the fold moves them here
 REGISTRY = os.path.join(ROOT, "registry.md")  # linked folders — outside work lives with its project
 CUE = os.path.join(ROOT, "sounds", "cue-attention.oga")  # the actionable-card cue (operator's pick, 2026-06-13)
+CUE_VOLUME = "131072"  # paplay stream volume, ~200% (operator: cue not loud enough, 2026-06-13) — amplifies this stream only, never the system sink
 MARKER = " [machine]"
 LM = 3  # left margin
 
@@ -676,11 +677,26 @@ def fold_exchange(blk):
 
 
 def thread_label(words):
-    """A thread's name from its first words — a short human phrase, not a
-    slug; capped so the panel stays legible, cut on a word boundary."""
+    """A thread's name: a short, clean phrase from the operator's first
+    words (they asked for short, clear labels — 2026-06-13). Keep just the
+    first sentence when that already reads as a phrase, tighten to a snug
+    cap on a clause-then-word boundary, and strip trailing punctuation so a
+    label never trails off mid-word with a stray comma. A pure heuristic can
+    shorten and clean but not summarize — a thread can always be renamed
+    from its own view, and the machine may relabel it when it answers."""
     phrase = " ".join(words.split())
-    if len(phrase) > 48:
-        phrase = phrase[:48].rsplit(" ", 1)[0].rstrip() + "…"
+    m = re.search(r"[.?!](?:\s|$)", phrase)
+    if m and m.start() >= 12:
+        phrase = phrase[:m.start()]
+    cap = 40
+    if len(phrase) > cap:
+        head = phrase[:cap]
+        cut = max((head.rfind(sep) for sep in (", ", "; ", " — ", ": ")),
+                  default=-1)
+        if cut < 12:
+            cut = head.rfind(" ")
+        phrase = (head[:cut] if cut >= 12 else head).rstrip(" ,;:—-") + "…"
+    phrase = phrase.rstrip(" .,;:—-")
     return phrase or "untitled"
 
 
@@ -890,10 +906,11 @@ def note(msg):
 def play_cue():
     """A short sound when the queue turns actionable — the operator asked
     for it (2026-06-13) so they need not watch the screen; cue-attention is
-    their pick. Fire-and-forget through paplay: no audio (no paplay, no sink)
-    is a silent no-op, never an error in the loop."""
+    their pick, played louder at their word (2026-06-13). Fire-and-forget
+    through paplay at CUE_VOLUME (this stream only): no audio (no paplay, no
+    sink) is a silent no-op, never an error in the loop."""
     try:
-        subprocess.Popen(["paplay", CUE],
+        subprocess.Popen(["paplay", "--volume=" + CUE_VOLUME, CUE],
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except OSError:
         pass
