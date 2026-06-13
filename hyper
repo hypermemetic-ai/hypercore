@@ -1937,7 +1937,23 @@ def main(scr):
             # the exchange reads as a chat: it opens pinned to the newest
             # words (scroll == -1) and follows them as they land; scrolling
             # up unpins, reaching the bottom pins again.
-            put(scr, top, LM, exb["lines"][0][3:].strip().upper(), DIM)
+            exhead = exb["lines"][0][3:].strip()
+            put(scr, top, LM, exhead.upper(), DIM)
+            # thread → work: a thread that spawned a graph names that work on
+            # its own view — the mate of the root's thread field, so a thread
+            # and the work it became point at each other (working-indicator
+            # graph, second slice). matched by the heading the root recorded,
+            # right-aligned on the heading row so the chat scroll never hides
+            # it. linked across hypercore's own graphs, where its threads live
+            spawned = [(gn, gb) for gn, gb in gs
+                       if gb[0]["fields"].get("thread", "") == exhead]
+            if spawned:
+                gn, gb = spawned[0]
+                op = sum(1 for b in gb
+                         if "open" in b["fields"].get("state", ""))
+                mark = "→ %s · %d/%d open" % (gn, op, len(gb))
+                put(scr, top, max(LM + len(exhead) + 2, w - len(mark) - LM),
+                    mark, DIM)
             rows = []
             for wln in exb["words"]:
                 attr = (DECIDE if wln.startswith("the operator decides (")
@@ -2104,8 +2120,14 @@ def main(scr):
                     # a graph line: its summary, then its root node's fields
                     gblocks, gsum = g
                     prows.append((0, gsum, DIM))
+                    # of: the parent graph; thread: the thread that spawned
+                    # this work — both provenance, shown last. the thread
+                    # field is the graph→thread half of the link (working-
+                    # indicator graph, second slice); the thread→work half
+                    # lives in the exchange view
                     pairs = [(k, gblocks[0]["fields"].get(k))
-                             for k in ("ask", "check", "state", "since", "of")]
+                             for k in ("ask", "check", "state", "since",
+                                       "of", "thread")]
                 else:
                     pairs = list(b["fields"].items())
                 for label, val in pairs:
