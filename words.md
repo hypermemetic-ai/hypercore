@@ -36,6 +36,8 @@ machine (2026-06-13): Understood — and it is already the rule in the ground ru
 
 operator (2026-06-13): the point is good intentions won't help here. we need to make this consistent.
 
+machine (2026-06-13): Agreed — SKILL.md already carried the rule and I broke it anyway; that is the proof that a rule the machine must remember is the good intention you mean. The only real answer is structural: the threads redesign has to make the surfaces mechanically separate, so a decision has nowhere to land but a card and a thread is thinking-only. That is not a promise I keep by hand — it is a property the build must have. So it joins the scope of the threads work already on the queue (the working-indicator card) as a hard requirement: the surfaces enforce the separation. "Make it consistent" gets answered in the structure, not here.
+
 ## what happened to the sts2 work
 
 operator (2026-06-13): what happened to the sts2 work? doesn't appear under w, appears to have been dropped?
