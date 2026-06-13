@@ -2104,8 +2104,12 @@ def main(scr):
                 nxt = marks[wsel + 1] if wsel + 1 < len(marks) else len(rows)
                 if mark < scroll:
                     scroll = mark
+                # an opened entry anchors to its top, not its bottom: when it
+                # outruns the view, show its head and let the tail run below
+                # — never scroll past the entry's own start (mark) to chase
+                # its end (the operator's word, 2026-06-13)
                 if nxt > scroll + view_h:
-                    scroll = max(0, nxt - view_h)
+                    scroll = min(mark, max(0, nxt - view_h))
             scroll = max(0, min(scroll, max(0, len(rows) - view_h)))
             for i, segs in enumerate(rows[scroll: scroll + view_h]):
                 for x, txt, attr in segs:
