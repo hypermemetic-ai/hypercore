@@ -22,3 +22,5 @@ operator (2026-06-13): new idea, which I like: some kind of "working on it" indi
 
 operator (2026-06-13): work view is hard to navigate, mostly due to the size of the node text blocks. if they all started collapsed it would be much easier to navigate at the cost of an extra keypress. another idea might be using empty space if available to display the text block there instead of under the node/graph label.
 
+machine (2026-06-13): Built — acceptance card on the queue. The work view now opens collapsed: every entry and node is one line (▸ title · state), so you j/k the whole list at a glance; enter opens the one under the cursor and its text block unfolds below (▾), enter again shuts it — the extra keypress you named. Graph lines still unfold to their nodes on enter. Relaunch hyper to try it (it reads its own code only at launch). Your second idea — the block in empty side space instead of inline under the label — I left for now: inline-on-demand is the smaller, surer change, while a side panel is a bigger layout shift I'd rather you decide on after living with this one. If the inline unfold still feels cramped, say so and I'll build the side-space version.
+

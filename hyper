@@ -1288,6 +1288,9 @@ def main(scr):
     GUT = 10  # the kind column
 
     view, sel, ci, ai, si, wsel, gsel = "home", 0, 0, 0, 0, 0, 0
+    expanded = set()  # work-view items whose text block is open (the operator's
+    #                   word, 2026-06-13): the view opens collapsed, enter opens
+    #                   the one you want to read — keyed by heading, all shut
     back = None  # where h left from — h on home returns there
     wexp = None  # the work view opens folded; set, it names the unfolded project
     dunit = 0  # the project whose documents the document view shows
@@ -1992,13 +1995,20 @@ def main(scr):
             rows, marks = [[(LM, headline, BOLD)], []], []
             iw = width - 2
             for i, b in enumerate(items):
-                # the title owns its row; the state sits beside it only when
-                # it fits whole, and wraps below otherwise — never the
-                # other way around
-                name = b["lines"][0][3:].strip()
+                # the view opens collapsed (the operator's word, 2026-06-13):
+                # one line per entry — a ▸/▾ mark, the title, and the state
+                # beside it — so the list scans at a glance; enter opens the
+                # one under the cursor and its text block unfolds below
+                exp = b["lines"][0] in expanded
+                name = (("▾ " if exp else "▸ ") + b["lines"][0][3:].strip())
                 state = b["fields"].get("state", "")
                 shown = name if len(name) <= iw else name[: iw - 1] + "…"
                 inline = state if state and len(state) <= iw - len(shown) - 2 else ""
+                # collapsed and the state did not fit whole: show a truncated
+                # tail so the one-liner still says where the entry stands
+                if not exp and state and not inline:
+                    room = iw - len(shown) - 2
+                    inline = (state[: room - 1] + "…") if room >= 6 else ""
                 marks.append(len(rows))
                 if i == wsel:
                     row = [(LM + 2, (shown + " " * iw)[:iw], REV)]
@@ -2009,20 +2019,22 @@ def main(scr):
                     if inline:
                         row.append((LM + 2 + iw - len(inline), inline, DIM))
                 rows.append(row)
-                if state and not inline:
-                    rows += [[(LM + 4, ln, DIM)] for ln in wrap(state, iw - 2)]
-                ask = b["fields"].get("ask")
-                if ask:
-                    rows += [[(LM + 4, ln, DIM)] for ln in wrap(ask, iw - 2)]
-                for key in ("check", "result"):
-                    val = b["fields"].get(key)
-                    if val:
+                if exp:
+                    # the text block — only for the entry the operator opened
+                    if state and not inline:
+                        rows += [[(LM + 4, ln, DIM)] for ln in wrap(state, iw - 2)]
+                    ask = b["fields"].get("ask")
+                    if ask:
+                        rows += [[(LM + 4, ln, DIM)] for ln in wrap(ask, iw - 2)]
+                    for key in ("check", "result"):
+                        val = b["fields"].get(key)
+                        if val:
+                            rows += [[(LM + 4, ln, DIM)]
+                                     for ln in wrap(key + ": " + val, iw - 2)]
+                    waits = b["fields"].get("waits on")
+                    if waits:
                         rows += [[(LM + 4, ln, DIM)]
-                                 for ln in wrap(key + ": " + val, iw - 2)]
-                waits = b["fields"].get("waits on")
-                if waits:
-                    rows += [[(LM + 4, ln, DIM)]
-                             for ln in wrap("waits on " + waits, iw - 2)]
+                                 for ln in wrap("waits on " + waits, iw - 2)]
                 rows.append([])
             for j, (gname, gblocks) in enumerate(glines):
                 i = len(items) + j
@@ -2158,10 +2170,11 @@ def main(scr):
             "exchange": "s speak . r rename . c fold away . space/b page . h home . esc back",
             "work": ("enter unfold . d document . s speak . h home . esc back"
                      if wexp is None else
-                     "enter unfold graph . j/k move . d document . "
+                     "enter open . j/k move . d document . "
                      "s speak on it . space/b scroll . h home . esc fold"
                      if wexp == 0 else
-                     "j/k move . s speak on it . space/b scroll . h home . esc back"),
+                     "enter open . j/k move . s speak on it . "
+                     "space/b scroll . h home . esc back"),
             "doc": "space/b page . s speak . h home . esc back",
             "log": "space/b page . s speak . h home . esc back",
         }[view]
@@ -2574,6 +2587,22 @@ def main(scr):
                           and wsel >= len(pdata[2]) and pdata[3]):
                         wexp, wsel, scroll = (
                             wexp + 1 + (wsel - len(pdata[2])), 0, 0)
+                    else:
+                        # enter on a leaf — a work.md entry or a graph node —
+                        # toggles its text block open or shut (the operator's
+                        # word, 2026-06-13: collapsed by default, a keypress
+                        # to read the one you want)
+                        b = None
+                        if wexp == 0 and wsel < len(work):
+                            b = work[wsel]
+                        elif isinstance(pdata, tuple) and wsel < len(pdata[2]):
+                            b = pdata[2][wsel]
+                        elif isinstance(pdata, list) and pdata:
+                            b = pdata[wsel]
+                        if b is not None:
+                            key = b["lines"][0]
+                            expanded.discard(key) if key in expanded \
+                                else expanded.add(key)
             elif ch == ord("d") and wexp is None:
                 # the selection is the unit: d opens the documents of the
                 # line under the cursor — intent.md for a project
