@@ -1316,9 +1316,6 @@ def main(scr):
     GUT = 10  # the kind column
 
     view, sel, ci, ai, si, wsel, gsel = "home", 0, 0, 0, 0, 0, 0
-    expanded = set()  # work-view items whose text block is open (the operator's
-    #                   word, 2026-06-13): the view opens collapsed, enter opens
-    #                   the one you want to read — keyed by heading, all shut
     back = None  # where h left from — h on home returns there
     wexp = None  # the work view opens folded; set, it names the unfolded project
     dunit = 0  # the project whose documents the document view shows
@@ -2000,11 +1997,14 @@ def main(scr):
                         put(scr, y, LM + width - len(tsum), tsum, DIM)
 
         elif view == "work":
+            # one unit unfolded, two columns (the operator's pick,
+            # 2026-06-13): a compact list of entries on the left, the
+            # selected entry's full content in a panel on the right that
+            # updates as j/k moves the selection — no inline expand, the
+            # detail is always there for the selected entry. enter drops
+            # into a graph (its own two columns replace the panel); space/b
+            # scrolls the panel, top-anchored, when an entry runs long.
             put(scr, top, LM, "STANDING WORK", DIM)
-            # one unit unfolded: under hypercore, work.md entries first and
-            # its execution graphs below them — children under their
-            # parent; a graph unfolds further to its nodes, its head
-            # naming the parent its root's of: field records
             pname, pdata = projects[wexp]
             if pdata is None:
                 items, glines, headline = work, gs, pname
@@ -2018,102 +2018,76 @@ def main(scr):
                 items, glines = pdata, []
                 headline = (pdata[0]["fields"].get("of", "hypercore")
                             + " › " + pname)
-            rows, marks = [[(LM, headline, BOLD)], []], []
-            iw = width - 2
-            for i, b in enumerate(items):
-                # the view opens collapsed (the operator's word, 2026-06-13):
-                # one line per entry — the title and its state beside it — so
-                # the list scans at a glance; enter opens the one under the
-                # cursor and its text block unfolds below, sectioned
-                exp = b["lines"][0] in expanded
-                name = b["lines"][0][3:].strip()
-                state = b["fields"].get("state", "")
-                shown = name if len(name) <= iw else name[: iw - 1] + "…"
-                inline = state if state and len(state) <= iw - len(shown) - 2 else ""
-                # collapsed and the state did not fit whole: show a truncated
-                # tail so the one-liner still says where the entry stands
-                if not exp and state and not inline:
-                    room = iw - len(shown) - 2
-                    inline = (state[: room - 1] + "…") if room >= 6 else ""
-                marks.append(len(rows))
-                if i == wsel:
-                    row = [(LM + 2, (shown + " " * iw)[:iw], REV)]
-                    if inline:
-                        row.append((LM + 2 + iw - len(inline), inline, REV))
-                else:
-                    row = [(LM + 2, shown, BOLD)]
-                    if inline:
-                        row.append((LM + 2 + iw - len(inline), inline, DIM))
-                rows.append(row)
-                if exp:
-                    # the text block, opened: each field is its own section —
-                    # a dim label over a readable body, a blank line between —
-                    # so the sectioning reads at a glance, not as one chunk
-                    # (the operator's word, 2026-06-13: clearly legible, clean)
-                    secs = []
-                    if state and not inline:
-                        secs.append(("state", state))
-                    for key in ("ask", "check", "options", "try",
-                                "result", "waits on", "blocks"):
-                        val = b["fields"].get(key)
-                        if val:
-                            secs.append((key, val))
-                    for label, val in secs:
-                        rows.append([])
-                        rows.append([(LM + 4, label.upper(), DIM)])
-                        rows += [[(LM + 6, ln, 0)] for ln in wrap(val, iw - 4)]
-                rows.append([])
-            for j, (gname, gblocks) in enumerate(glines):
-                i = len(items) + j
+            # the left list: every work.md entry, then every graph line —
+            # wsel spans both in the same order it always did. each carries
+            # the block its panel renders (a graph carries its blocks + the
+            # one-line summary the list used to show inline)
+            left = []
+            for b in items:
+                left.append((b["lines"][0][3:].strip(), b, None))
+            for gname, gblocks in glines:
                 folded = "folded" in gblocks[0]["fields"].get("state", "")
                 nodes = "%d node%s" % (len(gblocks),
                                        "" if len(gblocks) == 1 else "s")
-                if folded:
-                    gsum = "folded · " + nodes
+                gsum = ("folded · " + nodes if folded else "%s · %d open"
+                        % (nodes, sum(1 for b in gblocks
+                                      if "open" in b["fields"].get("state", ""))))
+                left.append((gname, None, (gblocks, gsum)))
+            put(scr, top + 1, LM, headline[:width], BOLD)
+            cy = top + 3
+            colh = max(1, view_h - 1)
+            fullw = max(40, w - 2 * LM)
+            leftw = max(18, min(fullw // 3, 34))
+            panx = LM + leftw + 3
+            panw = max(20, fullw - leftw - 3)
+            wrapw = min(panw, 74)
+            # left-list scroll: keep the selection on screen, top-anchored
+            lscroll = wsel - colh + 1 if wsel >= colh else 0
+            lscroll = max(0, min(lscroll, max(0, len(left) - colh)))
+            for vi in range(lscroll, min(len(left), lscroll + colh)):
+                name = left[vi][0]
+                yy = cy + (vi - lscroll)
+                shown = name if len(name) <= leftw else name[: leftw - 1] + "…"
+                if vi == wsel:
+                    put(scr, yy, 0, "▌", ACCENT)
+                    put(scr, yy, LM, (shown + " " * leftw)[:leftw], REV)
                 else:
-                    gsum = "%s · %d open" % (nodes, sum(
-                        1 for b in gblocks
-                        if "open" in b["fields"].get("state", "")))
-                shown = gname if len(gname) <= iw else gname[: iw - 1] + "…"
-                inline = gsum if len(gsum) <= iw - len(shown) - 2 else ""
-                marks.append(len(rows))
-                if i == wsel:
-                    row = [(LM + 2, (shown + " " * iw)[:iw], REV)]
-                    if inline:
-                        row.append((LM + 2 + iw - len(inline), inline, REV))
+                    put(scr, yy, LM, shown, BOLD)
+            if len(left) > lscroll + colh:
+                put(scr, cy + colh, LM,
+                    "… %d more" % (len(left) - lscroll - colh), DIM)
+            # the divider between the list and the panel
+            for yy in range(cy, cy + colh):
+                put(scr, yy, panx - 2, "│", DIM)
+            # the right panel: the selected entry's full content, each field
+            # its own section — a dim label over a readable body (the same
+            # sectioning the inline expand used to show, now always present)
+            prows = []
+            if left:
+                name, b, g = left[wsel]
+                prows.append((0, name, BOLD))
+                if g is not None:
+                    # a graph line: its summary, then its root node's fields
+                    gblocks, gsum = g
+                    prows.append((0, gsum, DIM))
+                    pairs = [(k, gblocks[0]["fields"].get(k))
+                             for k in ("ask", "check", "state", "since", "of")]
                 else:
-                    row = [(LM + 2, shown, BOLD)]
-                    if inline:
-                        row.append((LM + 2 + iw - len(inline), inline, DIM))
-                rows.append(row)
-                if folded:
-                    # a fold can be trusted only as far as its checks
-                    # reach (ratified): the archived line wears its
-                    # root's check, so that reach reads from the list
-                    chk = gblocks[0]["fields"].get("check")
-                    if chk:
-                        rows += [[(LM + 4, ln, DIM)]
-                                 for ln in wrap("check: " + chk, iw - 2)]
-                rows.append([])
-            if marks:
-                mark = marks[wsel]
-                nxt = marks[wsel + 1] if wsel + 1 < len(marks) else len(rows)
-                if mark < scroll:
-                    scroll = mark
-                # an opened entry anchors to its top, not its bottom: when it
-                # outruns the view, show its head and let the tail run below
-                # — never scroll past the entry's own start (mark) to chase
-                # its end (the operator's word, 2026-06-13)
-                if nxt > scroll + view_h:
-                    scroll = min(mark, max(0, nxt - view_h))
-            scroll = max(0, min(scroll, max(0, len(rows) - view_h)))
-            for i, segs in enumerate(rows[scroll: scroll + view_h]):
-                for x, txt, attr in segs:
-                    put(scr, top + 2 + i, x, txt, attr)
-            below = len(rows) - view_h - scroll
-            if below > 0:
-                put(scr, top + 2 + view_h, LM,
-                    "… %d more below — space scrolls" % below, DIM)
+                    pairs = list(b["fields"].items())
+                for label, val in pairs:
+                    if not val:
+                        continue
+                    prows.append((0, "", 0))
+                    prows.append((0, label.upper(), DIM))
+                    prows += [(2, ln, 0) for ln in wrap(val, wrapw - 2)]
+            pmax = max(0, len(prows) - colh)
+            scroll = max(0, min(scroll, pmax))
+            for i, (ind, txt, attr) in enumerate(prows[scroll: scroll + colh]):
+                put(scr, cy + i, panx + ind, txt[: panw - ind], attr)
+            if pmax > scroll:
+                put(scr, cy + colh, panx,
+                    "… %d more — space scrolls" % (len(prows) - scroll - colh),
+                    DIM)
 
         elif view in ("doc", "log"):
             dname = projects[dunit][0] if view == "doc" else ""
@@ -2615,22 +2589,8 @@ def main(scr):
                           and wsel >= len(pdata[2]) and pdata[3]):
                         wexp, wsel, scroll = (
                             wexp + 1 + (wsel - len(pdata[2])), 0, 0)
-                    else:
-                        # enter on a leaf — a work.md entry or a graph node —
-                        # toggles its text block open or shut (the operator's
-                        # word, 2026-06-13: collapsed by default, a keypress
-                        # to read the one you want)
-                        b = None
-                        if wexp == 0 and wsel < len(work):
-                            b = work[wsel]
-                        elif isinstance(pdata, tuple) and wsel < len(pdata[2]):
-                            b = pdata[2][wsel]
-                        elif isinstance(pdata, list) and pdata:
-                            b = pdata[wsel]
-                        if b is not None:
-                            key = b["lines"][0]
-                            expanded.discard(key) if key in expanded \
-                                else expanded.add(key)
+                    # enter on a leaf entry does nothing now — its full
+                    # content already shows in the panel (two-column view)
             elif ch == ord("d") and wexp is None:
                 # the selection is the unit: d opens the documents of the
                 # line under the cursor — intent.md for a project
@@ -2649,12 +2609,13 @@ def main(scr):
                 if wexp is None:
                     gsel += 1
                 else:
-                    wsel += 1
+                    # a new selection: the panel re-anchors to its top
+                    wsel, scroll = wsel + 1, 0
             elif ch in (curses.KEY_UP, ord("j")):
                 if wexp is None:
                     gsel -= 1
                 else:
-                    wsel -= 1
+                    wsel, scroll = wsel - 1, 0
             elif ch == ord(" ") and wexp is not None:
                 scroll += 1
             elif ch == ord("b") and wexp is not None:
