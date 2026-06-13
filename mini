@@ -9,4 +9,4 @@
 # work; anything ambiguous it leaves uncommitted, named, for the full
 # machine.  HYPER_MINI in the environment overrides this file (testing);
 # with no mini file, the full machine takes the busywork itself.
-claude -p {prompt} --model claude-fable-5 --effort low --dangerously-skip-permissions
+claude -p {prompt} --model claude-opus-4-8 --effort low --dangerously-skip-permissions

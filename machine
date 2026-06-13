@@ -7,4 +7,4 @@
 # full permissions, operator's word 2026-06-11: the summoned machine
 # runs unprompted; the bar on irreversibly destructive acts is a
 # standing order (CLAUDE.md rule 7), held by the machine itself.
-claude -p {prompt} --model claude-fable-5 --dangerously-skip-permissions
+claude -p {prompt} --model claude-opus-4-8 --effort xhigh --dangerously-skip-permissions
