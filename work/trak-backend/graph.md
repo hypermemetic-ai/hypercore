@@ -32,7 +32,9 @@
 - op: do
 - ask: execute the foothold decision (option 2). Stand up a local trak the work can build against: build the plexus workspace trak needs (plexus-trak + path deps plexus-core/-macros/-transport/-auth-core), run trak on :44107 in its single-user / legacy-HS256 path — the default branch carries the legacy validator, so register a local user → HS256 token, no plexus-idp — and confirm a facet write round-trips. trak's auth branch does not touch the facet RPC surface (identical on both branches), so this standup serves the client and mapping work unchanged; real OIDC is deferred to the network phase per the decision.
 - check (acceptance): a trak daemon listens on :44107; under single-user auth a facet create then get round-trips (the operator's own bar — "confirm writes work before relying on it"); the bring-up path is written down so any session can start trak again; then the foothold work.md card is cleared in the executing commit. How to try it: with trak running, a create+get against :44107 returns the same facet.
+- progress (2026-06-13): the workspace is cloned and ready — plexus-trak (on its default branch feature/AUTHZ-TENANT-GATE-trak-facets, the legacy-HS256 single-user path) plus its four path deps plexus-core/-macros/-transport/-auth-core, all next to it in ~/projects. The build then hit a wall: no Rust toolchain on this machine (no cargo, rustc, or rustup), and trak builds only from source. Installing one leaves the project folder and touches the operator's environment, so it surfaces as a decision (work.md) rather than a unilateral install.
 - state: open
+- blocked-by: the toolchain decision card in work.md — once a toolchain is in place the build runs immediately (workspace is staged); apt's rustc 1.75 is likely too old for trak's deps (schemars 1, thiserror 2, jsonrpsee 0.26), so rustup-stable is the dependable choice
 - since: 2026-06-13
 - of: switch hypercore's document backend to trak
 
