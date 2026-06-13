@@ -24,13 +24,3 @@ operator (2026-06-13): "to decide" looks bad atm. too long, touches the start of
 
 machine (2026-06-13): Right — labels sit in a 7-wide gutter with the body at column 9, so "to decide" (9) touches the text. Per your own rule I put it on the queue as a decision rather than settle it here — and you've already picked option 2 (cap labels at 7). Executing it: the decision card's first field becomes "decide". Every other card label already fits in 7, so that is the only one that moves.
 
-## what happened to the sts2 work
-
-operator (2026-06-13): what happened to the sts2 work? doesn't appear under w, appears to have been dropped?
-
-machine (2026-06-13): Not dropped — removed, and recoverable. On your word that outside work shouldn't live under hypercore, a session removed the STS2 overlay card from work.md (52f0652); that is why it is gone from w. Nothing is lost: the card and your settled config-tuning decision stand in git (602a33c, 2c8484b, the full card in 52f0652's parent). What did not happen is the move — the STS2 project was never stood up (no folder, not in registry.md), so the work has no home now; that is the dropped feeling. To restore it: stand up an STS2 project (folder + registry entry) and the work moves there, or re-card it in hypercore if you want it here. Your call — say the word and I set it up; I won't author your project's intent unprompted.
-
-operator (2026-06-13): let's stand up the project so we can track the work and pick up where we left off.
-
-machine (2026-06-13): Done — stood up at ~/projects/sts2, its own git repo, registered in hypercore's registry.md so it shows under w as a linked project. Restored where you left off: the decided config-tuning-pass card (recovered from git 602a33c/2c8484b) sits in its work.md — the next step is my concrete spirebird_stats config.json diff for you to approve, then edit + relaunch. intent.md carries a [machine] seed of what the overlay is and the lever, yours to author or rewrite — I didn't endorse it. Say when you want the config diff and I'll bring it (it'll surface as a card there, not here).
-
