@@ -138,7 +138,16 @@ graph's intent document is singular, and this repo is hypercore's folder.
   if what the operator said is actionable, file the decision card (or
   acceptance card, or just build it) and let any answer point to it. An
   answer that asks "shall I card this?" is the failure mode this closes —
-  the machine cards first, then reports.
+  the machine cards first, then reports. And the decision goes to the
+  queue, never into the thread (the operator's word, 2026-06-13: "the
+  queue is the decision making interface"): the thread carries the
+  thinking — the response to chew on, the reasoning, the options laid
+  out — but the call itself is a decision card the operator settles on
+  the queue. A thread answer that ends "say the word / your call here,"
+  expecting the operator to decide in prose, is the same failure as
+  asking to card it; file the card and point the thread answer at it.
+  "Don't rush" never means keep a decision in the thread — it means the
+  card waits unhurried on the queue.
 - Decisions before material (operator's word, 2026-06-11): a call that
   commits the operator's resources or changes what they must later judge
   is settled by the operator before the material exists — surfaced live,
