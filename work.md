@@ -12,7 +12,7 @@
 
 - ask: new project (operator, 2026-06-13): a clean, small, glanceable readout of Claude subscription-plan utilization on the queue/home screen — session, weekly, monthly. The render is straightforward and mine to build once the data is settled; the open question is the data source, because there is no public subscription-utilization API, and the source decides whether the numbers are real or estimated — so it's yours before any material.
 - options: read Claude Code's own local usage / rate-limit state if it is persisted on disk here — most accurate if it exists; needs a look for where the harness stores session/weekly counters . derive from the harness usage logs ccusage-style — parse token/usage records under ~/.claude; gives weekly/monthly totals but maps imperfectly onto the plan's 5-hour session window and weekly cap . show only locally-computable estimates, clearly labelled as estimates — always works, never authoritative
-- state: awaiting your decision
+- state: decided (2026-06-13) — option 1 — read Claude Code's own local usage / rate-limit state if it is persisted on disk here — most accurate if it exists; needs a look for where the harness stores session/weekly counters
 - since: 2026-06-13
 - blocks: nothing compounds — this is additive to the queue screen and independent of the trak switch; it waits only on which source feeds it.
 
