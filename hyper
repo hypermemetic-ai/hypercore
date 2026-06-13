@@ -64,6 +64,7 @@ WORK = os.path.join(ROOT, "work.md")
 WORKDIR = os.path.join(ROOT, "work")      # open graphs — current work only
 ARCHDIR = os.path.join(ROOT, "archive")   # folded graphs — the fold moves them here
 REGISTRY = os.path.join(ROOT, "registry.md")  # linked folders — outside work lives with its project
+CUE = os.path.join(ROOT, "sounds", "cue-attention.oga")  # the actionable-card cue (operator's pick, 2026-06-13)
 MARKER = " [machine]"
 LM = 3  # left margin
 
@@ -823,6 +824,25 @@ def note(msg):
     return msg
 
 
+def play_cue():
+    """A short sound when the queue turns actionable — the operator asked
+    for it (2026-06-13) so they need not watch the screen; cue-attention is
+    their pick. Fire-and-forget through paplay: no audio (no paplay, no sink)
+    is a silent no-op, never an error in the loop."""
+    try:
+        subprocess.Popen(["paplay", CUE],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except OSError:
+        pass
+
+
+def attn_key(kind, obj):
+    """A stable identity for an item needing the operator — a statement by
+    its text, a card or exchange by its heading — so the cue fires only on
+    new arrivals, never while items just sit."""
+    return (kind, obj["text"] if kind == "decide" else obj["lines"][0])
+
+
 def ensure_launcher():
     """The menu entry that launches hyper without a fresh login: a symlink
     in the applications directory to the repo's hyper.desktop, kept by
@@ -1110,6 +1130,8 @@ def main(scr):
     wexp = None  # the work view opens folded; set, it names the unfolded project
     dunit = 0  # the project whose documents the document view shows
     scroll, flash, confirm, exkey = 0, "", None, None
+    prev_attn = None  # the last tick's set of items needing the operator — the
+                      # cue fires on new arrivals; None until the first tick seeds it
     machine = None  # (Popen, started, kind) while a summoned session is working
     escalate = False  # a mini left work behind — the next summon goes to the full machine
     boot = True  # the first frame summons the machine itself when the record calls
@@ -1319,6 +1341,15 @@ def main(scr):
                    + [("sent", b) for b in sent])
         entries = attention + waiting
         nattn = len(attention)
+        # a sound when the queue turns actionable, so the operator need not
+        # watch the screen (their word, 2026-06-13; cue-attention their pick):
+        # cue on any newly-arrived item needing them — the nothing→something
+        # transition and each new card alike — never while items just sit. the
+        # first tick seeds the set silently; an already-open hyper is not news.
+        cur_attn = {attn_key(k, o) for k, o in attention}
+        if prev_attn is not None and cur_attn - prev_attn:
+            play_cue()
+        prev_attn = cur_attn
         sel = max(0, min(sel, len(entries) - 1))
         ci = max(0, min(ci, len(pend) - 1))
         ai = max(0, min(ai, len(accepts) - 1))

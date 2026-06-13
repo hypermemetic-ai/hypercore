@@ -20,14 +20,11 @@
 
 ## hyper: a sound cue when a card needs you
 
-- ask: Your word (2026-06-13) — an audible cue when a card needs you, so you don't have to watch the screen; gentle, pleasant, clear. Feasible: pipewire is running and paplay/pw-play are available; hyper has no audio today but can shell out to play a short file when the queue turns actionable. Two design points. Firing (my proposed default, refine on your word): play once when the queue goes from nothing-for-you to something-for-you, and once when a new actionable card arrives — never repeating while items just sit, so it cues you, never nags. The sound itself is your aesthetic, and that is the fork:
-- resolved fork (option 3 chosen — generate candidates): I pick a gentle chime + accept . you give me the sound . generate 2-3 candidates first
-- update (2026-06-13, batch 2 — luxurious, superseded): regenerated as warm glass/bell synth tones; you found them too long-running and asked for something known-good instead, so the synth approach is dropped (generate_cues.py removed).
-- update (2026-06-13, batch 3 — known-good, short): pulled three short, professionally-designed freedesktop notification sounds into sounds/ (the system sound theme — see SOURCES.txt). Play with `paplay sounds/<file>`. Pick one and I wire it to the actionable-card transition and land for acceptance.
-- options: cue-message — soft, short "message" tone, 0.31s (paplay sounds/cue-message.oga) — recommended . cue-attention — a gentle attention sound, 0.50s (paplay sounds/cue-attention.oga) . cue-instant — fuller classic notification, 1.03s (paplay sounds/cue-instant.oga)
-- state: decided (2026-06-13) — option 2 — cue-attention — a gentle attention sound, 0.50s (paplay sounds/cue-attention.oga)
+- ask: built (your pick, option 2) — hyper plays a short sound the moment the queue turns actionable, so you need not watch the screen. It fires once when something first needs you (the queue goes from nothing-for-you to something-for-you) and once each time a new card arrives that needs you — a decision to make, a slice to accept, or a machine answer to read — and never repeats while items just sit. The sound is cue-attention.oga, your pick: a gentle 0.50s attention tone, played fire-and-forget through paplay (no audio device is a silent no-op, never an error). An open hyper at launch stays silent — only a genuine new arrival cues.
+- try: relaunch hyper (interface code loads only at launch), then leave it on the queue and let a card land — speak something so the machine answers, or wait for a decision/acceptance card — and the cue sounds once as it arrives. `paplay sounds/cue-attention.oga` plays the tone on demand; the volume rides your normal system mixer.
+- state: awaiting acceptance
 - since: 2026-06-13
-- blocks: additive to hyper's queue screen; nothing compounds. Build follows your pick and lands for acceptance (you will relaunch hyper to get it — interface code loads at launch).
+- blocks: additive to hyper's queue screen; nothing compounds. The screen works unchanged without sound; the cue is pure addition.
 
 ## hyper: topic separation for main-screen speech
 
