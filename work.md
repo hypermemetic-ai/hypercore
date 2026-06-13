@@ -1,12 +1,11 @@
 # work
 
-## the working-on-it indicator — how to start
+## the working indicator + fold-protection
 
-- ask: the per-thread "working on it" indicator and what it pulls with it — the full design and reasoning live in the thread "new idea, which I like…". The organizing idea: threads are the open thinking/working channel, the queue is for decisions. This card is the call on how to begin.
-- options: build the first slice now — a per-thread "working" indicator (a thread reads as worked when a session is running and its last word is yours) plus fold-protection so a thread being worked can't be closed and lose you that fact; small and reversible, it gives the felt thing and makes the top-right global "the machine is working" redundant; the deeper session-owns-thread model, the thread↔work link, and softening the action-oriented language all wait until you've lived with it . open it as a full graph (working-indicator) and work the whole arc in order — indicator + fold-protection, then thread↔work linking (a graph root records the thread that spawned it), then the session-owns-thread model, then softening the language — more up front, the whole vision . not yet — keep the thread as the record and revisit when you're ready; nothing is lost, the thinking is on disk
-- state: decided (2026-06-13) — option 2 — open it as a full graph (working-indicator) and work the whole arc in order — indicator + fold-protection, then thread↔work linking (a graph root records the thread that spawned it), then the session-owns-thread model, then softening the language — more up front, the whole vision
-- since: 2026-06-13
-- blocks: nothing compounds — today's interface works; this is a new direction, so the only cost of waiting is the time before threads show what's being worked. Once built, the per-thread indicator replaces the top-right "the machine is working".
+- ask: built the first slice of the working-indicator arc (your settled option 2). A thread now reads as "working" — not "sent" — while a session is running and its last word is yours: the label turns accent in the THREADS panel, so you can see at a glance which thread the machine is on; with no session on it, it falls back to "sent". And fold-protection: a thread being worked refuses to fold away (c flashes a word instead of closing it), so a thread in flight can't be lost. The global top-right "the machine is working · clock" is left standing for now — once you've lived with the per-thread indicator, retiring it can be its own slice.
+- try: relaunch hyper (a running hyper reads its own code only at launch), press s on a thread (or open one and speak into it) — its line in THREADS reads "working" while the machine runs, and drops back to "sent" once the session ends; open that thread and press c while it's worked — it won't fold until the answer has landed.
+- state: awaiting acceptance
+- blocks: nothing compounds — reversible in one revert; the rest of the arc (thread↔work linking, the session-owns-thread model, softening the language) waits in the working-indicator graph until you've lived with this.
 
 ## two-column work view — list left, panel right
 

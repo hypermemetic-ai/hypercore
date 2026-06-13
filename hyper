@@ -1668,6 +1668,13 @@ def main(scr):
                         and obj["lines"][0] in spoken)
                         or (kind == "decide" and obj.get("spoken"))):
                     label, lattr = "spoken", DIM
+                # the per-thread working indicator (working-indicator graph,
+                # first slice): a thread reads as worked when a session is
+                # running and its last word is yours — a sent thread with a
+                # machine on it. it leaves "sent" (dispatched, no session) for
+                # "working" (a session is answering it now)
+                if kind == "sent" and machine:
+                    label, lattr = "working", ACCENT
                 if kind == "decide":
                     text = obj["text"].replace(MARKER, "")
                     tag = obj["section"] or ""
@@ -2518,7 +2525,15 @@ def main(scr):
             elif ch == curses.KEY_UP:
                 scroll = max(0, (exmax if scroll == -1 else scroll) - 1)
             elif ch == ord("c"):
-                confirm = ("fold", exb)
+                # fold-protection (working-indicator graph, first slice): a
+                # thread a session is working — its last word yours, a machine
+                # on it — can't be folded away and lose you that fact. it
+                # folds once the session has answered
+                if machine and exb["words"] and exb["words"][-1].startswith(OP_LINES):
+                    flash = ("this thread is being worked — it folds once the "
+                             "session answers, not while it's on it")
+                else:
+                    confirm = ("fold", exb)
             elif ch == ord("s"):
                 if "words.md" in dirty_files:
                     flash = held
