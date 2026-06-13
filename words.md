@@ -10,3 +10,7 @@ operator (2026-06-13): is this coming as a card? or do you expect me to make the
 
 machine (2026-06-13): You're right — it's a card now, on the queue. "The working-on-it indicator — how to start," with three options: build the first slice (indicator + fold-protection) now / open it as a full graph and work the whole arc / not yet. The thread keeps the thinking; the card carries the call. My error was reading "don't rush" as "keep it conversational" — but don't-rush just means the card waits unhurried on the queue; the decision was never the thread's to hold. I've recorded that in SKILL.md (strong action bias) so no session poses a decision in a thread again.
 
+## from the graph "trak-backend", on "the client is generated, not hand-written: synapse-cc" . 2026-06-13
+
+operator (2026-06-13): when these entries open up, the view appears to snap to the bottom for long entries. I think it should snap to the top.
+
