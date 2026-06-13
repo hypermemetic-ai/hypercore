@@ -223,6 +223,12 @@ graph's intent document is singular, and this repo is hypercore's folder.
   rests on it. Fields: op (ask / check / decide / do), ask, check,
   result (when done), state, of (the parent node's head — relations live
   here). Everything else is do, absorbed into the operation it served.
+  Write each field for legibility (the operator's word, 2026-06-13 — make
+  it clearly legible, clean; the machine's own writing should improve its
+  utility): one concern per field, said plainly and no longer than it must
+  be — hyper's work view sections fields under their own labels, so a
+  field need not carry its own structure or repeat what another holds. A
+  node whose ask has become a wall is worth rewriting clean, not growing.
 - States are plain words: open, done, folded. A node waiting on an
   operator act names the act, exactly as work.md entries do — but the
   operator's cards stay in work.md; a graph never asks the operator

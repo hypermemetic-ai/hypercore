@@ -2026,11 +2026,11 @@ def main(scr):
             iw = width - 2
             for i, b in enumerate(items):
                 # the view opens collapsed (the operator's word, 2026-06-13):
-                # one line per entry — a ▸/▾ mark, the title, and the state
-                # beside it — so the list scans at a glance; enter opens the
-                # one under the cursor and its text block unfolds below
+                # one line per entry — the title and its state beside it — so
+                # the list scans at a glance; enter opens the one under the
+                # cursor and its text block unfolds below, sectioned
                 exp = b["lines"][0] in expanded
-                name = (("▾ " if exp else "▸ ") + b["lines"][0][3:].strip())
+                name = b["lines"][0][3:].strip()
                 state = b["fields"].get("state", "")
                 shown = name if len(name) <= iw else name[: iw - 1] + "…"
                 inline = state if state and len(state) <= iw - len(shown) - 2 else ""
@@ -2050,21 +2050,22 @@ def main(scr):
                         row.append((LM + 2 + iw - len(inline), inline, DIM))
                 rows.append(row)
                 if exp:
-                    # the text block — only for the entry the operator opened
+                    # the text block, opened: each field is its own section —
+                    # a dim label over a readable body, a blank line between —
+                    # so the sectioning reads at a glance, not as one chunk
+                    # (the operator's word, 2026-06-13: clearly legible, clean)
+                    secs = []
                     if state and not inline:
-                        rows += [[(LM + 4, ln, DIM)] for ln in wrap(state, iw - 2)]
-                    ask = b["fields"].get("ask")
-                    if ask:
-                        rows += [[(LM + 4, ln, DIM)] for ln in wrap(ask, iw - 2)]
-                    for key in ("check", "result"):
+                        secs.append(("state", state))
+                    for key in ("ask", "check", "options", "try",
+                                "result", "waits on", "blocks"):
                         val = b["fields"].get(key)
                         if val:
-                            rows += [[(LM + 4, ln, DIM)]
-                                     for ln in wrap(key + ": " + val, iw - 2)]
-                    waits = b["fields"].get("waits on")
-                    if waits:
-                        rows += [[(LM + 4, ln, DIM)]
-                                 for ln in wrap("waits on " + waits, iw - 2)]
+                            secs.append((key, val))
+                    for label, val in secs:
+                        rows.append([])
+                        rows.append([(LM + 4, label.upper(), DIM)])
+                        rows += [[(LM + 6, ln, 0)] for ln in wrap(val, iw - 4)]
                 rows.append([])
             for j, (gname, gblocks) in enumerate(glines):
                 i = len(items) + j
