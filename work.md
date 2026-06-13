@@ -8,11 +8,3 @@
 - since: 2026-06-13
 - blocks: nothing compounds — today's interface works; this is a new direction, so the only cost of waiting is the time before threads show what's being worked. Once built, the per-thread indicator replaces the top-right "the machine is working".
 
-## "it asks" reuses ASK as a verb — which congruent voice for the field labels
-
-- ask: a decision card labels its first field "it asks" — casting the card (the machine) as the one asking. But the ask is yours: intent, your input guiding the work, the first of ask/check/decide/do. The machine only surfaces a decision for you to settle; it does not ask. So "it asks" mis-voices the ask onto the machine — that is the incongruity. (Two near-misses that read fine under this: "it does" on an acceptance card — the machine does do the work; and the commit head "the operator asks explain" — you are the asker there.) The only fix is the label; the call is which word names what the machine brings.
-- options: the call — a decision is a call in our words, the field reads "the call" over the situation . the decision — plainest, names the field for what it is . to decide — frames it as the thing awaiting your decision
-- state: decided (2026-06-13) — option 3 — to decide — frames it as the thing awaiting your decision
-- since: 2026-06-13
-- blocks: nothing breaks — "it asks" reads fine, this is voice. Until it settles, every decision card you open says the machine "asks", when the ask is yours.
-
