@@ -2053,12 +2053,12 @@ def main(scr):
                     # list reads as more than a column of bold lines and each
                     # row says what it is about without opening it (the
                     # operator's word, 2026-06-13)
-                    gist = (b["fields"].get("check")
-                            or b["fields"].get("ask") or "").split(". ")[0].strip()
-                    if gist:
+                    gline = (b["fields"].get("check")
+                             or b["fields"].get("ask") or "").split(". ")[0].strip()
+                    if gline:
                         gw = iw - 4
-                        rows.append([(LM + 4, gist if len(gist) <= gw
-                                      else gist[: gw - 1] + "…", DIM)])
+                        rows.append([(LM + 4, gline if len(gline) <= gw
+                                      else gline[: gw - 1] + "…", DIM)])
                 if exp:
                     # the text block, opened: each field is its own section —
                     # a dim label over a readable body, a blank line between —
