@@ -17,15 +17,24 @@ operator-facing word from the result.
   conversationalist authors from it crosses to the operator
 
 ### Requirement: a worker is grounded in its capability's spec slice, by construction
-A worker MUST be handed the living spec sliced to the capabilities its change touches —
-their requirements and scenarios, the glossary, the system's decisions — assembled before
-it runs, so there is no path that runs a worker without its slice. It holds the spec,
-never raw code, and never the operator view.
+A worker MUST be handed the living spec with the capabilities its change touches marked as
+its grounding — their requirements and scenarios foregrounded — AND the rest of the spec
+carried beside them for scan, with the glossary and the system's decisions, assembled before
+it runs, so there is no path that runs a worker without its grounding. It holds the spec,
+never raw code, and never the operator view. A worker is **not slice-confined** (rebuild-spec
+§4.1, §6.4): a delta cannot be authored or verified from one capability in isolation, so its
+rescan covers the whole spec and catches a capability the handed delta mis-named or missed.
 
 #### Scenario: assembling the context
 - WHEN a worker is run on a node whose handed delta names a set of capabilities
-- THEN its context is exactly those capabilities' specs plus the glossary and decisions,
-  and its prompt is built only from that slice
+- THEN its context contains the whole spec — the named capabilities marked as grounding and
+  the rest carried for scan — plus the glossary and decisions, and its prompt foregrounds the
+  grounding while keeping the full scan
+
+#### Scenario: the rescan catches a mis-mapping
+- WHEN a handed delta names a capability the change does not touch, or omits one it does
+- THEN the worker's context still holds the whole spec, so its rescan can catch the
+  mis-mapping rather than trust the delta's list — which a slice-confined worker could not
 
 ### Requirement: a worker runs fenced in its own git worktree
 A worker MUST run in its own git worktree — a separate checkout on its own branch, fenced

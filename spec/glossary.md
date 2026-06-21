@@ -64,6 +64,12 @@ it sharpens inside grilling as work folds.
   **MODIFIED**, and **REMOVED** requirements. A behavior-changing graph carries
   one; a trivial graph carries an empty delta and says so.
 
+- **folding condition** — a structural gate a graph must clear to fold: its delta
+  applies, a behavior-changing graph carries a recorded **red→green feedback loop**,
+  and no source file it grew crosses the **line-count budget** without a decision. An
+  engineering discipline made into a check — advice can be ignored, a folding
+  condition cannot. An unmet one returns a decision, never a silent pass.
+
 - **capability** — a coherent slice of system behavior, named in the domain's own
   words, owning a spec file and any local decisions.
 
