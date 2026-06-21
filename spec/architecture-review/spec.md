@@ -24,7 +24,10 @@ process, not a one-off, so the picture is current by construction like every oth
 ### Requirement: the review surfaces a god-file-in-the-making before it sets
 A module past the length signal with no depth-decision accepting it MUST surface as a strong
 deepening opportunity — assess its depth; a module nearing the signal surfaces as a lighter
-one; a module past the signal but accepted by a structured depth-decision is not debt. The
+one; a module past the signal but **within** a structured depth-decision's accepted length is not
+debt. A module that has grown **materially past** the length a depth-decision once accepted it at
+(a *stale* acceptance, ADR 0008) MUST return to the backlog, marked as having outgrown its bar —
+distinct from a never-decided over-signal file, so the operator reads the two differently. The
 measure shipped here is **length** — what a module costs a worker's window, one signal of
 depth — the same record `folding-conditions` consults at the fold, applied to the whole
 standing tree. **Depth is the criterion, not length**: the deeper, model-driven **red-flag
@@ -39,8 +42,14 @@ fabricated into a depth verdict.
   merely nearing the signal as a lighter one
 
 #### Scenario: a depth-accepted module
-- WHEN a source file past the signal is named in a structured depth-decision accepting it
+- WHEN a source file past the signal is named in a structured depth-decision accepting it, and is
+  still within that accepted length
 - THEN it is not in the deepening backlog, though the structural map still shows it, marked
+
+#### Scenario: a module that has outgrown its accepted bar
+- WHEN a source file has grown materially past the length a depth-decision accepted it at
+- THEN it returns to the deepening backlog as a strong opportunity, the map marks it as having
+  outgrown its bar (the decision re-opened), distinct from a never-decided over-signal file
 
 ### Requirement: the review's output is the operator view's upper levels and the backlog
 The review's output MUST be the operator view's "what the system is" upper levels — the

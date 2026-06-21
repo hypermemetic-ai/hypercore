@@ -144,10 +144,24 @@ it sharpens inside grilling as work folds.
   length ceiling above it.
 
 - **depth decision** — what the gate raises when a file is past the length signal with
-  no depth-decision accepting it: re-cut / deepen / accept-with-reason, surfaced to the
-  operator. Recorded, when accepted, as a **structured depth-decision** — a parseable
-  `depth-decision: <path> accepted — …` line that names the exact file, so a coincidental
-  mention can grant no exception (the spelling is not the decision).
+  no depth-decision accepting it *at a length it is still within*: re-cut / deepen /
+  accept-with-reason, surfaced to the operator. Recorded, when accepted, as a **structured
+  depth-decision** — a parseable `depth-decision: <path> accepted@<N> — …` line that names the
+  exact file and the length it is accepted at, so a coincidental mention can grant no exception
+  (the spelling is not the decision) and the acceptance is bounded (the ratchet, below).
+
+- **accepted length / the ratchet** — the length `<N>` a structured depth-decision accepts a file
+  at (ADR 0008). Acceptance is **bounded** to it, not granted forever: it clears the gate only
+  while the file stays within `<N>` plus a small **materiality margin**, so a stable or shrinking
+  file stays quiet but renewed growth materially past the bar re-opens the depth decision.
+  Renewing the acceptance at the new length **ratchets** the bar up; the bar lives in the record
+  (a shrink never lowers it), and the highest recorded length governs (the ratchet only rises).
+
+- **exceeded acceptance** — a file past the length signal that *was* accepted at a lower length
+  and has since outgrown it (the architecture review's `exceeded` status). The acceptance is
+  **stale**: the file returns to the deepening backlog, marked as having outgrown its bar — read
+  differently from a never-decided over-signal file (`over`), so a settled-then-grown decision is
+  visibly distinct from one never made.
 
 - **red flag** — a named symptom that code is more complex than it needs to be
   (Ousterhout): shallow module, information leakage, temporal decomposition, pass-through

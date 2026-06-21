@@ -89,8 +89,8 @@ def check(root: str) -> None:
     # 4. a file past the signal folds when a structured depth-decision accepts it — the
     # decision's accept-with-reason outcome, recorded as a parseable record (not a substring).
     graph.atomic_write(os.path.join(spec.spec_dir(root), "decisions", "0099-giant-depth.md"),
-                       "# ADR 0099\n\ndepth-decision: hyper/giant.py accepted — deep behind a "
-                       "small interface; its length is context-cost, not shallowness.\n")
+                       f"# ADR 0099\n\ndepth-decision: hyper/giant.py accepted@{conditions.SIGNAL + 61} "
+                       "— deep behind a small interface; its length is context-cost, not shallowness.\n")
     ask = staged("a depth-accepted large module", "a depth-accepted module folds")
     godfile(worker._tree_path(ask, root))
     result = worker.apply(ask, scripted(json.dumps({

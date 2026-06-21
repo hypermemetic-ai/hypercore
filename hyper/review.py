@@ -44,12 +44,15 @@ BAR = 20                                  # the visual bar's width, the signal f
 @dataclass
 class Module:
     """One source file the review measured, with its standing against the length signal.
-    `status`: ok | nearing | over | accepted — `over` is length past the signal with no
-    depth-decision (a deepening opportunity); `accepted` is past the signal but a structured
-    depth-decision records it accepted."""
+    `status`: ok | nearing | over | exceeded | accepted. `over` is past the signal with no
+    depth-decision (a deepening opportunity); `accepted` is past the signal but within a
+    structured depth-decision's accepted length; `exceeded` is past the signal *and* materially
+    past the length a depth-decision once accepted it at — a stale acceptance, the depth decision
+    re-opened (ADR 0008). `bar` is that accepted length for accepted/exceeded, else None."""
     rel: str
     lines: int
     status: str
+    bar: int | None = None
 
 
 @dataclass
@@ -77,11 +80,12 @@ DEPTH_NOT_YET = ("the depth scan beyond length — the red flags, the deletion t
 
 def review(root: str | None = None) -> Review:
     """Scan the source tree live and report. Reads every module's length, places it against
-    the length signal, and gathers the ones over (no depth-decision) or nearing it into the
-    deepening backlog. A depth-accepted file shows on the map, marked, but is not in the
-    backlog — its size is a recorded decision."""
+    the length signal, and gathers the ones over (no depth-decision), past a stale accepted bar
+    (exceeded), or nearing it into the deepening backlog. A file within its depth-decision's
+    accepted length shows on the map, marked, but is not in the backlog — its size is a recorded
+    decision; a file that has outgrown that bar returns to the backlog (ADR 0008)."""
     src = os.path.join(root or graph._root(), "hyper")
-    modules = [Module(rel, n, _status(rel, n, root)) for rel, n in _sources(src)]
+    modules = [_module(rel, n, root) for rel, n in _sources(src)]
     modules.sort(key=lambda m: -m.lines)
     return Review(modules, [f for m in modules if (f := _finding(m))])
 
@@ -92,7 +96,7 @@ def bars(rv: Review) -> list[str]:
     if not rv.modules:
         return ["(no modules found)"]
     w = max(len(m.rel) for m in rv.modules)
-    return [f"{m.rel.ljust(w)}  {_bar(m.lines)}  {m.lines}/{conditions.SIGNAL}{_mark(m.status)}"
+    return [f"{m.rel.ljust(w)}  {_bar(m.lines)}  {m.lines}/{conditions.SIGNAL}{_mark(m)}"
             for m in rv.modules]
 
 
@@ -107,10 +111,19 @@ def backlog(rv: Review) -> list[str]:
 
 # ── internals ────────────────────────────────────────────────────────────────
 
-def _status(rel: str, n: int, root: str | None) -> str:
-    if n > conditions.SIGNAL:
-        return "accepted" if conditions.accepted(_canon(rel), root) else "over"
-    return "nearing" if n >= NEAR else "ok"
+def _module(rel: str, n: int, root: str | None) -> Module:
+    """Place one module against the signal and its depth-decision. Past the signal it is
+    `accepted` (within the recorded bar + margin), `exceeded` (a bar exists but the file outgrew
+    it — the ratchet re-opened the decision, ADR 0008), or `over` (no bar at all). The accepted
+    bar is consulted from `conditions` so the per-graph gate and this standing scan agree on one
+    criterion. Within the signal it is `nearing` or `ok`."""
+    canon = _canon(rel)
+    if n <= conditions.SIGNAL:
+        return Module(rel, n, "nearing" if n >= NEAR else "ok")
+    bar = conditions.accepted_at(canon, root)
+    if conditions.accepted(canon, n, root):
+        return Module(rel, n, "accepted", bar)
+    return Module(rel, n, "exceeded", bar) if bar is not None else Module(rel, n, "over")
 
 
 def _canon(rel: str) -> str:
@@ -125,6 +138,11 @@ def _finding(m: Module) -> Finding | None:
                        f"{m.lines} lines, past the {conditions.SIGNAL}-line length signal — "
                        "assess its depth (no depth-decision accepts its size); length is the "
                        "context-cost signal, the red-flag depth scan is not yet built")
+    if m.status == "exceeded":
+        return Finding(m.rel, m.lines, "past its accepted bar", "strong",
+                       f"{m.lines} lines, materially past the {m.bar}-line bar a depth-decision "
+                       "accepted it at — the acceptance is stale; re-cut, deepen, or renew it at "
+                       "the new length (acceptance ratchets, it does not silence later growth)")
     if m.status == "nearing":
         return Finding(m.rel, m.lines, "nearing the length signal", "consider",
                        f"{m.lines} lines, nearing the {conditions.SIGNAL}-line length signal — "
@@ -137,10 +155,13 @@ def _bar(n: int) -> str:
     return "█" * filled + "░" * (BAR - filled)
 
 
-def _mark(status: str) -> str:
+def _mark(m: Module) -> str:
+    if m.status == "accepted":
+        return f"  (depth accepted@{m.bar})"
+    if m.status == "exceeded":
+        return f"  ⚑ grew past its accepted bar of {m.bar} — decision re-opened"
     return {"over": "  ⚑ past the length signal — assess depth",
-            "accepted": "  (depth accepted)",
-            "nearing": "  • nearing", "ok": ""}[status]
+            "nearing": "  • nearing", "ok": ""}[m.status]
 
 
 def _sources(src: str) -> list[tuple[str, int]]:

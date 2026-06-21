@@ -49,7 +49,8 @@ accepting the file lets it fold. The condition is scoped to the files the graph 
   the spec is left untouched — never a silent refusal and never a silent pass
 
 #### Scenario: a depth-decision accepts the length
-- WHEN a structured depth-decision record names the file as accepted past the signal
+- WHEN a structured depth-decision record names the file as accepted **at a stated length** and
+  the file is still within that length
 - THEN the depth condition is met for that file and the fold may proceed
 
 #### Scenario: a coincidental mention is not an exception
@@ -57,3 +58,29 @@ accepting the file lets it fold. The condition is scoped to the files the graph 
   accepting it
 - THEN the file is not cleared and the depth decision still stands — the exception is the
   decision, not the spelling, so a coincidental mention grants no free pass
+
+### Requirement: an accepted length is bounded to the length it names, and ratchets
+A structured depth-decision MUST accept a file **at a stated length** (`accepted@<N>`), and that
+acceptance is bounded to it: it clears the gate only while the file stays within the accepted
+length plus a small **materiality margin**, so a one-line edit past the bar does not re-open a
+settled decision. A file that grows **materially past** the length it was accepted at MUST re-raise
+the depth decision — acceptance ratchets, it does not silence later growth — and renewing the
+acceptance at the new length raises the bar. A stable or shrinking file stays cleared; the bar
+lives in the record, so a shrink never lowers it. A **bare `accepted`** with no stated length names
+no bound and MUST NOT clear the gate — the exception is the decision *at a stated size*, not the
+spelling. When several records name one file, the highest accepted length governs (the ratchet only
+rises).
+
+#### Scenario: an accepted file grows materially past its bar
+- WHEN a file a depth-decision accepted at length N grows materially past N (beyond the margin)
+- THEN the depth decision is re-raised at the new length and the fold is held until it is renewed —
+  the old acceptance does not silence the growth
+
+#### Scenario: an accepted file stays within its bar, or shrinks
+- WHEN a file a depth-decision accepted at length N is touched but stays within N (plus the margin),
+  or shrinks
+- THEN it stays cleared and raises no new decision — no nagging on a stable file
+
+#### Scenario: a bare acceptance names no bound
+- WHEN a depth-decision records the file `accepted` with no stated length
+- THEN it does not clear the gate — an acceptance must name the length it is bounded to

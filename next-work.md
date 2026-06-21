@@ -1,5 +1,46 @@
 # next work
 
+## Done — slice 9, the accepted-length ratchet (2026-06-21)
+
+The hole slice 7 left open — a structured depth-decision cleared a file *forever, regardless of
+length*, so a file accepted at 450 lines could balloon to 2,000 and the gate stay silent — is
+closed. Acceptance is now **bounded to the length it names, and ratchets**. The operator settled
+the direction after slice 7 (set a higher bar for the next trip; don't silence forever, don't nag
+on every touch); this slice builds it and settles the machine-side sub-questions. What landed:
+
+- **The accepted length lives in the record** (`depth-decision: <path> accepted@<N> — <reason>`),
+  not computed from git history. Durable, version-controlled, operator-legible — and recording
+  the bar (rather than inferring a high-water mark) makes **shrink-then-regrow correct for free**:
+  a shrink never lowers the bar, so a file that shrinks and regrows to its old size never re-nags.
+- **`accepted` is bounded; `accepted_at` is the deep primitive.** `accepted(rel, lines, root)`
+  clears the gate only while the file is within `N + N·SLACK` (the materiality margin, `SLACK =
+  0.1` — a one-line edit past the bar does not re-open a settled decision; only material growth
+  does). `accepted_at(rel, root)` reads the recorded bar — the **max** across all records naming
+  the file, so the ratchet only rises and the live bar is order-independent. The margin logic
+  lives in one place; the review consults the predicate, it does not reimplement it.
+- **A bare `accepted` (no `@<N>`) no longer clears the gate** — an acceptance that names no bound
+  is incomplete, so the decision re-fires. The same by-construction closure slice 7 used for the
+  substring hole, applied to the length: the exception is the decision *at a stated size*, not the
+  spelling. (This is the direct consequence of the settled direction, recorded machine-side.)
+- **The review distinguishes a stale acceptance from a never-decided over-signal file.** A third
+  over-signal status, **`exceeded`** (`hyper/review.py`, `Module.bar`): a file past the signal
+  that *was* accepted at a lower bar and has since outgrown it. It returns to the deepening
+  backlog (the finding names the stale bar), and the structural map marks it "grew past its
+  accepted bar of N — decision re-opened" — read differently from a brand-new `over` file. So
+  `over` = never decided, `exceeded` = accepted-but-outgrown, `accepted` = within the bar.
+
+The four open sub-questions from the slice-7 hand-off are all settled, in the ADR: the **margin**
+(proportional `SLACK`, a starting value to tune); **shrink-then-regrow** (correct by construction —
+the bar is recorded, not a git high-water mark); the **review render** (the `exceeded` status);
+and **where the high-water mark lives** (the record). ADR 0008 records the decision (it *refines*
+0006 — the structured record now names its length; a bare `accepted` no longer clears) — the
+direction operator-settled, the machine-side shape awaiting ratification. Spec deltas across
+`folding-conditions` (acceptance is bounded and ratchets), `architecture-review` (the exceeded
+rendering), and the glossary (accepted length / the ratchet / exceeded acceptance). Acceptance —
+`hyper/check/slice9.py` (19 checks) — and **all of slices 1–9 pass** (`python3 -m hyper --check`,
+126 checks, 0 fail). The slice's own work stayed deep: `conditions.py` is 201 lines, well within
+the signal.
+
 ## Done — slice 8, parallelism re-grounded: design-it-twice (2026-06-21)
 
 The worktree fence — slice 4's throughput isolation — now also serves design quality. For a
@@ -121,22 +162,32 @@ matters (unsurfaced, *un*-named drift). The real defenses against that gap are t
 (slice 6 — a standing adversarial scan rendered to the operator). Knowing §9's errors exist is
 enough.
 
-## Next — the two items raised after slice 7
+## Next — the AGENTS.md / context-files investigation (item 2)
 
-The eight planned slices (rebuild-spec §9) are built. The next work is the two items the operator
-raised after slice 7, recorded below: **(1)** the accepted-length ratchet — *settled, build it*;
-**(2)** AGENTS.md / context-files — *investigate* (verify `claude -p` auto-loads them first).
-Item 1 is the clean next slice — it folds into exactly what slice 7 built (`conditions.accepted`,
-the structured depth-decision record, the review's `accepted` status), and now also touches
-slice 8's structured `design-decision` idiom, which shares the same record shape.
+The eight planned slices (rebuild-spec §9) are built, and **item 1 — the accepted-length ratchet —
+is built (slice 9, above).** What remains of the two items the operator raised after slice 7 is
+**item 2: AGENTS.md / context-files — *investigate***. It is an investigation, not a settled
+build: **verify first** that headless `claude -p --model …` actually auto-loads AGENTS.md /
+CLAUDE.md from the worktree cwd (the whole idea hinges on it), then design which layer belongs in
+files (durable role-invariant grounding — `worker.DEPTH` is the live smell, a compressed copy of
+`research/aposd.md` in a Python constant) versus which stays prompt-assembled and routed (the
+per-capability self-model — hypercore's own mechanism, must not flatten into one shared file). The
+surface-level analysis is below (§2); it is shallow and says so — validate before building.
 
-## Raised for a later session — not yet worked (operator, 2026-06-21)
+## Raised for a later session (operator, 2026-06-21)
 
-Two questions the operator raised after slice 7. **Judgment is deferred — the analysis below is
-surface-level only and says so**; the next session should validate before building. Recorded
-here so the message survives the session boundary.
+Two questions the operator raised after slice 7. **Item 1 is now built (slice 9, above)** — the
+original surface-level note is kept below for the record, struck through by the build. **Item 2 is
+still an investigation** and must be validated before building. Recorded here so the message
+survives the session boundary.
 
-### 1. The accepted length must set a *higher bar* for the next trip (decision: yes)
+### 1. The accepted length must set a *higher bar* for the next trip — DONE (slice 9, ADR 0008)
+
+*Built. The surface-level note below was the slice-7 hand-off; slice 9 settled every open
+sub-question — see the slice-9 Done section above and ADR 0008. The shape it predicted held: the
+record carries the accepted length (`accepted@<N>`), `accepted` clears only within the bar plus a
+proportional materiality margin (`SLACK`), past it the decision re-fires and must be renewed, and
+shrink-then-regrow is correct because the bar lives in the record, not a git high-water mark.*
 
 **Current behavior (confirmed in `conditions.py`):** once a structured `depth-decision: <path>
 accepted` record exists, `accepted(path)` matches that path **permanently and regardless of

@@ -17,9 +17,9 @@ import os
 import subprocess
 import tempfile
 
-from . import harness, slice1, slice2, slice3, slice4, slice5, slice6, slice7, slice8
+from . import harness, slice1, slice2, slice3, slice4, slice5, slice6, slice7, slice8, slice9
 
-SLICES = (slice1, slice2, slice3, slice4, slice5, slice6, slice7, slice8)
+SLICES = (slice1, slice2, slice3, slice4, slice5, slice6, slice7, slice8, slice9)
 
 
 def run() -> int:
@@ -38,5 +38,5 @@ def run() -> int:
     if n:
         print(f"  {n} FAILED\n")
         return 1
-    print("  all checks pass — slices 1–8 meet their acceptance checks\n")
+    print("  all checks pass — slices 1–9 meet their acceptance checks\n")
     return 0

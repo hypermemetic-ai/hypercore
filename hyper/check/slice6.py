@@ -28,7 +28,7 @@ def check(root: str) -> None:
 
     # 2. the real tree is honestly clean — the per-slice check split kept every module within
     # the length signal, so nothing is over (debt) or depth-accepted (the discipline on itself).
-    ok(not any(m.status in ("over", "accepted") for m in rv.modules),
+    ok(not any(m.status in ("over", "exceeded", "accepted") for m in rv.modules),
        "no module is past the length signal — the real tree is honestly clean (check.py split)")
     ok(not any(f.kind == "past the length signal" for f in rv.findings),
        "the deepening backlog carries no past-the-signal debt on the real tree")
@@ -49,8 +49,8 @@ def check(root: str) -> None:
     # 4. the depth-decision record — the same record folding-conditions consults: a structured
     # depth-decision naming the file clears it from the backlog, but the map still shows it.
     graph.atomic_write(os.path.join(scan, "spec", "decisions", "0099-giant.md"),
-                       "# ADR 0099\n\ndepth-decision: hyper/giant.py accepted — deep behind a "
-                       "small interface; its length is context-cost, not shallowness.\n")
+                       f"# ADR 0099\n\ndepth-decision: hyper/giant.py accepted@{conditions.SIGNAL + 61} "
+                       "— deep behind a small interface; its length is context-cost, not shallowness.\n")
     dec = review.review(scan)
     ok(not any(f.subject.endswith("giant.py") for f in dec.findings),
        "a file past the signal with a structured depth-decision accepting it is not debt")

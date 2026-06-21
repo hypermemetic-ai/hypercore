@@ -50,6 +50,14 @@ from . import delta, spec
 # file costs the worker's window, whatever each line means — its context cost, not its depth.
 SIGNAL = 400
 
+# The materiality margin on an accepted length (ADR 0008). Accepting a length signal is bounded
+# to the length it was accepted at — not granted forever — and the signal re-fires only when the
+# file grows *materially* past that bar, so a one-line edit past it does not re-open a settled
+# decision. SLACK is that margin, proportional to the accepted length: renewed growth past
+# `bar + bar·SLACK` re-opens the depth decision; a stable or shrinking file stays cleared. A
+# starting value to tune (§11), like the signal itself.
+SLACK = 0.1
+
 
 def unmet(result, root: str | None = None) -> str | None:
     """The first folding condition this graph's material fails to meet, or None when all are
@@ -82,24 +90,42 @@ def _feedback_loop(d: delta.Delta, result) -> str | None:
 
 def _depth(result, root: str | None) -> str | None:
     """Depth is the criterion; length is its signal (§7.1). A source file this graph created or
-    grew past the length signal, with no depth-decision accepting it, raises a depth decision —
-    re-cut / deepen / accept-with-reason — never a silent refusal and never a silent pass.
-    Scoped to what this graph touched — the .py files in its own commit — so a graph is judged
-    on the depth of what *it* built, not a sibling's. Length never auto-refuses (F2): a long
-    file is either judged deep (fine — length was only context-cost signal) or raises this
-    decision for the operator to settle."""
+    grew past the length signal, with no depth-decision accepting it *at a length it is still
+    within*, raises a depth decision — re-cut / deepen / accept-with-reason — never a silent
+    refusal and never a silent pass. Scoped to what this graph touched — the .py files in its own
+    commit — so a graph is judged on the depth of what *it* built, not a sibling's. Length never
+    auto-refuses (F2): a long file is either judged deep (fine — length was only context-cost
+    signal) or raises this decision for the operator to settle. Acceptance is bounded (ADR 0008):
+    a file that has grown materially past the length a depth-decision accepted it at re-opens the
+    decision, so an old acceptance cannot silence unbounded later growth."""
     tree = result.worktree
     for rel in _touched_py(tree):
         path = os.path.join(tree, rel)
         if not os.path.isfile(path):
             continue                        # removed by the graph — frees context, never spends it
         n = sum(1 for _ in open(path, encoding="utf-8", errors="ignore"))
-        if n > SIGNAL and not accepted(rel, root):
-            return (f"depth decision: {rel} is {n} lines, past the {SIGNAL}-line length signal "
-                    "— re-cut it, deepen it, or record a depth-decision accepting it "
-                    "(rebuild-spec §7.1). Length is a context-cost signal, not a depth verdict; "
-                    "the depth judgment is the operator's.")
+        if n > SIGNAL and not accepted(rel, n, root):
+            return _depth_decision(rel, n, root)
     return None
+
+
+def _depth_decision(rel: str, n: int, root: str | None) -> str:
+    """The depth decision the gate raises on `rel` at `n` lines — phrased for the two cases the
+    operator must tell apart: a file never accepted past the signal, and a file whose earlier
+    acceptance the new length has *outgrown* (the ratchet, ADR 0008). Both name re-cut / deepen /
+    accept and the exact structured record to write, so the architect can settle it in one step."""
+    bar = accepted_at(rel, root)
+    if bar is not None:
+        return (f"depth decision: {rel} is {n} lines, materially past the {bar}-line bar a "
+                f"depth-decision accepted it at — the acceptance is stale (it ratchets, it does "
+                f"not silence later growth; rebuild-spec §7.1, ADR 0008). Re-cut it, deepen it, "
+                f"or renew the acceptance at the new length: `depth-decision: {rel} accepted@{n} "
+                f"— <reason>`. Length is a context-cost signal, not a depth verdict; the depth "
+                f"judgment is the operator's.")
+    return (f"depth decision: {rel} is {n} lines, past the {SIGNAL}-line length signal — re-cut "
+            f"it, deepen it, or record a depth-decision accepting it at this length: "
+            f"`depth-decision: {rel} accepted@{n} — <reason>` (rebuild-spec §7.1). Length is a "
+            f"context-cost signal, not a depth verdict; the depth judgment is the operator's.")
 
 
 def _touched_py(tree: str) -> list[str]:
@@ -111,41 +137,65 @@ def _touched_py(tree: str) -> list[str]:
     return [ln for ln in out.split() if ln.endswith(".py")]
 
 
-def accepted(rel: str, root: str | None) -> bool:
-    """True when a **structured depth-decision** records this exact file as accepted past the
-    length signal (rebuild-spec §7.1, ADR 0006). The record is a line in a decision file:
+def accepted(rel: str, lines: int, root: str | None) -> bool:
+    """True when a **structured depth-decision** accepts this exact file at a length it is still
+    within (rebuild-spec §7.1, ADR 0006/0008). Acceptance is **bounded, not permanent**: a
+    depth-decision records the file accepted *at a stated length* and clears the gate only while
+    the file stays within that bar plus the materiality margin (`SLACK`). Renewed growth
+    materially past the accepted length re-opens the depth decision; a stable or shrinking file
+    stays cleared — the bar lives in the record, so a shrink never lowers it and a regrow back to
+    the old size never re-nags. `lines` is the file's current length. Public because the
+    architecture review (`review`) consults the same record — one criterion, the per-graph gate
+    and the standing scan. `rel` is the file's path relative to the repo root (e.g.
+    `hyper/foo.py`)."""
+    bar = accepted_at(rel, root)
+    return bar is not None and lines <= bar + round(bar * SLACK)
 
-        depth-decision: <repo-relative path> accepted — <reason>
 
-    The gate matches the *path*, not a basename appearing anywhere in prose — so a coincidental
-    mention can no longer grant an exception. This replaces the old loose substring `justified`
-    match, whose hole was that any ADR naming a coincidentally-large file read as a free pass.
-    The exception is the *decision*, not the *spelling*. Public because the architecture review
-    (`review`) consults the same record for its standing whole-tree scan — one criterion, the
-    per-graph gate and the standing scan. `rel` is the file's path relative to the repo root
-    (e.g. `hyper/foo.py`)."""
+def accepted_at(rel: str, root: str | None) -> int | None:
+    """The length a structured depth-decision records this file accepted at — the **ratchet
+    bar** — or None when none accepts it. The record is a line in a decision file:
+
+        depth-decision: <repo-relative path> accepted@<N> — <reason>
+
+    `<N>` is the line count the operator accepted; the acceptance is bounded to it (`accepted`).
+    The gate matches the *path*, not a basename appearing anywhere in prose, so a coincidental
+    mention grants no exception (the slice-7 closure) — and a **bare `accepted`** with no `@<N>`
+    is an *incomplete* acceptance that names no bound, so it does not clear the gate (ADR 0008):
+    the exception is the decision *at a stated size*, not the spelling. When several records name
+    the same file — each re-acceptance as the file grows writes a new one — the **highest** bar
+    governs: the ratchet only rises, so the most permissive recorded acceptance is the live one."""
     d = os.path.join(spec.spec_dir(root), "decisions")
     if not os.path.isdir(d):
-        return False
+        return None
     want = rel.replace(os.sep, "/")
-    for name in os.listdir(d):
-        if not name.endswith(".md"):
-            continue
-        for line in open(os.path.join(d, name), encoding="utf-8", errors="ignore"):
-            if _depth_record(line) == want:
-                return True
-    return False
+    bars = [rec[1] for name in os.listdir(d) if name.endswith(".md")
+            for line in open(os.path.join(d, name), encoding="utf-8", errors="ignore")
+            if (rec := _depth_record(line)) and rec[0] == want]
+    return max(bars) if bars else None
 
 
-def _depth_record(line: str) -> str | None:
-    """Parse one `depth-decision: <path> accepted — …` line to the accepted path, or None.
-    A line is a depth-decision only with the exact structured prefix and an `accepted` outcome;
-    anything else (prose, a different outcome) is not a pass."""
+def _depth_record(line: str) -> tuple[str, int] | None:
+    """Parse one `depth-decision: <path> accepted@<N> — …` line to `(path, accepted-length)`, or
+    None. A line is a depth-decision only with the exact structured prefix and an `accepted@<N>`
+    outcome naming an integer length; a bare `accepted`, a different outcome, or prose is not a
+    pass — the acceptance must name the length it is bounded to (ADR 0008)."""
     text = line.strip()
     if not text.lower().startswith("depth-decision:"):
         return None
-    body = text.split(":", 1)[1].strip()
-    parts = body.split()
-    if len(parts) < 2 or "accepted" not in (p.strip(",.—-").lower() for p in parts[1:]):
+    parts = text.split(":", 1)[1].split()
+    if len(parts) < 2:
         return None
-    return parts[0].rstrip(",").replace(os.sep, "/")
+    path = parts[0].rstrip(",").replace(os.sep, "/")
+    for tok in parts[1:]:
+        if (n := _accepted_length(tok)) is not None:
+            return (path, n)
+    return None
+
+
+def _accepted_length(token: str) -> int | None:
+    """`accepted@<N>` → N (the bounded length); a bare `accepted` or anything else → None.
+    Tolerant of trailing punctuation (`accepted@450,`) and case."""
+    t = token.strip(",.—-").lower()
+    digits = t[len("accepted@"):] if t.startswith("accepted@") else ""
+    return int(digits) if digits.isdigit() else None

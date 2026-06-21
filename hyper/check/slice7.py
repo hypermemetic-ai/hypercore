@@ -75,8 +75,9 @@ def check(root: str) -> None:
     # still only raises a decision, and a structured depth-decision accepting it lets it fold.
     # No number refuses outright; judgment + the operator-decision carry the whole range.
     decide("0101-pathological-depth.md",
-           "# ADR 0101\n\ndepth-decision: hyper/huge.py accepted — generated table, deep "
-           "behind a three-call interface; its length is context-cost, not shallowness.\n")
+           f"# ADR 0101\n\ndepth-decision: hyper/huge.py accepted@{conditions.SIGNAL * 6 + 1} — "
+           "generated table, deep behind a three-call interface; length is context-cost, not "
+           "shallowness.\n")
     ask = staged("a pathologically long but accepted module", "a far-past-signal module folds")
     longfile(worker._tree_path(ask, root), "huge.py", conditions.SIGNAL * 6)   # ~6× the signal
     result = worker.apply(ask, scripted(json.dumps({
@@ -104,7 +105,7 @@ def check(root: str) -> None:
         "report": "grew a module merely mentioned in an ADR",
         "delta": delta_for("the substring hole stays closed"),
         "loop": {"command": "run", "red": "failed", "green": "passed"}})), root)
-    ok(conditions.accepted("hyper/wide.py", root) is False,
+    ok(conditions.accepted("hyper/wide.py", conditions.SIGNAL + 51, root) is False,
        "a coincidental prose mention is not a structured depth-decision — the hole stays closed")
     ok(conditions.unmet(result, root) is not None,
        "the file mentioned only in prose still raises a depth decision — no free pass by spelling")
