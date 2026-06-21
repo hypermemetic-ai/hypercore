@@ -34,8 +34,8 @@ it is best at, so a role is grounded, specialized, and consistent without one gi
 | Part | What it is | Lifetime | Best for |
 |---|---|---|---|
 | **Repo documents** | `intent.md`, rebuild-spec, the living spec, ADRs, `research/` | durable, authored/folded | the **single source of truth** every other part derives from |
-| **Agents files** | `AGENTS.md` (worker) + `CLAUDE.md`→`@AGENTS.md` (architect) | always-on, per session | the role's **standing identity + disciplines** — who it is, how it works, every episode |
-| **Skills** | on-demand capability/methodology packs (both harnesses have them) | loaded when relevant | **specialized expertise, routed** — pulled by the task, not always resident |
+| **Agents files** | `AGENTS.md` (worker) + `CLAUDE.md`→`@AGENTS.md` (architect) | always-on, per session | **minimal, operational** grounding — the check command, the tools, the workflow pointer (kept small; see §4.5) |
+| **Skills** | on-demand capability/methodology packs (both harnesses have them) | loaded when relevant | **specialized expertise, routed** — pulled by the task, not always resident; the heavy methodology lives here |
 | **Prompts** | the per-node assembled context (handed delta, ask, touched spec slice, live state) | per episode | the **live, task-specific** material that only exists for this node |
 
 The governing relationship: **repo documents are the source; agents files, skills, and prompts are
@@ -44,33 +44,38 @@ hand-copied between them (that is the `worker.DEPTH` smell — a compressed copy
 frozen in a Python constant [code]); each channel renders from the one source.
 
 The earlier draft mis-cast this as a turf war ("keep routing in prompts; resist files and skills").
-It is not. **Skills *are* the routing mechanism** — on-demand, per-capability loading is exactly
-what hypercore's per-capability self-model wants, done by the harness instead of marshalled into one
-megaprompt. **Agents files *are* where role identity belongs** — always-on grounding is what makes a
-role specialized and consistent. The megaprompt that `worker.prompt()` assembles today is the thing
-this *replaces*, split across the channel that fits each piece.
+That was wrong. But the *next* draft over-corrected the other way — "agents files are where role
+identity belongs, always on" — and **§4.5's evidence does not support that**. The calibrated shape:
+**skills carry the specialization** (on-demand, per-capability loading is exactly what hypercore's
+self-model wants — and the better-backed mechanism), the **always-on agents file stays minimal and
+operational** (overview/identity prose in it is the failure mode the evidence names), and hypercore's
+real specialization leverage is its **workflow** (routing, fence, folding) plus skills — not a thick
+context file. The megaprompt `worker.prompt()` assembles is still what this replaces; it just lands
+mostly in **skills**, not in the agents file.
 
 ## 3. The two roles, specialized — the target layering [design]
 
 What each role is assembled from, every piece single-sourced from repo documents:
 
 - **Worker (GPT-5.5 / OMP), fenced.**
-  - *Agents file* (`AGENTS.md` at the fence root): the worker's standing identity — system-facing,
-    fenced, the deep-module disciplines, the worker contract, the red→green-loop discipline. Always
-    on, so the worker *is* a deep-building specialist before it reads a single task.
-  - *Skills*: the methodology and per-capability expertise it pulls for the node it is on — the depth
-    framework in depth, the touched capability's self-model, design patterns for that capability.
+  - *Agents file* (`AGENTS.md` at the fence root): **minimal and operational** — that this is a
+    hypercore worker, the feedback-loop/check command, the tools and conventions to use, a pointer to
+    the skills. Small and high-signal (§4.5: thick "identity" prose in the always-on file is the
+    documented failure mode).
+  - *Skills*: where the worker's specialization actually lives — the depth/deep-module methodology,
+    the touched capability's self-model, the red→green-loop discipline, design patterns — pulled on
+    demand for the node it is on.
   - *Prompt*: the handed delta, the ask, the touched spec slice, the live state of this node.
 - **Architect (Opus 4.8 / Claude).**
-  - *Agents file* (`CLAUDE.md` → `@AGENTS.md`, or its own): the architect's standing identity —
-    operator-facing, design judgment, legibility, the coherence stance, the standing-guard floor.
-  - *Skills*: design-it-twice, the architecture review, the grilling discipline — pulled when the
-    work calls for them.
+  - *Agents file* (`CLAUDE.md` → `@AGENTS.md`, or its own): minimal — that this is hypercore's
+    architect, operator-facing, with the workflow pointer. Not the design philosophy as prose.
+  - *Skills*: where the architect's specialization lives — design-it-twice, the architecture review,
+    the grilling and coherence disciplines — pulled when the work calls for them.
   - *Prompt*: the thread, the worker's hand-off to integrate, the live decision in front of it.
 
-So **role *is* mapped into the agents files** — deliberately, because the standing identity is what
-specialization means — while skills carry the on-demand expertise and prompts carry the live task.
-Each role gets the maximal stack; the parts do not compete, they compose.
+So the specialization is carried mostly by **skills** (on-demand) and by hypercore's **workflow**;
+the agents file is a thin, operational anchor, not the role's whole identity. The parts compose; the
+weight sits where the evidence (§4.5) says it earns its keep.
 
 ## 4. The mechanics, verified on the real harnesses [omp][claude]
 
@@ -100,6 +105,42 @@ Load-bearing facts, each verified:
    skill format is to be pinned when that side is built, but the principle holds: both roles can be
    specialized by skills, not only by prose. [design]
 
+## 4.5 Is the model backed? What field consensus does and does not support
+
+The mechanics above are observations, not opinions. The *design model* (§2–§3) needs more than
+confidence, so it was checked against current authoritative sources — and the check moved it:
+
+- **Backed (strong):** **`AGENTS.md` as the open standard to bank on.** ~28+ tools read it natively,
+  60k+ repos, stewarded by the Linux Foundation's Agentic AI Foundation. The source-of-truth choice
+  is well-founded. ([agents.md], [InfoQ 2025-08])
+- **Backed (Anthropic's own guidance):** **skills + progressive disclosure as the on-demand
+  specialization mechanism** — *"skills transform general-purpose agents into specialized agents,"*
+  loaded only when relevant — and **minimal, high-signal always-on context** as a *hybrid* with
+  just-in-time retrieval (*"the smallest set of high-signal tokens"*). This backs "specialization via
+  skills" and "keep the agents file small." ([Anthropic: Agent Skills], [Anthropic: context engineering])
+- **NOT backed — partly contradicted:** the bet that **loading role grounding into an agents file
+  makes a role more skilled.** A 2026 study ([arXiv 2602.11988], [InfoQ 2026-03]) found context files
+  **often reduce success and reliably add ~20% cost** (+2.5–3.9 steps): LLM-generated files −0.5% to
+  −2% success; developer-authored +4% but *"marginal and inconsistent"* (no gain for Claude Code).
+  What **helped** was minimal, specific *operational* instructions (a named tool was used 1.6× vs
+  0.01×); what **hurt** was codebase overviews and identity/explanatory prose (*"context files do not
+  provide effective overviews"*; *"unnecessary requirements make tasks harder"*). Their recommendation:
+  **omit generated context files; include only minimal requirements.**
+
+The correction this forces, already folded into §2–§3: the heavy methodology — the depth disciplines,
+the per-capability self-model — belongs in **on-demand skills**, not the always-on agents file (it is
+exactly the "overview/identity prose" the evidence flags). The agents file stays **minimal and
+operational**. And hypercore must treat the file's value for *its own* agents as something to
+**measure, not assume** — the "verify, don't assume" ethos that settled the mechanics, applied to the
+*worth*. (My own extrapolations — mapping the self-model onto skills, the clean three-channel
+taxonomy — are reasonable and consistent with the above, but they are design, not consensus.)
+
+Sources: [agents.md](https://agents.md/) · [InfoQ 2025-08](https://www.infoq.com/news/2025/08/agents-md/) ·
+[Anthropic: Agent Skills](https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills) ·
+[Anthropic: context engineering](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) ·
+[arXiv 2602.11988](https://arxiv.org/html/2602.11988v1) ·
+[InfoQ 2026-03](https://www.infoq.com/news/2026/03/agents-context-file-value-review/)
+
 ## 5. The blocker, and the sequencing [code]
 
 Two facts set *when* each piece can land:
@@ -119,13 +160,18 @@ flip, OMP skills) lands **with the parked harness seam**.
 
 ## 6. The design the next session owns [design]
 
-Not "whether" — the direction is set: assemble all five parts into two maximally specialized roles.
-The open work is the concrete assembly:
+The direction is set: specialize the two roles via **skills + workflow**, with a **minimal**
+agents file — calibrated by §4.5's evidence, not the over-confident "thick identity file." The open
+work is the concrete assembly:
 
-1. **The assembly map.** For each role, partition its grounding across the three channels:
-   what is *standing identity* → the agents file; what is *on-demand expertise* → a skill; what is
-   *live task* → the prompt. Name the actual pieces (the worker's disciplines, each capability's
-   self-model, the architect's design methodologies) and place each.
+0. **Earn the always-on file empirically.** §4.5: context files often don't help and add ~20% cost.
+   So keep the agents file minimal and operational, do **not** auto-generate it, and **measure**
+   whether it helps hypercore's own agents (an A/B on real tasks) before leaning on it — the same
+   verification ethos that settled the mechanics, applied to the worth.
+1. **The assembly map.** For each role, partition its grounding: *minimal operational anchor* → the
+   agents file; *the heavy expertise* (the worker's disciplines, each capability's self-model, the
+   architect's design methodologies) → skills; *live task* → the prompt. Name the actual pieces and
+   place each, with the weight on skills.
 2. **Single-sourcing from repo documents.** Every channel renders from the one source — no second
    `worker.DEPTH`. Decide how skills and agents files are *derived* (and kept in sync as the spec
    folds — the self-model is re-derived every fold; its skill form must follow).

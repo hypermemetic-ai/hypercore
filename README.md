@@ -30,5 +30,8 @@ specialized**, assembled from five parts — repo documents (the single source) 
 channels: **agents files** (always-on role identity), **skills** (on-demand specialized expertise —
 the routing), and **prompts** (the per-node live task). Mechanics verified on the real harnesses: OMP
 auto-loads **`AGENTS.md`**, Claude auto-loads **`CLAUDE.md`**, the `@AGENTS.md` adapter bridges, and
-both harnesses have skills. The next session designs the concrete per-role assembly (architect side
-startable now; the worker-fenced side lands with the parked pi/OMP harness seam).
+both harnesses have skills. Checked against field evidence (§4.5): the standard choice (AGENTS.md) and
+on-demand **skills** are well-backed, but context files often don't help and add ~20% cost — so the
+agents file stays **minimal/operational**, specialization sits in **skills + workflow**, and the
+file's value is to be measured, not assumed. The next session designs the concrete per-role assembly
+(architect side startable now; the worker-fenced side lands with the parked pi/OMP harness seam).

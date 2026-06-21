@@ -15,11 +15,16 @@ the model are settled below.
   specialized expertise (this *is* the routing — per-capability, harness-native), **prompts** deliver
   the per-node live task. Nothing hand-copied between channels — that is the `worker.DEPTH` smell.
   The megaprompt `worker.prompt()` assembles today is what this *replaces*, split across the channels.
-- **Role belongs in the agents files** — deliberately. The worker's `AGENTS.md` is its standing
-  identity (system-facing, fenced, build-deep disciplines, the worker contract); the architect's
-  `CLAUDE.md` is its own (operator-facing, design judgment, coherence, legibility). Skills carry the
-  on-demand methodologies (worker: the depth framework, the touched capability's self-model;
-  architect: design-it-twice, the architecture review, grilling). Each role gets the maximal stack.
+- **Specialization sits in skills + workflow; the agents file stays minimal** — *calibrated against
+  the evidence* (see `research/context-files.md` §4.5; the question "is this backed by field
+  consensus?" moved it). A 2026 study ([arXiv 2602.11988]) finds context files often *reduce* success
+  and add ~20% cost, with **overview/identity prose** the failure mode and **minimal operational
+  instructions** the part that helps. So the heavy methodology — the depth disciplines, each
+  capability's self-model — goes in **on-demand skills** (Anthropic's own progressive-disclosure
+  guidance backs this), not the always-on agents file, which stays a thin operational anchor (the
+  check command, the tools, a pointer). And the file's value for hypercore's own agents is to be
+  **measured, not assumed**. (The earlier "role identity belongs in the agents files, always on" was
+  over-confident and is corrected.)
 - **The mechanics are verified on the real harnesses** — canary tests with **tools disabled** (so it
   is genuine auto-load, not the agent reading the file) + negative controls. [omp, claude] **OMP (the
   worker) auto-loads `AGENTS.md` from the worktree cwd**; **Claude (the architect) auto-loads
