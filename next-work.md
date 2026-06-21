@@ -12,28 +12,34 @@ now teed up; nothing below is open except the build itself.
   only** (the check command, custom build commands), no overview prose, since files "do not function
   as effective repository overviews." Skills + progressive disclosure are an open cross-vendor
   standard; the AGENTS.md-vs-skill division of labor is field consensus. Both back the design.
-- **Amendment 1 — the full scan goes just-in-time (operator's call).** The field leans JIT over
-  preloading. So instead of preloading the whole spec, the worker is handed the **complete
-  capability index** (the by-construction awareness guarantee — it cannot miss a capability exists)
-  + the **touched slices** in full, and pulls the rest **from the fenced checkout on demand**. The
-  index render lands now; the drop-the-rest + pull-from-fence half lands with the harness seam.
+- **Amendment 1, made then withdrawn same day — the full scan stays whole (operator's coherence
+  call).** First amended to just-in-time (preload a capability index + touched slices, pull the rest
+  from the fence). The operator then re-raised the whole-picture concern — for the second time — and
+  it exposed the JIT move as a category error: a conditional pull is gated on the worker *already
+  suspecting* it must look, which a myopic worker won't, so it would turn the §6.4 keystone (the full
+  rescan that catches the architect's mis-scoping, and guards against myopic locally-discordant
+  builds) from a by-construction guarantee into a discipline. And the field's JIT evidence targets
+  *large/external* context — hypercore's spec is deliberately small and scannable (a `self-model`
+  requirement), the high-signal core the field's hybrid says to *preload*. So the worker keeps the
+  **whole spec preloaded, touched foregrounded** (the original slice-4 behavior, already tested);
+  JIT is reserved for the **ADR/reference tail**, which carries no whole-picture stake. The
+  capability-index idea is dropped as premature.
 - **Amendment 2 — the agents file is a single minimal shared anchor (operator's pick).** One
   `AGENTS.md`, **symlinked as `CLAUDE.md`** (`ln -s AGENTS.md CLAUDE.md` — Claude now reads
-  `AGENTS.md`/the symlink, so no `@import` adapter, no two role files), holding only non-inferable
-  operational lines. All specialization in skills.
+  `AGENTS.md`/the symlink, so no adapter, no two role files), holding only non-inferable operational
+  lines. All specialization in skills.
 - **The build sequence** (`research/assembly.md` §5), lowest-regret first, no harness seam needed:
   (1) retire `worker.DEPTH` — render the depth grounding from `research/aposd.md`, create the depth
-  skill artifact; (2) the **capability index** render (the JIT guarantee), foregrounded with the
-  touched slices, the rest kept as interim fallback pre-seam; (3) the derived-render /
-  materialize-on-fold mechanism; (4) the minimal shared `AGENTS.md` + `CLAUDE.md` symlink; (5) the
-  architect's methodology skills. **With the parked pi/OMP seam:** transport `cwd` = the fence, drop
-  the preloaded rest + pull JIT, the OMP flip, OMP skill loading. Spec deltas to `worker` (the JIT
-  grounding) and the glossary (capability index, JIT full scan).
+  skill artifact; (2) the derived-render / materialize-on-fold mechanism; (3) the minimal shared
+  `AGENTS.md` + `CLAUDE.md` symlink; (4) the architect's methodology skills. The worker's **spec
+  grounding is untouched** (whole spec preloaded), so nothing here perturbs the slice-4 keystone.
+  **With the parked pi/OMP seam:** transport `cwd` = the fence, the ADR/reference tail dropped from
+  the prompt and pulled JIT (the spec capabilities stay preloaded), the OMP flip, OMP skill loading.
 - **Still machine-side:** the exact per-harness skill format and the harness-seam build, pinned when
-  that side is built. The acceptance harness asserts the scaffold (the frozen copy gone, the index
-  and channels render from source and regenerate on fold, the artifacts single-sourced; with the
-  seam, the transport runs `cwd` = the fence and the prompt no longer preloads the rest) — never that
-  a live model loaded a file/skill (the §4 experiment, recorded not faked).
+  that side is built. The acceptance harness asserts the scaffold (the frozen copy gone, channels
+  render from source and regenerate on fold, the artifacts single-sourced, the whole-spec grounding
+  unchanged; with the seam, the transport runs `cwd` = the fence and pulls the reference tail) —
+  never that a live model loaded a file/skill (the §4 experiment, recorded not faked).
 
 **Next step: begin the build at §5 step 1** (retire `DEPTH`, single-sourced from `aposd.md`).
 

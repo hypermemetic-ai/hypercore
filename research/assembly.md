@@ -30,8 +30,8 @@ piece deterministically:
 | **durable** | **agents file** — minimal, operational (the anchor) | **skills** — the specialization, loaded on demand |
 | **live (re-derived each fold)** | **prompt** — rendered fresh from source, by construction | (degenerate: a live, narrowly-routed thing is just prompt) |
 
-This is why the live grounding stays prompt-side (the complete capability index preloaded, the rest
-reached just-in-time — §2) while the depth disciplines move to a skill, even though both are "needed
+This is why the live grounding stays prompt-side (the **whole spec, preloaded by construction**,
+touched foregrounded — §2) while the depth disciplines move to a skill, even though both are "needed
 every episode": the grounding is **live** (it changes every fold) and so cannot be frozen into an
 always-on file or a skill without a copy going stale; the depth disciplines are **durable** and so
 can. And it is why the agents file stays thin: only the durable, every-episode, *operational* residue
@@ -70,53 +70,59 @@ The weight lands on **skills + the prompt-rendered live spec**, with a thin oper
 file — which is the calibrated shape §4.5 backs, not the thick-identity-file the earlier draft
 reached for.
 
-## 2. The full scan, made just-in-time [operator-amended 2026-06-21]
+## 2. The full scan stays whole and by-construction — the keystone [corrected 2026-06-21]
 
-§6.4 leaned: *"map the per-capability self-model onto skills (loaded on demand by the touched
-capability), replacing the whole-spec megaprompt."* The first draft of this design pushed back —
-keep the whole spec preloaded, because the worker's full scan is structural. The second-pass
-research (§8) and the operator's call settled it differently, and better: **the full scan stays a
-guarantee, but its mechanism becomes just-in-time.**
+This section flip-flopped, and the final answer is the one the original slice-4 build already holds.
+§6.4 leaned "map the per-capability self-model onto skills, replacing the whole-spec megaprompt."
+The first draft pushed back (keep the spec whole). The second pass then over-corrected to
+just-in-time on the field evidence. The operator re-raised the whole-picture concern — for the
+second time — and that exposed the just-in-time move as wrong here. The settled answer: **the worker
+holds the whole spec, preloaded, by construction; "touched" foregrounds attention, it never filters
+what is available.**
 
-**The tension, stated honestly.** Two goods pull apart. (a) The worker's non-slice-confinement is
-by-construction in `worker.py` — it holds the whole spec so its rescan catches a capability the
-delta mis-named or missed, "no path that runs a worker without it"; routing the spec to on-demand
-skills would degrade that to "the worker must remember to pull every other skill," a discipline,
-not a structure. (b) The field evidence (§8) leans **just-in-time over preloading**: lightweight
-references loaded at runtime, "more tokens makes agents worse," Claude Code's own hybrid being a
-small file preloaded with glob/grep to explore. Preloading the entire spec every episode honors (a)
-at the cost of (b), and worsens as the spec grows.
+**Why whole, not just-in-time.** The worker needs the whole picture for three things, and a
+conditional pull only safely covers the first:
 
-**The resolution: a mandatory complete index + on-demand full text.** Both goods are kept by
-splitting *awareness* from *depth*:
+1. *Awareness* — knowing a capability exists. (A thin index could cover this.)
+2. *Cross-impact verification* — the **keystone** (rebuild-spec §6.4): the worker's full rescan is
+   the structural defense against the architect's delta mis-naming or missing a capability. Catching
+   "my change to X also breaks an invariant Y guarantees" needs Y's actual contract in view, not a
+   one-liner. `slice4` tests exactly this ("the context contains the whole spec, not only the touched
+   slice").
+3. *Design coherence* — building a module that fits the existing seams and abstractions, not one
+   locally sensible but globally discordant.
 
-- The **complete capability index** — every capability's name and a one-line summary — is preloaded
-  **by construction, every episode**. This is the structural guarantee: the worker is handed the
-  *whole surface*, so it can never be unaware a capability exists, and its rescan checks the handed
-  delta against the full index by name. The index is *mandatory* — stronger than a pure-JIT "the
-  worker might grep," which could silently skip a capability.
-- The **touched slices** (the grounding) are preloaded in full.
-- The **rest of the spec** is **reachable in the fenced checkout** (the fence is a checkout of the
-  repo, so `spec/` is on disk) and loaded on demand — read/grep — when the rescan flags a capability
-  worth a deep look. This is the cost-bearing full text, paid only where the verification needs it.
+A just-in-time pull fails 2 and 3, and fails them in the worst way: the pull is **gated on the
+worker already suspecting it must look** — which a *myopic* worker will not. Its trigger assumes the
+absence of the very myopia it must guard against. That converts a by-construction guarantee into a
+discipline, the one thing the worker design refuses ("structural, not a discipline to remember").
 
-So the guarantee shifts from "all full text preloaded" to "the **complete index** always handed
-over, the **full text always reachable**." The worker cannot miss a capability (awareness is
-by-construction); it pays for depth only on demand (the field's just-in-time). This scales with
-capability *count* (the index), not capability *size* — the property preloading lacked.
+**Why the field's just-in-time evidence does not apply here.** That guidance targets *large/external*
+context — sprawling codebases, retrieved documents, million-token windows. hypercore's living spec is
+the opposite: deliberately **small and wholly scannable** (a `self-model` requirement, "concise
+enough to scan across all of them at once"). And the field's *actual* recommendation is a hybrid —
+**preload the high-signal core, JIT the long tail.** The spec *is* the high-signal core; preloading
+it whole is what the hybrid endorses, not what it warns against. If the spec ever grew too big to
+preload, that would be a `self-model` "scannable" violation to fix at the source, never a reason to
+blind the worker.
 
-**What still routes to skills.** The per-capability *expertise / methodology* — the durable "how you
-build this capability well," beyond the bare requirements — routes to skills, loaded by the touched
-set; plus the cross-cutting **depth** disciplines (worker) and **design methodologies** (architect).
-The spec *requirements* are reached by the index-plus-fence mechanism above, not by skills. The
-skills with real content *today* are `depth` and the architect's three methodologies; per-capability
-worker skills are an **as-needed growth** (a skill appears when a capability accrues expertise beyond
-its requirements), not a day-one one-skill-per-capability split.
+**Where just-in-time does belong: the reference tail.** The economy target is not the spec — it is
+the **ADRs/decisions**, which grow fastest and are least relevant per node (and which §1 already put
+on-demand). They carry no whole-picture stake, so they are the right thing to pull from the fenced
+checkout once the worker runs there. The capability-index idea is dropped as premature: redundant
+when the whole spec is already present.
 
-**Sequencing the shift (see §5).** The **index render** is the by-construction primitive and is
-buildable now; pre-seam the worker prompt carries the index *plus* the rest as an interim fallback
-(nothing is dropped, so no guarantee is weakened in between). The **drop-the-rest + pull-from-fence**
-half lands with the harness seam, when the worker runs with `cwd` = the fence and can read it.
+**What still routes to skills.** The per-capability *expertise / methodology* (the durable "how you
+build this capability well," beyond the requirements) and the cross-cutting **depth** disciplines
+(worker) and **design methodologies** (architect). The spec *requirements* are not routed — they are
+preloaded whole. The skills with real content today are `depth` and the architect's three
+methodologies; per-capability worker skills are an **as-needed growth**, not a day-one split.
+
+**Consequence for the build.** Because "whole spec preloaded, touched foregrounded" is exactly what
+`worker.context`/`worker.prompt` already do, item 2 makes **no change** to the worker's spec
+grounding and does not perturb the keystone or its checks. The only on-demand shift is moving the
+ADR/reference tail off the prompt — and that lands with the harness seam (the worker needs the fence
+to pull from).
 
 ## 3. Single-sourcing (§6.2) — the derived render, by the fold
 
@@ -131,8 +137,6 @@ single-sourcing answer, applied to two more channels:
 
 - the `depth` skill — and, pre-seam, the worker's prompt-side depth grounding — render from
   `research/aposd.md`: one source for the depth disciplines, no frozen copy;
-- the **capability index** (§2) renders from the `spec/<cap>/` slices — every name plus a one-line
-  summary, regenerated whenever a fold adds, renames, or reframes a capability;
 - a per-capability skill (when one exists, §2) renders from `spec/<cap>/spec.md`;
 - the architect's methodology skills render from their spec slices / research docs;
 - the agents file's operational anchor renders from one small source (the non-inferable operational
@@ -190,27 +194,26 @@ and the worker is still `claude -p`, not OMP (the pi/OMP seam is parked).
    frozen copy. The depth **skill artifact** is created now for when the seam lands. The concrete
    first build: kills the named smell and single-sources it, no change to what the worker is
    grounded in. Harness-assertable (the constant is gone; the render reads aposd.md).
-2. **The capability index render** (§2) — the by-construction JIT guarantee. The worker prompt
-   foregrounds the complete index + the touched slices; pre-seam it still carries the rest as an
-   interim fallback (nothing dropped, no guarantee weakened). Harness-assertable (the index renders
-   from `spec/`, names every capability).
-3. **The derived-render / materialize-on-fold mechanism** (§3) — skills, the index, and the agents
-   file regenerate from source on fold. Harness-assertable (nothing hand-edited; regenerates).
-4. **The minimal shared `AGENTS.md` + `CLAUDE.md` symlink** (§0, §4) — non-inferable content the
+2. **The derived-render / materialize-on-fold mechanism** (§3) — skills and the agents file
+   regenerate from source on fold. Harness-assertable (nothing hand-edited; regenerates).
+3. **The minimal shared `AGENTS.md` + `CLAUDE.md` symlink** (§0, §4) — non-inferable content the
    operator set: the check command, the hand-back convention, a pointer to the skills. The architect
    runs at repo root, so the symlinked file reaches it immediately (not side-effect-free) — which is
    why the content is kept to the non-inferable minimum the evidence endorses.
-5. **The architect's methodology skill artifacts** (design-it-twice, architecture-review,
+4. **The architect's methodology skill artifacts** (design-it-twice, architecture-review,
    grilling), rendered from their spec slices.
+
+The worker's **spec grounding is untouched** — whole spec preloaded, touched foregrounded (§2) — so
+no step here perturbs the slice-4 keystone or its checks.
 
 **With the parked harness seam:**
 
-6. **The transport runs the worker with `cwd` = the fence.** The preloaded "rest of spec" is
-   **dropped** from the prompt; the worker pulls slices just-in-time from the checkout (read/grep),
-   the complete index still preloaded as the awareness guarantee. OMP auto-loads the fence's
-   `AGENTS.md` and loads skills on demand; the worker's depth + per-capability expertise move from
-   the prompt to skills.
-7. **The OMP flip** (worker = `omp`, GPT-5.5), and OMP-native skill loading.
+5. **The transport runs the worker with `cwd` = the fence.** The **reference tail** (the
+   ADRs/decisions) is dropped from the prompt and pulled just-in-time from the checkout (read/grep);
+   **the spec capabilities stay preloaded** (the whole-picture keystone, §2). OMP auto-loads the
+   fence's `AGENTS.md` and loads skills on demand; the worker's depth + per-capability expertise move
+   from the prompt to skills.
+6. **The OMP flip** (worker = `omp`, GPT-5.5), and OMP-native skill loading.
 
 ## 6. The honest harness limit
 
@@ -232,10 +235,13 @@ The assembly model is **operator-ratified** (ADR 0009), with two decisions made 
   build/hand-back convention, and a pointer to the skills. This is exactly the §8 study's endorsed
   "non-inferable details." No overview/identity prose, no per-capability requirements. The file's
   worth stays measurable, but the lean is set: keep it minimal; specialization is in skills.
-- **The full scan moves to just-in-time, now (§2).** Rather than preload the whole spec, the worker
-  is handed the complete capability index (the by-construction awareness guarantee) and the touched
-  slices, and pulls the rest from the fenced checkout on demand. This overturned the first draft's
-  "keep the whole spec preloaded" on the field's just-in-time evidence (§8) — the operator's call.
+- **The full scan stays whole and by-construction (§2).** At first ratification this was amended to
+  just-in-time; the operator then re-raised the whole-picture concern and the amendment was
+  **withdrawn** the same day. The worker holds the *whole* spec, preloaded, touched foregrounded for
+  attention only — the slice-4 keystone, the defense against the architect's mis-scoping and against
+  worker myopia. Just-in-time is reserved for the ADR/reference tail, which carries no whole-picture
+  stake. (Coherence note: the just-in-time amendment over-applied field evidence calibrated for
+  large/external context to a spec deliberately kept small and scannable.)
 
 Ratified alongside: the governing two-axis cut (§0) and the assembly map (§1); single-sourcing as a
 derived render regenerated by the fold, with the materialize-on-fold step (§3); the one-shared-anchor
@@ -267,11 +273,13 @@ contradicting itself. Three things validated and sharpened; two facts moved the 
   `CLAUDE.md` is present), and the clean standard pattern is one file with a `CLAUDE.md → AGENTS.md`
   symlink. With specialization in skills, the always-on anchor is one shared file — retiring the
   two-role-files / `@import`-adapter plan (§4). ([Claude Code #34235]; community guides)
-- **Moved the design (fact 2) — full scan goes just-in-time.** The field leans **just-in-time over
-  preloading** (lightweight references loaded at runtime; "more tokens makes agents worse"; Claude
-  Code's own hybrid — a small file preloaded, glob/grep to explore). This contradicted the first
-  draft's "preload the whole spec," and prompted the operator's amendment (§2): a mandatory complete
-  index + on-demand full text from the fence. ([Anthropic: context engineering])
+- **Fact 2, over-applied then corrected — the spec stays preloaded.** The field leans **just-in-time
+  over preloading**, but that guidance targets *large/external* context, and its actual shape is a
+  hybrid: *preload the high-signal core, JIT the long tail* (Claude Code itself preloads a small file
+  and uses glob/grep for the rest). Read first as "move the spec scan to just-in-time," it was
+  corrected when the operator re-raised whole-picture: hypercore's spec is the small,
+  scannable-by-design high-signal core, so it stays **preloaded whole** (§2); just-in-time is for the
+  ADR/reference tail. ([Anthropic: context engineering])
 
 Sources: [arXiv 2602.11988](https://arxiv.org/abs/2602.11988) ·
 [InfoQ 2026-03](https://www.infoq.com/news/2026/03/agents-context-file-value-review/) ·

@@ -31,11 +31,13 @@ via pi/OMP), each **maximally skilled and specialized**, assembled from repo doc
 source) feeding three derived channels — a **minimal agents file** (non-inferable operational lines
 only), **skills** (on-demand specialization — the routing), and **prompts** (the per-node live task).
 Placed by two axes (durability × reach): **skills + the agents file are derived renders regenerated
-by the fold** (no hand-copy — this kills the `worker.DEPTH` smell); the worker's full scan is
-**just-in-time** (a preloaded complete **capability index** as the awareness guarantee + the touched
-slices, the rest pulled from the fenced checkout on demand); and placement is **one shared `AGENTS.md`
-symlinked as `CLAUDE.md`**. Calibrated by field evidence (the ETH Zurich AGENTS.md study + Anthropic's
+by the fold** (no hand-copy — this kills the `worker.DEPTH` smell); the worker keeps the **whole spec
+preloaded, by construction** (touched foregrounded for attention — the slice-4 keystone, the defense
+against mis-scoping and worker myopia; a just-in-time amendment was tried and withdrawn as a category
+error — the spec is the small, scannable high-signal core the field's hybrid says to preload, and
+JIT is reserved for the ADR/reference tail); and placement is **one shared `AGENTS.md` symlinked as
+`CLAUDE.md`**. Calibrated by field evidence (the ETH Zurich AGENTS.md study + Anthropic's
 skills/context-engineering guidance): the agents file stays minimal/non-inferable, specialization
 lives in skills. Next step: **build at §5 step 1** — retire `DEPTH` (render from `aposd.md`), then
-the capability index and the derived-render mechanism; the worker-fenced side (JIT pull, the OMP flip)
-lands on the parked pi/OMP harness seam.
+the derived-render mechanism and the shared anchor; the worker-fenced side (reference-tail pull, the
+OMP flip) lands on the parked pi/OMP harness seam.
