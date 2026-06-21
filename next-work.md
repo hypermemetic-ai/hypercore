@@ -1,5 +1,44 @@
 # next work
 
+## Built — item 2, §5 step 1: the `worker.DEPTH` smell retired (2026-06-21)
+
+The build began at the lowest-regret step (assembly.md §5.1, ADR 0009): the worker's depth
+disciplines are no longer a frozen hand-compression of `research/aposd.md` in a Python constant —
+they are **single-sourced**, rendered from aposd.md, so a sharpened synthesis reaches the next
+worker with no second copy to drift. The named smell is gone. What landed:
+
+- **`hyper/depth.py` — the one render of the disciplines.** It extracts aposd.md's two canonical
+  lists (the §3 **design principles** — build toward; the §2 **red flags** — build away from) and
+  renders them into the channels that carry them: `disciplines(root)` (the worker's prompt-side
+  grounding, replacing the deleted `worker.DEPTH`) and `skill(root)` / `materialize(root)` (the
+  `depth` SKILL.md artifact for the parked harness seam). The header is the only authored part —
+  operational framing, no restated content — so the disciplines are 100% derived.
+- **Source resolution: project root first, the shipping repo as fallback.** A project root takes
+  precedence (so the acceptance harness plants a controlled aposd.md and proves the render is
+  derived from *it*), and the package's own aposd.md backs the render when a root carries no
+  `research/` — the disciplines are hypercore's own methodology, present even against a bare temp
+  root. Read live, never cached, like the spec.
+- **The worker is unchanged in substance, derived in mechanism.** `context()` now assembles
+  `ctx.depth = depth.disciplines(root)` alongside the whole spec; `prompt()` renders `ctx.depth`.
+  The **whole-spec grounding is untouched** — the slice-4 keystone holds — and the worker still
+  carries the disciplines every episode (the slice-7 proactive defense), now rendered not copied.
+- **The depth skill artifact exists** at `skills/depth/SKILL.md` — progressive-disclosure form
+  (metadata → disciplines → a pointer back to aposd.md), single-sourced and materialized on disk
+  (the one new mechanism, ADR 0009 §3). Its **regeneration on fold is step 2**, not yet wired.
+- **Acceptance: `hyper/check/slice10.py` (11 checks)** drives the real render over a *planted*
+  aposd.md — the frozen copy is gone, both channels render the planted disciplines, **editing the
+  source changes the grounding** (drift impossible), the keystone holds, the skill materializes.
+  slice 7's worker-prompt assertion was updated to the rendered vocabulary (same claim, new
+  spelling). **All of slices 1–10 pass** (`python3 -m hyper --check`, 137 checks, 0 fail). Spec
+  deltas: `worker` (the disciplines are single-sourced + a derived-from-source scenario), the
+  glossary (a `derived channel` term). No new ADR — this *executes* ADR 0009, mints no decision.
+
+**Next step: §5 step 2** — the derived-render / materialize-on-fold mechanism (the fold gains a
+render step that regenerates `skills/` and the agents file from source; `depth.materialize` is the
+first target). Then step 3 (the minimal shared `AGENTS.md` + `CLAUDE.md` symlink, operator content)
+and step 4 (the architect's methodology skill artifacts). The worker-fenced side (steps 5–6) lands
+with the parked pi/OMP seam.
+
 ## Ratified — item 2, the assembly model (2026-06-21)
 
 A second research pass validated the design against live sources (recorded in `research/assembly.md`
@@ -41,7 +80,10 @@ now teed up; nothing below is open except the build itself.
   unchanged; with the seam, the transport runs `cwd` = the fence and pulls the reference tail) —
   never that a live model loaded a file/skill (the §4 experiment, recorded not faked).
 
-**Next step: begin the build at §5 step 1** (retire `DEPTH`, single-sourced from `aposd.md`).
+**Next step: begin the build at §5 step 1** (retire `DEPTH`, single-sourced from `aposd.md`). —
+**DONE** (see the top section): `hyper/depth.py` renders the disciplines from `aposd.md`, the
+frozen constant is deleted, the `depth` skill artifact is materialized, slice 10 pins it. The
+build continues at §5 step 2 (materialize-on-fold).
 
 ## Designed — item 2, the assembly across channels (2026-06-21)
 

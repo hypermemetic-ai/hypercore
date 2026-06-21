@@ -38,6 +38,9 @@ error — the spec is the small, scannable high-signal core the field's hybrid s
 JIT is reserved for the ADR/reference tail); and placement is **one shared `AGENTS.md` symlinked as
 `CLAUDE.md`**. Calibrated by field evidence (the ETH Zurich AGENTS.md study + Anthropic's
 skills/context-engineering guidance): the agents file stays minimal/non-inferable, specialization
-lives in skills. Next step: **build at §5 step 1** — retire `DEPTH` (render from `aposd.md`), then
-the derived-render mechanism and the shared anchor; the worker-fenced side (reference-tail pull, the
-OMP flip) lands on the parked pi/OMP harness seam.
+lives in skills. **§5 step 1 is built** — `hyper/depth.py` single-sources the depth disciplines from
+`aposd.md` (the frozen `worker.DEPTH` retired), the `depth` skill artifact is materialized at
+`skills/depth/SKILL.md`, and `hyper/check/slice10.py` pins it (137 checks, 0 fail). Next: **§5 step
+2** — the derived-render / materialize-on-fold mechanism, then the shared `AGENTS.md`/`CLAUDE.md`
+anchor and the architect's skills; the worker-fenced side (reference-tail pull, the OMP flip) lands
+on the parked pi/OMP harness seam.

@@ -117,8 +117,8 @@ def check(root: str) -> None:
     ask = staged("any worker episode", "the worker is grounded in depth")
     ctx = worker.context(ask, root)
     text = worker.prompt(ask, ctx)
-    ok(all(s in text for s in ("DEEP MODULES", "RED FLAGS", "shallow module",
-                               "COMPLEXITY DOWNWARD", "STRATEGIC")),
+    ok(all(s in text for s in ("Modules should be deep", "Pull complexity downward",
+                               "strategic", "red flags", "Shallow module")),
        "the worker's prompt carries the deep-module framework and the red flags by construction")
     worker.teardown(ask, root)
 

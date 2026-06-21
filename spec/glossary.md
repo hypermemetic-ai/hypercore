@@ -105,6 +105,12 @@ it sharpens inside grilling as work folds.
 
 - **gap** — the difference between vision and as-built; the backlog, read live.
 
+- **derived channel** — a grounding channel **rendered from one source**, never hand-copied
+  (ADR 0009): the worker's depth grounding and the `depth` **skill** both render from
+  `research/aposd.md`. Like the **as-built**, a derived channel changes when its source changes,
+  so a frozen second copy (the retired `worker.DEPTH` constant) cannot drift. Materialized on
+  disk when an external harness must auto-load it (a skill, an agents file); read live otherwise.
+
 - **architecture review** — the standing scan of the source tree for deepening
   opportunities, read live. It surfaces god-files-in-the-making before they set and
   renders the operator view's upper levels — the structural map of as-built reality,

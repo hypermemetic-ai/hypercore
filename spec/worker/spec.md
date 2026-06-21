@@ -47,10 +47,22 @@ concern produces deep modules, so the folding-conditions depth gate stays a rare
 backstop, not an operator-load generator. The grounding is assembled into the worker's prompt
 by construction, like its spec slice — there is no path that runs a worker without it.
 
+The disciplines MUST be **single-sourced**, not a frozen copy: they are *rendered* from their one
+home, `research/aposd.md` (the faithful synthesis), so a sharpened synthesis reaches the next
+worker with no second copy to drift (ADR 0009). The same render also produces a `depth` **skill**
+artifact, materialized on disk, for the harness that loads skills natively — one source, the
+channels derived from it, the way the as-built is derived from the model and only the vision is
+authored.
+
 #### Scenario: the depth disciplines are in the grounding
 - WHEN a worker is assembled to run
 - THEN its prompt carries the deep-module framework and the red flags, foregrounded as
   disciplines it is held to, so it builds deep up front
+
+#### Scenario: the disciplines are derived from their source
+- WHEN the depth synthesis (`research/aposd.md`) is sharpened
+- THEN the next worker's depth grounding renders the change with nothing hand-copied, and the
+  retired frozen constant cannot drift from the source because it no longer exists
 
 ### Requirement: a worker runs fenced in its own git worktree
 A worker MUST run in its own git worktree — a separate checkout on its own branch, fenced
