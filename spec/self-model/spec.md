@@ -54,12 +54,19 @@ folds unless the delta merges; the living spec is therefore never separately edi
 ### Requirement: the operator view renders vision beside as-built and gap
 The operator view MUST render, at every altitude, the **vision** (authored, from
 `intent.md`) beside the **as-built** (derived from the living spec) and the **gap**
-between them, as a recursive tree to the depth the work reaches.
+between them, as a recursive tree to the depth the work reaches. The upper levels'
+"what the system is" structural map and the deepening backlog are the standing output
+of the architecture review (`architecture-review` capability), kept honest between folds.
 
 #### Scenario: the view is read
 - WHEN the operator opens the view
 - THEN it shows the vision, the as-built capabilities and their requirements, and the
   gap; drilling into a capability zooms the same three to that grain
+
+#### Scenario: the root's upper levels
+- WHEN the operator opens the root of the view
+- THEN its structural map of as-built reality and its deepening backlog are the
+  architecture review's standing output, derived from the scan, not hand-authored
 
 ### Requirement: the as-built and gap are derived; only the vision is authored
 No statement in the as-built or gap renders MUST be hand-authored or hand-maintained

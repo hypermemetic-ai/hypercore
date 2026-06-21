@@ -99,5 +99,17 @@ it sharpens inside grilling as work folds.
 
 - **gap** — the difference between vision and as-built; the backlog, read live.
 
+- **architecture review** — the standing scan of the source tree for deepening
+  opportunities, read live. It surfaces god-files-in-the-making before they set and
+  renders the operator view's upper levels — the structural map of as-built reality,
+  debt marked — so the operator reads the system's shape without reading code.
+
+- **deepening backlog** — the architecture review's findings, read as the gap: the
+  modules grown large or shallow enough to want deepening, each carrying a
+  recommendation strength.
+
+- **recommendation strength** — the weight a deepening finding carries: **strong**
+  (deepen now) for a module over the budget, **consider** for one nearing it.
+
 - **ADR** — a recorded decision, kept sparingly: only when it is hard to reverse,
   surprising without context, and the result of a real trade-off.
