@@ -100,10 +100,30 @@ the slice into a full architectural re-grounding, designed in `research/reground
 - **The justification-match hole is closed by construction**: length no longer auto-refuses, so
   the loose substring escape-hatch is deleted, replaced by a structured depth-decision record.
 
-Open forks to grill before phase 3 implements (regrounding.md §7): **F1** the build boundary
-(mechanical scaffold now + model judgment deferred, vs. build the model verdict now); **F2**
-whether any high *pathological* length ceiling survives mechanically; **F3** the capability-naming
-ripple (keep `conversation`, rename only the role).
+**F1 — resolved (defer both).** The depth-assessment machinery — both the model-driven verdict
+*and* the mechanical proxies — is **not built this slice**; it is recorded not-yet-built and
+likely wants its own later slice (a model-driven standing red-flag scan is a real capability, and
+cramming it in would itself be tactical). Phase 3 builds only the settled, fully harness-testable
+scaffold: length demoted to a signal that raises a *decision*, not an auto-refusal; the substring
+escape-hatch deleted and replaced by a structured depth-decision record; the review re-rendered
+around depth (length + the red-flags framework as the lens, the depth-assessment marked
+not-yet-built); the worker grounded in the depth disciplines; the §7/§6 + ADR 0004/0005 revisions;
+the check.py split kept on locality; the §9/README housekeeping. The operator reads the system
+through the *depth lens* (the framework, the decision-raising gate, the grounded worker) this
+slice; the automated depth *measurement* lands later.
+
+**Still open for the implementing session:** **F2** — does any high *pathological* length ceiling
+survive mechanically (architect's lean: yes, one high context-cost tripwire, far above the old
+400); **F3** — the capability naming (architect's lean: keep `conversation`, rename only the role).
+
+### Handoff (smart-zone, rebuild-spec §5.3) — clear the session; implement phase 3 fresh
+
+Design (phases 1–2) is complete and durable; the implementing work wants a clean window. A fresh
+episode implements phase 3 by reading, in order: this section of `next-work.md`, then
+`research/regrounding.md` (§8 = the change list, §7 = the open forks F2/F3), then
+`research/aposd.md` (the grounding), then the touched specs and `hyper/{conditions,review}.py`.
+Settle F2/F3 first (both small), then build the scaffold above, carry the spec deltas, and meet
+the acceptance check. Phase 1 and phase 2 are committed (`e136ac1`, `5777961`).
 
 ## Later — slice 8 (parallelism, re-grounded)
 
