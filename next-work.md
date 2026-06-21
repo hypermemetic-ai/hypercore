@@ -283,6 +283,18 @@ extended — `hyper/check/slice7.py`, with slices 5/6 updated to the new names a
   lean): the operator-facing channel is the boundary and it is unchanged, so this is a rename,
   not a re-cut — no new boundary ADR.
 
+## Noted for a later session (machine, 2026-06-21)
+
+- **`slice4`'s code-leak check uses substring proxies that false-positive on ADR prose.** The check
+  "the worker is grounded in the spec, never the code" asserts `"import " not in prompt` and
+  `"curses" not in prompt` — but `worker._decisions` feeds every `spec/decisions/*.md` into the
+  worker prompt, so an ADR that *discusses* imports or curses trips it as if real code leaked. It
+  bit us drafting ADR 0009 ("import adapter" → reworded). As ADRs accumulate and discuss code-ish
+  topics, the substring proxy gets more false-positive-prone. Minor; worded around for now. A
+  sturdier check would test the *grounding the worker assembles* (spec slices, glossary, decisions)
+  rather than scan the whole rendered string for code-shaped substrings — but only if it earns the
+  change; the current check still catches the real failure it was built for.
+
 ## Considered and declined — do not re-propose
 
 Making handoff §9 ("do not re-introduce these errors") into an enforced pre-fold checklist was
