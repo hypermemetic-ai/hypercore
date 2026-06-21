@@ -40,3 +40,15 @@ read is the corpus that is low-noise — the two reasons the methodology bets on
 Slices 1–4 still pass; the worker's context contains the whole spec with the touched
 capabilities marked as grounding; a mis-mapped handed delta is caught by the worker's
 rescan, not trusted.
+
+## Considered and declined — do not re-propose
+
+Making handoff §9 ("do not re-introduce these errors") into an enforced pre-fold
+checklist was raised and **declined** by the operator (2026-06-21): §9 is a bootstrap
+artifact — the errors that tempted across the spec's revision rounds — not the critical
+invariant set, so it is not worth hardening, and a checklist of named errors buys false
+comfort against the gap that actually matters (unsurfaced, *un*-named drift). The real
+defenses against that gap are this worker fix (restoring the §6.4 keystone — a second
+role with full scan that the first can't suppress) and the architecture review (slice 6,
+a standing adversarial scan rendered to the operator). Knowing §9's errors exist is
+enough.
