@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import textwrap
 
-from . import graph
+from . import grill, graph
 from .conversation import Thread
 
 # styles (the window owns their colors)
@@ -21,7 +21,7 @@ Span = tuple
 Row = list
 
 
-def main_body(nodes: list[graph.Node], sel: int) -> list[Row]:
+def main_body(nodes: list[graph.Node], sel: int, width: int = 76) -> list[Row]:
     """The resting face of the system: the queue over the threads."""
     rows: list[Row] = [[("hypercore", TITLE)], []]
 
@@ -34,9 +34,9 @@ def main_body(nodes: list[graph.Node], sel: int) -> list[Row]:
         style = SEL if chosen else CARD
         rows.append([("  " + ("▸ " if chosen else "· "), style),
                      (_subject(c.text), style),
-                     ("   " + c.kind, TAG)])
+                     ("   " + _card_label(c), TAG)])
         if chosen:
-            rows.append([("      [a] approve   [c] cut   [e] explain", DIM)])
+            rows.extend(_card_detail(c, width))
 
     rows.append([])
     rows.append([("threads", HEAD)])
@@ -47,6 +47,33 @@ def main_body(nodes: list[graph.Node], sel: int) -> list[Row]:
         rows.append([("  · ", CARD), (_subject(n.text), CARD)])
 
     return rows
+
+
+def _card_label(c: graph.Node) -> str:
+    """A card's weight, named: a grilling question, a ratification, or a decision."""
+    if grill.is_question(c):
+        return "question"
+    if grill.is_entry(c):
+        return "ratify"
+    return c.kind
+
+
+def _card_detail(c: graph.Node, width: int) -> list[Row]:
+    """The selected card, opened: a question shows its lean and what would flip it;
+    a view entry shows the contract the ratify endorses; a plain card, its commands."""
+    if grill.is_question(c):
+        rows = [[("      lean  ", DIM), (grill.lean_of(c), SAY)]]
+        if grill.flip_of(c):
+            rows.append([("      flips ", DIM), (grill.flip_of(c), TAG)])
+        rows.append([("      [a] accept the lean   ·   type to answer", DIM)])
+        return rows
+    if grill.is_entry(c):
+        rows: list[Row] = []
+        for w in _wrap(grill.contract(c), width - 8):
+            rows.append([("      ", SAY), (w, SAY)])
+        rows.append([("      [a] ratify — spawns the work   ·   [c] cut", DIM)])
+        return rows
+    return [[("      [a] approve   [c] cut   [e] explain", DIM)]]
 
 
 def converse_body(thread: Thread, width: int, explain_text: str | None = None) -> list[Row]:
@@ -102,6 +129,8 @@ def footer(model: str, mode: str, buffer: str, status: str, width: int) -> Row:
         left = "view · ↑↓ select · →/enter drill · ←/esc up · type to speak"
     elif mode == "browse":
         left = "browse · ↑↓ select · a/c/e act · v view · esc or type to speak"
+    elif mode == "answer":
+        left = "answer › " + buffer + "▖" + "   esc cancels"
     elif mode == "converse":
         left = "› " + buffer + "▖" + "   esc closes the thread"
     else:

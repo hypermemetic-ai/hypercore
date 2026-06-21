@@ -10,7 +10,7 @@ import curses
 import threading
 from dataclasses import dataclass, field
 
-from . import conversation, graph, render, view
+from . import conversation, graph, grill, render, view
 from .conversation import Thread
 
 ESC, ENTER, BACKSPACES = 27, (10, 13, curses.KEY_ENTER), (8, 127, curses.KEY_BACKSPACE)
@@ -19,7 +19,7 @@ SPIN = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
 
 @dataclass
 class State:
-    mode: str = "input"            # input | browse | converse | view
+    mode: str = "input"            # input | browse | converse | view | answer
     buffer: str = ""
     sel: int = 0
     thread: Thread | None = None
@@ -28,6 +28,7 @@ class State:
     tick: int = 0
     view_path: list[int] = field(default_factory=list)  # drill-down into the view
     view_sel: int = 0
+    answer_id: str = ""            # the grilling question being answered, if any
 
 
 class Async:
@@ -83,6 +84,8 @@ def _dispatch(scr, st: State, ch: int, nodes) -> bool:
         return False
     if st.mode == "view":
         return _view_keys(st, ch)
+    if st.mode == "answer":
+        return _answering(st, ch)
     if st.mode == "browse":
         return _browse(st, ch, nodes)
     return _typing(st, ch)
@@ -125,7 +128,13 @@ def _browse(st: State, ch: int, nodes) -> bool:
         st.view_path = []
         st.view_sel = 0
     elif cards and ch == ord("a"):
-        graph.approve(cards[st.sel])
+        card = cards[st.sel]
+        if grill.is_entry(card):                      # the gate: ratify spawns work
+            grill.ratify(card)
+        elif grill.is_question(card):                 # accept the machine's lean
+            st.pending = Async(lambda c=card: grill.advance(c, grill.lean_of(c)))
+        else:
+            graph.approve(card)
         st.sel = 0
     elif cards and ch == ord("c"):
         graph.cut(cards[st.sel])
@@ -136,9 +145,30 @@ def _browse(st: State, ch: int, nodes) -> bool:
         st.thread = Thread()
         st.explain_text = None
         st.pending = Async(lambda: conversation.explain(card))
+    elif cards and grill.is_question(cards[st.sel]) and 32 <= ch < 127:
+        st.mode = "answer"                            # answer the question in its own words
+        st.answer_id = cards[st.sel].id
+        st.buffer = chr(ch)
     elif 32 <= ch < 127:  # any other key starts speaking
         st.mode = "input"
         st.buffer = chr(ch)
+    return True
+
+
+def _answering(st: State, ch: int) -> bool:
+    """Type an answer to the selected grilling question; Enter sends it to the pass."""
+    if ch == ESC:
+        st.buffer, st.answer_id, st.mode = "", "", "browse"
+    elif ch in BACKSPACES:
+        st.buffer = st.buffer[:-1]
+    elif ch in ENTER:
+        answer, qid = st.buffer.strip(), st.answer_id
+        st.buffer, st.answer_id, st.mode = "", "", "browse"
+        node = graph.find(qid)
+        if answer and node is not None:
+            st.pending = Async(lambda: grill.advance(node, answer))
+    elif 32 <= ch < 127:
+        st.buffer += chr(ch)
     return True
 
 
@@ -175,7 +205,9 @@ def _land(st: State, result) -> None:
             st.mode = "converse"
     elif isinstance(result, str):             # an explain story
         st.explain_text = result
-    else:                                     # an error becomes a visible reply
+    elif isinstance(result, graph.Node):      # a grilling step; the re-read shows it
+        pass
+    elif isinstance(result, Exception):       # an error becomes a visible reply
         if st.thread:
             st.thread.add("machine", f"(the conversationalist could not answer: {result})")
 
@@ -191,7 +223,7 @@ def _paint(scr, st: State, nodes) -> None:
         node = view.resolve(view.operator_view(), st.view_path)
         rows = render.view_body(node, st.view_sel, w)
     else:
-        rows = render.main_body(nodes, st.sel)
+        rows = render.main_body(nodes, st.sel, w)
     for y, row in enumerate(rows):
         if y >= h - 1:
             break

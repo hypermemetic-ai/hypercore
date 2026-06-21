@@ -25,6 +25,8 @@ _DEFAULT_ROOT = os.path.dirname(_HERE)
 # States read by the views. "awaiting you" -> queue; "standing" -> threads.
 AWAITING = "awaiting you"
 STANDING = "standing"
+GRILLING = "grilling"        # an ask held while its grilling pass runs: not work, not a card
+PENDING = "pending"          # a grilling question waiting its turn, one at a time
 MARKER = "[machine]"
 
 
@@ -45,6 +47,7 @@ class Node:
     text: str          # the ask or statement, plain prose
     machine: bool      # carries the [machine] marker
     created: float
+    parent: str = ""   # the relation: a grilling question/entry points at its ask
 
     @property
     def is_card(self) -> bool:
@@ -80,6 +83,12 @@ def find(node_id: str) -> Node | None:
     return next((n for n in read_graph() if n.id == node_id), None)
 
 
+def children(parent_id: str, nodes: list[Node] | None = None) -> list[Node]:
+    """The nodes hung off a parent — a grilling pass's questions and view entry."""
+    pool = read_graph() if nodes is None else nodes
+    return [n for n in pool if n.parent == parent_id]
+
+
 # ── mutations (each lands one node file and commits it) ──────────────────────
 
 def file_intent(ask: str) -> Node:
@@ -89,9 +98,9 @@ def file_intent(ask: str) -> Node:
     return n
 
 
-def raise_card(statement: str, kind: str = "decide") -> Node:
+def raise_card(statement: str, kind: str = "decide", parent: str = "") -> Node:
     """Put a machine-owned statement or decision on the operator's queue."""
-    n = _new(kind, AWAITING, "machine", statement, machine=True)
+    n = _new(kind, AWAITING, "machine", statement, machine=True, parent=parent)
     _persist(n, f"raise {kind}: {_subject(statement)}")
     return n
 
@@ -111,6 +120,47 @@ def cut(node: Node) -> None:
     if os.path.exists(path):
         os.remove(path)
     commit([path], f"cut: {_subject(node.text)}")
+
+
+# ── grilling: an ask held, its questions surfaced one at a time, then spawned ──
+
+def hold(ask: str) -> Node:
+    """Hold the operator's ask while its grilling pass runs — owner's words, not work."""
+    n = _new("ask", GRILLING, "operator", ask, machine=False)
+    _persist(n, f"hold ask: {_subject(ask)}")
+    return n
+
+
+def question(parent_id: str, text: str, awaiting: bool) -> Node:
+    """A machine-owned grilling question on `parent_id`; on the queue or waiting its turn."""
+    n = _new("ask", AWAITING if awaiting else PENDING, "machine", text,
+             machine=True, parent=parent_id)
+    _persist(n, f"grill: {_subject(text)}")
+    return n
+
+
+def resolve(node: Node, answer: str) -> Node:
+    """Settle a grilling question with the operator's answer; it leaves the queue."""
+    node.text = f"{node.text}\n\nanswered: {answer.strip()}"
+    node.machine = False
+    node.owner = "operator"
+    node.state = "settled"
+    _persist(node, f"answer: {_subject(answer)}")
+    return node
+
+
+def surface(node: Node) -> Node:
+    """Bring the next pending question onto the queue — one question at a time."""
+    node.state = AWAITING
+    _persist(node, f"surface: {_subject(node.text)}")
+    return node
+
+
+def spawn(node: Node) -> Node:
+    """The ratified ask becomes standing work; the grilling pass is over."""
+    node.state = STANDING
+    _persist(node, f"spawn work: {_subject(node.text)}")
+    return node
 
 
 # ── durable write (the act lands atomically; the commit follows behind) ──────
@@ -138,9 +188,9 @@ def commit(paths: list[str], message: str) -> None:
 
 # ── on-disk form (legible markdown, one file per node) ───────────────────────
 
-def _new(kind, state, owner, text, machine) -> Node:
+def _new(kind, state, owner, text, machine, parent="") -> Node:
     return Node(uuid.uuid4().hex[:6], kind, state, owner, text.strip(),
-                machine, time.time())
+                machine, time.time(), parent)
 
 
 def _path(node_id: str) -> str:
@@ -170,13 +220,15 @@ def _read(path: str) -> Node:
         text=text,
         machine=machine,
         created=float(meta.get("created", "0") or 0),
+        parent=meta.get("parent", ""),
     )
 
 
 def _persist(node: Node, message: str) -> None:
     body = node.text + (f"\n\n{MARKER}" if node.machine else "")
+    rel = f"parent: {node.parent}\n" if node.parent else ""
     raw = (f"---\nkind: {node.kind}\nstate: {node.state}\n"
-           f"owner: {node.owner}\ncreated: {node.created:.0f}\n---\n{body}\n")
+           f"owner: {node.owner}\ncreated: {node.created:.0f}\n{rel}---\n{body}\n")
     atomic_write(_path(node.id), raw)         # the act lands at once
     commit([_path(node.id)], message)         # durability follows behind
 

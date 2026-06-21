@@ -16,7 +16,7 @@ import json
 import subprocess
 from dataclasses import dataclass, field
 
-from . import graph
+from . import graph, grill
 
 MODEL = "claude-opus-4-8"
 MODEL_LABEL = "opus 4.8"
@@ -51,23 +51,32 @@ class Reply:
     filed: graph.Node | None = None
     card: graph.Node | None = None
     done: bool = False
+    grilling: graph.Node | None = None          # an ask held for a grilling pass
+    questions: list[graph.Node] = field(default_factory=list)
 
 
 def speak(thread: Thread, text: str, transport=None) -> Reply:
     """One turn: feed the operator's words to the conversationalist and land
-    whatever consequence it returns on the graph."""
+    whatever consequence it returns on the graph. A filed ask does not become
+    work directly — it enters grilling (§5), and only files straight through when
+    it is below the floor."""
     transport = transport or _claude
     thread.add("operator", text)
     intent = _parse(transport(_prompt(thread)))
 
-    filed = graph.file_intent(intent["file"]) if intent.get("file") else None
+    filed = grilling = None
+    questions: list[graph.Node] = []
+    if intent.get("file"):
+        held, questions = grill.consider(intent["file"], transport)
+        grilling, filed = (held, None) if questions else (None, held)
     card = graph.raise_card(intent["card"]) if intent.get("card") else None
     say = (intent.get("say") or "").strip()
     thread.add("machine", say)
     done = bool(intent.get("done"))
     if done:
         thread.open = False
-    return Reply(say=say, filed=filed, card=card, done=done)
+    return Reply(say=say, filed=filed, card=card, done=done,
+                 grilling=grilling, questions=questions)
 
 
 def explain(node: graph.Node, transport=None) -> str:
