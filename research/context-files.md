@@ -167,7 +167,12 @@ work is the concrete assembly:
 0. **Earn the always-on file empirically.** §4.5: context files often don't help and add ~20% cost.
    So keep the agents file minimal and operational, do **not** auto-generate it, and **measure**
    whether it helps hypercore's own agents (an A/B on real tasks) before leaning on it — the same
-   verification ethos that settled the mechanics, applied to the worth.
+   verification ethos that settled the mechanics, applied to the worth. **"Minimal" is not defined
+   here and nothing about the file's content is committed** — what (if anything) goes in the agents
+   file is the operator's to set. The illustrative shape is a handful of operational lines (the check
+   command, the build/hand-back convention, a pointer to skills); the depth philosophy, "what
+   hypercore is" prose, and the per-capability self-model do **not** belong in it. The operator may
+   define "minimal" differently, or decline the agents file entirely; this is a lean, not a decision.
 1. **The assembly map.** For each role, partition its grounding: *minimal operational anchor* → the
    agents file; *the heavy expertise* (the worker's disciplines, each capability's self-model, the
    architect's design methodologies) → skills; *live task* → the prompt. Name the actual pieces and

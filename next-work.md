@@ -24,7 +24,9 @@ the model are settled below.
   guidance backs this), not the always-on agents file, which stays a thin operational anchor (the
   check command, the tools, a pointer). And the file's value for hypercore's own agents is to be
   **measured, not assumed**. (The earlier "role identity belongs in the agents files, always on" was
-  over-confident and is corrected.)
+  over-confident and is corrected.) **"Minimal" is not defined and nothing about the file's content
+  is committed** — what (if anything) goes in the agents file is the operator's to set, and the
+  operator may define it differently or decline the file entirely.
 - **The mechanics are verified on the real harnesses** — canary tests with **tools disabled** (so it
   is genuine auto-load, not the agent reading the file) + negative controls. [omp, claude] **OMP (the
   worker) auto-loads `AGENTS.md` from the worktree cwd**; **Claude (the architect) auto-loads
