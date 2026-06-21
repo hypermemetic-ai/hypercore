@@ -1,6 +1,6 @@
 """Slice 9 — the accepted-length ratchet: acceptance is bounded, and ratchets.
 
-Acceptance (next-work.md item 1, ADR 0008): a structured depth-decision that accepts a file no
+Acceptance (ADR 0008): a structured depth-decision that accepts a file no
 longer silences it forever. The acceptance is **bounded to the length it names** and **ratchets**:
 it clears the gate only while the file stays within that bar (plus a materiality margin), renewed
 growth past it re-opens the depth decision, and renewing the acceptance at the new length raises

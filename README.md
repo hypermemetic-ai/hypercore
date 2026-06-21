@@ -12,8 +12,10 @@ Start here (a fresh session reads these, in order — all in this repo):
    meant to be scanned whole — the high-signal core.
 3. `spec/decisions/` — the ADRs: every decision and its grounds, in order. The reference tail.
 
-`next-work.md` carries the running build journal. Run the acceptance harness with
-`python3 -m hyper --check`; open the live system with `python3 -m hyper`.
+The live work *is* the graph: `work/` holds the open execution graphs, `archive/` the folded
+ones — each a folder with its own `intent.md` (its ask and folding condition). That is hypercore
+dogfooding its own §structure (ADR 0011): the graph on disk is the folder, not the node. Run the
+acceptance harness with `python3 -m hyper --check`; open the live system with `python3 -m hyper`.
 
 ## Where it stands
 
@@ -40,7 +42,8 @@ from the repo documents (the single source) across three derived channels: a min
 worker holds the whole spec preloaded by construction (the slice-4 keystone); just-in-time is
 reserved for the reference tail. The depth single-sourcing (above) is the first step built; the
 derived-render / materialize-on-fold mechanism, the shared anchor, and the architect's skills land
-next, with the fenced-worker side on the parked multi-model harness seam. See `next-work.md`.
+next, with the fenced-worker side on the parked multi-model harness seam. See `work/role-assembly/`
+— currently paused under `work/graph-on-disk/` (conforming the engine to the folder shape, ADR 0011).
 
 ## On documents
 
