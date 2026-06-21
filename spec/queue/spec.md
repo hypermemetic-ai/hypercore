@@ -40,3 +40,23 @@ approval, not dressed as a decision.
 - WHEN the machine raises a card
 - THEN its kind records whether it is a decision or a lighter approval, so the
   weight of the card matches the weight of the call
+
+### Requirement: a grilling question is a card carrying its lean and flip
+A grilling question MUST appear on the queue as a card showing the decision, the
+machine's lean, and the one thing that would flip it — a lighter request for approval,
+not a decision dressed in full weight; approving it accepts the lean.
+
+#### Scenario: a question is shown
+- WHEN a grilling question reaches the queue
+- THEN its card carries the lean and the flip, and approving it accepts the lean while
+  the operator may instead answer in their own words
+
+### Requirement: work does not spawn until the view entry is ratified
+A behavior-changing ask MUST NOT become standing work until the operator ratifies its
+view entry. Ratifying the entry is the operator's informed go and the contract the
+result is later checked against; until then the held ask is neither a card to clear
+nor work in flight.
+
+#### Scenario: the gate holds
+- WHEN a grilling pass has produced its view entry but the operator has not ratified it
+- THEN no standing work exists for the ask, and ratifying the entry spawns it
