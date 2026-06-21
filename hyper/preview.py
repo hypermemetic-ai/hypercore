@@ -45,7 +45,10 @@ def run() -> int:
         print("  " + _flat(row))
     print("  " + _flat(render.footer(conversation.MODEL_LABEL, "input", "", "", WIDTH)))
 
-    print("\n  ── the operator view (root) ──\n")
+    # the operator view root, with the architecture review's standing output: the
+    # structural map of as-built reality (modules against the budget, debt marked) and
+    # the deepening backlog as the gap — the system's shape read without reading code.
+    print("\n  ── the operator view (root) · the architecture review's map ──\n")
     root = view.operator_view(root=real)
     for row in render.view_body(root, 0, WIDTH):
         print("  " + _flat(row))

@@ -73,7 +73,7 @@ def _deep_module(result, root: str | None) -> str | None:
         if not os.path.isfile(path):
             continue                        # removed by the graph — frees budget, never spends it
         n = sum(1 for _ in open(path, encoding="utf-8", errors="ignore"))
-        if n > BUDGET and not _justified(rel, root):
+        if n > BUDGET and not justified(rel, root):
             return (f"deep-module budget: {rel} is {n} lines, over the {BUDGET}-line ceiling, "
                     "with no decision record justifying it (rebuild-spec §7.1)")
     return None
@@ -88,9 +88,11 @@ def _touched_py(tree: str) -> list[str]:
     return [ln for ln in out.split() if ln.endswith(".py")]
 
 
-def _justified(rel: str, root: str | None) -> bool:
+def justified(rel: str, root: str | None) -> bool:
     """A file over budget is allowed only when a decision record names it — the ADR escape
-    hatch (§7.1): crossing the ceiling is a recorded trade-off, never a silent one."""
+    hatch (§7.1): crossing the ceiling is a recorded trade-off, never a silent one. Public
+    because the architecture review (`review`) consults the same budget and escape hatch for
+    its standing whole-tree scan — one budget, the per-graph gate and the standing scan."""
     d = os.path.join(spec.spec_dir(root), "decisions")
     if not os.path.isdir(d):
         return False

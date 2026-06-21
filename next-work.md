@@ -1,15 +1,35 @@
 # next work
 
-## Done — the worker's spec grounding (landed with slice 5, 2026-06-21)
+## Done — slice 6, the architecture review render (2026-06-21)
 
-The slice-4 worker was built **slice-confined** (`worker.context` returned only the touched
-capabilities) — the error build-handoff §9 names by name, and a violation of rebuild-spec
-§6.4 (the worker is the role with full scan access, whose rescan catches the
-conversationalist's mis-mapping). Corrected: `worker.context` now returns the **whole spec**
-with the touched capabilities flagged as grounding; `worker.prompt` foregrounds the grounding
-and carries the rest for the rescan; the `worker` spec requirement was MODIFIED to drop "its
-context is exactly those capabilities" and assert full scan + the mis-mapping rescan. The
-`_slice4` check now proves non-confinement and the mis-mapping keystone.
+The standing review (`hyper/review.py`, rebuild-spec §7.4) scans the source tree live for
+deepening opportunities — modules over or nearing the line-count budget — and renders two
+things from one scan: the **deepening backlog** (the engine that surfaces
+god-files-in-the-making) and the operator view's **upper levels**, a visual structural map
+of as-built reality with debt marked. The review is not a separate artifact: its output *is*
+the operator view's as-built and gap (`view.operator_view`), so the operator reads the
+system's shape without reading code (§9.6 acceptance met). It consults the budget
+`folding-conditions` owns — one budget, the per-graph gate at the fold and this standing
+whole-tree scan. New capability `architecture-review` (ADR 0005, the eighth and last unit ADR
+0001 forecast); self-model's view requirement MODIFIED to record the upper levels as the
+review's standing output.
+
+The first deepening work the review surfaced, landed in the same slice: the acceptance harness
+`hyper/check.py` (491 lines, over budget — ADR 0004 named it the first candidate) was split
+into the per-slice `hyper/check/` package (`harness` + `__init__` orchestrator + `slice1…6`),
+each well under budget, so the review reports the real tree honestly clean. Building the
+god-file *detector* while growing a god-file would have been self-contradictory.
+
+## Known debt — the justification escape hatch is a loose substring match
+
+`conditions.justified` (and so the review) treats a file as justified-over-budget when its
+basename merely *appears* in any decision record — not when the record actually justifies its
+size. It surfaced this slice: `check.py` read "(justified)" only because ADR 0004 *named* it
+while saying it should be split. The check.py split made it moot (no over-budget file remains),
+but the hole is latent: a future ADR that names a coincidentally-over-budget file would hide it.
+A tightening (require an explicit justification phrase, or a structured ADR field) is
+folding-conditions' to make and carries its own delta — not done here to avoid scope creep into
+slice 5's capability.
 
 ## Considered and declined — do not re-propose
 
@@ -18,14 +38,14 @@ was raised and **declined** by the operator (2026-06-21): §9 is a bootstrap art
 errors that tempted across the spec's revision rounds — not the critical invariant set, so it
 is not worth hardening, and a checklist of named errors buys false comfort against the gap
 that actually matters (unsurfaced, *un*-named drift). The real defenses against that gap are
-the worker fix above (restoring the §6.4 keystone — a second role with full scan the first
-can't suppress) and the architecture review (slice 6, a standing adversarial scan rendered to
-the operator). Knowing §9's errors exist is enough.
+the worker fix (the §6.4 keystone — a second role with full scan the first can't suppress) and
+the architecture review (slice 6, now built — a standing adversarial scan rendered to the
+operator). Knowing §9's errors exist is enough.
 
-## Next — slice 6 (the architecture review render)
+## Next — slice 7 (parallelism, re-grounded)
 
-The standing review (rebuild-spec §7.4) producing the operator view's **upper levels**
-("what the system is" at each altitude) and the deepening backlog — vision beside as-built,
-debt marked, read without reading code. One thread to pick up from slice 5: the acceptance
-harness `hyper/check.py` is over the line-count budget and is the first candidate for the
-per-slice split the deep-module discipline asks for (ADR 0004).
+The worktree concurrency now also serving design quality: the design-it-twice pattern
+(rebuild-spec §7.5, §9.7) for load-bearing interfaces — parallel workers in isolated worktrees
+producing genuinely different interfaces for one decision, compared on depth, locality, and
+seam placement. *Check:* concurrent workers advance one graph in isolation and each folds its
+delta; a load-bearing interface decision can be designed twice in parallel and compared.

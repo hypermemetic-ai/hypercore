@@ -7,18 +7,19 @@ sources, never hand-tended: read `intent.md` and `spec/` fresh and the view is
 current by construction.
 
 The vision is whole, not stored per capability; a capability's vision is a live
-slice of `intent.md` — the statements that name it. The gap render is deliberately
-coarse at this slice: per capability it surfaces the debt the spec marks on itself;
-at the root it gathers that debt and names what the architecture review (a later
-slice) will deepen. Being honest about its own shallowness is the debt-marking the
-view is meant to do.
+slice of `intent.md` — the statements that name it. The upper levels' "what the
+system is" and the deepening backlog are the standing output of the architecture
+review (`review`, §7.4): the root's structural map of the modules against the budget
+is its as-built, and the review's findings are the gap the operator reads. Per
+capability the gap still surfaces the debt the spec marks on itself; the review
+gathers the system-wide deepening work at the root.
 """
 from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
 
-from . import graph, spec
+from . import graph, review, spec
 
 DEBT = ("NOTE:", "unbuilt", "shallow")
 
@@ -39,6 +40,7 @@ class ViewNode:
     title: str
     vision: list[str] = field(default_factory=list)
     asbuilt: list[str] = field(default_factory=list)
+    structure: list[str] = field(default_factory=list)   # the review's module map (root only)
     gap: list[str] = field(default_factory=list)
     children: list["ViewNode"] = field(default_factory=list)
 
@@ -46,15 +48,17 @@ class ViewNode:
 def operator_view(root: str | None = None) -> ViewNode:
     sp = spec.read_spec(root)
     intent = _read_intent(root)
+    rv = review.review(root)
     caps = [_capability_node(c, intent) for c in sp.capabilities]
 
-    debt = [f"{c.title}: {g}" for c in caps for g in c.gap]
+    cap_debt = [f"{c.title}: {g}" for c in caps for g in c.gap]
     return ViewNode(
         title="hypercore",
         vision=[f"{title}: {stmts[0]}" for title, stmts in intent if stmts],
         asbuilt=[f"{c.name} — {len(c.requirements)} requirements"
                  for c in sp.capabilities],
-        gap=debt + ["the full gap is the architecture review's to draw — unbuilt"],
+        structure=review.bars(rv),                       # what the system is, as a picture
+        gap=review.backlog(rv) + cap_debt,               # the deepening backlog, then per-cap debt
         children=caps,
     )
 

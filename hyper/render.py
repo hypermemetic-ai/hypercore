@@ -113,6 +113,15 @@ def view_body(node, sel: int, width: int) -> list[Row]:
 
     block("vision", node.vision, SAY)
     block("as-built", node.asbuilt, CARD)
+
+    structure = getattr(node, "structure", None)         # the architecture review's map
+    if structure:
+        rows.append([("structure  ·  modules against the budget", HEAD)])
+        for line in structure:
+            style = TAG if "✗" in line else CARD         # debt marked, in line
+            rows.append([("    ", style), (line, style)])
+        rows.append([])
+
     block("gap", node.gap, TAG)
 
     if node.children:
