@@ -160,5 +160,28 @@ it sharpens inside grilling as work folds.
   working code as not enough and invest in the design that keeps the system cheap to
   change. The worker is grounded to be strategic — to build deep up front.
 
+- **design-it-twice** — the judgment use of the worktree concurrency: for a load-bearing
+  interface, designing the decision several ways in parallel before committing one, then picking
+  the deepest (Ousterhout, rebuild-spec §7.5). The fence that isolates a worker for throughput
+  isolates several candidates for design quality.
+
+- **design contest** — the run of design-it-twice on one decision: a set of candidates, the
+  architect's comparison, and the recorded pick. It is not a node kind; it is several fenced
+  candidates under one decision.
+
+- **candidate** — one shape in a design contest: a design built to one **design brief**, in its
+  own fence, isolated from its siblings. It produces an interface **design**, not an
+  implementation — the interface, what it hides, the seam, and the depth argument.
+
+- **design brief** — the instruction that pushes a candidate toward a radically different shape:
+  minimize the interface / maximize flexibility / optimize the common caller / ports-and-adapters
+  (rebuild-spec §7.5). Different briefs make the contest span real alternatives.
+
+- **design-decision** — the architect's machine-side pick among candidates, recorded as a
+  structured `design-decision: <subject> → <chosen> — <reason>` line in an ADR — the same
+  structured-record idiom the depth-decision uses. A load-bearing interface choice is hard to
+  reverse, so it is ADR-worthy; the operator sees it only when the comparison reveals a
+  stake-bearing difference (the standing-guard floor).
+
 - **ADR** — a recorded decision, kept sparingly: only when it is hard to reverse,
   surprising without context, and the result of a real trade-off.

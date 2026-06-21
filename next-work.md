@@ -1,5 +1,60 @@
 # next work
 
+## Done — slice 8, parallelism re-grounded: design-it-twice (2026-06-21)
+
+The worktree fence — slice 4's throughput isolation — now also serves design quality. For a
+load-bearing interface the architect judges worth it, the decision is **designed twice**:
+several **candidates**, each in its own fence (the fence, tagged per candidate), each briefed to
+design the *same* interface radically differently (§7.5's four briefs), and the architect picks
+or hybridizes on **depth, locality, and seam placement**. What landed:
+
+- **`design-it-twice` is its own capability** (`spec/design-it-twice/`, `hyper/design.py`; ADR
+  0007). It orchestrates `worker` (borrows the fence) and `conversation` (the architect judges)
+  without belonging to either — the same boundary logic as `architecture-review` (0005). The
+  deep entry is `design.design_twice(node, briefs, transport, root)`: it hides the parallel
+  candidate fences, the comparison, the ADR write, the stake-escalation, and the teardown.
+- **Selection is machine-side — the operator ratified this** (the one fork grilled this slice;
+  chosen over an operator-facing card and over machine-picks-but-always-notify). The architect
+  compares and records the pick as a **structured design-decision** ADR
+  (`design-decision: <subject> → <chosen> — <reason>`, the depth-decision idiom). The interface
+  shape is machine-side like the spec delta — the operator's anchor is the contract, not the
+  machine-side design (§6.4). The pick does not spend the operator's go.
+- **A stake-bearing difference still reaches the operator** — the standing-guard floor (§5.1):
+  when the comparison reveals a difference the operator has a stake in, it re-enters grilling as
+  a card carrying only the architect-authored stake. The candidate designs and the reasoning
+  stay machine-side; the leak path that would put raw designs on a card does not exist.
+- **Candidates design, they do not implement** — interface + what it hides + the seam + the
+  deletion-test argument; depth/locality/seam are judgable from the design, and the winner
+  carries forward as the contract for one ordinary `apply`. Cheap; no thrown-away builds.
+- **The concurrency clause is composition, not a scheduler.** "Concurrent workers advance one
+  graph in isolation and each folds its delta" is satisfied by the slice-4 fence composing — two
+  workers, two fences, two independent folds, no interference. No throughput scheduler was built;
+  the judgment use is the slice, held apart from throughput parallelism as the queue note asked.
+- **The fence gained a tagged-sibling form** (`worker.worktree(..., tag=)`) and a shared
+  `worker.commit_tree` — the one in-fence commit primitive both a worker result and a candidate
+  design land through, so the fence-commit knowledge stays in one place (no duplication).
+
+Spec deltas across the new `design-it-twice`, `conversation` (the architect's selection
+judgment), `worker` (concurrent workers fold in isolation), and the glossary (design-it-twice,
+design contest, candidate, design brief, design-decision). ADR 0007 records the boundary +
+machine-side selection. Acceptance extended — `hyper/check/slice8.py` (18 checks) — and **all of
+slices 1–8 pass** (`python3 -m hyper --check`, 107 checks, 0 fail). rebuild-spec §7.5/§9.8 are
+the external methodology doc (`~/Documents/rebuild-spec-1.md`), not in this repo's commit.
+
+### The fork, resolved by the operator
+
+- **Selection lands machine-side** (operator's choice during grilling). The architect picks and
+  records an ADR; the operator sees it only on a stake-bearing difference. Recorded in ADR 0007
+  as operator-ratified, the rest of that ADR machine-owned awaiting ratification.
+
+### Honestly not-yet-wired (recorded, not fabricated — the slice-7 F1 precedent)
+
+The capability is invoked on the architect's judgment that an interface is load-bearing.
+**Automatic detection of "load-bearing" inside live grilling** is the natural next integration
+— a model judgment like the stake-floor, not deterministically harness-testable — so it is
+recorded as the standing job to grow, not faked. The mechanism (contest → compare → record →
+escalate) ships complete and tested.
+
 ## Done — slice 7, the architecture re-grounded in depth (Ousterhout) (2026-06-21)
 
 Phase 3 landed. The line-count budget and the slice-6 `check.py` split were reconsidered against
@@ -66,18 +121,14 @@ matters (unsurfaced, *un*-named drift). The real defenses against that gap are t
 (slice 6 — a standing adversarial scan rendered to the operator). Knowing §9's errors exist is
 enough.
 
-## Next — slice 8 (parallelism, re-grounded)
+## Next — the two items raised after slice 7
 
-The worktree concurrency now also serving design quality: the **design-it-twice** pattern
-(rebuild-spec §7.5) for load-bearing interfaces — parallel workers in isolated worktrees producing
-genuinely different interfaces for one decision, compared on **depth, locality, and seam
-placement** and picked or hybridized with a strong recommendation. This is hypercore's existing
-concurrency model (isolated worktrees) applied to the one place first-draft commitment hurts most:
-the shape of a deep module. Hold Ousterhout's design-it-twice (a *judgment* discipline) apart from
-throughput parallelism — slice 8 is the judgment use.
-
-*Check:* concurrent workers advance one graph in isolation and each folds its delta; a
-load-bearing interface decision can be designed twice in parallel and compared.
+The eight planned slices (rebuild-spec §9) are built. The next work is the two items the operator
+raised after slice 7, recorded below: **(1)** the accepted-length ratchet — *settled, build it*;
+**(2)** AGENTS.md / context-files — *investigate* (verify `claude -p` auto-loads them first).
+Item 1 is the clean next slice — it folds into exactly what slice 7 built (`conditions.accepted`,
+the structured depth-decision record, the review's `accepted` status), and now also touches
+slice 8's structured `design-decision` idiom, which shares the same record shape.
 
 ## Raised for a later session — not yet worked (operator, 2026-06-21)
 

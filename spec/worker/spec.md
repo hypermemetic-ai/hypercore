@@ -63,6 +63,18 @@ integrates.
 - THEN it gets a worktree distinct from the main tree, commits its result there on its own
   branch, and that commit is reachable in the record but absent from the main line
 
+### Requirement: concurrent workers advance the graph in isolation, each folding its own delta
+The fence MUST compose: several workers MAY hold distinct worktrees at once, each building and
+committing on its own branch, none touching a sibling's tree or the main line, and each folding
+its own delta into the one spec independently. Isolation is the concurrency model — throughput is
+many fences at once, and the same composition is what `design-it-twice` runs a contest of
+candidates on (rebuild-spec §7.5).
+
+#### Scenario: two workers advance at once
+- WHEN two workers hold two distinct fences at the same time
+- THEN each commits in its own tree off the main line, and each folds its own delta into the
+  spec with no interference between them
+
 ### Requirement: the worker applies and refines the delta the architect proposed
 A worker MUST rescan the current spec to verify the handed delta against present reality,
 build behind a feedback loop, and refine the delta to match what it built; the

@@ -162,26 +162,37 @@ def prompt(node: graph.Node, ctx: WorkerContext) -> str:
 
 # ── the fence (a real, separate git worktree on its own branch) ──────────────
 
-def worktree(node: graph.Node, root: str | None = None) -> str:
+def worktree(node: graph.Node, root: str | None = None, tag: str = "") -> str:
     """Cut the worker a fenced tree: a separate checkout on branch worker/<id>. It builds
     here in isolation; its commits land in the shared object store without touching the
-    main line or a sibling's tree."""
+    main line or a sibling's tree. `tag` distinguishes sibling fences on one node — the
+    design-it-twice contest cuts one per candidate (branch worker/<id>-<tag>), so several
+    candidates advance the same decision in isolation from each other."""
     base = root or graph._root()
-    path = _tree_path(node, base)
+    path = _tree_path(node, base, tag)
     if os.path.isdir(path):
         return path
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    _git(base, "worktree", "add", "-b", f"worker/{node.id}", path, "HEAD")
+    _git(base, "worktree", "add", "-b", _branch(node, tag), path, "HEAD")
     return path
 
 
-def teardown(node: graph.Node, root: str | None = None) -> None:
+def teardown(node: graph.Node, root: str | None = None, tag: str = "") -> None:
     """Tear the fence down once the result has integrated: remove the worktree and its
     branch. The work has reached the one record through the fold, not through this branch."""
     base = root or graph._root()
-    path = _tree_path(node, base)
+    path = _tree_path(node, base, tag)
     _git(base, "worktree", "remove", "--force", path)
-    _git(base, "branch", "-D", f"worker/{node.id}")
+    _git(base, "branch", "-D", _branch(node, tag))
+
+
+def commit_tree(tree: str, message: str) -> None:
+    """Commit everything in a fence to the one record — the in-fence commit primitive, kept
+    in one place because the fence is the worker's concern. Both the worker's result and a
+    design-it-twice candidate's design land through it, fenced from the main line until they
+    integrate."""
+    _git(tree, "add", "-A")
+    _git(tree, "commit", "-m", message)
 
 
 # ── apply: the worker builds, fenced and grounded, and hands back ────────────
@@ -243,8 +254,13 @@ def _decisions(root: str | None) -> str:
                        for n in sorted(os.listdir(d)) if n.endswith(".md"))
 
 
-def _tree_path(node: graph.Node, base: str) -> str:
-    return os.path.join(base, "work", "worktrees", node.id)
+def _tree_path(node: graph.Node, base: str, tag: str = "") -> str:
+    name = node.id + (f"-{tag}" if tag else "")
+    return os.path.join(base, "work", "worktrees", name)
+
+
+def _branch(node: graph.Node, tag: str = "") -> str:
+    return f"worker/{node.id}" + (f"-{tag}" if tag else "")
 
 
 def _record(tree: str, report: str, refined: str, loop: dict) -> None:
@@ -256,8 +272,7 @@ def _record(tree: str, report: str, refined: str, loop: dict) -> None:
     loop_md = "\n".join(f"- {k}: {loop.get(k, '')}" for k in ("command", "red", "green"))
     body = f"# worker result\n\n## report\n{report}\n\n## delta\n{refined}\n\n## loop\n{loop_md}\n"
     graph.atomic_write(os.path.join(tree, "RESULT.md"), body)
-    _git(tree, "add", "-A")
-    _git(tree, "commit", "-m", "worker: result")
+    commit_tree(tree, "worker: result")
 
 
 def _git(cwd: str, *args: str) -> None:

@@ -5,9 +5,10 @@ architect is the single voice between the operator and the system, which
 reads the operator's words and lands one concrete consequence on the graph.
 The role is named **architect** because it holds the operator-aligned **design
 judgment** — it authors the spec delta (the design of the change), renders it back to
-the operator, and judges **depth** at the archive gate — and communicating a design is
-part of designing it (rebuild-spec §6, ADR 0006). The capability stays `conversation`:
-the thread is a conversation and the operator-facing channel is what it owns.
+the operator, judges **depth** at the archive gate, and **selects** among design-it-twice
+candidates — and communicating a design is part of designing it (rebuild-spec §6, ADR 0006).
+The capability stays `conversation`: the thread is a conversation and the operator-facing
+channel is what it owns.
 
 ### Requirement: a thread is throwaway and holds no durable state
 A thread MUST be one conversational session, opened when the operator types in and
@@ -72,6 +73,20 @@ its own product is the defense against self-judging.
 - WHEN a worker hands back material past the length signal with no depth-decision accepting it
 - THEN the architect raises a depth decision (re-cut / deepen / accept-with-reason) and the
   fold is held — the depth surfaces to the operator, not a length number's verdict
+
+### Requirement: the architect selects among design-it-twice candidates
+For a load-bearing interface designed twice (`design-it-twice`), the architect MUST compare the
+candidates on depth, locality, and seam placement and pick or hybridize — machine-side design
+judgment recorded as an ADR, not an operator decision (rebuild-spec §6.4, §7.5, ADR 0007). It
+surfaces a card only when the comparison reveals a stake-bearing difference, which re-enters
+grilling (§5.1). The candidate designs and the reasoning stay machine-side; only the
+architect-authored stake crosses to the operator, the same routing as a raw worker output.
+
+#### Scenario: the architect picks the interface
+- WHEN candidate interfaces for a load-bearing decision are handed to the architect
+- THEN it records the pick as a structured design-decision ADR and raises no card unless a
+  stake-bearing difference surfaces, in which case the authored stake — not the raw designs —
+  reaches the operator
 
 ### Requirement: a filed ask is grilled before it becomes work
 An ask that opens real choices MUST pass a grilling floor before spawning work: the
