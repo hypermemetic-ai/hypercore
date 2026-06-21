@@ -84,8 +84,9 @@ def skill(root: str | None = None) -> str:
 def materialize(root: str | None = None) -> str:
     """Write the depth skill artifact to disk and return its path. The one new mechanism ADR 0009
     names: unlike the live-rendered operator view, a skill is a static file an external harness
-    auto-loads, so it must be *materialized*. The fold's render step regenerates it from source
-    (build step 2); here it is the artifact created for the seam, single-sourced like the rest."""
+    auto-loads, so it must be *materialized*. The fold's render step regenerates it from source —
+    this is the first channel `channels.materialize` drives (role-assembly step 2), single-sourced
+    like the rest; the artifact stands ready for when the parked harness seam loads skills natively."""
     path = os.path.join(root or graph._root(), SKILL_PATH)
     graph.atomic_write(path, skill(root))
     return path

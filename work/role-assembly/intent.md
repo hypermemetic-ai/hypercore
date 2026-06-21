@@ -26,11 +26,14 @@ whole spec unchanged; the worker-fenced side is parked, not faked, on the pi/OMP
 - **step 1 — retire `worker.DEPTH`.** The depth grounding renders from `spec/depth.md`
   (`hyper/depth.py`); the `depth` skill artifact materializes at `skills/depth/SKILL.md`; slice 10
   pins it. (slice 10, ADR 0009; the source moved to `spec/depth.md` in ADR 0010.)
+- **step 2 — materialize-on-fold.** The fold (`delta.fold`) gained a render step that re-derives the
+  static channels from the spec and commits them in the same act, so a committed artifact cannot drift
+  from its source. `hyper/channels.py` is the registry — one `CHANNELS` list, `materialize()` the one
+  act — with `depth.materialize` its first (today only) target; steps 3–4 append to it. `skills/` is
+  now regenerated output, not a loose root render. (slice 11, ADR 0009 §3.)
 
 ## open steps (buildable now, none needs the harness seam)
 
-- **step 2 — materialize-on-fold.** The fold gains a render step that regenerates `skills/` and the
-  agents file from source; `depth.materialize` is the first target.
 - **step 3 — the minimal shared `AGENTS.md` + `CLAUDE.md` symlink.** Operator content — what
   "minimal" means, what (if anything) goes in it, whether to have one at all, and to **measure** (an
   A/B) before leaning on it (§4.5: context files often don't help, add ~20% cost). Blocked on the

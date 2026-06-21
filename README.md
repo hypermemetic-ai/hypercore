@@ -40,18 +40,21 @@ Since the slices, the repo was made to obey its own §structure (ADR 0010–0012
 the graph — `work/` (open) + `archive/` (folded), each graph a folder with its `intent.md`.
 `hyper/graph.py` is now folder-native (fold = move the folder, `work/`→`archive/`) and grilling lives
 in each graph's `grilling.md`; `next-work.md` is retired and `research/` dissolved into material on
-its node. 139 checks green.
+its node. 147 checks green.
 
 **Next — item 2 (role assembly, ADR 0009).** Two roles, each maximally specialized, assembled
 from the repo documents (the single source) across three derived channels: a minimal shared
 `AGENTS.md` (symlinked as `CLAUDE.md`), on-demand **skills**, and the per-episode **prompt**. The
 worker holds the whole spec preloaded by construction (the slice-4 keystone); just-in-time is
-reserved for the reference tail. The depth single-sourcing (above) is the first step built; the
-derived-render / materialize-on-fold mechanism, the shared anchor, and the architect's skills land
-next, with the fenced-worker side on the parked multi-model harness seam. The open arc is
-`work/role-assembly/` (its `intent.md` carries the steps); the immediate next is **step 2 —
-materialize-on-fold**, where the fold regenerates `skills/` from source and `skills/` (the last loose
-root render) becomes regenerated output. The engine conformance is done (`archive/graph-on-disk/`).
+reserved for the reference tail. The depth single-sourcing (step 1) and **materialize-on-fold**
+(step 2, slice 11) are built: the fold (`delta.fold`) now re-derives the static channels from the spec
+via `hyper/channels.py` — a one-line registry steps 3–4 plug into — so `skills/` is regenerated output,
+not a loose root render, and a committed artifact cannot drift from its source. Landing next: the
+minimal shared `AGENTS.md` anchor (step 3, operator content), then the architect's methodology skills
+(step 4), with the fenced-worker side on the parked multi-model harness seam. The open arc is
+`work/role-assembly/` (its `intent.md` carries the steps); the immediate next is **step 3 — the
+minimal shared `AGENTS.md` + `CLAUDE.md` symlink** (blocked on the operator's word on what goes in it).
+The engine conformance is done (`archive/graph-on-disk/`).
 
 ## On documents
 

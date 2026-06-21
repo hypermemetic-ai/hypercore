@@ -35,7 +35,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 
-from . import graph, spec
+from . import channels, graph, spec
 
 VERBS = ("ADDED", "MODIFIED", "REMOVED")
 
@@ -140,9 +140,13 @@ def fold(delta: Delta | None, root: str | None = None) -> None:
         base = open(path).read() if os.path.isfile(path) else _seed(name)
         graph.atomic_write(path, _apply(base,
                                         [o for o in delta.ops if o.capability == name]))
-    if touched:
-        paths = [spec.cap_path(n, root) for n in touched]
-        graph.commit(paths, f"fold: {delta.subject or 'delta'} → {', '.join(touched)}")
+    # The render step: every fold re-derives the static channels (skills, the agents file) from the
+    # spec, so a committed artifact cannot drift from its source — committed in the same act as the
+    # spec change (ADR 0009 §3). Idempotent: an unchanged source re-renders identically and the
+    # commit no-ops, so even a trivial fold safely keeps the channels current.
+    rendered = channels.materialize(root)
+    paths = [spec.cap_path(n, root) for n in touched] + rendered
+    graph.commit(paths, f"fold: {delta.subject or 'delta'} → {', '.join(touched) or 'channels'}")
 
 
 def _seed(name: str) -> str:
