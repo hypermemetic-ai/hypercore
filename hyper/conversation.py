@@ -6,7 +6,10 @@ durability lands on the graph. The conversationalist reads the operator's words
 and lands one concrete consequence: a filed intent (standing work), a card
 returned to the queue, or an answer (with the thread closed when satisfied).
 
-Slice 1 stubs "the work": filing intent records the node and nothing runs yet.
+The conversationalist no longer stubs the work: a ratified ask spawns standing
+work, a worker builds it fenced (`worker`), and `integrate` is the archive stage —
+it coherence-checks the result against the contract and authors every operator-facing
+word from it, so a worker's raw output reaches the operator through no path at all.
 The model transport is injectable — a live `claude -p` session in the window, a
 scripted fake in the acceptance check.
 """
@@ -16,7 +19,7 @@ import json
 import subprocess
 from dataclasses import dataclass, field
 
-from . import graph, grill
+from . import delta, graph, grill
 
 MODEL = "claude-opus-4-8"
 MODEL_LABEL = "opus 4.8"
@@ -77,6 +80,41 @@ def speak(thread: Thread, text: str, transport=None) -> Reply:
         thread.open = False
     return Reply(say=say, filed=filed, card=card, done=done,
                  grilling=grilling, questions=questions)
+
+
+COHERENCE = (
+    "You are hypercore's conversationalist, archiving a worker's hand-off. Judge "
+    "coherence at the operator's altitude: does the result honor the contract? This is "
+    "not a code review. The worker's report below is for you alone and MUST NOT reach "
+    "the operator — author any operator-facing words yourself, short and plain. Reply "
+    'with ONLY a JSON object:\n{"coherent": <true if the result honors the contract>, '
+    '"say": <your plain note to the operator about what landed, or what is in doubt>, '
+    '"card": <if not coherent, the decision to put on the queue — re-cut, abandon, or '
+    'change the ask — else null>}'
+)
+
+
+def integrate(node: graph.Node, result, transport=None, root: str | None = None) -> Reply:
+    """The archive stage: take a worker's hand-off, coherence-check it against the
+    contract, and on a pass fold its refined delta into the spec — the work integrates and
+    leaves the threads view in the same act. The worker's raw report is *input* to the
+    conversationalist's judgment, never output: every operator-facing word here is authored
+    fresh, so the report crosses to the operator through no path. An incoherent result
+    raises a decision (re-cut / abandon / change the ask) rather than folding."""
+    transport = transport or _claude
+    verdict = _parse(transport(
+        f"{COHERENCE}\n\nThe contract:\n{grill.contract_of(node)}\n\n"
+        f"The worker's report (machine-facing — do not forward):\n{result.report}\n\n"
+        "Reply with the JSON object now."))
+    say = (verdict.get("say") or "").strip()
+    if not verdict.get("coherent"):
+        card = graph.raise_card(verdict.get("card") or say or
+                                "the result did not honor the contract",
+                                kind="decide", parent=node.id)
+        return Reply(say=say, card=card)
+    delta.fold(delta.parse(result.delta), root)        # archive ⟺ fold, one act
+    graph.integrated(node)
+    return Reply(say=say, done=True)
 
 
 def explain(node: graph.Node, transport=None) -> str:

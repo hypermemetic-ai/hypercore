@@ -40,11 +40,15 @@ def main_body(nodes: list[graph.Node], sel: int, width: int = 76) -> list[Row]:
 
     rows.append([])
     rows.append([("threads", HEAD)])
-    work = graph.standing(nodes)
-    if not work:
+    threads = graph.work(nodes)
+    if not threads:
         rows.append([("  — no standing work —", DIM)])
-    for n in work:
-        rows.append([("  · ", CARD), (_subject(n.text), CARD)])
+    for n in threads:
+        if n.is_live:
+            rows.append([("  ⟳ ", LIVE), (_subject(n.text), CARD),
+                         ("   a worker is on it", LIVE)])
+        else:
+            rows.append([("  · ", CARD), (_subject(n.text), CARD)])
 
     return rows
 

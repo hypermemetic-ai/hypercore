@@ -143,6 +143,17 @@ def delta_of(node: graph.Node) -> str:
     return parts[1].strip() if len(parts) == 2 else ""
 
 
+def entry_of(ask: graph.Node) -> graph.Node | None:
+    """The view entry hung off a spawned ask — the propose-stage product a worker reads
+    for its handed delta, and the conversationalist later checks the result against."""
+    return next((c for c in graph.children(ask.id) if is_entry(c)), None)
+
+
+def contract_of(ask: graph.Node) -> str:
+    entry = entry_of(ask)
+    return contract(entry) if entry else ""
+
+
 # ── internals ────────────────────────────────────────────────────────────────
 
 def _q_text(q: Question) -> str:

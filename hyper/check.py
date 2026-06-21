@@ -108,12 +108,13 @@ def run() -> int:
 
     _slice2(root)
     _slice3(root)
+    _slice4(root)
 
     print()
     if _fails:
         print(f"  {_fails} FAILED\n")
         return 1
-    print("  all checks pass — slices 1–3 meet their acceptance checks\n")
+    print("  all checks pass — slices 1–4 meet their acceptance checks\n")
     return 0
 
 
@@ -259,3 +260,107 @@ def _slice3(root: str) -> None:
         '{"questions":[]}'))
     ok(r2.filed is not None and r2.grilling is None, "a below-floor ask files directly")
     ok(len(graph.standing()) == base + 2, "the below-floor ask is standing work, ungrilled")
+
+
+def _slice4(root: str) -> None:
+    """Acceptance (spec §9.4): a worker is grounded in its capability's spec slice by
+    construction; it runs fenced in its own git worktree; and its raw output reaches the
+    operator through no path — the conversationalist authors every operator-facing word
+    and folds the refined delta. Drives propose→apply→archive end to end with scripted
+    transports over the real graph and a real worktree."""
+    import json
+
+    from . import conversation, delta, graph, render, spec, worker
+
+    print("\nslice 4 — acceptance check  (workers, with spec-scoped context)\n")
+
+    # the propose-stage product, ratified: a spawned ask carrying a contract and a handed
+    # delta that touches two existing capabilities (worker, conversation).
+    handed = (
+        "## ADDED — worker\n"
+        "### Requirement: a worker checkpoints its progress\n"
+        "The worker MUST record a checkpoint the conversationalist can read.\n"
+        "#### Scenario: a checkpoint\n- WHEN a worker pauses\n- THEN its progress is recorded\n\n"
+        "## ADDED — conversation\n"
+        "### Requirement: the conversationalist names the worker in the record\n"
+        "The conversationalist MUST record which worker a result came from.\n"
+        "#### Scenario: a hand-off\n- WHEN a result is archived\n- THEN the worker is named\n")
+    ask = graph.file_intent("give workers a progress checkpoint")
+    graph.approve(graph.raise_card(
+        "Workers checkpoint progress, and the record names the worker.\n\ndelta:\n" + handed,
+        kind="decide", parent=ask.id))                    # the ratified contract
+
+    # 1. the spec slice, by construction: the context is exactly the touched capabilities
+    ctx = worker.context(ask)
+    ok(set(ctx.names) == {"worker", "conversation"},
+       f"the worker's context is sliced to the capabilities its delta touches ({', '.join(sorted(ctx.names))})")
+    prompt = worker.prompt(ask, ctx)
+    ok("### Requirement:" in prompt and "throwaway operator-facing vessel" in prompt,
+       "the slice carries the touched capability specs and the glossary, by construction")
+    ok("import " not in prompt and "curses" not in prompt,
+       "the worker is grounded in the spec, never the code")
+
+    # 2. the fence: a real worktree, separate from the main line
+    tree = worker.worktree(ask, root)
+    ok(os.path.isdir(tree) and os.path.join("work", "worktrees") in tree and tree != root,
+       "the worker gets its own worktree under work/worktrees, separate from the main tree")
+    listed = subprocess.run(["git", "worktree", "list", "--porcelain"], cwd=root,
+                            capture_output=True, text=True).stdout
+    ok(ask.id in listed, "the worktree is a real, registered git worktree")
+    graph.delegate(ask)
+    ok(graph.find(ask.id).is_live and ask.id in [n.id for n in graph.work()],
+       "the delegated work goes live on the threads view while the worker runs")
+
+    # the worker builds and hands back a machine-facing result carrying raw prose
+    SENTINEL = "<<RAW WORKER RAMBLE — walls of rambling text>>"
+    result = worker.apply(ask, scripted(json.dumps({
+        "report": "Implemented the checkpoint behind a red→green loop. " + SENTINEL,
+        "delta": handed,
+        "loop": "asserted checkpoint absence (red), added it (green)"})), root)
+    ok(SENTINEL in result.report, "the worker produced a raw, machine-facing report")
+
+    # its own commit reached the record in its own tree, fenced from the main line
+    on_branch = subprocess.run(["git", "log", "--oneline", f"worker/{ask.id}"], cwd=root,
+                               capture_output=True, text=True).stdout
+    off_main = subprocess.run(["git", "cat-file", "-e", "HEAD:RESULT.md"], cwd=root,
+                              capture_output=True, text=True).returncode
+    ok("worker: result" in on_branch and off_main != 0,
+       "the worker's commit is in the record on its own branch, absent from the main line")
+
+    # 3. archive: the conversationalist coherence-checks and folds; the raw report leaks nowhere
+    reply = conversation.integrate(ask, result, scripted(json.dumps({
+        "coherent": True,
+        "say": "Workers now checkpoint progress; it landed.",
+        "card": None})), root)
+    ok(reply.done, "the conversationalist judged the result coherent and archived it")
+    ok(SENTINEL not in reply.say, "the conversationalist authored its own words, not the raw report")
+
+    sp = spec.read_spec(root)
+    ok(sp.capability("worker").requirement("a worker checkpoints its progress") is not None
+       and sp.capability("conversation").requirement(
+           "the conversationalist names the worker in the record") is not None,
+       "the refined delta folded into the spec in the same act")
+
+    # the raw report has no operator-facing or durable home anywhere
+    frame = "".join(t for row in render.main_body(graph.read_graph(), -1) for t, _s in row)
+    ndir = os.path.join(root, "work", "nodes")
+    nodefiles = "".join(open(os.path.join(ndir, n)).read() for n in os.listdir(ndir))
+    cards_text = "".join(c.text for c in graph.read_graph())
+    ok(SENTINEL not in frame and SENTINEL not in nodefiles and SENTINEL not in cards_text,
+       "the raw worker report reaches no card, no render, and no node — the leak path does not exist")
+
+    ok(graph.find(ask.id).state == graph.DONE and ask.id not in [n.id for n in graph.work()],
+       "the integrated work folded out of the threads view")
+
+    worker.teardown(ask, root)
+    ok(not os.path.isdir(tree), "the fence is torn down once the result integrates")
+
+    # the fold can grow a brand-new capability — the machinery the worker capability needed
+    delta.fold(delta.parse(
+        "## ADDED — scheduling\n"
+        "### Requirement: the scheduler cuts the next seam while work remains\n"
+        "The scheduler MUST keep building while any unblocked work remains.\n"
+        "#### Scenario: work remains\n- WHEN a ready leaf exists\n- THEN a session takes it"),
+        root)
+    ok(spec.read_spec(root).capability("scheduling") is not None,
+       "an ADDED requirement in an absent capability creates that capability on fold")

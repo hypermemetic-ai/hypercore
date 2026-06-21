@@ -24,7 +24,11 @@ On disk a delta is `delta.md` in a graph's folder:
     ## REMOVED — <capability>
     ### Requirement: <name>
 
-A delta with no `## VERB — capability` sections is trivial and applies nothing.
+A delta with no `## VERB — capability` sections is trivial and applies nothing. An
+ADDED requirement in a capability that does not yet exist *creates* that capability —
+how the self-model grows a new top-level unit as the work reveals one (ADR 0001
+forecast this; the worker capability is the first). MODIFIED or REMOVED in an absent
+capability is still a mismatch and cannot fold.
 """
 from __future__ import annotations
 
@@ -106,7 +110,9 @@ def check(delta: Delta | None, sp: spec.Spec) -> str | None:
             return f"unknown verb {op.verb!r}"
         cap = sp.capability(op.capability)
         if cap is None:
-            return f"unknown capability {op.capability!r}"
+            if op.verb != "ADDED":
+                return f"{op.verb} in an absent capability: {op.capability!r}"
+            continue  # ADDED into an absent capability creates it on fold
         present = cap.requirement(op.requirement.name) is not None
         if op.verb == "ADDED" and present:
             return f"ADDED requirement already exists: {op.requirement.name!r}"
@@ -131,11 +137,19 @@ def fold(delta: Delta | None, root: str | None = None) -> None:
     touched = sorted({op.capability for op in delta.ops})
     for name in touched:
         path = spec.cap_path(name, root)
-        graph.atomic_write(path, _apply(open(path).read(),
+        base = open(path).read() if os.path.isfile(path) else _seed(name)
+        graph.atomic_write(path, _apply(base,
                                         [o for o in delta.ops if o.capability == name]))
     if touched:
         paths = [spec.cap_path(n, root) for n in touched]
         graph.commit(paths, f"fold: {delta.subject or 'delta'} → {', '.join(touched)}")
+
+
+def _seed(name: str) -> str:
+    """The base for a capability the fold is creating: only its name. The machine does
+    not invent the rich prose of a hand-authored capability — the header states what it
+    is and the delta's requirements carry the rest; the architecture review fills it in."""
+    return f"# {name}\n"
 
 
 def _apply(text: str, ops: list[Op]) -> str:

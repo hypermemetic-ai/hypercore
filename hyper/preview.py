@@ -38,6 +38,13 @@ def run() -> int:
         print("  " + _flat(row))
     print("  " + _flat(render.footer(conversation.MODEL_LABEL, "browse", "", "", WIDTH)))
 
+    # a worker on a thread: the live indicator the threads view shows while it runs
+    graph.delegate(graph.standing()[0])
+    print("\n  ── a worker on a thread (live) ──\n")
+    for row in render.main_body(graph.read_graph(), -1, WIDTH):
+        print("  " + _flat(row))
+    print("  " + _flat(render.footer(conversation.MODEL_LABEL, "input", "", "", WIDTH)))
+
     print("\n  ── the operator view (root) ──\n")
     root = view.operator_view(root=real)
     for row in render.view_body(root, 0, WIDTH):

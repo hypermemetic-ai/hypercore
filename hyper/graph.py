@@ -22,9 +22,11 @@ from dataclasses import dataclass
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _DEFAULT_ROOT = os.path.dirname(_HERE)
 
-# States read by the views. "awaiting you" -> queue; "standing" -> threads.
+# States read by the views. "awaiting you" -> queue; "standing"/"in flight" -> threads.
 AWAITING = "awaiting you"
-STANDING = "standing"
+STANDING = "standing"        # ready work, no worker on it yet — the ready frontier
+IN_FLIGHT = "in flight"      # a worker is on it: still work, now live on its thread
+DONE = "done"               # folded: the worker's result integrated and left the views
 GRILLING = "grilling"        # an ask held while its grilling pass runs: not work, not a card
 PENDING = "pending"          # a grilling question waiting its turn, one at a time
 MARKER = "[machine]"
@@ -57,6 +59,10 @@ class Node:
     def is_standing(self) -> bool:
         return self.state == STANDING
 
+    @property
+    def is_live(self) -> bool:
+        return self.state == IN_FLIGHT
+
 
 # ── reading ────────────────────────────────────────────────────────────────
 
@@ -76,7 +82,14 @@ def cards(nodes: list[Node] | None = None) -> list[Node]:
 
 
 def standing(nodes: list[Node] | None = None) -> list[Node]:
+    """The ready frontier: standing work no worker has taken yet."""
     return [n for n in (read_graph() if nodes is None else nodes) if n.is_standing]
+
+
+def work(nodes: list[Node] | None = None) -> list[Node]:
+    """The threads view: every unit of work, standing or in flight; DONE has left it."""
+    pool = read_graph() if nodes is None else nodes
+    return [n for n in pool if n.state in (STANDING, IN_FLIGHT)]
 
 
 def find(node_id: str) -> Node | None:
@@ -160,6 +173,24 @@ def spawn(node: Node) -> Node:
     """The ratified ask becomes standing work; the grilling pass is over."""
     node.state = STANDING
     _persist(node, f"spawn work: {_subject(node.text)}")
+    return node
+
+
+# ── delegation: a worker takes a node, runs, and its result integrates ────────
+
+def delegate(node: Node) -> Node:
+    """A worker takes a standing ask: it goes live (in flight) while the worker runs.
+    The live state is what the threads view shows a session on; nothing else changes."""
+    node.state = IN_FLIGHT
+    _persist(node, f"delegate: {_subject(node.text)}")
+    return node
+
+
+def integrated(node: Node) -> Node:
+    """The worker's result folded in: the work is done and leaves the threads view. The
+    delta reached the spec in the same fold; this only records that the work completed."""
+    node.state = DONE
+    _persist(node, f"integrate: {_subject(node.text)}")
     return node
 
 

@@ -30,6 +30,7 @@ TERMS = {
     "conversation": ("thread", "conversationalist", "conversation", "speak"),
     "self-model": ("model of the system", "state at a glance", "source of truth",
                    "self-model", "as-built"),
+    "worker": ("worker", "worktree", "isolat", "concurren", "fence", "parallel"),
 }
 
 
