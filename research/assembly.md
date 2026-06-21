@@ -30,11 +30,14 @@ piece deterministically:
 | **durable** | **agents file** — minimal, operational (the anchor) | **skills** — the specialization, loaded on demand |
 | **live (re-derived each fold)** | **prompt** — rendered fresh from source, by construction | (degenerate: a live, narrowly-routed thing is just prompt) |
 
-This is why the living spec stays in the prompt and the depth disciplines move to a skill, even
-though both are "needed every episode": the spec is **live** (it changes every fold) and so cannot
-be frozen into an always-on file or a skill without a copy going stale; the depth disciplines are
-**durable** and so can. And it is why the agents file stays thin: only the durable, every-episode,
-*operational* residue belongs there — which §4.5's evidence says is the only part that helps.
+This is why the live grounding stays prompt-side (the complete capability index preloaded, the rest
+reached just-in-time — §2) while the depth disciplines move to a skill, even though both are "needed
+every episode": the grounding is **live** (it changes every fold) and so cannot be frozen into an
+always-on file or a skill without a copy going stale; the depth disciplines are **durable** and so
+can. And it is why the agents file stays thin: only the durable, every-episode, *operational* residue
+belongs there — which the evidence (§8) says is the only part that helps, and only when it is
+**non-inferable** (the check command, the build/hand-back convention). The operator set this lean
+(2026-06-21): a single minimal shared anchor, non-inferable content only — §7.
 
 ## 1. The assembly map (§6.1) — every current prompt-piece, placed
 
@@ -67,46 +70,53 @@ The weight lands on **skills + the prompt-rendered live spec**, with a thin oper
 file — which is the calibrated shape §4.5 backs, not the thick-identity-file the earlier draft
 reached for.
 
-## 2. The full-scan finding — resolving §6.4's tension [design]
+## 2. The full scan, made just-in-time [operator-amended 2026-06-21]
 
 §6.4 leaned: *"map the per-capability self-model onto skills (loaded on demand by the touched
-capability), replacing the whole-spec megaprompt."* Worked against the code, that lean does not
-hold whole, and the design must say why rather than paper over it.
+capability), replacing the whole-spec megaprompt."* The first draft of this design pushed back —
+keep the whole spec preloaded, because the worker's full scan is structural. The second-pass
+research (§8) and the operator's call settled it differently, and better: **the full scan stays a
+guarantee, but its mechanism becomes just-in-time.**
 
-**The worker's non-slice-confinement is by-construction, not a discipline.** `worker.py` is
-emphatic: the worker holds the *whole* spec so its rescan catches a capability the handed delta
-mis-named or missed, and "there is no path that runs a worker without it" — the grounding is
-*assembled*, structural. If per-capability spec slices became on-demand skills loaded by the
-touched set, the full scan would degrade to "the worker must remember to pull every other skill
-too" — a discipline, and exactly the kind of "structural, not a discipline to remember" property
-the worker is built to keep. Routing the spec would trade a structural guarantee for a habit.
+**The tension, stated honestly.** Two goods pull apart. (a) The worker's non-slice-confinement is
+by-construction in `worker.py` — it holds the whole spec so its rescan catches a capability the
+delta mis-named or missed, "no path that runs a worker without it"; routing the spec to on-demand
+skills would degrade that to "the worker must remember to pull every other skill," a discipline,
+not a structure. (b) The field evidence (§8) leans **just-in-time over preloading**: lightweight
+references loaded at runtime, "more tokens makes agents worse," Claude Code's own hybrid being a
+small file preloaded with glob/grep to explore. Preloading the entire spec every episode honors (a)
+at the cost of (b), and worsens as the spec grows.
 
-**The resolution: route the expertise, not the requirements.** Split what §6.4 called "the
-per-capability self-model":
+**The resolution: a mandatory complete index + on-demand full text.** Both goods are kept by
+splitting *awareness* from *depth*:
 
-- The per-capability **requirements** — the living spec, the self-model *as as-built reality* —
-  stay **by-construction in the worker's grounding**, rendered live from source. They are small and
-  scannable by design (the self-model's own requirement: "concise enough to scan across all of
-  them at once"), so carrying all of them is cheap, and carrying all of them is what the full-scan
-  guarantee *is*. This layer does not route.
-- The per-capability **expertise / methodology** — the durable "how you build this capability
-  well" that is *not* in the bare requirements — is what routes to **skills**, loaded on demand by
-  the touched set. Plus the cross-cutting durable methodology: the **depth** disciplines (worker)
-  and the **design methodologies** (architect).
+- The **complete capability index** — every capability's name and a one-line summary — is preloaded
+  **by construction, every episode**. This is the structural guarantee: the worker is handed the
+  *whole surface*, so it can never be unaware a capability exists, and its rescan checks the handed
+  delta against the full index by name. The index is *mandatory* — stronger than a pure-JIT "the
+  worker might grep," which could silently skip a capability.
+- The **touched slices** (the grounding) are preloaded in full.
+- The **rest of the spec** is **reachable in the fenced checkout** (the fence is a checkout of the
+  repo, so `spec/` is on disk) and loaded on demand — read/grep — when the rescan flags a capability
+  worth a deep look. This is the cost-bearing full text, paid only where the verification needs it.
 
-So the megaprompt is replaced **in part**: the frozen methodology (`DEPTH`) and the identity prose
-leave it for a skill and a thin file; the **live spec stays**, because full scan is structural.
-This refines §6.4's lean rather than executing it verbatim — recorded as a machine-side resolution
-(below, ADR 0009), the reasoning surfaced for the operator to ratify or overturn.
+So the guarantee shifts from "all full text preloaded" to "the **complete index** always handed
+over, the **full text always reachable**." The worker cannot miss a capability (awareness is
+by-construction); it pays for depth only on demand (the field's just-in-time). This scales with
+capability *count* (the index), not capability *size* — the property preloading lacked.
 
-**A consequence for what ships first.** The skills with real content *today* are `depth` (worker)
-and `design-it-twice` / `architecture-review` / grilling (architect) — each already a rich spec
-slice or research doc. Per-capability *worker* skills are mostly empty today, because a capability
-currently carries only its requirements (which stay full-scan) and little separable expertise. So
-per-capability worker skills are an **as-needed growth** (a skill appears when a capability accrues
-expertise beyond its requirements), not a day-one explosion of one-skill-per-capability. The
-routing mechanism is built; it is populated as expertise accrues — the same "decomposition is
-as-needed" discipline intent.md applies to the graph.
+**What still routes to skills.** The per-capability *expertise / methodology* — the durable "how you
+build this capability well," beyond the bare requirements — routes to skills, loaded by the touched
+set; plus the cross-cutting **depth** disciplines (worker) and **design methodologies** (architect).
+The spec *requirements* are reached by the index-plus-fence mechanism above, not by skills. The
+skills with real content *today* are `depth` and the architect's three methodologies; per-capability
+worker skills are an **as-needed growth** (a skill appears when a capability accrues expertise beyond
+its requirements), not a day-one one-skill-per-capability split.
+
+**Sequencing the shift (see §5).** The **index render** is the by-construction primitive and is
+buildable now; pre-seam the worker prompt carries the index *plus* the rest as an interim fallback
+(nothing is dropped, so no guarantee is weakened in between). The **drop-the-rest + pull-from-fence**
+half lands with the harness seam, when the worker runs with `cwd` = the fence and can read it.
 
 ## 3. Single-sourcing (§6.2) — the derived render, by the fold
 
@@ -119,12 +129,14 @@ derived render of the self-model.** intent.md's discipline — "no statement in 
 render is hand-authored; each is a render of the model and changes when the model changes" — is the
 single-sourcing answer, applied to two more channels:
 
-- the `depth` skill renders from `research/aposd.md` — one source for the depth disciplines, no
-  frozen copy;
+- the `depth` skill — and, pre-seam, the worker's prompt-side depth grounding — render from
+  `research/aposd.md`: one source for the depth disciplines, no frozen copy;
+- the **capability index** (§2) renders from the `spec/<cap>/` slices — every name plus a one-line
+  summary, regenerated whenever a fold adds, renames, or reframes a capability;
 - a per-capability skill (when one exists, §2) renders from `spec/<cap>/spec.md`;
 - the architect's methodology skills render from their spec slices / research docs;
-- the agents file's operational anchor renders from one small source (the operational residue of
-  the role constant).
+- the agents file's operational anchor renders from one small source (the non-inferable operational
+  residue of the role constant — §0).
 
 **Kept in sync by the fold.** The self-model is re-derived every fold; its derived channels
 follow. The fold gains a **render step** that regenerates the derived channel files from source —
@@ -139,28 +151,31 @@ render step, committed, regenerated when the source changes. That materialize-on
 single genuinely new piece the build adds; everything else is the existing derived-render
 discipline pointed at two new targets.
 
-## 4. Role-specialized placement (§6.3) — the filename is the router
+## 4. Placement — one shared anchor, symlinked [operator-amended 2026-06-21]
 
-§6.3 asked how the worker gets the worker's file and the architect gets the architect's, given the
-fence is a checkout of the repo (so a repo-root file is shared). The §4 verification already
-answers it: **the harness auto-load rule separates the roles for free.** [omp][claude]
+§6.3 asked how the worker gets the worker's file and the architect gets the architect's. The first
+draft answered "two role-specialized files, separated by the harness auto-load rule." The
+second-pass research (§8) made that unnecessary and the operator simplified it: **one shared
+anchor.**
 
-- **`AGENTS.md`** (repo root) — the worker's minimal anchor. OMP auto-loads `AGENTS.md` from the
-  cwd walk-up; the fence is a checkout, so the committed `AGENTS.md` is present at the fence root
-  and the fenced worker loads it. [omp]
-- **`CLAUDE.md`** (repo root) — the architect's minimal anchor. The architect runs at repo root
-  and Claude auto-loads `CLAUDE.md`; it **ignores `AGENTS.md`** [claude], so the worker's file does
-  not leak into the architect's context.
-- **Shared core, if the operator wants one:** write it once in `AGENTS.md`; `CLAUDE.md` pulls it
-  with `@AGENTS.md` (the verified adapter [claude]) plus any architect-only lines. If the two
-  operational anchors do not actually overlap, each file stands alone — decide when the content is
-  set (it is the operator's, §6.0).
+Two facts collapse the placement. First, role specialization lives entirely in **skills** (field
+consensus, §8), so the always-on file carries only the *shared, non-inferable* operational residue
+(the check command, the hand-back convention) — which is the same for both roles; there is nothing
+role-specific left to put in it. Second, Claude now reads `AGENTS.md` (when no `CLAUDE.md` is
+present), and the clean, standard pattern is a single file with a symlink. [claude+doc, §8] So:
 
-No distinct-cwd trick and no per-role subdirectories are needed: the two filenames are the router,
-and that fact is verified, not assumed. Skills live in each harness's skills location (OMP native;
-Claude Code / the Agent SDK [doc]); the exact skill *format* per side is pinned when that side is
-built (§4.4 of the investigation), but the principle — both roles specialized by skills, not only
-by prose — holds on both.
+- **`AGENTS.md`** (repo root) — the one minimal shared anchor. OMP auto-loads it from the fence
+  (a checkout, so the committed file is present at the fence root) [omp]; the architect reads the
+  same content via the symlink below.
+- **`CLAUDE.md` → `AGENTS.md`** — a symlink (`ln -s AGENTS.md CLAUDE.md`), which the architect's
+  harness treats as its own. One file, one source; no `@import` adapter, no two role files, nothing
+  to keep in sync between roles. [claude+doc, §8]
+
+Skills live in each harness's skills location (OMP native; Claude Code / the Agent SDK [doc]); the
+exact skill *format* per side is pinned when that side is built (§4.4 of the investigation), but the
+principle — both roles specialized by skills, not by prose — holds on both. (The `@AGENTS.md` adapter
+the investigation verified still works and is the fallback if the symlink is ever inconvenient; the
+symlink is simply cleaner.)
 
 ## 5. Sequencing the build (§6.5)
 
@@ -172,25 +187,30 @@ and the worker is still `claude -p`, not OMP (the pi/OMP seam is parked).
 1. **Retire the `DEPTH` smell.** Render the worker's depth grounding from `research/aposd.md`
    (single source), deleting the frozen constant. Pre-seam the worker is still `claude -p` with no
    fence cwd, so its depth grounding stays **in the prompt** — but rendered from aposd.md, not a
-   frozen copy. The depth **skill artifact** is created now for when the seam lands. This is the
-   concrete first build: it kills the named smell and single-sources it, with no change to what the
-   worker is actually grounded in. Harness-assertable (the constant is gone; the render reads
-   aposd.md).
-2. **The derived-render mechanism + the render-on-fold step** (§3). Harness-assertable (the
-   channel files regenerate from source; nothing hand-edited).
-3. **The architect's `CLAUDE.md`** (minimal) and the worker's **`AGENTS.md`** (minimal) — *only if*
-   the operator ratifies having them and sets the content (§6.0). The architect runs at repo root,
-   so a repo-root `CLAUDE.md` reaches it immediately — this is the one channel that is **not**
-   side-effect-free to drop, so it lands only on the operator's word.
-4. **The architect's methodology skill artifacts** (design-it-twice, architecture-review,
+   frozen copy. The depth **skill artifact** is created now for when the seam lands. The concrete
+   first build: kills the named smell and single-sources it, no change to what the worker is
+   grounded in. Harness-assertable (the constant is gone; the render reads aposd.md).
+2. **The capability index render** (§2) — the by-construction JIT guarantee. The worker prompt
+   foregrounds the complete index + the touched slices; pre-seam it still carries the rest as an
+   interim fallback (nothing dropped, no guarantee weakened). Harness-assertable (the index renders
+   from `spec/`, names every capability).
+3. **The derived-render / materialize-on-fold mechanism** (§3) — skills, the index, and the agents
+   file regenerate from source on fold. Harness-assertable (nothing hand-edited; regenerates).
+4. **The minimal shared `AGENTS.md` + `CLAUDE.md` symlink** (§0, §4) — non-inferable content the
+   operator set: the check command, the hand-back convention, a pointer to the skills. The architect
+   runs at repo root, so the symlinked file reaches it immediately (not side-effect-free) — which is
+   why the content is kept to the non-inferable minimum the evidence endorses.
+5. **The architect's methodology skill artifacts** (design-it-twice, architecture-review,
    grilling), rendered from their spec slices.
 
 **With the parked harness seam:**
 
-5. **The transport runs the worker with `cwd` = the fence.** Then OMP auto-loads the fence's
+6. **The transport runs the worker with `cwd` = the fence.** The preloaded "rest of spec" is
+   **dropped** from the prompt; the worker pulls slices just-in-time from the checkout (read/grep),
+   the complete index still preloaded as the awareness guarantee. OMP auto-loads the fence's
    `AGENTS.md` and loads skills on demand; the worker's depth + per-capability expertise move from
-   the prompt to skills, and the prompt shrinks to the live task + the full-scan spec.
-6. **The OMP flip** (worker = `omp`, GPT-5.5), and OMP-native skill loading.
+   the prompt to skills.
+7. **The OMP flip** (worker = `omp`, GPT-5.5), and OMP-native skill loading.
 
 ## 6. The honest harness limit
 
@@ -202,29 +222,59 @@ from `research/aposd.md`; the derived channel files regenerate from source and n
 hand-edited; the skill and file artifacts exist and are single-sourced; and (with the seam) the
 transport runs the worker with `cwd` = the fence.
 
-## 7. What the operator ratifies — and what stays the operator's
+## 7. Ratified — what the operator decided (2026-06-21)
 
-**Proposed for ratification (machine-side, ADR 0009):**
+The assembly model is **operator-ratified** (ADR 0009), with two decisions made at ratification:
 
-- the governing two-axis cut (§0) and the assembly map it produces (§1);
-- the full-scan resolution (§2) — *route the expertise, keep the requirements by-construction* —
-  which **refines §6.4's lean** rather than executing it verbatim;
-- single-sourcing as a derived render regenerated by the fold (§3), with the materialize-on-fold
-  step as the one new mechanism;
-- the filename-as-router placement (§4);
-- the sequencing (§5) and the honest harness limit (§6).
+- **The agents file is a single minimal shared anchor, non-inferable content only.** Of the three
+  positions weighed — skills-only / minimal anchor / anchor-then-measure — the operator chose the
+  minimal anchor: one `AGENTS.md` (symlinked as `CLAUDE.md`) holding only the check command, the
+  build/hand-back convention, and a pointer to the skills. This is exactly the §8 study's endorsed
+  "non-inferable details." No overview/identity prose, no per-capability requirements. The file's
+  worth stays measurable, but the lean is set: keep it minimal; specialization is in skills.
+- **The full scan moves to just-in-time, now (§2).** Rather than preload the whole spec, the worker
+  is handed the complete capability index (the by-construction awareness guarantee) and the touched
+  slices, and pulls the rest from the fenced checkout on demand. This overturned the first draft's
+  "keep the whole spec preloaded" on the field's just-in-time evidence (§8) — the operator's call.
 
-**Left to the operator — not committed here (§6.0):**
+Ratified alongside: the governing two-axis cut (§0) and the assembly map (§1); single-sourcing as a
+derived render regenerated by the fold, with the materialize-on-fold step (§3); the one-shared-anchor
+symlink placement (§4); the sequencing (§5) and the honest harness limit (§6). Residual machine-side
+specifics — the exact per-harness skill format, and the harness-seam build — remain to be pinned when
+that side is built. The build now proceeds in §5 order, lowest-regret first.
 
-- what "**minimal**" means; what (if anything) goes in the agents file; **whether to have one at
-  all**. The illustrative shape is a handful of operational lines (the check command, the
-  build/hand-back convention, a pointer to the skills); the depth philosophy, the "what hypercore
-  is" prose, and the per-capability requirements do **not** belong in it. This is a lean, not a
-  decision — the operator may define minimal differently or decline the file entirely.
-- **measuring the file's worth** before leaning on it: §4.5 found context files often do not help
-  and add ~20% cost, so the agents file's value for hypercore's own agents is to be measured (an
-  A/B on real tasks), not assumed — the verify-don't-assume ethos that settled the mechanics,
-  applied to the worth.
+## 8. Second-pass validation (live sources, 2026-06-21)
 
-The build follows ratification; steps 1–2 of §5 (retiring the `DEPTH` smell, the derived-render
-mechanism) are the lowest-regret start and depend on none of the operator-owned content.
+Before ratifying, the design was checked a second time against current sources — open to
+contradicting itself. Three things validated and sharpened; two facts moved the design.
+
+- **Validated (strong) — the agents-file evidence.** The ETH Zurich study `context-files.md` §4.5
+  cited is real and its numbers hold: *Evaluating AGENTS.md* ([arXiv 2602.11988]; [InfoQ 2026-03]).
+  LLM-generated context files **−3% success / +20% cost**; human-written **+4% / +19% cost**
+  ("marginal and inconsistent"; no gain for Claude Code). Its recommendation is *sharper* than
+  "minimal/operational": **omit generated files; limit human-written ones to non-inferable details
+  — highly specific tooling or custom build commands.** Files hurt by being over-followed (more
+  tests/reads/greps) and *"do not function as effective repository overviews."* → the minimal,
+  non-inferable, no-overview anchor (§0, §7) is the paper's exact prescription; the check command is
+  the textbook non-inferable detail.
+- **Validated (strong) — skills as the specialization mechanism.** Progressive disclosure (three
+  levels: ~50-token metadata → 2–5k `SKILL.md` → resources) and *"one general-purpose agent + a
+  library of specialized capabilities"* over specialized agents — an **open standard** (Dec 2025,
+  adopted cross-vendor). The AGENTS.md-vs-skill division of labor (always-on standard checks → the
+  file; specialized multi-step workflows → skills) is field consensus that maps 1:1 onto §1.
+  ([Anthropic: Agent Skills], [Anthropic: context engineering])
+- **Moved the design (fact 1) — placement simplifies.** Claude now reads `AGENTS.md` (when no
+  `CLAUDE.md` is present), and the clean standard pattern is one file with a `CLAUDE.md → AGENTS.md`
+  symlink. With specialization in skills, the always-on anchor is one shared file — retiring the
+  two-role-files / `@import`-adapter plan (§4). ([Claude Code #34235]; community guides)
+- **Moved the design (fact 2) — full scan goes just-in-time.** The field leans **just-in-time over
+  preloading** (lightweight references loaded at runtime; "more tokens makes agents worse"; Claude
+  Code's own hybrid — a small file preloaded, glob/grep to explore). This contradicted the first
+  draft's "preload the whole spec," and prompted the operator's amendment (§2): a mandatory complete
+  index + on-demand full text from the fence. ([Anthropic: context engineering])
+
+Sources: [arXiv 2602.11988](https://arxiv.org/abs/2602.11988) ·
+[InfoQ 2026-03](https://www.infoq.com/news/2026/03/agents-context-file-value-review/) ·
+[Anthropic: Agent Skills](https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills) ·
+[Anthropic: context engineering](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) ·
+[Claude Code #34235](https://github.com/anthropics/claude-code/issues/34235)
