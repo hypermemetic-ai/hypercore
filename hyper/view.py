@@ -9,8 +9,8 @@ current by construction.
 The vision is whole, not stored per capability; a capability's vision is a live
 slice of `intent.md` — the statements that name it. The upper levels' "what the
 system is" and the deepening backlog are the standing output of the architecture
-review (`review`, §7.4): the root's structural map of the modules against the budget
-is its as-built, and the review's findings are the gap the operator reads. Per
+review (`review`, §7.4): the root's structural map of the modules by length against the
+length signal is its as-built, and the review's findings are the gap the operator reads. Per
 capability the gap still surfaces the debt the spec marks on itself; the review
 gathers the system-wide deepening work at the root.
 """
@@ -28,7 +28,7 @@ TERMS = {
     "interface": ("interface", "window", "screen", "keyboard"),
     "graph": ("graph", "node", "durable", "version-controlled"),
     "queue": ("queue", "card", "decision", "approve", "endorse"),
-    "conversation": ("thread", "conversationalist", "conversation", "speak"),
+    "conversation": ("thread", "architect", "conversation", "speak"),
     "self-model": ("model of the system", "state at a glance", "source of truth",
                    "self-model", "as-built"),
     "worker": ("worker", "worktree", "isolat", "concurren", "fence", "parallel"),

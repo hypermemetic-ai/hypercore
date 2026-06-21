@@ -138,12 +138,20 @@ The new gate dissolves the hole rather than patching it:
   because the record is the *decision*, not the *spelling*. The hole is closed by the reframe.
   **[grilled: "fixed or made moot here."]**
 
-## 7. The open forks — to grill before phase 3 implements
+## 7. The open forks — resolved (phase 3, 2026-06-21)
 
-The re-grounding above is firm on everything the operator settled; these three remain genuinely
-open, in dependency order:
+The re-grounding above is firm on everything the operator settled; these three were the genuinely
+open forks. All three are now resolved — **F1** in phase 2 (defer), **F2** and **F3** by the
+implementing session (next-work.md records the reasoning). Resolutions are marked **[resolved]**
+inline below.
 
-- **F1 — the build boundary: how much depth-judgment is built now vs. spec'd-not-yet-built?** The
+- **F1 — [resolved: defer both].** The depth-assessment machinery — the model-driven verdict and
+  the mechanical proxies alike — is **not built this slice**; it is recorded not-yet-built and
+  likely wants its own later slice. Phase 3 ships only the settled, fully harness-testable
+  scaffold (length raises a *decision*; the substring hatch deleted for a structured
+  depth-decision; the review re-rendered around depth with the model-driven scan marked
+  not-yet-built; the worker grounded in the depth disciplines). The original fork text follows.
+  **F1 — the build boundary: how much depth-judgment is built now vs. spec'd-not-yet-built?** The
   model-driven depth verdict can't be checked by the deterministic (no-LLM) acceptance harness the
   way a number can. *Architect's lean:* build the mechanical scaffold now (length-as-signal; the
   gate raising a *decision* instead of auto-refusing; the substring hatch deleted; the review
@@ -152,20 +160,33 @@ open, in dependency order:
   exact self-honesty slice 6 used for the deletion test. *Flips it:* Ousterhout's own objection —
   a proxy isn't depth; if "the operator reads depth" demands real judgment in hand now, the
   model-driven verdict gets built this slice (with a non-deterministic evidence path).
-- **F2 — does any hard length refusal survive?** Length is demoted to a signal — but is there a
-  *pathological* outer bound (a file so long it's a context-window problem regardless of depth —
-  the original `window.py` justification) that still refuses **mechanically**, far above the old
-  400? *Architect's lean:* keep one **high** hard ceiling as a pathology tripwire (context-cost,
-  not depth — Ousterhout doesn't object to *that* job), with everything between the old budget and
-  it governed by depth-judgment. *Flips it:* if any hard number reproduces the error we're
-  removing, drop it entirely and let judgment + decision carry the whole range.
-- **F3 — the capability naming ripple.** The role is renamed architect; is the **capability**
-  still `conversation` (the thread + the operator-facing channel), with the architect the role
-  inside it? *Architect's lean:* keep the capability `conversation` (the thread *is* a
-  conversation; the channel is what the capability owns) and rename only the role to architect
-  within it — smaller ripple, and the capability boundary (operator-facing channel) is unchanged.
-  *Flips it:* if "architect" should be its own capability (design judgment as a distinct surface
-  from the operator-facing channel), that's a boundary re-cut and an ADR.
+- **F2 — [resolved: drop the hard ceiling — the flip, not the lean].** No hard length refusal
+  survives. The architect's lean was one *high* auto-refusing pathology ceiling; the implementing
+  session took the *flip* instead, because an auto-refusing number at **any** height reproduces
+  the error being removed (a number standing in for the judgment of depth) and would force the
+  escape hatch back — yet §6 above, already grilled, deletes the hatch *by construction* on the
+  ground that length no longer auto-refuses. A surviving ceiling contradicts §6. So length raises
+  a *decision* across its whole range; judgment + the operator-decision carry it; the
+  anti-dilution guarantee holds because over-signal material is un-foldable until the operator
+  settles the decision. The original fork text follows. **F2 — does any hard length refusal
+  survive?** Length is demoted to a signal — but is there a *pathological* outer bound (a file so
+  long it's a context-window problem regardless of depth — the original `window.py` justification)
+  that still refuses **mechanically**, far above the old 400? *Architect's lean:* keep one
+  **high** hard ceiling as a pathology tripwire (context-cost, not depth — Ousterhout doesn't
+  object to *that* job), with everything between the old budget and it governed by depth-judgment.
+  *Flips it:* if any hard number reproduces the error we're removing, drop it entirely and let
+  judgment + decision carry the whole range.
+- **F3 — [resolved: keep `conversation`, rename only the role — the lean].** The role is the
+  architect; the capability stays `conversation` (the thread *is* a conversation; the
+  operator-facing channel is the boundary it owns, unchanged), so this is a rename, not a re-cut,
+  and carries no new boundary ADR. The original fork text follows. **F3 — the capability naming
+  ripple.** The role is renamed architect; is the **capability** still `conversation` (the thread
+  + the operator-facing channel), with the architect the role inside it? *Architect's lean:* keep
+  the capability `conversation` (the thread *is* a conversation; the channel is what the capability
+  owns) and rename only the role to architect within it — smaller ripple, and the capability
+  boundary (operator-facing channel) is unchanged. *Flips it:* if "architect" should be its own
+  capability (design judgment as a distinct surface from the operator-facing channel), that's a
+  boundary re-cut and an ADR.
 
 ## 8. What phase 3 touches
 

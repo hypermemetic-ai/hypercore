@@ -1,7 +1,7 @@
 """The window: the operator's whole world. Keyboard-only, fullscreen,
 high-contrast. A thin paint-and-input layer over the graph and the
-conversationalist — it holds nothing that isn't about the screen or the
-keyboard. Heavy work (summoning the conversationalist) runs off the input loop
+architect — it holds nothing that isn't about the screen or the
+keyboard. Heavy work (summoning the architect) runs off the input loop
 so keystrokes never block, the rule the old window broke first.
 """
 from __future__ import annotations
@@ -42,7 +42,7 @@ class Async:
     def _run(self, fn):
         try:
             self.result = fn()
-        except Exception as e:  # surfaced as the conversationalist's reply
+        except Exception as e:  # surfaced as the architect's reply
             self.result = e
         finally:
             self.done = True
@@ -209,7 +209,7 @@ def _land(st: State, result) -> None:
         pass
     elif isinstance(result, Exception):       # an error becomes a visible reply
         if st.thread:
-            st.thread.add("machine", f"(the conversationalist could not answer: {result})")
+            st.thread.add("machine", f"(the architect could not answer: {result})")
 
 
 # ── painting ──────────────────────────────────────────────────────────────────

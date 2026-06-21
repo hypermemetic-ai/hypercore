@@ -19,7 +19,7 @@ def check(root: str) -> None:
     print("\nslice 3 — acceptance check  (intent extraction by grilling)\n")
     base = len(graph.standing())
 
-    # an above-floor ask: the conversationalist files, the floor finds two stakes
+    # an above-floor ask: the architect files, the floor finds two stakes
     t = Thread()
     r = speak(t, "set up the berserk download", scripted(
         '{"say":"Let me pin two things down first.","file":"download new Berserk '

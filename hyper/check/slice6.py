@@ -26,35 +26,36 @@ def check(root: str) -> None:
     ok(len(rv.modules) > 5 and all(m.lines > 0 for m in rv.modules),
        f"the review scans the source tree live ({len(rv.modules)} modules measured)")
 
-    # 2. the real tree is honestly clean — the per-slice check split kept every module in
-    # budget, so nothing is over (debt) or justified-over (the discipline biting on itself).
-    ok(not any(m.status in ("over", "justified") for m in rv.modules),
-       "no module is over the budget — the real tree is honestly clean (check.py was split)")
-    ok(not any(f.kind == "over budget" for f in rv.findings),
-       "the deepening backlog carries no over-budget debt on the real tree")
+    # 2. the real tree is honestly clean — the per-slice check split kept every module within
+    # the length signal, so nothing is over (debt) or depth-accepted (the discipline on itself).
+    ok(not any(m.status in ("over", "accepted") for m in rv.modules),
+       "no module is past the length signal — the real tree is honestly clean (check.py split)")
+    ok(not any(f.kind == "past the length signal" for f in rv.findings),
+       "the deepening backlog carries no past-the-signal debt on the real tree")
 
     # 3. it surfaces a god-file-in-the-making before it sets: plant one in a scan tree, the
     # review flags it as a strong deepening opportunity; an in-budget sibling is left alone.
     scan = tempfile.mkdtemp(prefix="hyper-review-")
     graph.atomic_write(os.path.join(scan, "hyper", "giant.py"),
-                       "# a shallow god-file\n" + "x = 0\n" * (conditions.BUDGET + 60))
+                       "# a shallow god-file\n" + "x = 0\n" * (conditions.SIGNAL + 60))
     graph.atomic_write(os.path.join(scan, "hyper", "small.py"), "y = 1\n")
     planted = review.review(scan)
     big = next((f for f in planted.findings if f.subject.endswith("giant.py")), None)
-    ok(big is not None and big.strength == "strong" and big.kind == "over budget",
-       "the review surfaces an over-budget god-file as a strong deepening opportunity")
+    ok(big is not None and big.strength == "strong" and big.kind == "past the length signal",
+       "the review surfaces a past-the-signal god-file as a strong deepening opportunity")
     ok(not any(f.subject.endswith("small.py") for f in planted.findings),
-       "an in-budget module raises no finding")
+       "a module within the signal raises no finding")
 
-    # 4. the justification escape hatch — the same budget folding-conditions gates with: a
-    # decision naming the file clears it from the backlog, but the map still shows it, marked.
+    # 4. the depth-decision record — the same record folding-conditions consults: a structured
+    # depth-decision naming the file clears it from the backlog, but the map still shows it.
     graph.atomic_write(os.path.join(scan, "spec", "decisions", "0099-giant.md"),
-                       "# ADR 0099\n\nhyper/giant.py is allowed over the budget here.\n")
-    justified = review.review(scan)
-    ok(not any(f.subject.endswith("giant.py") for f in justified.findings),
-       "a file over budget but named in a decision is not debt")
-    gm = next(m for m in justified.modules if m.rel.endswith("giant.py"))
-    ok(gm.status == "justified", "the structural map still shows the justified file, marked")
+                       "# ADR 0099\n\ndepth-decision: hyper/giant.py accepted — deep behind a "
+                       "small interface; its length is context-cost, not shallowness.\n")
+    dec = review.review(scan)
+    ok(not any(f.subject.endswith("giant.py") for f in dec.findings),
+       "a file past the signal with a structured depth-decision accepting it is not debt")
+    gm = next(m for m in dec.modules if m.rel.endswith("giant.py"))
+    ok(gm.status == "accepted", "the structural map still shows the depth-accepted file, marked")
 
     # 5. the operator view's upper levels ARE the review's output — derived, not hand-authored.
     v = view.operator_view(root=REAL)
@@ -66,7 +67,7 @@ def check(root: str) -> None:
     # 6. read without reading code: the map is styled spans, no TTY, the system's shape not source.
     rows = render.view_body(v, 0, 76)
     text = "".join(t for row in rows for t, _s in row)
-    ok("operator view" in text and "█" in text and "/400" in text,
-       "the operator reads a visual map of as-built reality against the budget, no TTY")
+    ok("operator view" in text and "█" in text and f"/{conditions.SIGNAL}" in text,
+       "the operator reads a visual map of as-built reality against the length signal, no TTY")
     ok("import " not in text and "def " not in text,
        "the map shows the system's shape, not its source — read without reading code")

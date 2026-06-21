@@ -28,7 +28,7 @@ returns the story toward the decision and leaves the card standing.
 
 #### Scenario: explain
 - WHEN the operator presses explain on a card
-- THEN the conversationalist returns the story toward the decision and the card
+- THEN the architect returns the story toward the decision and the card
   stays on the queue
 
 ### Requirement: a card's weight matches its call

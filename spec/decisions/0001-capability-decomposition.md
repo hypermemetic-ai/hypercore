@@ -20,7 +20,7 @@ Five capabilities, taking their names from `intent.md`'s own nouns:
   committed; the one source of truth.
 - **queue** — the decision surface: cards as a view of awaiting nodes; approve / cut
   / explain; weight matching the call.
-- **conversation** — the throwaway thread and the conversationalist: one session,
+- **conversation** — the throwaway thread and the architect: one session,
   closed on satisfaction, landing one consequence on the graph.
 - **self-model** — the living spec, the delta, the fold, and the operator view: the
   system's maintained model of itself.

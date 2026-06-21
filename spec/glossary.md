@@ -43,14 +43,18 @@ it sharpens inside grilling as work folds.
   durability lives on the graph. "One session per thread" means the thread simply
   *is* that one session, then closes.
 
-- **conversationalist** — the single voice between the operator and the system. It
-  owns every word that crosses to the operator, reads the operator's words, and
-  lands one concrete consequence.
+- **architect** — the operator-facing half of the split, and the holder of design
+  judgment (renamed from *conversationalist* in slice 7). It owns every word that
+  crosses to the operator, reads the operator's words and lands one concrete
+  consequence, **authors the spec delta** (the design of the change), and **judges
+  depth at the archive gate** — raising a decision on shallowness rather than a silent
+  veto. Communicating a design is part of designing it. Structurally opposed to the
+  worker's investment in its own product, which is the defense against self-judging.
 
 - **worker** — the system-facing half of the split: it carries out a spawned ask,
-  fenced in its own worktree and grounded in its capability's spec slice, and hands
-  the conversationalist a technical result. It has **no channel to the operator**;
-  its audience is the conversationalist and the spec.
+  fenced in its own worktree, grounded in its capability's spec slice **and in the
+  depth disciplines** so it builds deep up front, and hands the architect a technical
+  result. It has **no channel to the operator**; its audience is the architect and the spec.
 
 - **worktree** — the fence a worker runs in: its own git checkout on its own branch,
   isolated from sibling workers and the main line. The worker builds here and its
@@ -64,11 +68,13 @@ it sharpens inside grilling as work folds.
   **MODIFIED**, and **REMOVED** requirements. A behavior-changing graph carries
   one; a trivial graph carries an empty delta and says so.
 
-- **folding condition** — a structural gate a graph must clear to fold: its delta
-  applies, a behavior-changing graph carries a recorded **red→green feedback loop**,
-  and no source file it grew crosses the **line-count budget** without a decision. An
-  engineering discipline made into a check — advice can be ignored, a folding
-  condition cannot. An unmet one returns a decision, never a silent pass.
+- **folding condition** — a structural gate a graph must clear to fold. Two are
+  **non-negotiable facts** that auto-refuse: its delta applies, and a behavior-changing
+  graph carries a recorded **red→green feedback loop**. The third is a **judgment**:
+  **depth** — a source file past the **length signal** raises a **depth decision**
+  (re-cut / deepen / accept-with-reason), never an auto-refusal on length. An engineering
+  discipline made into a check — advice can be ignored, a folding condition cannot. An
+  unmet fact returns its reason; the depth condition returns a decision; never a silent pass.
 
 - **capability** — a coherent slice of system behavior, named in the domain's own
   words, owning a spec file and any local decisions.
@@ -102,14 +108,57 @@ it sharpens inside grilling as work folds.
 - **architecture review** — the standing scan of the source tree for deepening
   opportunities, read live. It surfaces god-files-in-the-making before they set and
   renders the operator view's upper levels — the structural map of as-built reality,
-  debt marked — so the operator reads the system's shape without reading code.
+  debt marked — so the operator reads the system's shape without reading code. It
+  measures **length** (the built signal) and is meant to grow the model-driven
+  **red-flag depth scan**, recorded as not-yet-built.
 
 - **deepening backlog** — the architecture review's findings, read as the gap: the
-  modules grown large or shallow enough to want deepening, each carrying a
+  modules grown long or shallow enough to want a depth look, each carrying a
   recommendation strength.
 
 - **recommendation strength** — the weight a deepening finding carries: **strong**
-  (deepen now) for a module over the budget, **consider** for one nearing it.
+  (assess/deepen now) for a module past the length signal, **consider** for one nearing it.
+
+- **deep module** — a module that hides a lot of behavior behind a small interface;
+  hypercore's positive criterion for structure (Ousterhout, `research/aposd.md`). Its
+  opposite is a **shallow module**. A simple interface matters more than a simple
+  implementation — interface cost is paid by every caller forever — so *pull complexity
+  downward*: when something must be hard, make it hard inside the module.
+
+- **shallow module** — a module whose interface is nearly as complicated as the
+  implementation it fronts; it costs the reader almost as much as no module at all. The
+  #1 **red flag**, and what a length *floor* (over-decomposition) and an un-deepened
+  length *ceiling* both produce.
+
+- **depth** — how much functionality is hidden behind how small an interface; the
+  criterion the constraints are read in. A judgment, not a number — the system raises it
+  as a decision, never enforces it as a threshold.
+
+- **context cost** — what a module costs an agent's window to load: every line is
+  context the worker must hold. hypercore's own concern, distinct from depth, for which
+  **length** is a fair mechanical proxy. The honest job length is kept for.
+
+- **length signal** — the line count past which a touched source file raises a **depth
+  decision** (a starting value to tune). It is a *signal* of depth and a measure of
+  context cost, **never an auto-refusal** and never a depth verdict — there is no hard
+  length ceiling above it.
+
+- **depth decision** — what the gate raises when a file is past the length signal with
+  no depth-decision accepting it: re-cut / deepen / accept-with-reason, surfaced to the
+  operator. Recorded, when accepted, as a **structured depth-decision** — a parseable
+  `depth-decision: <path> accepted — …` line that names the exact file, so a coincidental
+  mention can grant no exception (the spelling is not the decision).
+
+- **red flag** — a named symptom that code is more complex than it needs to be
+  (Ousterhout): shallow module, information leakage, temporal decomposition, pass-through
+  method, special-general mixture, conjoined methods, repetition, comment-repeats-code,
+  vague or hard-to-pick name, nonobvious code. Each a smell a judge weighs, none a
+  threshold a tool measures — the lens the architecture review is meant to grow.
+
+- **strategic / tactical programming** — *tactical*: optimize for the next feature
+  working, letting complexity accrete a tolerable bit at a time. *Strategic*: treat
+  working code as not enough and invest in the design that keeps the system cheap to
+  change. The worker is grounded to be strategic — to build deep up front.
 
 - **ADR** — a recorded decision, kept sparingly: only when it is hard to reverse,
   surprising without context, and the result of a real trade-off.

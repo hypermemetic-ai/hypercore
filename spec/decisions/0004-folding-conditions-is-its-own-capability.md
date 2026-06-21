@@ -2,6 +2,12 @@
 
 Status: machine-owned, awaiting ratification. [machine]
 
+> **Superseded in part by ADR 0006 (slice 7).** The boundary decision below stands —
+> folding-conditions is its own capability. But its *line-count budget* is re-grounded in
+> depth: the 400-line ceiling no longer auto-refuses (it raises a depth decision), and the
+> substring justification escape hatch is deleted, replaced by a structured depth-decision
+> record. Read the line-count specifics below as superseded by ADR 0006.
+
 ## Context
 
 Slice 5 builds the disciplines that keep the model true as enforced folding conditions

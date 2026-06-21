@@ -5,7 +5,7 @@ Status: machine-owned, awaiting ratification. [machine]
 ## Context
 
 Slice 4 builds the worker (rebuild-spec §6, §9.4): the system-facing half of the
-conversationalist/worker split, fenced in its own worktree and grounded in its
+architect/worker split, fenced in its own worktree and grounded in its
 capability's spec slice. ADR 0001 forecast "workers" as a later capability; ADR 0002
 set the counter-precedent of folding a new behavior into the existing five rather than
 widening the operator view. The seam had to be cut one way, because it sets the operator
@@ -19,10 +19,10 @@ call during the slice's grilling, against the lean's flip (fold into `conversati
 The grounds the operator weighed: the worker owns a surface none of the five do — OS
 isolation and the git-worktree fence, spec-scoped context, a system-facing audience — so
 a clean boundary stands here in a way it did not for extraction (ADR 0002), which had no
-surface of its own and spoke only through the conversationalist. Folding the worker into
+surface of its own and spoke only through the architect. Folding the worker into
 `conversation` would have placed the system-facing role inside the operator-facing one —
 the single capability it least belongs to, since the worker is defined by *not* being the
-conversationalist.
+architect.
 
 A second decision follows from the first: a delta that ADDS a requirement in a capability
 that does not yet exist now **creates** that capability on fold. ADR 0001 forecast that

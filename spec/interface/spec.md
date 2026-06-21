@@ -1,7 +1,7 @@
 # interface
 
 The window: the operator's whole world. Keyboard-only, fullscreen, high-contrast
-— a thin paint-and-input layer over the graph and the conversationalist that holds
+— a thin paint-and-input layer over the graph and the architect that holds
 nothing that isn't about the screen or the keyboard.
 
 ### Requirement: the interface is the only place the operator operates
@@ -18,7 +18,7 @@ The window's keystroke loop MUST service and echo every keystroke without waitin
 on any git-bound or IO-bound work. Heavy work runs off the input loop.
 
 #### Scenario: a heavy pass is in flight
-- WHEN the conversationalist is being summoned (a slow, off-loop call)
+- WHEN the architect is being summoned (a slow, off-loop call)
 - THEN keystrokes are still serviced each frame and a thinking indicator shows,
   because the heavy pass runs on another thread and the loop polls its result
 

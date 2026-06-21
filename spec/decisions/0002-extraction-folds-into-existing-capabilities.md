@@ -16,7 +16,7 @@ the existing five — because it sets the operator view's top level.
 Intent extraction is **not** its own capability. Its requirements fold into the two
 capabilities that already own the surfaces it acts on:
 
-- **conversation** — the floor and the grilling interview: the conversationalist
+- **conversation** — the floor and the grilling interview: the architect
   resolves every decision it can, surfaces the residual stake-bearing ones one at a
   time, and produces the contract and the spec delta.
 - **queue** — the grilling question card (carrying its lean and what would flip it)
@@ -27,7 +27,7 @@ expectation of a sixth capability.
 
 ## Grounds
 
-Grilling has no surface of its own: it speaks through the conversationalist and lands
+Grilling has no surface of its own: it speaks through the architect and lands
 on the queue. A sixth capability would duplicate those two boundaries rather than
 draw a new one, and split one coherent behavior across a seam checks could not stand
 on. The five-capability spine of ADR 0001 holds; this ADR records that extraction was

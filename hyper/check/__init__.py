@@ -5,7 +5,7 @@
 Each slice's acceptance check (rebuild-spec §9) is its own module, driven with a
 *scripted* transport (no LLM, so the loop is deterministic and fast) over the *real*
 graph, spec, conditions, and worktrees — it asserts the system, not a story. The live
-conversationalist and the window are the evidence you watch by running `python3 -m hyper`
+architect and the window are the evidence you watch by running `python3 -m hyper`
 and `--frame`; this is the evidence that gates.
 
 run() lays the shared ground — a throwaway git-backed root — and walks the slices in
@@ -17,9 +17,9 @@ import os
 import subprocess
 import tempfile
 
-from . import harness, slice1, slice2, slice3, slice4, slice5, slice6
+from . import harness, slice1, slice2, slice3, slice4, slice5, slice6, slice7
 
-SLICES = (slice1, slice2, slice3, slice4, slice5, slice6)
+SLICES = (slice1, slice2, slice3, slice4, slice5, slice6, slice7)
 
 
 def run() -> int:
@@ -38,5 +38,5 @@ def run() -> int:
     if n:
         print(f"  {n} FAILED\n")
         return 1
-    print("  all checks pass — slices 1–6 meet their acceptance checks\n")
+    print("  all checks pass — slices 1–7 meet their acceptance checks\n")
     return 0

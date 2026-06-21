@@ -1,4 +1,4 @@
-"""Slice 1 — the main window: operator ↔ conversationalist ↔ queue.
+"""Slice 1 — the main window: operator ↔ architect ↔ queue.
 
 Acceptance (spec §9.1): open a thread, converse, file intent that lands as work on the
 graph (or get a question answered), the thread closes on satisfaction, and durability
@@ -40,7 +40,7 @@ def check(root: str) -> None:
     before = len(graph.read_graph())
     t2 = Thread()
     r2 = speak(t2, "what are you?", scripted(
-        '{"say":"I am hypercore\'s conversationalist.","done":true}'))
+        '{"say":"I am hypercore\'s architect.","done":true}'))
     ok(r2.filed is None and r2.card is None, "a question files nothing")
     ok(not t2.open and len(graph.read_graph()) == before, "the question thread closes, graph unchanged")
 

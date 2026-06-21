@@ -1,6 +1,6 @@
 """Intent extraction by grilling — the floor, the one-at-a-time interview, the gate.
 
-Before an ask that opens real choices becomes work, the conversationalist runs a
+Before an ask that opens real choices becomes work, the architect runs a
 grilling pass. It resolves every decision it can from the living spec and intent,
 and surfaces only the residue — the decisions the operator has a stake in — as
 questions on the queue, **one at a time**, each carrying the machine's *lean* (its
@@ -24,7 +24,7 @@ from dataclasses import dataclass
 from . import conversation, graph, spec
 
 FLOOR = (
-    "You are hypercore's conversationalist running a grilling pass on an ask before "
+    "You are hypercore's architect running a grilling pass on an ask before "
     "it becomes work. Resolve every decision you can from the living spec and intent; "
     "put to the operator ONLY the decisions they have a stake in — ones that change "
     "operator-visible behavior, are hard to reverse, or commit real cost. Err toward "
@@ -37,7 +37,7 @@ FLOOR = (
 )
 
 PRODUCTS = (
-    "You are hypercore's conversationalist. The grilling pass is resolved. Produce two "
+    "You are hypercore's architect. The grilling pass is resolved. Produce two "
     "things. (1) entry — the operator-view contract: one plain paragraph stating what "
     "this ask will become, the thing its result is later validated against. (2) delta — "
     "the spec delta the change realizes, markdown with `## ADDED|MODIFIED|REMOVED — "
@@ -145,7 +145,7 @@ def delta_of(node: graph.Node) -> str:
 
 def entry_of(ask: graph.Node) -> graph.Node | None:
     """The view entry hung off a spawned ask — the propose-stage product a worker reads
-    for its handed delta, and the conversationalist later checks the result against."""
+    for its handed delta, and the architect later checks the result against."""
     return next((c for c in graph.children(ask.id) if is_entry(c)), None)
 
 

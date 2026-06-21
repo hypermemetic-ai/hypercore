@@ -3,7 +3,7 @@
 Acceptance (spec §9.4): a worker is grounded in its capability's spec slice by construction
 — holding the whole spec, not confined to the touched slice (rebuild-spec §4.1, §6.4); it
 runs fenced in its own git worktree; and its raw output reaches the operator through no
-path — the conversationalist authors every operator-facing word and folds the refined delta.
+path — the architect authors every operator-facing word and folds the refined delta.
 Drives propose→apply→archive end to end with scripted transports over the real graph and a
 real worktree.
 """
@@ -26,11 +26,11 @@ def check(root: str) -> None:
     handed = (
         "## ADDED — worker\n"
         "### Requirement: a worker checkpoints its progress\n"
-        "The worker MUST record a checkpoint the conversationalist can read.\n"
+        "The worker MUST record a checkpoint the architect can read.\n"
         "#### Scenario: a checkpoint\n- WHEN a worker pauses\n- THEN its progress is recorded\n\n"
         "## ADDED — conversation\n"
-        "### Requirement: the conversationalist names the worker in the record\n"
-        "The conversationalist MUST record which worker a result came from.\n"
+        "### Requirement: the architect names the worker in the record\n"
+        "The architect MUST record which worker a result came from.\n"
         "#### Scenario: a hand-off\n- WHEN a result is archived\n- THEN the worker is named\n")
     ask = graph.file_intent("give workers a progress checkpoint")
     graph.approve(graph.raise_card(
@@ -93,18 +93,18 @@ def check(root: str) -> None:
     ok("worker: result" in on_branch and off_main != 0,
        "the worker's commit is in the record on its own branch, absent from the main line")
 
-    # 3. archive: the conversationalist coherence-checks and folds; the raw report leaks nowhere
+    # 3. archive: the architect coherence-checks and folds; the raw report leaks nowhere
     reply = conversation.integrate(ask, result, scripted(json.dumps({
         "coherent": True,
         "say": "Workers now checkpoint progress; it landed.",
         "card": None})), root)
-    ok(reply.done, "the conversationalist judged the result coherent and archived it")
-    ok(SENTINEL not in reply.say, "the conversationalist authored its own words, not the raw report")
+    ok(reply.done, "the architect judged the result coherent and archived it")
+    ok(SENTINEL not in reply.say, "the architect authored its own words, not the raw report")
 
     sp = spec.read_spec(root)
     ok(sp.capability("worker").requirement("a worker checkpoints its progress") is not None
        and sp.capability("conversation").requirement(
-           "the conversationalist names the worker in the record") is not None,
+           "the architect names the worker in the record") is not None,
        "the refined delta folded into the spec in the same act")
 
     # the raw report has no operator-facing or durable home anywhere

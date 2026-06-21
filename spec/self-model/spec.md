@@ -57,6 +57,10 @@ The operator view MUST render, at every altitude, the **vision** (authored, from
 between them, as a recursive tree to the depth the work reaches. The upper levels'
 "what the system is" structural map and the deepening backlog are the standing output
 of the architecture review (`architecture-review` capability), kept honest between folds.
+The map renders the system's **depth**, not merely its length: length is shown as a
+context-cost signal against the threshold, and the deeper model-driven red-flag depth
+assessment is recorded as not-yet-built (rebuild-spec §7.4, ADR 0006), never fabricated —
+so the operator reads depth, not just a line count.
 
 #### Scenario: the view is read
 - WHEN the operator opens the view

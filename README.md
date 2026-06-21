@@ -12,8 +12,10 @@ Parked for later (not in the build): the pi/glm/gpt multi-model harness —
 `~/Documents/hypercore-parked/` (`harness-ideas.md` + `harness-source/`). The full
 pre-teardown repo is `~/Documents/hypercore-next-cold-backup-2026-06-20.tar.gz`.
 
-Build proceeds in slices (spec §9), slice 1 first. Slices 1–6 are built. With slice 6
-the acceptance harness was split per-slice into `hyper/check/` — the first deepening
-work the architecture review surfaced (ADR 0004/0005).
+Build proceeds in slices (spec §9), slice 1 first. Slices 1–7 are built. Slice 6 split the
+acceptance harness per-slice into `hyper/check/` (the first deepening work the review
+surfaced); slice 7 re-grounded the architecture in Ousterhout's *A Philosophy of Software
+Design* — depth is the criterion, length a context-cost signal that raises a *decision*
+rather than auto-refusing (ADR 0006; `research/aposd.md`, `research/regrounding.md`).
 
-Next: slice 7 — parallelism re-grounded (design-it-twice for load-bearing interfaces).
+Next: slice 8 — parallelism re-grounded (design-it-twice for load-bearing interfaces).

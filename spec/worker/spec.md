@@ -2,19 +2,19 @@
 
 The system-facing half of the split. A worker carries out a spawned ask: it builds,
 fenced in its own git worktree and grounded in its capability's spec slice, and hands
-the conversationalist a complete technical result. It never faces the operator — every
-word that crosses to the operator is the conversationalist's, authored from the result.
+the architect a complete technical result. It never faces the operator — every
+word that crosses to the operator is the architect's, authored from the result.
 
 ### Requirement: a worker is system-facing and never reaches the operator
-A worker's audience MUST be the conversationalist and the spec, never the operator. Its
+A worker's audience MUST be the architect and the spec, never the operator. Its
 result is written for the machine; it has no channel to the operator at all, so a raw
-worker output reaches the operator through no path — the conversationalist authors every
+worker output reaches the operator through no path — the architect authors every
 operator-facing word from the result.
 
 #### Scenario: a worker hands back
 - WHEN a worker produces a technical result carrying raw, machine-facing prose
 - THEN none of that prose appears on any card, render, or node; only what the
-  conversationalist authors from it crosses to the operator
+  architect authors from it crosses to the operator
 
 ### Requirement: a worker is grounded in its capability's spec slice, by construction
 A worker MUST be handed the living spec with the capabilities its change touches marked as
@@ -36,6 +36,22 @@ rescan covers the whole spec and catches a capability the handed delta mis-named
 - THEN the worker's context still holds the whole spec, so its rescan can catch the
   mis-mapping rather than trust the delta's list — which a slice-confined worker could not
 
+### Requirement: a worker is grounded in the depth disciplines, every episode
+A worker MUST be handed the **depth disciplines** as standing grounding in every episode — the
+deep-module framework (a lot of behavior behind a small interface; a simple interface matters
+more than a simple implementation; pull complexity downward), strategic over tactical
+programming, and the **red flags** of shallowness — so it builds **deep up front** rather than
+relying on the gate to catch shallowness after the fact (rebuild-spec §7.1, ADR 0006). This is
+the *proactive* primary anti-complexity defense: a worker that shares the long-term-health
+concern produces deep modules, so the folding-conditions depth gate stays a rarely-tripped
+backstop, not an operator-load generator. The grounding is assembled into the worker's prompt
+by construction, like its spec slice — there is no path that runs a worker without it.
+
+#### Scenario: the depth disciplines are in the grounding
+- WHEN a worker is assembled to run
+- THEN its prompt carries the deep-module framework and the red flags, foregrounded as
+  disciplines it is held to, so it builds deep up front
+
 ### Requirement: a worker runs fenced in its own git worktree
 A worker MUST run in its own git worktree — a separate checkout on its own branch, fenced
 from its siblings and the main line. It builds in isolation and its own commits reach the
@@ -47,15 +63,15 @@ integrates.
 - THEN it gets a worktree distinct from the main tree, commits its result there on its own
   branch, and that commit is reachable in the record but absent from the main line
 
-### Requirement: the worker applies and refines the delta the conversationalist proposed
+### Requirement: the worker applies and refines the delta the architect proposed
 A worker MUST rescan the current spec to verify the handed delta against present reality,
 build behind a feedback loop, and refine the delta to match what it built; the
-conversationalist then coherence-checks the result against the contract and archives the
-delta. The crossing is propose (conversationalist) → apply (worker) → archive
-(conversationalist), one delta end to end.
+architect then coherence-checks the result against the contract and archives the
+delta. The crossing is propose (architect) → apply (worker) → archive
+(architect), one delta end to end.
 
 #### Scenario: the result integrates
-- WHEN a worker hands back a refined delta and the conversationalist judges the result
+- WHEN a worker hands back a refined delta and the architect judges the result
   coherent with the contract
 - THEN the delta folds into the spec and the work leaves the threads view in the same act;
   an incoherent result raises a decision instead of folding

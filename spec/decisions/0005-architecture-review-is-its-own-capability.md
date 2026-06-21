@@ -2,6 +2,12 @@
 
 Status: machine-owned, awaiting ratification. [machine]
 
+> **Superseded in part by ADR 0006 (slice 7).** The boundary decision below stands —
+> architecture-review is its own capability, one criterion at two scopes. But the criterion is
+> re-grounded from length to depth: the review *measures length* as one signal, and the
+> model-driven red-flag depth scan becomes the standing job it is meant to grow (recorded
+> not-yet-built). Read the "measures length" framing below as superseded by ADR 0006.
+
 ## Context
 
 Slice 6 builds the architecture review render (rebuild-spec §7.4, §9.6): the standing scan

@@ -1,12 +1,12 @@
-"""The conversationalist: the only voice between the operator and the system.
+"""The architect: the only voice between the operator and the system.
 
 A thread is one throwaway conversational session — opened when the operator
 types in, closed when they have what they came for. It holds no durable state;
-durability lands on the graph. The conversationalist reads the operator's words
+durability lands on the graph. The architect reads the operator's words
 and lands one concrete consequence: a filed intent (standing work), a card
 returned to the queue, or an answer (with the thread closed when satisfied).
 
-The conversationalist no longer stubs the work: a ratified ask spawns standing
+The architect no longer stubs the work: a ratified ask spawns standing
 work, a worker builds it fenced (`worker`), and `integrate` is the archive stage —
 it coherence-checks the result against the contract and authors every operator-facing
 word from it, so a worker's raw output reaches the operator through no path at all.
@@ -25,7 +25,7 @@ MODEL = "claude-opus-4-8"
 MODEL_LABEL = "opus 4.8"
 
 SYSTEM = (
-    "You are hypercore's conversationalist — the single voice between the "
+    "You are hypercore's architect — the single voice between the "
     "operator and the system. The operator just spoke. Decide what their words "
     "are and land one concrete consequence. Reply with ONLY a JSON object:\n"
     '{"say": <your words to the operator, short and plain>, '
@@ -59,7 +59,7 @@ class Reply:
 
 
 def speak(thread: Thread, text: str, transport=None) -> Reply:
-    """One turn: feed the operator's words to the conversationalist and land
+    """One turn: feed the operator's words to the architect and land
     whatever consequence it returns on the graph. A filed ask does not become
     work directly — it enters grilling (§5), and only files straight through when
     it is below the floor."""
@@ -83,7 +83,7 @@ def speak(thread: Thread, text: str, transport=None) -> Reply:
 
 
 COHERENCE = (
-    "You are hypercore's conversationalist, archiving a worker's hand-off. Judge "
+    "You are hypercore's architect, archiving a worker's hand-off. Judge "
     "coherence at the operator's altitude: does the result honor the contract? This is "
     "not a code review. The worker's report below is for you alone and MUST NOT reach "
     "the operator — author any operator-facing words yourself, short and plain. Reply "
@@ -95,14 +95,16 @@ COHERENCE = (
 
 
 def integrate(node: graph.Node, result, transport=None, root: str | None = None) -> Reply:
-    """The archive stage: take a worker's hand-off, hold it against the folding conditions
-    and the contract, and on a pass fold its refined delta into the spec — the work integrates
-    and leaves the threads view in the same act. The worker's raw report is *input* to the
-    conversationalist's judgment, never output: every operator-facing word here is authored
-    fresh, so the report crosses to the operator through no path. A result that fails a folding
-    condition (no recorded loop, a god-file, a delta that will not apply) or that the
-    conversationalist judges incoherent raises a decision (re-cut / fix the loop / deepen the
-    module / abandon) rather than folding."""
+    """The archive stage, where the architect holds design judgment: take a worker's hand-off,
+    hold it against the folding conditions and the contract, and on a pass fold its refined
+    delta into the spec — the work integrates and leaves the threads view in the same act. The
+    worker's raw report is *input* to the architect's judgment, never output: every
+    operator-facing word here is authored fresh, so the report crosses to the operator through
+    no path. A result that fails a non-negotiable condition (no recorded loop, a delta that will
+    not apply), trips the **depth** condition (a module past the length signal with no
+    depth-decision — re-cut / deepen / accept-with-reason), or that the architect judges
+    incoherent raises a decision rather than folding. Depth surfaces to the operator as a
+    decision, never a silent veto and never a silent pass (rebuild-spec §7.1, ADR 0006)."""
     transport = transport or _claude
     blocked = conditions.unmet(result, root)           # the folding conditions (§7), before the merge
     if blocked:
@@ -128,7 +130,7 @@ def explain(node: graph.Node, transport=None) -> str:
     """Tell the story toward a decision; the card stays on the queue."""
     transport = transport or _claude
     prompt = (
-        "You are hypercore's conversationalist. The operator pressed explain on "
+        "You are hypercore's architect. The operator pressed explain on "
         "this card and wants help toward the decision — tell the story plainly: "
         "what it changes, where you lean, and the one thing that would flip it. "
         "Reply with ONLY a JSON object {\"say\": <your explanation>}.\n\n"
