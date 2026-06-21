@@ -66,12 +66,42 @@ def converse_body(thread: Thread, width: int, explain_text: str | None = None) -
     return rows
 
 
+def view_body(node, sel: int, width: int) -> list[Row]:
+    """One node of the operator view: vision beside as-built beside gap, then the
+    children to drill into. `node` is a view.ViewNode (duck-typed to stay decoupled)."""
+    rows: list[Row] = [[(f"operator view  ·  {node.title}", TITLE)], []]
+
+    def block(label: str, lines: list[str], style: str) -> None:
+        if not lines:
+            return
+        rows.append([(label, HEAD)])
+        for line in lines:
+            for w in _wrap(line, width - 8):
+                rows.append([("    ", style), (w, style)])
+        rows.append([])
+
+    block("vision", node.vision, SAY)
+    block("as-built", node.asbuilt, CARD)
+    block("gap", node.gap, TAG)
+
+    if node.children:
+        rows.append([("drill in", HEAD)])
+        for i, child in enumerate(node.children):
+            chosen = i == sel
+            style = SEL if chosen else CARD
+            rows.append([("  " + ("▸ " if chosen else "· "), style),
+                         (child.title, style)])
+    return rows
+
+
 def footer(model: str, mode: str, buffer: str, status: str, width: int) -> Row:
     """The bottom line: where the operator speaks, the model named at the right."""
     if status:
         left = status
+    elif mode == "view":
+        left = "view · ↑↓ select · →/enter drill · ←/esc up · type to speak"
     elif mode == "browse":
-        left = "browse · ↑↓ select · a/c/e act · esc or type to speak"
+        left = "browse · ↑↓ select · a/c/e act · v view · esc or type to speak"
     elif mode == "converse":
         left = "› " + buffer + "▖" + "   esc closes the thread"
     else:

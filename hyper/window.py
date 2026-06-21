@@ -10,7 +10,7 @@ import curses
 import threading
 from dataclasses import dataclass, field
 
-from . import conversation, graph, render
+from . import conversation, graph, render, view
 from .conversation import Thread
 
 ESC, ENTER, BACKSPACES = 27, (10, 13, curses.KEY_ENTER), (8, 127, curses.KEY_BACKSPACE)
@@ -19,13 +19,15 @@ SPIN = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
 
 @dataclass
 class State:
-    mode: str = "input"            # input | browse | converse
+    mode: str = "input"            # input | browse | converse | view
     buffer: str = ""
     sel: int = 0
     thread: Thread | None = None
     explain_text: str | None = None
     pending: "Async | None" = None
     tick: int = 0
+    view_path: list[int] = field(default_factory=list)  # drill-down into the view
+    view_sel: int = 0
 
 
 class Async:
@@ -79,9 +81,33 @@ def _main(scr) -> None:
 def _dispatch(scr, st: State, ch: int, nodes) -> bool:
     if ch == 17:  # Ctrl-Q quits from anywhere
         return False
+    if st.mode == "view":
+        return _view_keys(st, ch)
     if st.mode == "browse":
         return _browse(st, ch, nodes)
     return _typing(st, ch)
+
+
+def _view_keys(st: State, ch: int) -> bool:
+    """Navigate the operator-view tree: select, drill in, climb out."""
+    node = view.resolve(view.operator_view(), st.view_path)
+    last = max(0, len(node.children) - 1)
+    if ch in (ord("q"),):
+        return False
+    if ch in (curses.KEY_UP, ord("k")):
+        st.view_sel = max(0, st.view_sel - 1)
+    elif ch in (curses.KEY_DOWN, ord("j")):
+        st.view_sel = min(last, st.view_sel + 1)
+    elif node.children and ch in (curses.KEY_RIGHT, *ENTER):
+        st.view_path.append(st.view_sel)
+        st.view_sel = 0
+    elif ch in (ESC, curses.KEY_LEFT, *BACKSPACES):
+        if st.view_path:
+            st.view_path.pop()
+            st.view_sel = 0
+        else:
+            st.mode = "browse"
+    return True
 
 
 def _browse(st: State, ch: int, nodes) -> bool:
@@ -94,6 +120,10 @@ def _browse(st: State, ch: int, nodes) -> bool:
         st.sel = min(max(0, len(cards) - 1), st.sel + 1)
     elif ch == ESC:
         st.mode = "input"
+    elif ch == ord("v"):
+        st.mode = "view"
+        st.view_path = []
+        st.view_sel = 0
     elif cards and ch == ord("a"):
         graph.approve(cards[st.sel])
         st.sel = 0
@@ -157,6 +187,9 @@ def _paint(scr, st: State, nodes) -> None:
     h, w = scr.getmaxyx()
     if st.mode == "converse":
         rows = render.converse_body(st.thread or Thread(), w, st.explain_text)
+    elif st.mode == "view":
+        node = view.resolve(view.operator_view(), st.view_path)
+        rows = render.view_body(node, st.view_sel, w)
     else:
         rows = render.main_body(nodes, st.sel)
     for y, row in enumerate(rows):

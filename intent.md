@@ -13,7 +13,7 @@ hypercore is a small system for a human and an agent to work together.
 
 The graph is the model: nodes, the relations between them, and the material attached to them. Everything the operator sees is a view of that one graph.
 
-The machine carries no memory between episodes in its running context. An arc of work's durable memory is its thread, kept in the graph; a session's conversation is disposable and clears without loss, because the next episode reads what it needs from the thread.
+The machine carries no memory between episodes in its running context. An arc of work's durable memory is the graph and the version-controlled state that holds it; a session's conversation is disposable and clears without loss, because the next episode reads what it needs from the graph.
 
 Inherited debt is not carried. When the system stops passing the operator's acceptance with no lingering doubts, it is torn down and rebuilt, not patched.
 
@@ -40,6 +40,8 @@ The operator can speak from anywhere in the interface: their words land on disk 
 The operator's actions never make them wait. An act lands the instant the operator makes it and the interface frees at once; the durable write follows behind the screen, guaranteed to land or the operator told that it did not.
 
 The conversation is live: words spoken in the interface summon the machine on the spot, and the answer lands while the operator watches.
+
+A key, pressed on any visible element tied to a model's working, spawns a live visual of that model's reasoning — its shape, seen from several angles, in real time — so the operator can tune in to what a model is thinking and steer alongside it. This is a pull the operator makes on purpose, not a push the system sends; symbiosis wants the channel direct. [machine]
 
 Reading the operator's words is machine work. Whether a word is new intent, a new ask, an answer, or a redirect is the machine's call to make and answer for, and what it made of the word returns through the queue. Every operator word lands a concrete, findable consequence — a change, a decision returned to them, or a written reason nothing moved — and the record leads from the word to what was done about it.
 

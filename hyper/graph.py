@@ -110,7 +110,30 @@ def cut(node: Node) -> None:
     path = _path(node.id)
     if os.path.exists(path):
         os.remove(path)
-    _commit([path], f"cut: {_subject(node.text)}")
+    commit([path], f"cut: {_subject(node.text)}")
+
+
+# ── durable write (the act lands atomically; the commit follows behind) ──────
+# Shared by every durable write — the graph and the living spec both land here,
+# so the "atomic replace, then commit" mechanism lives in exactly one place.
+
+def atomic_write(path: str, text: str) -> None:
+    d = os.path.dirname(path)
+    os.makedirs(d, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=d)
+    with os.fdopen(fd, "w") as f:
+        f.write(text)
+    os.replace(tmp, path)                      # atomic; the act lands here
+
+
+def commit(paths: list[str], message: str) -> None:
+    try:
+        subprocess.run(["git", "add", *paths], cwd=_root(), check=True,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(["git", "commit", "-m", message], cwd=_root(), check=True,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
+        pass  # already on disk; a failed commit does not lose the act
 
 
 # ── on-disk form (legible markdown, one file per node) ───────────────────────
@@ -151,26 +174,11 @@ def _read(path: str) -> Node:
 
 
 def _persist(node: Node, message: str) -> None:
-    d = _nodes_dir()
-    os.makedirs(d, exist_ok=True)
     body = node.text + (f"\n\n{MARKER}" if node.machine else "")
     raw = (f"---\nkind: {node.kind}\nstate: {node.state}\n"
            f"owner: {node.owner}\ncreated: {node.created:.0f}\n---\n{body}\n")
-    fd, tmp = tempfile.mkstemp(dir=d)
-    with os.fdopen(fd, "w") as f:
-        f.write(raw)
-    os.replace(tmp, _path(node.id))           # atomic; the act lands here
-    _commit([_path(node.id)], message)        # durability follows behind
-
-
-def _commit(paths: list[str], message: str) -> None:
-    try:
-        subprocess.run(["git", "add", *paths], cwd=_root(), check=True,
-                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        subprocess.run(["git", "commit", "-m", message], cwd=_root(), check=True,
-                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    except Exception:
-        pass  # already on disk; a failed commit does not lose the act
+    atomic_write(_path(node.id), raw)         # the act lands at once
+    commit([_path(node.id)], message)         # durability follows behind
 
 
 def _subject(text: str) -> str:
