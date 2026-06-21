@@ -1,198 +1,146 @@
-# Item 2 — context files vs. prompt-assembled grounding: the verification and the routing boundary
+# Item 2 — assembling maximally skilled, specialized roles
 
-*The investigation `next-work.md` item 2 asked for. The operator's instinct was that hypercore
-grounds its agents **only** through hand-assembled prompt strings and leaves value on the table by
-holding no context file. This document does what the note demanded first — **verify** that the
-agents' real harnesses auto-load a context file — then resolves which grounding belongs in a file
-and which stays routed. It settles nothing the operator owns: §7 collects the genuine forks.*
+*The investigation `next-work.md` item 2 asked for. **The goal** (operator, 2026-06-21): two roles —
+**architect** and **worker** — each as **skilled, specialized, effective, and consistent** as we can
+make them. We have five moving parts to assemble toward that: **repo documents, agents files, skills,
+prompts**, across the **two roles**. This document fixes what each part is for, records the mechanics
+that are verified on the real harnesses, and hands the next session a concrete assembly to design. It
+builds nothing and settles nothing the operator owns.*
 
-*First written anchored to `claude -p` for both roles; **re-grounded** (2026-06-21) after the
-operator named the actual stack: the architect is Opus 4.8 (Claude), the **worker is GPT-5.5 via
-pi/OMP**, and the **north star is open-weight / non-proprietary only** (`hypercore-parked/
-harness-ideas.md` §0). That inverts which file is the source of truth — and both ends are now
-verified on their real harnesses.*
-
-*Marks: **[omp]** / **[claude]** = observed empirically this session on that harness; **[doc]** =
-vendor documentation; **[code]** = present in this repo or the parked harness; **[proposed]** = the
-architect's design, to be grilled; **[fork]** = a genuine judgment call left to the operator.*
+*Marks: **[omp]** / **[claude]** = verified empirically this session on that harness; **[doc]** =
+vendor documentation; **[code]** = present in this repo or the parked harness; **[design]** = the
+open design work for the next session.*
 
 ---
 
-## 1. The stack this grounds — two harnesses, two files, one open standard
+## 1. The stack — two harnesses, one open standard
 
-hypercore's reasoning is not one brain. Phase 1 (now) runs a single Claude brain as a stopgap; the
-intended split (`harness-parked` §0, sharpened by the operator this session) is:
+hypercore's reasoning is two specialized roles, on two harnesses (`harness-parked/harness-ideas.md`
+§0; sharpened by the operator):
 
-- **Architect = Opus 4.8, via `claude -p`.** Claude reads **`CLAUDE.md`**; it does **not** read
-  `AGENTS.md`. [claude+doc]
-- **Worker = GPT-5.5, via pi/OMP** (`omp -p … --model openai-codex/gpt-5.5`), run fenced in the
-  worktree (`hypercore-parked/harness-source`, `omp_runner.py`). OMP reads **`AGENTS.md`** — and, as
-  a superset loader, CLAUDE.md and many other conventions too. [omp+code]
-- **North star: open-weight only** (`harness-ideas.md` §0). Every closed route — Opus for the
-  architect, GPT-5.5 for the worker — is an interim the north star eventually retires.
+- **Architect = Opus 4.8, via `claude -p`.** Operator-facing: design judgment, coherence, legibility.
+  Reads **`CLAUDE.md`**; not `AGENTS.md`. [claude+doc]
+- **Worker = GPT-5.5, via pi/OMP**, run fenced in the worktree. System-facing: builds deep, hands
+  back a machine-facing result. Reads **`AGENTS.md`** natively (a superset loader — CLAUDE.md too).
+  [omp+code]
+- **North star: open-weight, non-proprietary** (§0). The open `AGENTS.md` standard is the durable
+  centre; `CLAUDE.md` is the per-vendor edge.
 
-So the design question is **not** "which proprietary file." It is: **which file is the durable,
-cross-vendor source of truth, and which is a per-vendor adapter over it.** `AGENTS.md` is the open
-standard (OpenAI/Codex, opencode, OMP, and others read it); `CLAUDE.md` is Anthropic's. Banking on
-the open standard is the same instinct as the north star. **AGENTS.md is the source of truth;
-CLAUDE.md is a thin adapter** — exactly the operator's read.
+## 2. The five parts, and what each is for
 
-## 2. The gates — verified on the real harnesses, both ends [omp][claude]
+The point is not to pick one mechanism over another — it is to **layer all of them**, each doing what
+it is best at, so a role is grounded, specialized, and consistent without one giant brittle prompt:
 
-The whole idea hinges on auto-load, so it was tested with a **canary**: a context file naming a
-secret token the model could only know by having the file loaded. Crucially, to exclude the
-agent *tool-reading* the file (an agentic CLI with file tools will read a small directory), the
-decisive runs **disabled tools** (`omp --no-tools`, `claude --disallowedTools Read Glob Grep Bash`),
-so a returned token can *only* have come from auto-loaded context — plus a negative control.
+| Part | What it is | Lifetime | Best for |
+|---|---|---|---|
+| **Repo documents** | `intent.md`, rebuild-spec, the living spec, ADRs, `research/` | durable, authored/folded | the **single source of truth** every other part derives from |
+| **Agents files** | `AGENTS.md` (worker) + `CLAUDE.md`→`@AGENTS.md` (architect) | always-on, per session | the role's **standing identity + disciplines** — who it is, how it works, every episode |
+| **Skills** | on-demand capability/methodology packs (both harnesses have them) | loaded when relevant | **specialized expertise, routed** — pulled by the task, not always resident |
+| **Prompts** | the per-node assembled context (handed delta, ask, touched spec slice, live state) | per episode | the **live, task-specific** material that only exists for this node |
+
+The governing relationship: **repo documents are the source; agents files, skills, and prompts are
+three derived delivery channels** — always-on, on-demand, and per-node respectively. Nothing is
+hand-copied between them (that is the `worker.DEPTH` smell — a compressed copy of `research/aposd.md`
+frozen in a Python constant [code]); each channel renders from the one source.
+
+The earlier draft mis-cast this as a turf war ("keep routing in prompts; resist files and skills").
+It is not. **Skills *are* the routing mechanism** — on-demand, per-capability loading is exactly
+what hypercore's per-capability self-model wants, done by the harness instead of marshalled into one
+megaprompt. **Agents files *are* where role identity belongs** — always-on grounding is what makes a
+role specialized and consistent. The megaprompt that `worker.prompt()` assembles today is the thing
+this *replaces*, split across the channel that fits each piece.
+
+## 3. The two roles, specialized — the target layering [design]
+
+What each role is assembled from, every piece single-sourced from repo documents:
+
+- **Worker (GPT-5.5 / OMP), fenced.**
+  - *Agents file* (`AGENTS.md` at the fence root): the worker's standing identity — system-facing,
+    fenced, the deep-module disciplines, the worker contract, the red→green-loop discipline. Always
+    on, so the worker *is* a deep-building specialist before it reads a single task.
+  - *Skills*: the methodology and per-capability expertise it pulls for the node it is on — the depth
+    framework in depth, the touched capability's self-model, design patterns for that capability.
+  - *Prompt*: the handed delta, the ask, the touched spec slice, the live state of this node.
+- **Architect (Opus 4.8 / Claude).**
+  - *Agents file* (`CLAUDE.md` → `@AGENTS.md`, or its own): the architect's standing identity —
+    operator-facing, design judgment, legibility, the coherence stance, the standing-guard floor.
+  - *Skills*: design-it-twice, the architecture review, the grilling discipline — pulled when the
+    work calls for them.
+  - *Prompt*: the thread, the worker's hand-off to integrate, the live decision in front of it.
+
+So **role *is* mapped into the agents files** — deliberately, because the standing identity is what
+specialization means — while skills carry the on-demand expertise and prompts carry the live task.
+Each role gets the maximal stack; the parts do not compete, they compose.
+
+## 4. The mechanics, verified on the real harnesses [omp][claude]
+
+Tested with a **canary** (a context file naming a token the model could only know by having loaded
+it), with **tools disabled** on the decisive runs (`omp --no-tools`, `claude --disallowedTools …`) so
+a returned token proves *auto-load*, not the agent reading the file — plus negative controls.
 
 | Harness | Setup | Result |
 |---|---|---|
 | **OMP (worker)** | `AGENTS.md` at the worktree root, `--no-tools --no-session` | **token returned** — auto-loaded |
-| **OMP (worker)** | same, `AGENTS.md` removed from cwd, `--no-tools --no-session` | **NONE** — no carryover; the file is causal |
+| OMP (worker) | same, file removed from cwd | **NONE** — the file is causal, no carryover |
 | **Claude (architect)** | `CLAUDE.md` at cwd (incl. a real git worktree) | **token returned** — auto-loaded |
-| **Claude (architect)** | `AGENTS.md` alone at the worktree root | **NONE** — Claude ignores AGENTS.md |
-| **Claude (adapter)** | `CLAUDE.md` containing `@AGENTS.md`, file tools disabled | **token returned** — the import pulled AGENTS.md in |
-| **Claude (adapter)** | `AGENTS.md` present but no import, file tools disabled | **NONE** — without the adapter, AGENTS.md does not reach Claude |
+| Claude (architect) | `AGENTS.md` alone at the worktree root | **NONE** — Claude ignores AGENTS.md |
+| **Claude (adapter)** | `CLAUDE.md` with `@AGENTS.md`, file tools disabled | **token returned** — the import pulls AGENTS.md in |
+| Claude (adapter) | `AGENTS.md` present, no import, file tools disabled | **NONE** — without the adapter it does not reach Claude |
 
-Three facts, each load-bearing and each verified:
+Load-bearing facts, each verified:
 
-1. **The worker harness (OMP) auto-loads `AGENTS.md` from the worktree cwd** — proven with zero tools
-   available, so it is genuine context auto-load, not a tool read. [omp] OMP's rule descriptions
-   confirm the mechanism: *"Load AGENTS.md from … (project walk-up + user home)."* `--no-rules` does
-   **not** disable it — in OMP's taxonomy `AGENTS.md` is a *context file*, loaded unconditionally,
-   distinct from the cursor/windsurf-style "rules" that flag gates.
-2. **The architect harness (Claude) auto-loads `CLAUDE.md`, never `AGENTS.md`** — confirmed
-   empirically and by the docs (*"Claude Code reads `CLAUDE.md`, not `AGENTS.md`"*). [claude+doc]
-3. **The adapter works end-to-end:** a `CLAUDE.md` containing `@AGENTS.md` pulls the AGENTS.md content
-   into Claude's context; without the import Claude has nothing. [claude+doc] This is the documented
-   pattern (`@AGENTS.md`, or a `ln -s AGENTS.md CLAUDE.md` symlink) — the exact adapter the operator
-   wanted, now verified rather than assumed.
+1. **OMP auto-loads `AGENTS.md` from the worktree cwd** — proven with zero tools, so genuine context
+   auto-load. Its own rule says *"Load AGENTS.md from … (project walk-up + user home)."* [omp]
+2. **Claude auto-loads `CLAUDE.md`, never `AGENTS.md`** — empirically and by docs. [claude+doc]
+3. **The adapter works:** `CLAUDE.md` containing `@AGENTS.md` puts the AGENTS.md content in Claude's
+   context. So write the durable grounding once in `AGENTS.md`; the architect's `CLAUDE.md` is a
+   one-line `@AGENTS.md`. [claude+doc]
+4. **Both harnesses have a skills mechanism** — OMP natively (`--skills`, `--no-skills`, `omp agents`;
+   on-demand loading) [omp]; Claude Code / the Agent SDK have skills too. The exact architect-side
+   skill format is to be pinned when that side is built, but the principle holds: both roles can be
+   specialized by skills, not only by prose. [design]
 
-**Net:** author the grounding **once in `AGENTS.md`**; the worker reads it natively; a one-line
-`CLAUDE.md` → `@AGENTS.md` gives the architect (and any Claude-Code building session) the same
-content. The adapter is the temporary, proprietary edge; AGENTS.md is the durable centre.
+## 5. The blocker, and the sequencing [code]
 
-## 3. The blocker, and the sequencing — the worker does not yet run in its fence [code]
+Two facts set *when* each piece can land:
 
-Two facts gate *when* this lands, neither of which the surface note saw:
+- **The transport runs at the repo root, not the fence.** [code] `conversation._claude` calls
+  `claude -p` with **no `cwd`**; `worker.apply` uses the fence only to write `RESULT.md`. So **no
+  fence agents-file or skill reaches a worker until the transport runs the worker with `cwd = the
+  fence`.** And a repo-root `CLAUDE.md` reaches the *architect* immediately (it runs at repo root) —
+  not a side-effect-free drop. (`--check` is immune — scripted transport, no real model.)
+- **The worker is still `claude -p`, not OMP.** [code] The pi/OMP harness seam — worker = `omp`
+  fenced in the worktree — is **parked, not built** (`harness-ideas.md` §0.1). OMP's native AGENTS.md
+  and skills loading arrives with that seam.
 
-- **The current transport runs at the repo root, not the worktree.** [code] `conversation._claude`
-  calls `claude -p` with **no `cwd`**; `worker.apply` uses the fence only to write `RESULT.md` after
-  the fact — the model call runs where the python process launched (the repo root). So **no
-  worktree context file can reach a worker until the transport runs the worker with `cwd = the
-  fence`.** And because the architect already runs at the repo root, a repo-root `CLAUDE.md` reaches
-  the *architect* immediately — committing one is not a side-effect-free file drop. (`--check` is
-  immune: it drives a scripted transport, no real model call.)
-- **The worker is still `claude -p`, not OMP.** [code] The pi/OMP harness — the seam that makes the
-  worker `omp` fenced in the worktree (`harness.py`, `omp_runner.py`) — is **parked, not built in
-  the fresh repo** (`harness-ideas.md` §0.1). The worker-side payoff of AGENTS.md (OMP auto-loads it
-  in the fence) arrives with that seam.
+**Sequencing:** the architect side and the source-of-truth `AGENTS.md` (+ the `CLAUDE.md` adapter,
+retiring `worker.DEPTH`) can start **now**; the worker-fenced side (transport cwd-awareness, the OMP
+flip, OMP skills) lands **with the parked harness seam**.
 
-This is why the investigation recommends rather than builds: the *content* move (depth disciplines →
-`AGENTS.md`, single-sourced) is worth doing now and is immediately used by the architect and by
-building sessions; the *worker* wiring (run the worker fenced and cwd-aware; flip the worker to OMP)
-is the phase-2 harness seam. Author the file now; wire the worker when the seam lands.
+## 6. The design the next session owns [design]
 
-## 4. The routing boundary — what belongs in the file, what stays assembled [proposed]
+Not "whether" — the direction is set: assemble all five parts into two maximally specialized roles.
+The open work is the concrete assembly:
 
-hypercore **routes** context deliberately (rebuild-spec §6): each role gets only its render — the
-worker gets its touched capabilities foregrounded plus the scan, glossary, decisions, delta, ask;
-the architect gets operator-facing prompts; neither holds the other's view. A context file is the
-**opposite** of routing: it is ambient — every session rooted at or under it gets it, identically.
-So the boundary is **which grounding is genuinely role-invariant and ambient** (a fit for the file)
-versus **which is per-node and routed** (must stay assembled, or it flattens into one shared file —
-the §6.2 failure).
+1. **The assembly map.** For each role, partition its grounding across the three channels:
+   what is *standing identity* → the agents file; what is *on-demand expertise* → a skill; what is
+   *live task* → the prompt. Name the actual pieces (the worker's disciplines, each capability's
+   self-model, the architect's design methodologies) and place each.
+2. **Single-sourcing from repo documents.** Every channel renders from the one source — no second
+   `worker.DEPTH`. Decide how skills and agents files are *derived* (and kept in sync as the spec
+   folds — the self-model is re-derived every fold; its skill form must follow).
+3. **Role-specialized file placement.** The worker's fence is a checkout of the repo, so a
+   repo-root `AGENTS.md` is shared with everything that roots there. Decide how the worker gets the
+   *worker's* agents file and the architect gets the *architect's* — distinct cwds, scoped files, or
+   a shared core plus per-role overlays.
+4. **Skills as the routing.** Map the per-capability self-model onto skills (loaded on demand by the
+   touched capability), replacing the whole-spec megaprompt `worker.prompt()` marshals — for both
+   harnesses, single-sourced.
+5. **Sequencing the build** (§5): architect side + `AGENTS.md`/adapter now; worker-fenced side with
+   the harness seam. An ADR records the assembly model when the operator ratifies the partition.
 
-- **→ `AGENTS.md` (ambient, durable, role-invariant):** the **depth-discipline *framework*** — what
-  a deep module is, the red flags — and the "what hypercore is" frame. Same every episode,
-  version-controlled, operator-legible: exactly `intent.md`'s *"durable state in version-controlled
-  files,"* which a Python string literal is not. This **single-sources the live smell** the note
-  named: `worker.DEPTH` is a hand-compressed copy of `research/aposd.md` pasted into a constant
-  [code]. `AGENTS.md` carrying the framework (the architect's `CLAUDE.md` importing it via
-  `@AGENTS.md`) makes the source the source — the duplication is *deleted*, not maintained.
-- **stays assembled (per-node, routed):** the **per-capability spec slice and its touched/scan
-  split** — this *is* the routing; it is computed per node and cannot be a static file. With it: the
-  **glossary** (part of the self-model, *derived* and re-rendered every fold — pinning it into a
-  static file would flatten the model and need regenerating on each fold), the **decisions**, the
-  **handed delta**, the **ask**, and the role **stance** (the worker's *"build deep"* vs. the
-  architect's *"judge depth at the gate"* — role-specific instruction over a role-invariant
-  framework; putting the worker's stance in the shared file leaks it to the architect — the §6
-  failure).
-
-The note's guess ("durable role-invariant → files; self-model routing → stays assembled") was right
-in shape. The only correction is the file: the durable layer lives in **`AGENTS.md`** (the open
-standard the worker harness reads), with `CLAUDE.md` a generated `@AGENTS.md` adapter for the
-architect — not the first draft's "CLAUDE.md, since the worker runs `claude -p`," which had the
-worker's harness wrong.
-
-## 5. The richer option OMP opens — skills (and why it is also a fork) [omp]
-
-OMP is not only a context-file loader; it has a native **skills** mechanism — on-demand capability
-loading (`--no-skills`, `--skills=<glob>`, `omp agents`), selected per task rather than always
-present. A *parked* investigation hit exactly hypercore's question (`Trash/…/pi-omp-skill-loading-
-report`): prior work *"flattened skills into always-present prompt text rather than preserving OMP's
-skill selection and on-demand loading."* That is the same shape as the `worker.DEPTH` smell — and it
-suggests the **routed per-capability self-model could map onto OMP skills** (loaded on demand by the
-touched capability) rather than assembled into one prompt: routing, done by the harness.
-
-But skills are **OMP-specific**: the Claude architect has no OMP skills, and a skill mechanism is not
-the open `AGENTS.md` standard. Leaning on it coreward cuts against the north star and re-splits the
-two roles' grounding paths. So it is a genuine fork (§7 F3), not a free win — powerful for the
-worker, unavailable to the architect, and proprietary to one harness.
-
-## 6. Two uses, and the audience collision (unchanged by the re-grounding) [proposed]
-
-The note separated two uses; they still collide in one repo-root file. **(a)** grounding hypercore's
-*roles* wants the depth framework — content both the worker (builds deep) and the architect (judges
-depth) should hold. **(b)** onboarding agents that *build* hypercore (this meta-workflow) wants the
-reading order, the slice workflow, `python3 -m hyper --check`. Because the architect runs at the repo
-root, a single repo-root file holding (b) would feed the architect *"you are a building agent, read
-next-work.md"* — wrong-context noise for a role mid-conversation with the operator. **(a) and (b) are
-different audiences; one ambient file cannot serve both.** Keep (b) separate, or defer it.
-
-## 7. The open forks — the operator's to settle
-
-- **[fork] F1 — adopt file-grounding, with `AGENTS.md` as the source of truth and `CLAUDE.md` as the
-  `@AGENTS.md` adapter?** *Lean: yes, for the depth framework only.* It deletes the `worker.DEPTH`
-  duplication, is operator-legible and version-controlled, is read natively by the worker harness,
-  and banks on the open standard (north-star-aligned). The architect's adapter is one line and
-  verified. *Flips it:* if running the worker fenced+cwd-aware is far off and de-duplication is the
-  only near-term win, a shared `research/aposd.md`-imported constant gets that without a file.
-- **[fork] F2 — what crosses into `AGENTS.md`:** the role-invariant framework (depth disciplines, the
-  "what hypercore is" frame), **not** the routed per-capability self-model. *Lean: framework only;*
-  the routing (spec slice, glossary, decisions, delta, stance) stays assembled (§4).
-- **[fork] F3 — the routed layer: prompt-assembled (portable) vs. OMP skills (routed, on-demand, but
-  OMP-only).** *Lean: stay prompt-assembled for now* — it serves both the Claude architect and the
-  OMP worker and stays vendor-neutral; revisit OMP skills only if/when the architect also moves to a
-  harness with skills. This is the deeper form of the original "self-model routing" tension (§5).
-- **[fork] F4 — sequencing.** Author `AGENTS.md` + the `CLAUDE.md` adapter **now** (used immediately
-  by the architect and building sessions; `worker.DEPTH` retired); land the **worker** side (run the
-  worker fenced + cwd-aware; flip the worker to OMP) **with the parked harness seam**. *Lean: split
-  it this way* rather than waiting for the seam to start, or building worker-grounding against a
-  transport that does not yet run in the fence.
-- **[fork] F5 — user-level files are un-routed inputs to every role.** OMP loads `AGENTS.md` from
-  *user home* too, and Claude always loads `~/.claude/CLAUDE.md`. The operator's personal files leak
-  into both roles, outside any fence. *Lean: note the exposure; do not engineer around it now* — it
-  is the operator's own machine.
-
-## 8. What a build would touch, and the honest acceptance story
-
-The recommended near-term core (F1+F2+F4's "author now" half) touches: a committed **`AGENTS.md`**
-(the depth framework, importing/condensing `research/aposd.md`) at the repo root, present in every
-worktree checkout; a one-line **`CLAUDE.md`** (`@AGENTS.md`) adapter; **`hyper/worker.py`** —
-`DEPTH` leaves the Python constant, the prompt keeps only the worker's *stance*; **`spec/worker`**
-and **`spec/self-model`** deltas (grounding now arrives partly ambient, partly routed; the boundary
-stated); the **glossary** (ambient context file / source-of-truth vs. routed context; the
-CLAUDE.md-adapter term); and an **ADR** (file-grounding adopted, `AGENTS.md` the source of truth,
-`CLAUDE.md` the adapter, the routing boundary — it *adds* an ambient layer beside the routed one,
-superseding nothing). The worker-side half (F4) — the transport running fenced + cwd-aware, the OMP
-flip — folds into the parked harness seam when it is built.
-
-**The honest limit, the slice-7-F1 / slice-8 precedent:** the acceptance harness drives a *scripted*
-transport with no real model and no network, so it **cannot** assert that a real `omp`/`claude`
-loaded the file — that is the canary experiment in §2, run by hand, recorded as verified-by-
-experiment, not faked into the harness. The harness *can* assert the mechanical scaffold: `AGENTS.md`
-and the `CLAUDE.md` adapter exist at the repo root, the worker prompt no longer carries the
-duplicated `DEPTH` constant, and (when the seam lands) the transport threads a cwd and runs the
-worker with `cwd = the fence`. The model-side fact (the file actually grounds the agent) is the
-verified experiment above — the same self-honesty the depth scan and load-bearing detection carry.
+**The honest harness limit** (slice-7-F1 / slice-8 precedent): the acceptance harness drives a
+scripted transport with no real model, so it cannot assert a live `omp`/`claude` loaded a file or a
+skill — that is the verified experiment in §4, recorded as such, never faked into the harness. The
+harness *can* assert the scaffold: the files and skills exist and are single-sourced, the megaprompt
+duplication is gone, and (with the seam) the transport runs the worker with `cwd = the fence`.

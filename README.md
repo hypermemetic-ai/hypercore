@@ -24,11 +24,11 @@ length-acceptance **bounded** — it ratchets up rather than silencing a file fo
 accepted length recorded as `accepted@<N>` and a stale acceptance surfaced distinctly by the
 review (ADR 0008).
 
-Next: item 2 (context files) is **investigated** — `research/context-files.md`. Verified on the real
-heterogeneous stack (architect = Opus 4.8 via `claude -p`; worker = GPT-5.5 via pi/OMP): OMP
-auto-loads **`AGENTS.md`** from the worktree cwd, Claude auto-loads **`CLAUDE.md`** and ignores
-AGENTS.md, and a `CLAUDE.md` → `@AGENTS.md` adapter bridges the two. So **AGENTS.md is the source of
-truth** (the open standard, north-star-aligned) and **CLAUDE.md a thin adapter** — the depth
-framework moves there (retiring `worker.DEPTH`'s duplication), while per-capability routing stays
-prompt-assembled. A transport/seam blocker (the worker does not yet run in its fence; pi/OMP is
-parked) sets the sequencing. Five forks now await the operator's pick before the ADR and build.
+Next: item 2 (context files) is **investigated** — `research/context-files.md`. The goal: two roles
+(architect = Opus 4.8 via `claude -p`; worker = GPT-5.5 via pi/OMP), each **maximally skilled and
+specialized**, assembled from five parts — repo documents (the single source) feeding three derived
+channels: **agents files** (always-on role identity), **skills** (on-demand specialized expertise —
+the routing), and **prompts** (the per-node live task). Mechanics verified on the real harnesses: OMP
+auto-loads **`AGENTS.md`**, Claude auto-loads **`CLAUDE.md`**, the `@AGENTS.md` adapter bridges, and
+both harnesses have skills. The next session designs the concrete per-role assembly (architect side
+startable now; the worker-fenced side lands with the parked pi/OMP harness seam).
