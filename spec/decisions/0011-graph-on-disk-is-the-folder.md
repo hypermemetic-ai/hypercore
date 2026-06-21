@@ -73,7 +73,9 @@ reasoning from the intent's own §work.
 - **`next-work.md` is retired**: standing work becomes graph folders under `work/`, the frontier
   computed; its current content migrates onto the nodes whose asks it records (and folds to
   `archive/` where the work is already done).
-- **`research/` is unaffected** — ADR 0010 settled it as cited provenance; it is not a graph node.
+- **`research/` — corrected by ADR 0012.** This ADR first read research as unaffected; ADR 0012
+  reverses that — provenance *is* graph material, so the root `research/` is dissolved and each note
+  lands on its work graph. Independent of this ADR's graph-shape decision.
 - The machine's first framing of this fork (directory-move vs field-flip as a binary) was
   mis-bundled; the corrected, *separable* axes are decomposition-edge (containment, at the graph
   grain) and lifecycle transition (directory-move). Recorded so it is not re-litigated.

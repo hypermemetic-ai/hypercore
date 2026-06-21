@@ -15,7 +15,7 @@ and the harness-seam build — remain [machine] and land with the build.
 
 ## Context
 
-Item 2 was investigated (`research/context-files.md`), designed (`research/assembly.md`), and
+Item 2 was investigated (`work/role-assembly/context-files.md`), designed (`work/role-assembly/assembly.md`), and
 validated a second time against live sources (assembly.md §8). That second pass confirmed the field
 grounding and moved two facts; a third turn corrected an over-application of one of them.
 

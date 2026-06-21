@@ -7,7 +7,7 @@ Status: machine-owned, awaiting ratification. [machine]
 Slice 7 reconsiders the line-count budget and the slice-6 `check.py` split against John
 Ousterhout's *A Philosophy of Software Design* (`spec/depth.md`, the depth synthesis), and —
 the impression having held through a deep run — rebuilds hypercore's architectural constraint
-around it (`research/regrounding.md`, the slice-7 design). The budget named the enemy by its
+around it (`archive/depth-regrounding/regrounding.md`, the slice-7 design). The budget named the enemy by its
 **fingerprint** (length) rather than its **cause** (shallow, entangled, leaky structure),
 and so made the fingerprint the crime: a line-count ceiling that fires without judgment is
 the same mistake as *Clean Code*'s small-function floor — a number standing in for the

@@ -42,4 +42,4 @@ whole spec unchanged; the worker-fenced side is parked, not faked, on the pi/OMP
 - **steps 5–6 — the worker-fenced side.** Transport `cwd` = the fence, the ADR/reference tail pulled
   just-in-time (the spec capabilities stay preloaded), the OMP flip, OMP skill loading.
 
-Provenance: `research/context-files.md` (the investigation), `research/assembly.md` (the design).
+Provenance (this folder): `context-files.md` (the investigation), `assembly.md` (the design).

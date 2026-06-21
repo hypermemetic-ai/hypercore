@@ -2,7 +2,9 @@
 
 Status: **operator-directed** (2026-06-21) — the operator named the smell and chose the shape (the
 depth source's home, this ADR's scope); the machine-side execution below awaits ratification.
-[machine]
+[machine] **Superseded in part by ADR 0012:** the placement (research as a root directory) is
+reversed — provenance is material on its node. The cite-don't-depend discipline and the
+`research/aposd.md` → `spec/depth.md` promotion stand.
 
 ## Context
 

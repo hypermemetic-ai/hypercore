@@ -47,9 +47,11 @@ next, with the fenced-worker side on the parked multi-model harness seam. See `w
 
 ## On documents
 
-Research and design notes live under `research/` as **provenance** — they informed decisions but
-nothing standing depends on them. The decisions (`spec/decisions/`), the spec, and the code stand
-alone, so a clone is self-sufficient: a standing artifact may *cite* research as a footnote, never
-*depend* on it (read it at runtime, or pin acceptance to a section). ADR 0010 records the
-discipline — and retired the bootstrap `rebuild-spec` scaffold, its content absorbed into
-`intent.md`, the spec, and the ADRs.
+Research and design notes are **provenance** — they informed decisions but nothing standing depends
+on them. They are *material*, so they live with the work graph whose ask produced them (the item-2
+design in `work/role-assembly/`, the slice-7 design in `archive/depth-regrounding/`), folding to
+`archive/` with it — not in a root directory of their own (ADR 0012 dissolved the old `research/`).
+The decisions (`spec/decisions/`), the spec, and the code stand alone, so a clone is
+self-sufficient: a standing artifact may *cite* provenance as a footnote, never *depend* on it (read
+it at runtime, or pin acceptance to a section). ADR 0010 records that discipline and retired the
+bootstrap `rebuild-spec` scaffold; ADR 0012 placed provenance on its node.

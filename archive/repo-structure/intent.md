@@ -17,8 +17,10 @@ graph** — the model `intent.md` calls the source of truth. Investigation (the 
 
 The decision is recorded and ratified, and the repo obeys its own §structure:
 
-- **`research/` stays as cited provenance** (ADR 0010) — it informs decisions; nothing standing
-  depends on it. The load-bearing synthesis graduated to `spec/depth.md`.
+- **`research/` is dissolved** (ADR 0012, correcting ADR 0010 under false pretense) — provenance is
+  *material* on its node: the item-2 notes moved to `work/role-assembly/`, the slice-7 design to
+  `archive/depth-regrounding/`. The cite-don't-depend discipline and the `spec/depth.md` promotion
+  stand.
 - **the graph on disk is the folder, not the node** (ADR 0011) — `intent.md` §work verbatim, backed
   by OpenSpec and the research pass. `work/` (open) + `archive/` (folded) now exist.
 - **`next-work.md` is retired** — its forward work became the live graph (`work/`); its history is
@@ -29,3 +31,4 @@ The decision is recorded and ratified, and the repo obeys its own §structure:
 - ADR 0010 — research is provenance; the standing artifacts stand alone.
 - ADR 0011 — the graph on disk is the folder, not the node. Spawned the open arc
   `work/graph-on-disk/` (conform the engine).
+- ADR 0012 — provenance is material on its node; `research/` dissolved (reversing ADR 0010).
