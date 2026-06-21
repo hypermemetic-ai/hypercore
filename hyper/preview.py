@@ -26,11 +26,11 @@ def run() -> int:
 
     # a grilling question on the queue: its lean and what would flip it, expanded
     held = graph.hold("absorb the seasonal anime tracker")
-    graph.question(held.id,
-                   "which tracker should the seasonal pulls follow?\n"
-                   "lean: nyaa — it carries the releases you already use\n"
-                   "flip: a private tracker you have an account on would change it",
-                   awaiting=True)
+    grill._save(held, grill._Pass(0, [{
+        "q": "which tracker should the seasonal pulls follow?",
+        "lean": "nyaa — it carries the releases you already use",
+        "flip": "a private tracker you have an account on would change it",
+        "answer": ""}], "", ""))
     cards = graph.cards()
     sel = next(i for i, c in enumerate(cards) if grill.is_question(c))
     print("\n  ── grilling: one question, with the machine's lean ──\n")

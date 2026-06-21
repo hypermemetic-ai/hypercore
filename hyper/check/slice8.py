@@ -134,8 +134,13 @@ def check(root: str) -> None:
        "the candidate fences are scratch — torn down once the pick is recorded")
 
     frame = "".join(t for row in render.main_body(graph.read_graph(), -1) for t, _s in row)
-    ndir = os.path.join(root, "work", "nodes")
-    nodefiles = "".join(open(os.path.join(ndir, n)).read() for n in os.listdir(ndir))
+    nodefiles = ""
+    for top in ("work", "archive"):                          # graph nodes only — not the scratch fence
+        for dp, dirs, fs in os.walk(os.path.join(root, top)):
+            if "worktrees" in dirs:
+                dirs.remove("worktrees")
+            nodefiles += "".join(open(os.path.join(dp, fn)).read()
+                                 for fn in fs if fn in ("intent.md", "grilling.md"))
     cards_text = "".join(c.text for c in graph.read_graph())
     ok(SENTINEL not in frame and SENTINEL not in nodefiles and SENTINEL not in cards_text,
        "the raw candidate designs reach no card, render, or node — only the machine-side ADR")

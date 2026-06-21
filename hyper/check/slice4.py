@@ -17,7 +17,7 @@ from .harness import ok, scripted
 
 
 def check(root: str) -> None:
-    from .. import conversation, delta, graph, render, spec, worker
+    from .. import conversation, delta, graph, grill, render, spec, worker
 
     print("\nslice 4 — acceptance check  (workers, with spec-scoped context)\n")
 
@@ -33,9 +33,8 @@ def check(root: str) -> None:
         "The architect MUST record which worker a result came from.\n"
         "#### Scenario: a hand-off\n- WHEN a result is archived\n- THEN the worker is named\n")
     ask = graph.file_intent("give workers a progress checkpoint")
-    graph.approve(graph.raise_card(
-        "Workers checkpoint progress, and the record names the worker.\n\ndelta:\n" + handed,
-        kind="decide", parent=ask.id))                    # the ratified contract
+    graph.atomic_write(os.path.join(ask.path, "grilling.md"), grill._render(grill._Pass(  # the ratified contract
+        0, [], "Workers checkpoint progress, and the record names the worker.", handed)))
 
     # 1. the grounding, by construction: the whole spec, with the touched capabilities marked
     # as grounding — the worker is NOT slice-confined (ADR 0009)
@@ -55,10 +54,9 @@ def check(root: str) -> None:
     # shrink the worker's context — it still holds the whole spec, so the rescan can catch the
     # mis-mapping. A slice-confined worker (context = {graph}) would have been blind to it.
     mis = graph.file_intent("a change whose handed delta mis-maps the capability")
-    graph.approve(graph.raise_card(
-        "mis-mapped contract.\n\ndelta:\n## ADDED — graph\n"
-        "### Requirement: a mis-named requirement\nx\n#### Scenario: s\n- WHEN a\n- THEN b\n",
-        kind="decide", parent=mis.id))
+    graph.atomic_write(os.path.join(mis.path, "grilling.md"), grill._render(grill._Pass(
+        0, [], "mis-mapped contract.", "## ADDED — graph\n"
+        "### Requirement: a mis-named requirement\nx\n#### Scenario: s\n- WHEN a\n- THEN b\n")))
     mctx = worker.context(mis)
     ok(mctx.touched == {"graph"} and {"worker", "conversation"} <= set(mctx.names),
        "a mis-mapped delta keeps the whole spec in the worker's context — its rescan can catch "
@@ -109,8 +107,13 @@ def check(root: str) -> None:
 
     # the raw report has no operator-facing or durable home anywhere
     frame = "".join(t for row in render.main_body(graph.read_graph(), -1) for t, _s in row)
-    ndir = os.path.join(root, "work", "nodes")
-    nodefiles = "".join(open(os.path.join(ndir, n)).read() for n in os.listdir(ndir))
+    nodefiles = ""
+    for top in ("work", "archive"):                          # graph nodes only — not the scratch fence
+        for dp, dirs, fs in os.walk(os.path.join(root, top)):
+            if "worktrees" in dirs:
+                dirs.remove("worktrees")
+            nodefiles += "".join(open(os.path.join(dp, fn)).read()
+                                 for fn in fs if fn in ("intent.md", "grilling.md"))
     cards_text = "".join(c.text for c in graph.read_graph())
     ok(SENTINEL not in frame and SENTINEL not in nodefiles and SENTINEL not in cards_text,
        "the raw worker report reaches no card, no render, and no node — the leak path does not exist")

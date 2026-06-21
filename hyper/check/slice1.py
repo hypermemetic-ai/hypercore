@@ -29,6 +29,9 @@ def check(root: str) -> None:
     ok(r.filed is not None, "speaking files intent")
     ok(not t.open, "the thread closes on satisfaction")
     ok(len(graph.standing()) == 1, "the intent is standing work on the graph")
+    sw = graph.standing()[0]
+    ok(os.path.isfile(os.path.join(root, "work", sw.id, "intent.md")),
+       "the standing work is a folder under work/ — the unit on disk is the graph, not the node")
 
     # 2. durability is the graph's, not the thread's: re-read fresh, no resume
     fresh = graph.read_graph()
@@ -62,6 +65,8 @@ def check(root: str) -> None:
     ok(len(graph.cards()) == 0, "approve clears the card from the queue")
     endorsed = graph.find(card.id)
     ok(endorsed is not None and not endorsed.machine, "the endorsed node drops its [machine] marker")
+    ok(os.path.isfile(os.path.join(root, "archive", card.id, "intent.md")),
+       "approving folds the decision — its folder moves to archive/ (location is authoritative)")
 
     # 7. cut removes the words: the node file leaves
     doomed = graph.raise_card("a statement to cut")

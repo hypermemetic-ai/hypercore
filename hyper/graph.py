@@ -1,34 +1,38 @@
-"""The durable graph: nodes on disk, read live, written atomically and committed.
+"""The durable graph: execution graphs as folders on disk, read live, written atomically, committed.
 
-The graph is hypercore's one source of truth. The queue (cards) and the
-standing work (threads) are both *views* computed by reading the nodes — never
-lists kept in sync, so nothing can go stale. Every mutation writes one node
-file atomically and commits it; the act lands on disk at once and the commit
-follows behind.
+The graph is hypercore's one source of truth. A graph is a **folder** — intent.md §work L112: "the
+unit on disk is the graph, not the single node." Its `intent.md` carries the ask or statement and
+its state; material and child graphs sit alongside; while a grilling pass runs, the pass lives in
+`grilling.md` within the folder (resumable across episodes — `grill.py` owns it). Open graphs live
+under `work/`, folded ones under `archive/`; folding **moves** the folder, `work/` → `archive/`
+(L116), so location is itself state and cannot disagree with the record.
 
-A node carries one operation (intent.md's four: ask, decide, do, check) plus a
-statement's endorsement state. A node "awaiting you" is a card on the queue; a
-"standing" node is work on a thread.
+The queue (cards) and the standing work (threads) are **views** computed by scanning the tree (L110),
+never lists kept in sync. A "card" is a graph awaiting the operator — never a stored card file
+(ADR 0011, Design B): a machine-owned decision the operator must settle, or a held ask whose grilling
+has surfaced a question. Every mutation writes one `intent.md` atomically and commits it; a fold or a
+cut moves or removes the folder. The act lands on disk at once; the commit follows behind.
 """
 from __future__ import annotations
 
 import os
+import re
+import shutil
 import subprocess
 import tempfile
 import time
-import uuid
 from dataclasses import dataclass
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _DEFAULT_ROOT = os.path.dirname(_HERE)
 
-# States read by the views. "awaiting you" -> queue; "standing"/"in flight" -> threads.
-AWAITING = "awaiting you"
-STANDING = "standing"        # ready work, no worker on it yet — the ready frontier
+# States. A graph under archive/ is folded whatever its field says — location is authoritative.
+AWAITING = "awaiting you"    # a card on the queue: a decision to settle, or a surfaced question
+STANDING = "standing"        # ready work, no worker yet — the ready frontier
 IN_FLIGHT = "in flight"      # a worker is on it: still work, now live on its thread
-DONE = "done"               # folded: the worker's result integrated and left the views
+DONE = "done"               # folded: integrated and moved to archive/
 GRILLING = "grilling"        # an ask held while its grilling pass runs: not work, not a card
-PENDING = "pending"          # a grilling question waiting its turn, one at a time
+PENDING = "pending"          # a grilling question waiting its turn (held in grilling.md)
 MARKER = "[machine]"
 
 
@@ -36,45 +40,56 @@ def _root() -> str:
     return os.environ.get("HYPER_ROOT", _DEFAULT_ROOT)
 
 
-def _nodes_dir() -> str:
-    return os.path.join(_root(), "work", "nodes")
-
-
 @dataclass
 class Node:
-    id: str
+    id: str            # the folder name (a legible slug, globally unique)
     kind: str          # ask | decide | do | check | statement
     state: str
     owner: str         # operator | machine
-    text: str          # the ask or statement, plain prose
+    text: str          # the ask or statement, plain prose (the intent.md body, marker stripped)
     machine: bool      # carries the [machine] marker
     created: float
-    parent: str = ""   # the relation: a grilling question/entry points at its ask
+    parent: str = ""   # the enclosing graph's id, derived from folder location ("" if top-level)
+    path: str = ""     # the graph's folder on disk
+
+    @property
+    def folded(self) -> bool:
+        # Location is authoritative: a graph is folded once its folder sits under an archive/.
+        return f"{os.sep}archive{os.sep}" in self.path + os.sep
 
     @property
     def is_card(self) -> bool:
-        return self.state == AWAITING
+        return self.state == AWAITING and not self.folded
 
     @property
     def is_standing(self) -> bool:
-        return self.state == STANDING
+        return self.state == STANDING and not self.folded
 
     @property
     def is_live(self) -> bool:
-        return self.state == IN_FLIGHT
+        return self.state == IN_FLIGHT and not self.folded
 
 
-# ── reading ────────────────────────────────────────────────────────────────
+# ── reading: scan work/ and archive/ recursively for graph folders ───────────
 
 def read_graph() -> list[Node]:
-    d = _nodes_dir()
-    if not os.path.isdir(d):
-        return []
-    out = []
-    for name in os.listdir(d):
-        if name.endswith(".md"):
-            out.append(_read(os.path.join(d, name)))
+    out: list[Node] = []
+    for top in ("work", "archive"):
+        _scan(os.path.join(_root(), top), "", out)
     return sorted(out, key=lambda n: n.created)
+
+
+def _scan(base: str, parent: str, out: list[Node]) -> None:
+    if not os.path.isdir(base):
+        return
+    for name in sorted(os.listdir(base)):
+        folder = os.path.join(base, name)
+        intent = os.path.join(folder, "intent.md")
+        if os.path.isfile(intent):
+            node = _read(intent, parent)
+            out.append(node)
+            _scan(os.path.join(folder, "work"), node.id, out)       # nested open graphs
+            _scan(os.path.join(folder, "archive"), node.id, out)    # nested folded graphs
 
 
 def cards(nodes: list[Node] | None = None) -> list[Node]:
@@ -87,9 +102,9 @@ def standing(nodes: list[Node] | None = None) -> list[Node]:
 
 
 def work(nodes: list[Node] | None = None) -> list[Node]:
-    """The threads view: every unit of work, standing or in flight; DONE has left it."""
+    """The threads view: every unit of work, standing or in flight; folded has left it."""
     pool = read_graph() if nodes is None else nodes
-    return [n for n in pool if n.state in (STANDING, IN_FLIGHT)]
+    return [n for n in pool if n.state in (STANDING, IN_FLIGHT) and not n.folded]
 
 
 def find(node_id: str) -> Node | None:
@@ -97,76 +112,33 @@ def find(node_id: str) -> Node | None:
 
 
 def children(parent_id: str, nodes: list[Node] | None = None) -> list[Node]:
-    """The nodes hung off a parent — a grilling pass's questions and view entry."""
+    """The child graphs nested in a parent's work/ or archive/."""
     pool = read_graph() if nodes is None else nodes
     return [n for n in pool if n.parent == parent_id]
 
 
-# ── mutations (each lands one node file and commits it) ──────────────────────
+# ── mutations (each lands one intent.md and commits; a fold/cut moves the folder) ──
 
 def file_intent(ask: str) -> Node:
-    """Record the operator's captured intent as standing work on the graph."""
-    n = _new("ask", STANDING, "operator", ask, machine=False)
+    """Record the operator's captured intent as standing work — a new top-level graph."""
+    n = _new(ask, "ask", STANDING, "operator", machine=False)
     _persist(n, f"file intent: {_subject(ask)}")
     return n
 
 
 def raise_card(statement: str, kind: str = "decide", parent: str = "") -> Node:
-    """Put a machine-owned statement or decision on the operator's queue."""
-    n = _new(kind, AWAITING, "machine", statement, machine=True, parent=parent)
+    """Put a machine-owned statement or decision on the queue — a graph awaiting the operator,
+    nested in `parent`'s work/ when one is given (the decision lives where it arose), else top-level."""
+    n = _new(statement, kind, AWAITING, "machine", machine=True, parent=parent)
     _persist(n, f"raise {kind}: {_subject(statement)}")
     return n
 
 
-def approve(node: Node) -> Node:
-    """Endorse: the marker drops and the card leaves the queue."""
-    node.machine = False
-    node.owner = "operator"
-    node.state = "endorsed" if node.kind == "statement" else "settled"
-    _persist(node, f"approve: {_subject(node.text)}")
-    return node
-
-
-def cut(node: Node) -> None:
-    """Remove the words: the node file leaves (recoverable from git)."""
-    path = _path(node.id)
-    if os.path.exists(path):
-        os.remove(path)
-    commit([path], f"cut: {_subject(node.text)}")
-
-
-# ── grilling: an ask held, its questions surfaced one at a time, then spawned ──
-
 def hold(ask: str) -> Node:
-    """Hold the operator's ask while its grilling pass runs — owner's words, not work."""
-    n = _new("ask", GRILLING, "operator", ask, machine=False)
+    """Hold the operator's ask while its grilling pass runs — the graph exists, not yet work."""
+    n = _new(ask, "ask", GRILLING, "operator", machine=False)
     _persist(n, f"hold ask: {_subject(ask)}")
     return n
-
-
-def question(parent_id: str, text: str, awaiting: bool) -> Node:
-    """A machine-owned grilling question on `parent_id`; on the queue or waiting its turn."""
-    n = _new("ask", AWAITING if awaiting else PENDING, "machine", text,
-             machine=True, parent=parent_id)
-    _persist(n, f"grill: {_subject(text)}")
-    return n
-
-
-def resolve(node: Node, answer: str) -> Node:
-    """Settle a grilling question with the operator's answer; it leaves the queue."""
-    node.text = f"{node.text}\n\nanswered: {answer.strip()}"
-    node.machine = False
-    node.owner = "operator"
-    node.state = "settled"
-    _persist(node, f"answer: {_subject(answer)}")
-    return node
-
-
-def surface(node: Node) -> Node:
-    """Bring the next pending question onto the queue — one question at a time."""
-    node.state = AWAITING
-    _persist(node, f"surface: {_subject(node.text)}")
-    return node
 
 
 def spawn(node: Node) -> Node:
@@ -176,27 +148,37 @@ def spawn(node: Node) -> Node:
     return node
 
 
-# ── delegation: a worker takes a node, runs, and its result integrates ────────
+def approve(node: Node) -> Node:
+    """Endorse: the marker drops, the card leaves the queue, and the settled decision folds."""
+    node.machine = False
+    node.owner = "operator"
+    node.state = "endorsed" if node.kind == "statement" else "settled"
+    _persist(node, f"approve: {_subject(node.text)}")
+    return _fold(node, f"settle: {_subject(node.text)}")
+
+
+def cut(node: Node) -> None:
+    """Remove the words: the graph's folder leaves (recoverable from git)."""
+    if os.path.isdir(node.path):
+        shutil.rmtree(node.path)
+    commit([os.path.dirname(node.path)], f"cut: {_subject(node.text)}")
+
 
 def delegate(node: Node) -> Node:
-    """A worker takes a standing ask: it goes live (in flight) while the worker runs.
-    The live state is what the threads view shows a session on; nothing else changes."""
+    """A worker takes a standing ask: it goes live (in flight) while the worker runs."""
     node.state = IN_FLIGHT
     _persist(node, f"delegate: {_subject(node.text)}")
     return node
 
 
 def integrated(node: Node) -> Node:
-    """The worker's result folded in: the work is done and leaves the threads view. The
-    delta reached the spec in the same fold; this only records that the work completed."""
+    """The worker's result folded in: the work is done and its folder moves to archive/."""
     node.state = DONE
     _persist(node, f"integrate: {_subject(node.text)}")
-    return node
+    return _fold(node, f"fold: {_subject(node.text)}")
 
 
 # ── durable write (the act lands atomically; the commit follows behind) ──────
-# Shared by every durable write — the graph and the living spec both land here,
-# so the "atomic replace, then commit" mechanism lives in exactly one place.
 
 def atomic_write(path: str, text: str) -> None:
     d = os.path.dirname(path)
@@ -209,7 +191,7 @@ def atomic_write(path: str, text: str) -> None:
 
 def commit(paths: list[str], message: str) -> None:
     try:
-        subprocess.run(["git", "add", *paths], cwd=_root(), check=True,
+        subprocess.run(["git", "add", "-A", *paths], cwd=_root(), check=True,
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         subprocess.run(["git", "commit", "-m", message], cwd=_root(), check=True,
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -217,18 +199,34 @@ def commit(paths: list[str], message: str) -> None:
         pass  # already on disk; a failed commit does not lose the act
 
 
-# ── on-disk form (legible markdown, one file per node) ───────────────────────
+# ── on-disk form: one folder per graph, its intent.md the legible record ─────
 
-def _new(kind, state, owner, text, machine, parent="") -> Node:
-    return Node(uuid.uuid4().hex[:6], kind, state, owner, text.strip(),
-                machine, time.time(), parent)
-
-
-def _path(node_id: str) -> str:
-    return os.path.join(_nodes_dir(), f"{node_id}.md")
+def _new(text, kind, state, owner, machine, parent="") -> Node:
+    slug = _slug(text)
+    base = _child_base(parent) if parent else os.path.join(_root(), "work")
+    return Node(slug, kind, state, owner, text.strip(), machine, time.time(),
+                parent, os.path.join(base, slug))
 
 
-def _read(path: str) -> Node:
+def _child_base(parent_id: str) -> str:
+    """The work/ of the parent graph — where a child graph is born."""
+    p = find(parent_id)
+    if p:
+        return os.path.join(p.path, "work")
+    return os.path.join(_root(), "work")       # orphaned parent: fall back to top-level
+
+
+def _slug(text: str) -> str:
+    words = re.findall(r"[a-z0-9]+", text.lower())
+    base = "-".join(words[:5]) or "node"
+    taken = {n.id for n in read_graph()}
+    slug, i = base, 2
+    while slug in taken:
+        slug, i = f"{base}-{i}", i + 1
+    return slug
+
+
+def _read(path: str, parent: str) -> Node:
     with open(path) as f:
         raw = f.read()
     meta, body = {}, raw
@@ -243,25 +241,53 @@ def _read(path: str) -> Node:
     machine = text.endswith(MARKER)
     if machine:
         text = text[: -len(MARKER)].strip()
+    folder = os.path.dirname(path)
     return Node(
-        id=os.path.splitext(os.path.basename(path))[0],
+        id=os.path.basename(folder),
         kind=meta.get("kind", "ask"),
         state=meta.get("state", STANDING),
         owner=meta.get("owner", "machine"),
         text=text,
         machine=machine,
-        created=float(meta.get("created", "0") or 0),
-        parent=meta.get("parent", ""),
+        created=_ts(meta.get("created", "0")),
+        parent=parent,
+        path=folder,
     )
 
 
 def _persist(node: Node, message: str) -> None:
     body = node.text + (f"\n\n{MARKER}" if node.machine else "")
-    rel = f"parent: {node.parent}\n" if node.parent else ""
     raw = (f"---\nkind: {node.kind}\nstate: {node.state}\n"
-           f"owner: {node.owner}\ncreated: {node.created:.0f}\n{rel}---\n{body}\n")
-    atomic_write(_path(node.id), raw)         # the act lands at once
-    commit([_path(node.id)], message)         # durability follows behind
+           f"owner: {node.owner}\ncreated: {node.created:.0f}\n---\n{body}\n")
+    atomic_write(os.path.join(node.path, "intent.md"), raw)   # the act lands at once
+    commit([node.path], message)                              # durability follows behind
+
+
+def _fold(node: Node, message: str) -> Node:
+    """Move a graph's folder from its work/ to the sibling archive/ — the fold (L116)."""
+    if node.folded:
+        return node
+    parent_dir = os.path.dirname(node.path)                   # .../work
+    dest_base = os.path.join(os.path.dirname(parent_dir), "archive")
+    dest = os.path.join(dest_base, os.path.basename(node.path))
+    os.makedirs(dest_base, exist_ok=True)
+    shutil.move(node.path, dest)
+    node.path = dest
+    commit([parent_dir, dest_base], message)
+    return node
+
+
+def _ts(s: str) -> float:
+    """Lenient timestamp read: an epoch float, an ISO date, or 0 — so hand-authored graphs
+    (which carry a legible `created: YYYY-MM-DD`) and engine-written ones both read."""
+    s = s.strip()
+    try:
+        return float(s)
+    except ValueError:
+        try:
+            return time.mktime(time.strptime(s[:10], "%Y-%m-%d"))
+        except ValueError:
+            return 0.0
 
 
 def _subject(text: str) -> str:
