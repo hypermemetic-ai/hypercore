@@ -109,12 +109,13 @@ def run() -> int:
     _slice2(root)
     _slice3(root)
     _slice4(root)
+    _slice5(root)
 
     print()
     if _fails:
         print(f"  {_fails} FAILED\n")
         return 1
-    print("  all checks pass — slices 1–4 meet their acceptance checks\n")
+    print("  all checks pass — slices 1–5 meet their acceptance checks\n")
     return 0
 
 
@@ -264,7 +265,8 @@ def _slice3(root: str) -> None:
 
 def _slice4(root: str) -> None:
     """Acceptance (spec §9.4): a worker is grounded in its capability's spec slice by
-    construction; it runs fenced in its own git worktree; and its raw output reaches the
+    construction — holding the whole spec, not confined to the touched slice (rebuild-spec
+    §4.1, §6.4); it runs fenced in its own git worktree; and its raw output reaches the
     operator through no path — the conversationalist authors every operator-facing word
     and folds the refined delta. Drives propose→apply→archive end to end with scripted
     transports over the real graph and a real worktree."""
@@ -290,15 +292,32 @@ def _slice4(root: str) -> None:
         "Workers checkpoint progress, and the record names the worker.\n\ndelta:\n" + handed,
         kind="decide", parent=ask.id))                    # the ratified contract
 
-    # 1. the spec slice, by construction: the context is exactly the touched capabilities
+    # 1. the grounding, by construction: the whole spec, with the touched capabilities marked
+    # as grounding — the worker is NOT slice-confined (rebuild-spec §4.1, §6.4)
     ctx = worker.context(ask)
-    ok(set(ctx.names) == {"worker", "conversation"},
-       f"the worker's context is sliced to the capabilities its delta touches ({', '.join(sorted(ctx.names))})")
+    allcaps = {c.name for c in spec.read_spec(root).capabilities}
+    ok(ctx.touched == {"worker", "conversation"},
+       f"the touched capabilities are the worker's grounding ({', '.join(sorted(ctx.touched))})")
+    ok(set(ctx.names) == allcaps and {"self-model", "graph"} <= set(ctx.names),
+       "the context contains the whole spec, not only the touched slice — the worker is not slice-confined")
     prompt = worker.prompt(ask, ctx)
     ok("### Requirement:" in prompt and "throwaway operator-facing vessel" in prompt,
-       "the slice carries the touched capability specs and the glossary, by construction")
+       "the grounding carries the touched capability specs and the glossary, by construction")
     ok("import " not in prompt and "curses" not in prompt,
        "the worker is grounded in the spec, never the code")
+
+    # the keystone (rebuild-spec §6.4): a handed delta that mis-names a capability does not
+    # shrink the worker's context — it still holds the whole spec, so the rescan can catch the
+    # mis-mapping. A slice-confined worker (context = {graph}) would have been blind to it.
+    mis = graph.file_intent("a change whose handed delta mis-maps the capability")
+    graph.approve(graph.raise_card(
+        "mis-mapped contract.\n\ndelta:\n## ADDED — graph\n"
+        "### Requirement: a mis-named requirement\nx\n#### Scenario: s\n- WHEN a\n- THEN b\n",
+        kind="decide", parent=mis.id))
+    mctx = worker.context(mis)
+    ok(mctx.touched == {"graph"} and {"worker", "conversation"} <= set(mctx.names),
+       "a mis-mapped delta keeps the whole spec in the worker's context — its rescan can catch "
+       "what the delta mis-named, where a slice-confined worker would be blind")
 
     # 2. the fence: a real worktree, separate from the main line
     tree = worker.worktree(ask, root)
@@ -316,7 +335,9 @@ def _slice4(root: str) -> None:
     result = worker.apply(ask, scripted(json.dumps({
         "report": "Implemented the checkpoint behind a red→green loop. " + SENTINEL,
         "delta": handed,
-        "loop": "asserted checkpoint absence (red), added it (green)"})), root)
+        "loop": {"command": "python3 -m hyper --check",
+                 "red": "asserted the checkpoint was absent — the loop failed",
+                 "green": "added the checkpoint — the loop passed"}})), root)
     ok(SENTINEL in result.report, "the worker produced a raw, machine-facing report")
 
     # its own commit reached the record in its own tree, fenced from the main line
@@ -364,3 +385,107 @@ def _slice4(root: str) -> None:
         root)
     ok(spec.read_spec(root).capability("scheduling") is not None,
        "an ADDED requirement in an absent capability creates that capability on fold")
+
+
+def _slice5(root: str) -> None:
+    """Acceptance (spec §9.5): a graph that hands back a behavior change with no recorded
+    red→green loop, or one that grows a source file past the line-count budget, cannot fold —
+    the folding conditions refuse it and return a decision, leaving the spec untouched; a
+    result that meets every condition folds, and a file over budget folds only when a decision
+    record justifies it. Drives the conditions through the real integrate path and real
+    worktrees."""
+    import json
+
+    from . import conditions, conversation, graph, spec, worker
+
+    print("\nslice 5 — acceptance check  (the folding conditions)\n")
+
+    cap = "folding-conditions"
+    req = lambda name: spec.read_spec(root).capability(cap) and \
+        spec.read_spec(root).capability(cap).requirement(name)
+    coherent = lambda: scripted(json.dumps({"coherent": True, "say": "it landed.", "card": None}))
+
+    def delta_for(name: str) -> str:
+        return (f"## ADDED — {cap}\n### Requirement: {name}\nThe gate MUST hold.\n"
+                f"#### Scenario: s\n- WHEN a fold is attempted\n- THEN the gate runs\n")
+
+    def staged(text: str, name: str):
+        ask = graph.file_intent(text)
+        graph.approve(graph.raise_card("contract.\n\ndelta:\n" + delta_for(name),
+                                       kind="decide", parent=ask.id))
+        worker.worktree(ask, root)
+        graph.delegate(ask)
+        return ask
+
+    def godfile(tree: str) -> None:
+        graph.atomic_write(os.path.join(tree, "hyper", "giant.py"),
+                           "# a shallow god-file\n" + "x = 0\n" * (conditions.BUDGET + 60))
+
+    # 1. a behavior change handed back with no recorded loop cannot fold
+    ask = staged("a behavior change handed back with no loop", "a loopless change is gated")
+    result = worker.apply(ask, scripted(json.dumps({
+        "report": "did the work, no harness",
+        "delta": delta_for("a loopless change is gated"),
+        "loop": {"command": "", "red": "", "green": ""}})), root)         # no recorded loop
+    reply = conversation.integrate(ask, result, coherent(), root)
+    ok(reply.card is not None and not reply.done,
+       "a behavior change with no recorded red→green loop cannot fold")
+    ok(req("a loopless change is gated") is None, "the refused fold leaves the spec untouched")
+    ok(graph.find(ask.id).is_live, "the work stays live with a decision raised, not folded")
+    worker.teardown(ask, root)
+
+    # 2. a graph that grows a source file past the budget cannot fold (loop + delta both fine,
+    # so the budget is what bites)
+    ask = staged("a change that grows a god-file", "a god-file is gated")
+    godfile(worker._tree_path(ask, root))
+    result = worker.apply(ask, scripted(json.dumps({
+        "report": "grew a giant module",
+        "delta": delta_for("a god-file is gated"),
+        "loop": {"command": "run", "red": "failed", "green": "passed"}})), root)
+    blocked = conditions.unmet(result, root)
+    ok(blocked is not None and "budget" in blocked and "giant.py" in blocked,
+       f"the budget condition catches the god-file the graph grew ({conditions.BUDGET}-line ceiling)")
+    reply = conversation.integrate(ask, result, coherent(), root)
+    ok(reply.card is not None and not reply.done, "a graph that grows a god-file cannot fold")
+    ok(req("a god-file is gated") is None, "the refused fold leaves the spec untouched")
+    worker.teardown(ask, root)
+
+    # 3. a result that meets every condition folds — a recorded loop, an in-budget module
+    ask = staged("a clean behavior change", "a clean change folds")
+    result = worker.apply(ask, scripted(json.dumps({
+        "report": "did the work behind a loop",
+        "delta": delta_for("a clean change folds"),
+        "loop": {"command": "python3 -m hyper --check", "red": "absent", "green": "present"}})), root)
+    ok(conditions.unmet(result, root) is None,
+       "a recorded loop and an in-budget module meet every folding condition")
+    reply = conversation.integrate(ask, result, coherent(), root)
+    ok(reply.done and req("a clean change folds") is not None,
+       "the met conditions let the delta fold into the spec")
+    worker.teardown(ask, root)
+
+    # 4. a file over budget folds when a decision record justifies it (the ADR escape hatch)
+    graph.atomic_write(os.path.join(spec.spec_dir(root), "decisions", "0099-giant-justified.md"),
+                       "# ADR 0099\n\nhyper/giant.py is allowed over the budget here.\n")
+    ask = staged("a justified large module", "a justified module folds")
+    godfile(worker._tree_path(ask, root))
+    result = worker.apply(ask, scripted(json.dumps({
+        "report": "grew a justified module",
+        "delta": delta_for("a justified module folds"),
+        "loop": {"command": "run", "red": "failed", "green": "passed"}})), root)
+    ok(conditions.unmet(result, root) is None,
+       "a file over budget but named in a decision record clears the budget condition")
+    reply = conversation.integrate(ask, result, coherent(), root)
+    ok(reply.done and req("a justified module folds") is not None, "the justified exception folds")
+    worker.teardown(ask, root)
+
+    # 5. the delta condition is part of the same gate: a delta that will not apply is caught
+    # as a decision, not an uncaught CannotFold
+    ask = staged("a change carrying a delta that will not apply", "unused")
+    result = worker.apply(ask, scripted(json.dumps({
+        "report": "built it",
+        "delta": "## MODIFIED — folding-conditions\n### Requirement: nonexistent\nx\n",
+        "loop": {"command": "run", "red": "failed", "green": "passed"}})), root)
+    reply = conversation.integrate(ask, result, coherent(), root)
+    ok(reply.card is not None and not reply.done,
+       "a delta that will not apply is caught by the gate as a decision, not a crash")
+    worker.teardown(ask, root)

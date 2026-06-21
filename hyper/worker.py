@@ -5,10 +5,13 @@ the conversationalist and the spec; its job ends at handing back a complete tech
 result, written for the machine. Three properties define it, and each is structural,
 not a discipline to remember:
 
-- **It is grounded in its capability's spec slice, by construction.** Before a worker
-  runs, the spec is sliced for it — the requirements and scenarios of the capabilities
-  its change touches, the glossary, the system's decisions. `apply` builds its prompt
-  only from that slice (`context`), so there is no path that runs a worker without it.
+- **It is grounded in its capability's spec slice, with full scan of the whole spec.**
+  Before a worker runs, `context` assembles the living spec for it — the capabilities its
+  change touches marked as its *grounding*, the rest of the spec carried beside them for
+  scan, plus the glossary and the system's decisions — so there is no path that runs a
+  worker without it. A worker is *not* slice-confined (rebuild-spec §4.1, §6.4): a delta
+  cannot be authored or verified from one capability in isolation, so the worker rescans
+  the whole spec and its rescan catches a capability the handed delta mis-named or missed.
   It holds the spec, never raw code, and never the operator view.
 
 - **It runs fenced in its own git worktree.** Its tree is a separate checkout on its
@@ -38,26 +41,33 @@ from . import conversation, delta, graph, grill, spec
 WORKER = (
     "You are a hypercore worker — the system-facing half of the split. Your audience is "
     "the conversationalist and the spec, never the operator: write for the machine, in "
-    "precise technical terms, no operator-facing prose. You are grounded in the spec "
-    "slice below. Rescan it to verify the handed delta against current reality, do the "
-    "work behind a feedback loop, and refine the delta to match what you built. Reply "
-    "with ONLY a JSON object:\n"
+    "precise technical terms, no operator-facing prose. You are grounded in the capabilities "
+    "marked below and hold the whole spec beside them. Rescan the WHOLE spec to verify the "
+    "handed delta against current reality — catch any capability it mis-named or missed, "
+    "because a delta cannot be authored from one capability in isolation — do the work behind "
+    "a feedback loop, and refine the delta to match what you built. Reply with ONLY a JSON "
+    "object:\n"
     '{"report": <the technical result and all relevant facts, for the conversationalist>, '
     '"delta": <the refined spec delta — ADDED/MODIFIED/REMOVED markdown over the '
     'capabilities the change touches>, '
-    '"loop": <the feedback loop you drove: how it went red on the behavior, then green>}'
+    '"loop": {"command": <how to run the feedback loop>, '
+    '"red": <its failing verdict on the behavior before the fix>, '
+    '"green": <its passing verdict after the fix>}}'
 )
 
 
 @dataclass
 class WorkerContext:
-    """The spec slice a worker is grounded in — assembled from the model, never free-form.
-    Its capabilities are exactly the ones the change touches; nothing of the operator
-    view and nothing of the code is in here."""
-    capabilities: list[tuple[str, str]] = field(default_factory=list)  # (name, spec text)
+    """The spec a worker is grounded in — assembled from the model, never free-form. It
+    carries the *whole* spec (the worker is not slice-confined): `capabilities` is every
+    capability, and `touched` marks the ones the change names as its grounding/focus. The
+    rest is carried for the rescan that catches a mis-named or missed capability. Nothing of
+    the operator view and nothing of the code is in here."""
+    capabilities: list[tuple[str, str]] = field(default_factory=list)  # (name, spec text) — all
     glossary: str = ""
     decisions: str = ""
     delta: str = ""                                   # the handed delta, to verify + refine
+    touched: set[str] = field(default_factory=set)    # the grounding: capabilities the delta names
 
     @property
     def names(self) -> list[str]:
@@ -71,32 +81,42 @@ class WorkerResult:
     it. The worker's words reach the operator through no path at all."""
     report: str                                       # the technical result, for the conversationalist
     delta: str                                        # the refined spec delta the change realizes
-    loop: str                                         # the feedback-loop record (slice 5 enforces it)
+    loop: dict                                         # the recorded red→green loop (folding-conditions enforces it)
     worktree: str                                     # the fenced tree the work ran in
 
 
 # ── the spec slice (assembled by construction; no worker runs without it) ─────
 
 def context(node: graph.Node, root: str | None = None) -> WorkerContext:
-    """Slice the living spec for a node: the capabilities its handed delta touches (or a
-    full scan when none is handed — a delta cannot be authored from one capability alone),
-    their spec text, the glossary, and the system's decisions."""
+    """Assemble the living spec for a node: the *whole* spec — every capability's text, the
+    glossary, the decisions — with the capabilities the handed delta names marked as the
+    worker's grounding (`touched`). The worker is not slice-confined: it holds full scan
+    access so its rescan can verify the handed delta against the whole spec, not trust its
+    list (rebuild-spec §4.1, §6.4)."""
     sp = spec.read_spec(root)
     handed = _handed_delta(node)
     touched = _touched(handed, sp)
-    caps = [(c.name, _cap_text(c.name, root)) for c in sp.capabilities if c.name in touched]
-    return WorkerContext(caps, sp.glossary, _decisions(root), handed)
+    caps = [(c.name, _cap_text(c.name, root)) for c in sp.capabilities]   # all — full scan
+    return WorkerContext(caps, sp.glossary, _decisions(root), handed, touched)
 
 
 def prompt(node: graph.Node, ctx: WorkerContext) -> str:
-    """The worker's grounding, rendered to one prompt — spec slice, glossary, decisions,
-    the handed delta, and the ask. This is the whole of what the worker is given."""
-    sliced = "\n\n".join(f"### capability: {n}\n{t.strip()}" for n, t in ctx.capabilities)
+    """The worker's grounding, rendered to one prompt — the touched capabilities foregrounded
+    as the grounding, the rest of the spec carried for the rescan, then the glossary,
+    decisions, the handed delta, and the ask. This is the whole of what the worker is given."""
+    def render(items):
+        return "\n\n".join(f"### capability: {n}\n{t.strip()}" for n, t in items)
+    grounding = render([(n, t) for n, t in ctx.capabilities if n in ctx.touched])
+    scan = render([(n, t) for n, t in ctx.capabilities if n not in ctx.touched])
     return (
         f"{WORKER}\n\n"
         f"The ask:\n{grill.contract_of(node) or node.text}\n\n"
-        f"The handed delta (verify and refine it):\n{ctx.delta or '(none — author it from the scan)'}\n\n"
-        f"The spec slice you are grounded in:\n{sliced or '(no capability matched)'}\n\n"
+        f"The handed delta (verify and refine it against the WHOLE spec):\n"
+        f"{ctx.delta or '(none — author it from the full scan)'}\n\n"
+        f"Your grounding — the capabilities the delta names:\n"
+        f"{grounding or '(none named — author the delta from the full scan)'}\n\n"
+        f"The rest of the spec, for your rescan (catch any capability the delta mis-named or "
+        f"missed):\n{scan or '(none — this is the whole spec)'}\n\n"
         f"The glossary:\n{ctx.glossary}\n\n"
         f"The decisions:\n{ctx.decisions or '(none)'}\n\n"
         "Reply with the JSON object now."
@@ -134,11 +154,11 @@ def apply(node: graph.Node, transport=None, root: str | None = None) -> WorkerRe
     summon it, and take its machine-facing result. The result is committed inside the
     worker's own tree — its commit reaching the record in isolation — and handed back."""
     transport = transport or conversation._claude
-    ctx = context(node, root)                          # no apply without the slice
+    ctx = context(node, root)                          # no apply without the grounding
     obj = conversation._parse(transport(prompt(node, ctx)))
     report = (obj.get("report") or "").strip()
     refined = (obj.get("delta") or ctx.delta).strip()
-    loop = (obj.get("loop") or "").strip()
+    loop = obj.get("loop") if isinstance(obj.get("loop"), dict) else {}
     tree = _tree_path(node, root or graph._root())
     _record(tree, report, refined, loop)               # the worker's own commit, fenced
     return WorkerResult(report, refined, loop, tree)
@@ -190,12 +210,16 @@ def _tree_path(node: graph.Node, base: str) -> str:
     return os.path.join(base, "work", "worktrees", node.id)
 
 
-def _record(tree: str, report: str, refined: str, loop: str) -> None:
-    """The worker commits its result inside its own tree — proof its commits reach the one
-    record, fenced from the main line until the conversationalist integrates the delta."""
-    body = f"# worker result\n\n## report\n{report}\n\n## delta\n{refined}\n\n## loop\n{loop}\n"
+def _record(tree: str, report: str, refined: str, loop: dict) -> None:
+    """The worker commits everything it built inside its own tree — RESULT.md beside any
+    source it produced — proof its commits reach the one record, fenced from the main line
+    until the conversationalist integrates the delta. The whole tree is committed (not just
+    RESULT.md) so the material the folding conditions read — the source it grew, the loop it
+    ran — is in the record."""
+    loop_md = "\n".join(f"- {k}: {loop.get(k, '')}" for k in ("command", "red", "green"))
+    body = f"# worker result\n\n## report\n{report}\n\n## delta\n{refined}\n\n## loop\n{loop_md}\n"
     graph.atomic_write(os.path.join(tree, "RESULT.md"), body)
-    _git(tree, "add", "RESULT.md")
+    _git(tree, "add", "-A")
     _git(tree, "commit", "-m", "worker: result")
 
 

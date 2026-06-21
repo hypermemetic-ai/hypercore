@@ -1,54 +1,31 @@
-# next work — correct the worker's spec grounding
+# next work
 
-A fix-forward queued from the slice-4 session (2026-06-21), to do in a **fresh
-session** before or alongside slice 5. Read this, then `hyper/worker.py` and the
-`worker` capability in `spec/worker/spec.md`.
+## Done — the worker's spec grounding (landed with slice 5, 2026-06-21)
 
-## The finding
-
-Slice 4 built the worker **slice-confined**: `worker.context` returns only the
-capabilities the handed delta names. This is the error the build handoff §9 names
-outright — *"Agents are not slice-confined. (Do not revert to 'the worker is confined
-to one capability slice.')"* — and it breaks the keystone in rebuild-spec §6.4: the
-worker is the role with **full scan access**, and its rescan *"catches both mis-mapping
-and any drift"* in the conversationalist-authored delta. A touched-only worker trusts
-the delta's capability list and so cannot catch a mis-mapping; it also cannot author a
-sound delta, which §4.1 says *"cannot be established from one capability in isolation."*
-
-The over-sharing worry (a real 2026 failure mode) does not bite here: the whole `spec/`
-is a few hundred lines of high-signal markdown. §6.3 controls over-sharing *"by the spec
-being high-signal and scannable, not by hard slice-walls."* The corpus that is cheap to
-read is the corpus that is low-noise — the two reasons the methodology bets on full scan.
-
-## The change
-
-- `hyper/worker.py` — `context` returns **all** capabilities, with the touched ones
-  flagged as the grounding/focus; `prompt` foregrounds the touched slice and carries the
-  rest as scan context. "Grounded in its slice" means foreground emphasis, not exclusion.
-- The delta it carries — **MODIFY** the `worker` requirement *"a worker is grounded in
-  its capability's spec slice, by construction"*: it is grounded in the touched
-  capabilities **and holds full scan access to the whole spec**; its rescan verifies the
-  handed delta against the whole spec and catches mis-mapping. (Drop "its context is
-  exactly those capabilities.")
-- `hyper/check.py` `_slice4` — change the assertion from "context is *exactly* the
-  touched capabilities" to: the context **contains** the touched slice **and** the
-  untouched capabilities (proving non-confinement); add a case where the handed delta
-  **mis-names** a capability and the worker's rescan **catches** it (the keystone).
-
-## Acceptance
-
-Slices 1–4 still pass; the worker's context contains the whole spec with the touched
-capabilities marked as grounding; a mis-mapped handed delta is caught by the worker's
-rescan, not trusted.
+The slice-4 worker was built **slice-confined** (`worker.context` returned only the touched
+capabilities) — the error build-handoff §9 names by name, and a violation of rebuild-spec
+§6.4 (the worker is the role with full scan access, whose rescan catches the
+conversationalist's mis-mapping). Corrected: `worker.context` now returns the **whole spec**
+with the touched capabilities flagged as grounding; `worker.prompt` foregrounds the grounding
+and carries the rest for the rescan; the `worker` spec requirement was MODIFIED to drop "its
+context is exactly those capabilities" and assert full scan + the mis-mapping rescan. The
+`_slice4` check now proves non-confinement and the mis-mapping keystone.
 
 ## Considered and declined — do not re-propose
 
-Making handoff §9 ("do not re-introduce these errors") into an enforced pre-fold
-checklist was raised and **declined** by the operator (2026-06-21): §9 is a bootstrap
-artifact — the errors that tempted across the spec's revision rounds — not the critical
-invariant set, so it is not worth hardening, and a checklist of named errors buys false
-comfort against the gap that actually matters (unsurfaced, *un*-named drift). The real
-defenses against that gap are this worker fix (restoring the §6.4 keystone — a second
-role with full scan that the first can't suppress) and the architecture review (slice 6,
-a standing adversarial scan rendered to the operator). Knowing §9's errors exist is
-enough.
+Making handoff §9 ("do not re-introduce these errors") into an enforced pre-fold checklist
+was raised and **declined** by the operator (2026-06-21): §9 is a bootstrap artifact — the
+errors that tempted across the spec's revision rounds — not the critical invariant set, so it
+is not worth hardening, and a checklist of named errors buys false comfort against the gap
+that actually matters (unsurfaced, *un*-named drift). The real defenses against that gap are
+the worker fix above (restoring the §6.4 keystone — a second role with full scan the first
+can't suppress) and the architecture review (slice 6, a standing adversarial scan rendered to
+the operator). Knowing §9's errors exist is enough.
+
+## Next — slice 6 (the architecture review render)
+
+The standing review (rebuild-spec §7.4) producing the operator view's **upper levels**
+("what the system is" at each altitude) and the deepening backlog — vision beside as-built,
+debt marked, read without reading code. One thread to pick up from slice 5: the acceptance
+harness `hyper/check.py` is over the line-count budget and is the first candidate for the
+per-slice split the deep-module discipline asks for (ADR 0004).

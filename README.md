@@ -12,6 +12,7 @@ Parked for later (not in the build): the pi/glm/gpt multi-model harness —
 `~/Documents/hypercore-parked/` (`harness-ideas.md` + `harness-source/`). The full
 pre-teardown repo is `~/Documents/hypercore-next-cold-backup-2026-06-20.tar.gz`.
 
-Build proceeds in slices (spec §9), slice 1 first. Slices 1–4 are built.
+Build proceeds in slices (spec §9), slice 1 first. Slices 1–5 are built. The slice-4
+worker correction queued in `next-work.md` landed with slice 5.
 
-Queued before slice 5: `next-work.md` — a correction to the worker's spec grounding.
+Next: slice 6 — the architecture review render (the operator view's upper levels).

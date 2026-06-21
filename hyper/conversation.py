@@ -19,7 +19,7 @@ import json
 import subprocess
 from dataclasses import dataclass, field
 
-from . import delta, graph, grill
+from . import conditions, delta, graph, grill
 
 MODEL = "claude-opus-4-8"
 MODEL_LABEL = "opus 4.8"
@@ -95,13 +95,20 @@ COHERENCE = (
 
 
 def integrate(node: graph.Node, result, transport=None, root: str | None = None) -> Reply:
-    """The archive stage: take a worker's hand-off, coherence-check it against the
-    contract, and on a pass fold its refined delta into the spec — the work integrates and
-    leaves the threads view in the same act. The worker's raw report is *input* to the
+    """The archive stage: take a worker's hand-off, hold it against the folding conditions
+    and the contract, and on a pass fold its refined delta into the spec — the work integrates
+    and leaves the threads view in the same act. The worker's raw report is *input* to the
     conversationalist's judgment, never output: every operator-facing word here is authored
-    fresh, so the report crosses to the operator through no path. An incoherent result
-    raises a decision (re-cut / abandon / change the ask) rather than folding."""
+    fresh, so the report crosses to the operator through no path. A result that fails a folding
+    condition (no recorded loop, a god-file, a delta that will not apply) or that the
+    conversationalist judges incoherent raises a decision (re-cut / fix the loop / deepen the
+    module / abandon) rather than folding."""
     transport = transport or _claude
+    blocked = conditions.unmet(result, root)           # the folding conditions (§7), before the merge
+    if blocked:
+        card = graph.raise_card(blocked, kind="decide", parent=node.id)
+        return Reply(say="The result can't fold yet — a folding condition isn't met; "
+                         "the reason is on your queue.", card=card)
     verdict = _parse(transport(
         f"{COHERENCE}\n\nThe contract:\n{grill.contract_of(node)}\n\n"
         f"The worker's report (machine-facing — do not forward):\n{result.report}\n\n"
