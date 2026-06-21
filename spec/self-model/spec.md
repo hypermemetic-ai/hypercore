@@ -46,6 +46,11 @@ folds unless the delta merges; the living spec is therefore never separately edi
 - THEN that requirement is present in the capability's spec file and committed in the
   same act
 
+#### Scenario: a fold grows a new capability
+- WHEN a delta ADDS a requirement in a capability that does not yet exist
+- THEN the fold creates that capability and the operator view gains it as a top-level
+  unit; a MODIFIED or REMOVED requirement in an absent capability still cannot fold
+
 ### Requirement: the operator view renders vision beside as-built and gap
 The operator view MUST render, at every altitude, the **vision** (authored, from
 `intent.md`) beside the **as-built** (derived from the living spec) and the **gap**

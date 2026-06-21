@@ -47,6 +47,15 @@ it sharpens inside grilling as work folds.
   owns every word that crosses to the operator, reads the operator's words, and
   lands one concrete consequence.
 
+- **worker** — the system-facing half of the split: it carries out a spawned ask,
+  fenced in its own worktree and grounded in its capability's spec slice, and hands
+  the conversationalist a technical result. It has **no channel to the operator**;
+  its audience is the conversationalist and the spec.
+
+- **worktree** — the fence a worker runs in: its own git checkout on its own branch,
+  isolated from sibling workers and the main line. The worker builds here and its
+  commits reach the one record without touching another tree until the result integrates.
+
 - **fold** — the act that completes a graph: its result becomes its parent's
   material and its steps become history. The same act applies the graph's delta to
   the spec and re-renders the operator view.

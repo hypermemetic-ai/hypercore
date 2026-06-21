@@ -35,13 +35,24 @@ machine thinks, and the consequence lands when it returns.
 
 ### Requirement: a raw worker output never reaches the operator
 No output written for the machine MUST reach the operator unmediated; the
-conversationalist authors every operator-facing render.
+conversationalist authors every operator-facing render. The worker has no channel to the
+operator at all, so this is a path that does not exist rather than a rule to keep.
 
 #### Scenario: a worker hands back
-- WHEN a worker produces a technical result
-- THEN the conversationalist distills it before any of it crosses to the operator
-- NOTE: the worker role is unbuilt at this slice; this requirement is the contract
-  the worker slice must honor, and is shallow until then
+- WHEN a worker produces a technical result carrying raw, machine-facing prose
+- THEN the conversationalist authors the operator-facing words from it, and none of the
+  raw prose appears on any card, render, or node
+
+### Requirement: the conversationalist integrates the worker's hand-off
+The conversationalist MUST archive a worker's result: coherence-check it against the
+contract at the operator's altitude — not a code review — and on a pass fold the refined
+delta into the spec, the work leaving the threads view in the same act. The raw report is
+input to that judgment, never output.
+
+#### Scenario: coherence decides the fold
+- WHEN a worker hands a result back
+- THEN a result that honors the contract folds its delta and integrates, and a result that
+  does not raises a decision (re-cut, abandon, or change the ask) rather than folding
 
 ### Requirement: a filed ask is grilled before it becomes work
 An ask that opens real choices MUST pass a grilling floor before spawning work: the
