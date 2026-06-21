@@ -78,3 +78,71 @@ throughput parallelism — slice 8 is the judgment use.
 
 *Check:* concurrent workers advance one graph in isolation and each folds its delta; a
 load-bearing interface decision can be designed twice in parallel and compared.
+
+## Raised for a later session — not yet worked (operator, 2026-06-21)
+
+Two questions the operator raised after slice 7. **Judgment is deferred — the analysis below is
+surface-level only and says so**; the next session should validate before building. Recorded
+here so the message survives the session boundary.
+
+### 1. The accepted length must set a *higher bar* for the next trip (decision: yes)
+
+**Current behavior (confirmed in `conditions.py`):** once a structured `depth-decision: <path>
+accepted` record exists, `accepted(path)` matches that path **permanently and regardless of
+length** — so the file never re-trips the depth signal again, *no matter how much further it
+grows*. A file accepted at 450 lines can balloon to 2,000 in later changes and the gate stays
+silent. That is a hole: acceptance is currently unbounded.
+
+**Operator's direction (settled, build it):** when a length signal is accepted, **set a higher
+bar for the next trip** — do not silence the file forever, and do not nag on every touch. The
+acceptance should be *bounded to the length it was accepted at*; the signal re-fires only when
+the file grows materially past that accepted length, re-opening the depth decision at the new,
+higher level. Each acceptance ratchets the bar up to the current size; a stable or shrinking
+file stays quiet, renewed growth re-opens the question.
+
+*Surface-level shape (not validated — for the next session to settle):* the structured
+depth-decision record should carry the **accepted length** (e.g. `depth-decision: hyper/foo.py
+accepted@450 — reason`, or a separate field), and `accepted()` should clear the gate only while
+`current_lines <= accepted_length` (perhaps + a small margin to avoid re-tripping on a one-line
+edit). Past it, the signal trips again and the acceptance must be **renewed** at the new length.
+Open sub-questions I have *not* thought through: the right margin; whether shrink-then-regrow
+matters; how the review's `accepted` status and map render a stale/exceeded acceptance; whether
+the high-water mark belongs in the record or is computed. This touches exactly what slice 7 built
+(`conditions.accepted` + the structured record + `review` status), so it folds in naturally.
+
+### 2. Are we using prompts *and* AGENTS.md files appropriately? (investigate)
+
+**Surface-level read (shallow — not a deep audit):** hypercore currently grounds its agents
+**only through hand-assembled prompt strings** — `worker.prompt()` marshals the whole spec,
+glossary, decisions, the `DEPTH` disciplines, the delta and the ask into one big string;
+`conversation`/`grill` hold `SYSTEM`/`COHERENCE` prompts; the transport is headless
+`claude -p <prompt> --model …`. There is **no AGENTS.md / CLAUDE.md anywhere** in the repo. The
+operator's instinct that this leaves value on the table looks right at a glance, for two distinct
+uses worth separating:
+
+- **(a) hypercore *using* context files for its own roles.** Durable, role-invariant grounding —
+  the depth disciplines, the "what hypercore is" frame, the glossary — wants to live in
+  version-controlled context files the agent loads, not in code string literals. `worker.DEPTH`
+  is the live smell: it is a compressed copy of `research/aposd.md` pasted into a Python constant.
+  That contradicts intent.md's own "durable state in version-controlled files," and a file is
+  operator-legible and editable where a string literal is not. A worker runs `claude -p` *inside
+  its own worktree*, so an AGENTS.md placed there could be auto-loaded as standing grounding for
+  free, instead of re-marshalling a giant prompt each episode.
+- **(b) an AGENTS.md/CLAUDE.md *for agents building hypercore* (this very workflow).** The next
+  session currently learns the ropes by convention (read `next-work.md`, then `rebuild-spec`,
+  run `python3 -m hyper --check`). A repo AGENTS.md codifying that reading order, the slice
+  workflow, and the check command would make each session start grounded rather than
+  reconstructing it.
+
+**The tension to resolve, not paper over:** AGENTS.md is auto-loaded and **shared / un-routed**,
+which cuts across hypercore's deliberate *context routing* (rebuild-spec §6 — each role gets only
+its render; the worker never holds the operator view, etc.) and risks the very "noisy
+over-sharing" failure §6.2 names. So the real design question is **which layer belongs in files**
+(the role-invariant durable grounding — likely a good fit) versus **which stays prompt-assembled
+and routed** (the per-capability self-model slices — hypercore's own mechanism, should not be
+flattened into one shared file). Probably: durable role-invariant grounding → context files;
+self-model routing → stays assembled.
+
+**Verify first (the whole idea hinges on it):** does headless `claude -p --model …` actually
+auto-load AGENTS.md / CLAUDE.md from the worktree cwd? Believed yes (project memory loads in `-p`
+mode), but confirm before designing around it.
