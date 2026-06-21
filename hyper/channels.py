@@ -13,17 +13,18 @@ drift from the spec it derives from than the spec can drift from a folded delta 
 guarantee `delta.fold` gives the spec and the operator view gives the self-model, pointed at one more
 target (ADR 0009 §3, the one new mechanism).
 
-`depth` is the first and, today, only target. The minimal shared agents file (role-assembly step 3)
-and the architect's methodology skills (step 4) join `CHANNELS` as their steps land — each its own
-module's `materialize`, the registry the only place that knows the set.
+`depth` (the worker's discipline skill) was the first target; the architect's methodology skills join
+it (role-assembly step 4), each its own module's `materialize`. The minimal shared agents file (step 3)
+appends next. The registry is the only place that knows the set.
 """
 from __future__ import annotations
 
-from . import depth
+from . import depth, methodology
 
-# The static channels, in render order. Each renders its artifact from the spec and returns the path
-# written; new channels (the agents file, the architect's skills) append here as their steps land.
-CHANNELS = (depth.materialize,)
+# The static channels, in render order — each a `(root) -> path` render of one artifact from the spec.
+# `depth` is the worker's skill; `methodology.materializers()` splices in one render per architect
+# methodology skill. New channels (the agents file) append here as their steps land.
+CHANNELS = (depth.materialize, *methodology.materializers())
 
 
 def materialize(root: str | None = None) -> list[str]:

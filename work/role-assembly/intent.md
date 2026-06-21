@@ -31,6 +31,14 @@ whole spec unchanged; the worker-fenced side is parked, not faked, on the pi/OMP
   from its source. `hyper/channels.py` is the registry — one `CHANNELS` list, `materialize()` the one
   act — with `depth.materialize` its first (today only) target; steps 3–4 append to it. `skills/` is
   now regenerated output, not a loose root render. (slice 11, ADR 0009 §3.)
+- **step 4 — the architect's methodology skills.** `hyper/methodology.py` renders the architect's
+  design methodologies as skills from their capability slices — `design-it-twice` and
+  `architecture-review`, each a clean standalone `spec/<cap>/spec.md` → `skills/<cap>/SKILL.md`
+  (metadata, the slice's overview, the disciplines as requirement statements, scenarios left in the
+  slice). Single-sourced and spliced into the channels registry via `methodology.materializers()`, so
+  the fold re-derives them beside `depth`. (slice 12, ADR 0009 §5.4.) **Grilling/coherence deferred**
+  (below): they are requirements *inside* `conversation`, not a standalone slice, so they have no
+  `spec/<cap>/spec.md` to render — skilling them needs its own small step.
 
 ## open steps (buildable now, none needs the harness seam)
 
@@ -38,7 +46,11 @@ whole spec unchanged; the worker-fenced side is parked, not faked, on the pi/OMP
   "minimal" means, what (if anything) goes in it, whether to have one at all, and to **measure** (an
   A/B) before leaning on it (§4.5: context files often don't help, add ~20% cost). Blocked on the
   operator's word.
-- **step 4 — the architect's methodology skills.**
+- **step 4b — the grilling/coherence skill.** The architect's remaining methodologies (ADR 0009 §1)
+  live as requirements in `conversation`, not a slice. Either carve a `grilling` slice out of
+  `conversation` (a spec-structure delta — operator may want a say) or render from a named
+  requirement-subset; then it plugs into the same `methodology`/`channels` seam. Buildable, but needs
+  the slice-shape decision first.
 
 ## parked (the pi/OMP harness seam)
 

@@ -40,20 +40,21 @@ Since the slices, the repo was made to obey its own §structure (ADR 0010–0012
 the graph — `work/` (open) + `archive/` (folded), each graph a folder with its `intent.md`.
 `hyper/graph.py` is now folder-native (fold = move the folder, `work/`→`archive/`) and grilling lives
 in each graph's `grilling.md`; `next-work.md` is retired and `research/` dissolved into material on
-its node. 147 checks green.
+its node. 157 checks green.
 
 **Next — item 2 (role assembly, ADR 0009).** Two roles, each maximally specialized, assembled
 from the repo documents (the single source) across three derived channels: a minimal shared
 `AGENTS.md` (symlinked as `CLAUDE.md`), on-demand **skills**, and the per-episode **prompt**. The
 worker holds the whole spec preloaded by construction (the slice-4 keystone); just-in-time is
-reserved for the reference tail. The depth single-sourcing (step 1) and **materialize-on-fold**
-(step 2, slice 11) are built: the fold (`delta.fold`) now re-derives the static channels from the spec
-via `hyper/channels.py` — a one-line registry steps 3–4 plug into — so `skills/` is regenerated output,
-not a loose root render, and a committed artifact cannot drift from its source. Landing next: the
-minimal shared `AGENTS.md` anchor (step 3, operator content), then the architect's methodology skills
-(step 4), with the fenced-worker side on the parked multi-model harness seam. The open arc is
-`work/role-assembly/` (its `intent.md` carries the steps); the immediate next is **step 3 — the
-minimal shared `AGENTS.md` + `CLAUDE.md` symlink** (blocked on the operator's word on what goes in it).
+reserved for the reference tail. The single-source-on-fold spine is built: **depth single-sourcing**
+(step 1), **materialize-on-fold** (step 2, slice 11 — the fold re-derives the static channels from the
+spec via `hyper/channels.py`, so `skills/` is regenerated output a committed artifact can't drift
+from), and the **architect's methodology skills** (step 4, slice 12 — `hyper/methodology.py` renders
+`design-it-twice` and `architecture-review` from their spec slices into the same fold-driven registry).
+Open: the minimal shared `AGENTS.md` anchor (step 3, blocked on the operator's word on its content);
+a grilling/coherence skill (step 4b, needs a slice-shape decision — those methodologies live inside
+`conversation`, not a standalone slice); and the fenced-worker side on the parked multi-model harness
+seam (the autonomy unlock). The open arc is `work/role-assembly/` (its `intent.md` carries the steps).
 The engine conformance is done (`archive/graph-on-disk/`).
 
 ## On documents
