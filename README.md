@@ -24,5 +24,11 @@ length-acceptance **bounded** — it ratchets up rather than silencing a file fo
 accepted length recorded as `accepted@<N>` and a stale acceptance surfaced distinctly by the
 review (ADR 0008).
 
-Next: the AGENTS.md / context-files investigation (item 2 in `next-work.md`) — verify `claude -p`
-auto-loads context files first, then decide which grounding belongs in files vs. routed prompts.
+Next: item 2 (context files) is **investigated** — `research/context-files.md`. Verified on the real
+heterogeneous stack (architect = Opus 4.8 via `claude -p`; worker = GPT-5.5 via pi/OMP): OMP
+auto-loads **`AGENTS.md`** from the worktree cwd, Claude auto-loads **`CLAUDE.md`** and ignores
+AGENTS.md, and a `CLAUDE.md` → `@AGENTS.md` adapter bridges the two. So **AGENTS.md is the source of
+truth** (the open standard, north-star-aligned) and **CLAUDE.md a thin adapter** — the depth
+framework moves there (retiring `worker.DEPTH`'s duplication), while per-capability routing stays
+prompt-assembled. A transport/seam blocker (the worker does not yet run in its fence; pi/OMP is
+parked) sets the sequencing. Five forks now await the operator's pick before the ADR and build.
