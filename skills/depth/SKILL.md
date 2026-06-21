@@ -44,4 +44,4 @@ You are held to these standing disciplines; build deep up front so your work fol
 
 ## Going deeper
 
-The full synthesis — the reasoning behind each discipline, the *Clean Code* contrast, and the epistemic status — is `research/aposd.md`, this skill's single source.
+The full synthesis — the reasoning behind each discipline, the *Clean Code* contrast, and the epistemic status — is `spec/depth.md`, this skill's single source.

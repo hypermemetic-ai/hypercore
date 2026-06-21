@@ -3,44 +3,50 @@
 Clean rebuild from zero. History erased on 2026-06-20; the prior epoch was torn
 down, not patched.
 
-Start here (a fresh session needs these, in order):
-1. `~/Documents/build-handoff.md` — the construction handoff
-2. `~/Documents/rebuild-spec-1.md` — the methodology spec (machine-owned, awaits ratification)
-3. `intent.md` — the durable vision (in this repo)
+Start here (a fresh session reads these, in order — all in this repo):
 
-Parked for later (not in the build): the pi/glm/gpt multi-model harness —
-`~/Documents/hypercore-parked/` (`harness-ideas.md` + `harness-source/`). The full
-pre-teardown repo is `~/Documents/hypercore-next-cold-backup-2026-06-20.tar.gz`.
+1. `intent.md` — the durable vision: what the system is for. Every statement is
+   machine-owned until the operator ratifies it; the markers say what still awaits a word.
+2. `spec/` — the living spec: each capability's `spec.md`, the cross-cutting `glossary.md`,
+   and `spec/depth.md` (the depth disciplines the system is built to). Small by design and
+   meant to be scanned whole — the high-signal core.
+3. `spec/decisions/` — the ADRs: every decision and its grounds, in order. The reference tail.
 
-Build proceeds in slices (spec §9), slice 1 first. Slices 1–9 are built. Slice 6 split the
-acceptance harness per-slice into `hyper/check/` (the first deepening work the review
-surfaced); slice 7 re-grounded the architecture in Ousterhout's *A Philosophy of Software
-Design* — depth is the criterion, length a context-cost signal that raises a *decision*
-rather than auto-refusing (ADR 0006; `research/aposd.md`, `research/regrounding.md`); slice 8
-re-grounded parallelism as the judgment use of the worktree fence — **design-it-twice** for
-load-bearing interfaces, the architect picking machine-side on depth/locality/seam and
-recording a structured design-decision (ADR 0007; `hyper/design.py`); slice 9 made a
-length-acceptance **bounded** — it ratchets up rather than silencing a file forever, the
-accepted length recorded as `accepted@<N>` and a stale acceptance surfaced distinctly by the
-review (ADR 0008).
+`next-work.md` carries the running build journal. Run the acceptance harness with
+`python3 -m hyper --check`; open the live system with `python3 -m hyper`.
 
-Next: item 2 (context files) is investigated (`research/context-files.md`), designed
-(`research/assembly.md`), and **ratified** — ADR 0009, after a second validation pass against live
-sources (assembly.md §8). The goal: two roles (architect = Opus 4.8 via `claude -p`; worker = GPT-5.5
-via pi/OMP), each **maximally skilled and specialized**, assembled from repo documents (the single
-source) feeding three derived channels — a **minimal agents file** (non-inferable operational lines
-only), **skills** (on-demand specialization — the routing), and **prompts** (the per-node live task).
-Placed by two axes (durability × reach): **skills + the agents file are derived renders regenerated
-by the fold** (no hand-copy — this kills the `worker.DEPTH` smell); the worker keeps the **whole spec
-preloaded, by construction** (touched foregrounded for attention — the slice-4 keystone, the defense
-against mis-scoping and worker myopia; a just-in-time amendment was tried and withdrawn as a category
-error — the spec is the small, scannable high-signal core the field's hybrid says to preload, and
-JIT is reserved for the ADR/reference tail); and placement is **one shared `AGENTS.md` symlinked as
-`CLAUDE.md`**. Calibrated by field evidence (the ETH Zurich AGENTS.md study + Anthropic's
-skills/context-engineering guidance): the agents file stays minimal/non-inferable, specialization
-lives in skills. **§5 step 1 is built** — `hyper/depth.py` single-sources the depth disciplines from
-`aposd.md` (the frozen `worker.DEPTH` retired), the `depth` skill artifact is materialized at
-`skills/depth/SKILL.md`, and `hyper/check/slice10.py` pins it (137 checks, 0 fail). Next: **§5 step
-2** — the derived-render / materialize-on-fold mechanism, then the shared `AGENTS.md`/`CLAUDE.md`
-anchor and the architect's skills; the worker-fenced side (reference-tail pull, the OMP flip) lands
-on the parked pi/OMP harness seam.
+## Where it stands
+
+Build proceeds in slices, slice 1 first. **Slices 1–10 are built.**
+
+- **1–6 — the spine.** The graph and the fold; intent extraction by grilling; the worker and
+  its git-worktree fence; the folding conditions; the architecture review. Slice 6 split the
+  acceptance harness per-slice into `hyper/check/` — the first deepening work the review surfaced.
+- **7 — depth is the criterion (ADR 0006).** Re-grounded against Ousterhout's *A Philosophy of
+  Software Design* (`spec/depth.md`): length is demoted to a context-cost *signal* that raises a
+  decision, never an auto-refusal.
+- **8 — design-it-twice (ADR 0007; `hyper/design.py`).** The judgment use of the worktree fence:
+  a load-bearing interface designed several ways in isolation, the architect picking machine-side
+  on depth/locality/seam and recording a structured design-decision.
+- **9 — bounded acceptance (ADR 0008).** A length-acceptance ratchets up rather than silencing a
+  file forever; the accepted length is recorded as `accepted@<N>`, a stale acceptance surfaced
+  distinctly by the review.
+- **10 — the depth source single-sourced (ADR 0009).** The worker's depth grounding and the
+  `depth` skill render from `spec/depth.md` via `hyper/depth.py` — never a frozen copy.
+
+**Next — item 2 (role assembly, ADR 0009).** Two roles, each maximally specialized, assembled
+from the repo documents (the single source) across three derived channels: a minimal shared
+`AGENTS.md` (symlinked as `CLAUDE.md`), on-demand **skills**, and the per-episode **prompt**. The
+worker holds the whole spec preloaded by construction (the slice-4 keystone); just-in-time is
+reserved for the reference tail. The depth single-sourcing (above) is the first step built; the
+derived-render / materialize-on-fold mechanism, the shared anchor, and the architect's skills land
+next, with the fenced-worker side on the parked multi-model harness seam. See `next-work.md`.
+
+## On documents
+
+Research and design notes live under `research/` as **provenance** — they informed decisions but
+nothing standing depends on them. The decisions (`spec/decisions/`), the spec, and the code stand
+alone, so a clone is self-sufficient: a standing artifact may *cite* research as a footnote, never
+*depend* on it (read it at runtime, or pin acceptance to a section). ADR 0010 records the
+discipline — and retired the bootstrap `rebuild-spec` scaffold, its content absorbed into
+`intent.md`, the spec, and the ADRs.

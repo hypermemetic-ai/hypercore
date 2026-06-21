@@ -1,6 +1,6 @@
 # architecture-review
 
-The standing scan that keeps the system deep (rebuild-spec §7.4). It reads the source
+The standing scan that keeps the system deep (ADR 0005). It reads the source
 tree live for deepening opportunities and renders two things from one scan: the
 **deepening backlog** — the engine that surfaces god-files-in-the-making before they
 set — and the operator view's **"what the system is" upper levels** — the structural
@@ -33,7 +33,7 @@ depth — the same record `folding-conditions` consults at the fold, applied to 
 standing tree. **Depth is the criterion, not length**: the deeper, model-driven **red-flag
 depth scan** — the deletion test, the shallow-module and information-leakage flags,
 testable-through-the-interface — is the assessment this review is meant to grow, and is **not
-yet built** (slice 7, F1). That shallowness is recorded here and in the operator's gap, never
+yet built** (ADR 0006). That shallowness is recorded here and in the operator's gap, never
 fabricated into a depth verdict.
 
 #### Scenario: a god-file in the making

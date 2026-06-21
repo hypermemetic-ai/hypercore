@@ -9,7 +9,7 @@ not a discipline to remember:
   Before a worker runs, `context` assembles the living spec for it — the capabilities its
   change touches marked as its *grounding*, the rest of the spec carried beside them for
   scan, plus the glossary and the system's decisions — so there is no path that runs a
-  worker without it. A worker is *not* slice-confined (rebuild-spec §4.1, §6.4): a delta
+  worker without it. A worker is *not* slice-confined (ADR 0009): a delta
   cannot be authored or verified from one capability in isolation, so the worker rescans
   the whole spec and its rescan catches a capability the handed delta mis-named or missed.
   It holds the spec, never raw code, and never the operator view.
@@ -26,16 +26,16 @@ not a discipline to remember:
   bug to avoid but a path that does not exist.
 
 - **It is grounded in the depth disciplines, every episode.** The prompt carries the
-  deep-module framework and the red flags — **single-sourced from `research/aposd.md`** via
-  the `depth` module (rebuild-spec §7.1, ADR 0009), not a frozen copy — so the worker builds
+  deep-module framework and the red flags — **single-sourced from `spec/depth.md`** via
+  the `depth` module (ADR 0009), not a frozen copy — so the worker builds
   **deep up front**, strategic, not tactical. This is the *proactive* primary defense against
-  complexity (re-grounding §3): a worker that shares the long-term-health concern produces deep
+  complexity (ADR 0006): a worker that shares the long-term-health concern produces deep
   modules, so the folding-conditions depth gate stays a rarely-tripped backstop rather than an
   operator-load generator. Design awareness is the first anti-complexity mechanism; the gate is
-  the second. The grounding is *derived* from the synthesis, so a sharpened aposd.md reaches the
+  the second. The grounding is *derived* from the synthesis, so a sharpened spec/depth.md reaches the
   next worker with no second copy to drift — the old `worker.DEPTH` constant's smell, retired.
 
-Delta authorship crosses the seam (rebuild-spec §6.4): the architect *proposes*
+Delta authorship crosses the seam (ADR 0009): the architect *proposes*
 the delta during grilling; the worker *applies* — rescans the current spec to verify the
 handed delta against present reality, builds, and refines the delta as the code reveals
 what the spec could not; the architect *archives* it.
@@ -74,14 +74,14 @@ class WorkerContext:
     the *whole* spec (the worker is not slice-confined): `capabilities` is every capability, and
     `touched` marks the ones the change names as its grounding/focus; the rest is carried for the
     rescan that catches a mis-named or missed capability. `depth` is the standing depth
-    disciplines, rendered from `research/aposd.md` (single-sourced, never a frozen copy). Nothing
+    disciplines, rendered from `spec/depth.md` (single-sourced, never a frozen copy). Nothing
     of the operator view and nothing of the code is in here."""
     capabilities: list[tuple[str, str]] = field(default_factory=list)  # (name, spec text) — all
     glossary: str = ""
     decisions: str = ""
     delta: str = ""                                   # the handed delta, to verify + refine
     touched: set[str] = field(default_factory=set)    # the grounding: capabilities the delta names
-    depth: str = ""                                   # the depth disciplines, rendered from aposd.md
+    depth: str = ""                                   # the depth disciplines, rendered from spec/depth.md
 
     @property
     def names(self) -> list[str]:
@@ -104,15 +104,15 @@ class WorkerResult:
 def context(node: graph.Node, root: str | None = None) -> WorkerContext:
     """Assemble the grounding for a node: the *whole* spec — every capability's text, the
     glossary, the decisions — with the capabilities the handed delta names marked as the
-    worker's grounding (`touched`), plus the depth disciplines rendered from `research/aposd.md`.
+    worker's grounding (`touched`), plus the depth disciplines rendered from `spec/depth.md`.
     The worker is not slice-confined: it holds full scan access so its rescan can verify the
-    handed delta against the whole spec, not trust its list (rebuild-spec §4.1, §6.4)."""
+    handed delta against the whole spec, not trust its list (ADR 0009)."""
     sp = spec.read_spec(root)
     handed = _handed_delta(node)
     touched = _touched(handed, sp)
     caps = [(c.name, _cap_text(c.name, root)) for c in sp.capabilities]   # all — full scan
     return WorkerContext(caps, sp.glossary, _decisions(root), handed, touched,
-                         depth.disciplines(root))   # single-sourced from aposd.md, not frozen
+                         depth.disciplines(root))   # single-sourced from spec/depth.md, not frozen
 
 
 def prompt(node: graph.Node, ctx: WorkerContext) -> str:

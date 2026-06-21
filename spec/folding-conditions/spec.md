@@ -1,7 +1,7 @@
 # folding-conditions
 
 The conditions a graph's material must meet to fold — the engineering disciplines made
-structural (rebuild-spec §7). The self-model owns the delta and the atomic merge; this
+structural. The self-model owns the delta and the atomic merge; this
 capability owns the gates on the material a worker produced, run at the archive stage
 before the merge. Advice can be ignored; a folding condition cannot, so the disciplines
 bite by construction rather than by a reviewer remembering them.
@@ -9,7 +9,7 @@ bite by construction rather than by a reviewer remembering them.
 Two of the conditions are **non-negotiable facts** — the delta applies, and a
 behavior-changing graph carries a recorded red→green loop — and they auto-refuse the fold.
 The third is a **judgment**: **depth** is the criterion (a deep module, a lot of behavior
-behind a small interface — rebuild-spec §7.1, re-grounded in Ousterhout, ADR 0006), and
+behind a small interface — re-grounded in Ousterhout, ADR 0006), and
 **length** is one signal of it, never the criterion. So the depth condition does not
 auto-refuse on length; it raises a **decision** — re-cut, deepen, or accept-with-reason —
 held on the operator's queue. An unmet fact refuses the fold and returns its reason; the

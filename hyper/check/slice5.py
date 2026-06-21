@@ -56,7 +56,7 @@ def check(root: str) -> None:
 
     # 2. a graph that grows a source file past the length signal raises a depth decision — the
     # work stays live (re-cut/deepen/accept), never silently folds (loop + delta both fine, so
-    # the depth condition is what bites). Length raises a decision, not an auto-refusal (§7.1).
+    # the depth condition is what bites). Length raises a decision, not an auto-refusal (ADR 0006).
     ask = staged("a change that grows a god-file", "a god-file is gated")
     godfile(worker._tree_path(ask, root))
     result = worker.apply(ask, scripted(json.dumps({

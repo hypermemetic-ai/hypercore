@@ -107,7 +107,7 @@ it sharpens inside grilling as work folds.
 
 - **derived channel** — a grounding channel **rendered from one source**, never hand-copied
   (ADR 0009): the worker's depth grounding and the `depth` **skill** both render from
-  `research/aposd.md`. Like the **as-built**, a derived channel changes when its source changes,
+  `spec/depth.md`. Like the **as-built**, a derived channel changes when its source changes,
   so a frozen second copy (the retired `worker.DEPTH` constant) cannot drift. Materialized on
   disk when an external harness must auto-load it (a skill, an agents file); read live otherwise.
 
@@ -126,7 +126,7 @@ it sharpens inside grilling as work folds.
   (assess/deepen now) for a module past the length signal, **consider** for one nearing it.
 
 - **deep module** — a module that hides a lot of behavior behind a small interface;
-  hypercore's positive criterion for structure (Ousterhout, `research/aposd.md`). Its
+  hypercore's positive criterion for structure (Ousterhout, `spec/depth.md`). Its
   opposite is a **shallow module**. A simple interface matters more than a simple
   implementation — interface cost is paid by every caller forever — so *pull complexity
   downward*: when something must be hard, make it hard inside the module.
@@ -182,7 +182,7 @@ it sharpens inside grilling as work folds.
 
 - **design-it-twice** — the judgment use of the worktree concurrency: for a load-bearing
   interface, designing the decision several ways in parallel before committing one, then picking
-  the deepest (Ousterhout, rebuild-spec §7.5). The fence that isolates a worker for throughput
+  the deepest (Ousterhout, ADR 0007). The fence that isolates a worker for throughput
   isolates several candidates for design quality.
 
 - **design contest** — the run of design-it-twice on one decision: a set of candidates, the
@@ -195,7 +195,7 @@ it sharpens inside grilling as work folds.
 
 - **design brief** — the instruction that pushes a candidate toward a radically different shape:
   minimize the interface / maximize flexibility / optimize the common caller / ports-and-adapters
-  (rebuild-spec §7.5). Different briefs make the contest span real alternatives.
+  (ADR 0007). Different briefs make the contest span real alternatives.
 
 - **design-decision** — the architect's machine-side pick among candidates, recorded as a
   structured `design-decision: <subject> → <chosen> — <reason>` line in an ADR — the same

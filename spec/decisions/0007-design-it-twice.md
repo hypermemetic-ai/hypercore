@@ -5,7 +5,7 @@ operator ratified during slice 8's grilling (2026-06-21). [machine]
 
 ## Context
 
-Slice 8 (rebuild-spec §9.8, §7.5) builds the judgment use of the worktree concurrency:
+Slice 8 builds the judgment use of the worktree concurrency:
 **design-it-twice** for load-bearing interfaces. The worktree fence already isolates a worker
 for throughput (slice 4); the same isolation, run as a contest of candidates, serves design
 quality. Two questions had to be settled to build it: where the new behavior lives (a capability
@@ -27,13 +27,13 @@ one stake-bearing fork, because it is a "what crosses to the operator" call.
   depth/locality/seam, picks or hybridizes, and records the pick as a **structured
   design-decision ADR** (`design-decision: <subject> → <chosen> — <reason>`). The interface shape
   is machine-side design, like the spec delta: the operator's trust anchor is the contract it
-  ratifies, never the machine-side design (rebuild-spec §6.4). So the pick does not spend the
+  ratifies, never the machine-side design. So the pick does not spend the
   operator's go. *The operator chose this landing during grilling* — over an operator-facing
   decision card and over a "machine picks + always notify" middle ground.
 - **A stake-bearing difference still reaches the operator.** When the comparison reveals a
   difference the operator has a stake in (operator-visible behavior, hard to reverse, real cost),
   it re-enters grilling as a decision card carrying only the architect-authored stake — the
-  standing-guard floor (§5.1). Only that stake crosses; the candidate designs and the reasoning
+  standing-guard floor. Only that stake crosses; the candidate designs and the reasoning
   stay machine-side, in the fences and the ADR — the same routing that keeps a raw worker output
   off the operator's surfaces.
 - **Candidates design, they do not implement.** A candidate produces an interface design — the
@@ -54,10 +54,10 @@ same isolation makes a contest safe, so design-it-twice borrows the fence (`work
 tagged per candidate) rather than inventing a parallelism primitive — `worker.commit_tree` is the
 one in-fence commit both the worker's result and a candidate's design land through, so the
 fence-commit knowledge stays in one place. Selection lands machine-side for the same reason delta
-authorship does (0006/§6.4): design judgment co-locates with the role that holds it (the
+authorship does (ADR 0006): design judgment co-locates with the role that holds it (the
 architect), and the operator's leverage is the contract, kept whole by surfacing only a
 stake-bearing difference. The trigger — judging an interface load-bearing — is the architect's
-judgment (§7.5) with the depth gate's "cannot deepen in place" (§7.1) as a second entry; the
+judgment with the depth gate's "cannot deepen in place" as a second entry; the
 capability is invoked on that judgment, the automatic detection during live grilling being the
 natural next integration, recorded honestly rather than fabricated (the slice-7 F1 precedent).
 

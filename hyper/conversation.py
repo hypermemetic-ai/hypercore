@@ -61,7 +61,7 @@ class Reply:
 def speak(thread: Thread, text: str, transport=None) -> Reply:
     """One turn: feed the operator's words to the architect and land
     whatever consequence it returns on the graph. A filed ask does not become
-    work directly — it enters grilling (§5), and only files straight through when
+    work directly — it enters grilling, and only files straight through when
     it is below the floor."""
     transport = transport or _claude
     thread.add("operator", text)
@@ -104,9 +104,9 @@ def integrate(node: graph.Node, result, transport=None, root: str | None = None)
     not apply), trips the **depth** condition (a module past the length signal with no
     depth-decision — re-cut / deepen / accept-with-reason), or that the architect judges
     incoherent raises a decision rather than folding. Depth surfaces to the operator as a
-    decision, never a silent veto and never a silent pass (rebuild-spec §7.1, ADR 0006)."""
+    decision, never a silent veto and never a silent pass (ADR 0006)."""
     transport = transport or _claude
-    blocked = conditions.unmet(result, root)           # the folding conditions (§7), before the merge
+    blocked = conditions.unmet(result, root)           # the folding conditions, before the merge
     if blocked:
         card = graph.raise_card(blocked, kind="decide", parent=node.id)
         return Reply(say="The result can't fold yet — a folding condition isn't met; "

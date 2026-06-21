@@ -1,6 +1,6 @@
 """Slice 7 — the architecture re-grounded in depth (Ousterhout).
 
-Acceptance (next-work.md / research/regrounding.md §9): the constraints read in Ousterhout's
+Acceptance (ADR 0006): the constraints read in Ousterhout's
 terms (deep modules, the red flags); the mechanical gate and the standing review reflect them;
 **the operator reads the system's depth, not merely its length**; and the slice-6 check.py split
 is re-decided on the new criteria (kept, on locality — see ADR 0006). This check drives the
@@ -51,7 +51,7 @@ def check(root: str) -> None:
 
     # 1. length raises a DECISION, never a silent veto — and the reason names the three
     # outcomes (re-cut / deepen / accept). The gate hands the operator a depth judgment, not a
-    # number's verdict (re-grounding §4; spec/folding-conditions, spec/conversation-as-architect).
+    # number's verdict (ADR 0006; spec/folding-conditions, spec/conversation-as-architect).
     # (A file with no depth-decision record of its own — names are unique so a sibling slice's
     # record can't clear it.)
     ask = staged("a change past the signal", "a depth decision is raised")
@@ -112,7 +112,7 @@ def check(root: str) -> None:
     worker.teardown(ask, root)
 
     # 4. the worker is grounded in the depth disciplines EVERY episode — the proactive defense
-    # (re-grounding §3): the deep-module framework and the red flags are in its prompt by
+    # (ADR 0006): the deep-module framework and the red flags are in its prompt by
     # construction, so it builds deep up front and the gate stays a rarely-tripped backstop.
     ask = staged("any worker episode", "the worker is grounded in depth")
     ctx = worker.context(ask, root)

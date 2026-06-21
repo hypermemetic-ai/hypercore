@@ -10,7 +10,7 @@ Status: machine-owned, awaiting ratification. [machine]
 
 ## Context
 
-Slice 6 builds the architecture review render (rebuild-spec §7.4, §9.6): the standing scan
+Slice 6 builds the architecture review render: the standing scan
 for deepening opportunities that produces the operator view's "what the system is" upper
 levels and the deepening backlog. ADR 0001 forecast "architecture-review" as a later
 capability — the last of the boundaries it anticipated. The seam had to be cut one way,
@@ -47,7 +47,7 @@ One budget, two scopes: the line-count budget lives in `folding-conditions` (the
 at the fold). The architecture review consults the same budget and the same decision-record
 escape hatch for its standing whole-tree scan, rather than defining a second budget — so a file
 the gate would refuse is the same file the review flags, by construction. The "nearing budget"
-threshold (80% of the budget) is the review's own, a starting value to tune (§11) like the
+threshold (80% of the budget) is the review's own, a starting value to tune like the
 budget itself. The review's depth is deliberately shallow at this slice — it measures length,
 the mechanical part; the deletion test and seam analysis it is meant to grow are recorded as
 unbuilt in its own spec, the same self-honesty the operator view is built to practice.

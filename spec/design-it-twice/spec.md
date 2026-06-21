@@ -1,6 +1,6 @@
 # design-it-twice
 
-The judgment use of the worktree concurrency (rebuild-spec §7.5). The fence that isolates a
+The judgment use of the worktree concurrency (ADR 0007). The fence that isolates a
 worker for throughput also isolates several candidates for design quality: for an interface the
 architect judges load-bearing, the decision is **designed twice** — several candidates, each in
 its own fence, each briefed to design the *same* interface radically differently — and the
@@ -15,8 +15,8 @@ A load-bearing interface decision MUST be designable as a contest of several can
 brief (minimize the interface / maximize flexibility / optimize the common caller /
 ports-and-adapters), each running in its own fence — the worker's worktree, tagged per candidate
 — so the candidates advance the same decision at once, isolated from each other and the main
-line. The architect judges an interface load-bearing (§7.5); the depth gate's "cannot deepen in
-place" is the second entry (§7.1).
+line. The architect judges an interface load-bearing (ADR 0007); the depth gate's "cannot deepen in
+place" is the second entry (ADR 0006).
 
 #### Scenario: the decision is designed twice
 - WHEN a load-bearing interface decision is designed twice with N briefs
@@ -40,7 +40,7 @@ The architect MUST compare the candidates on **depth, locality, and seam placeme
 or hybridize, and record the pick as a **structured design-decision ADR** — a parseable
 `design-decision: <subject> → <chosen> — <reason>` line, the same structured-record idiom the
 depth-decision uses. The selection is machine-side design judgment: the operator's trust anchor
-is the contract, not the machine-side design (rebuild-spec §6.4, ADR 0007), so the pick does not
+is the contract, not the machine-side design (ADR 0007), so the pick does not
 spend the operator's go. The candidate designs and the reasoning stay machine-side — in the
 fences and the ADR — never on a card.
 
@@ -52,7 +52,7 @@ fences and the ADR — never on a card.
 ### Requirement: a stake-bearing difference re-enters grilling
 WHEN the comparison reveals a difference the operator has a stake in — operator-visible
 behavior, hard to reverse, or real cost — the architect MUST raise it as a decision card
-parented to the decision node (the standing-guard floor, rebuild-spec §5.1), carrying only the
+parented to the decision node (the standing-guard floor), carrying only the
 architect-authored stake. The interface shape stays machine-side; only a stake-bearing
 behavioral difference crosses to the operator.
 

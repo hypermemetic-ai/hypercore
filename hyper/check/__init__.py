@@ -2,7 +2,7 @@
 
     python3 -m hyper --check
 
-Each slice's acceptance check (rebuild-spec §9) is its own module, driven with a
+Each slice's acceptance check is its own module, driven with a
 *scripted* transport (no LLM, so the loop is deterministic and fast) over the *real*
 graph, spec, conditions, and worktrees — it asserts the system, not a story. The live
 architect and the window are the evidence you watch by running `python3 -m hyper`

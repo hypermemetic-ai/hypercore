@@ -4,10 +4,10 @@ Status: machine-owned, awaiting ratification. [machine]
 
 ## Context
 
-Slice 7 reconsiders the line-count budget (rebuild-spec §7.1) and the slice-6 `check.py`
-split against John Ousterhout's *A Philosophy of Software Design* (`research/aposd.md`),
-and — the impression having held through a deep run — rebuilds hypercore's architectural
-constraint around it (`research/regrounding.md`). The budget named the enemy by its
+Slice 7 reconsiders the line-count budget and the slice-6 `check.py` split against John
+Ousterhout's *A Philosophy of Software Design* (`spec/depth.md`, the depth synthesis), and —
+the impression having held through a deep run — rebuilds hypercore's architectural constraint
+around it (`research/regrounding.md`, the slice-7 design). The budget named the enemy by its
 **fingerprint** (length) rather than its **cause** (shallow, entangled, leaky structure),
 and so made the fingerprint the crime: a line-count ceiling that fires without judgment is
 the same mistake as *Clean Code*'s small-function floor — a number standing in for the
@@ -67,8 +67,8 @@ decision*; the **judgment layer** (`architecture-review`) is where the red flags
 standing scan. A judgment framework honored by a mechanical system without becoming the rule it
 warns against means: the machine *triggers and surfaces* the judgment (length past the signal →
 a decision), and a person *makes* it (the operator, with the model-driven verdict to grow). The
-deepest move is proactive — design awareness engineered into the worker's context (rebuild-spec
-§1.2's own thesis turned on its own work) — so the gate rarely fires.
+deepest move is proactive — design awareness engineered into the worker's context (the
+incremental-complexity thesis turned on hypercore's own work) — so the gate rarely fires.
 
 ## Consequences
 
@@ -81,5 +81,5 @@ capabilities, one criterion at two scopes — stand. `conditions.BUDGET` becomes
 living spec carries deltas across `folding-conditions`, `architecture-review`, `conversation`
 (the architect rename + the depth-judgment requirement), `worker` (the depth-disciplines
 grounding), `self-model` (the operator view reads depth), and the glossary (the architect
-rename + the Ousterhout terms). rebuild-spec §6, §7.1, §7.4, §9 are revised. A future change
-that re-cuts these boundaries carries an ADR superseding this one.
+rename + the Ousterhout terms). A future change that re-cuts these boundaries carries an ADR
+superseding this one.

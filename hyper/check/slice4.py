@@ -1,7 +1,7 @@
 """Slice 4 — workers, with spec-scoped context: the fence, the routing, the hand-back.
 
-Acceptance (spec §9.4): a worker is grounded in its capability's spec slice by construction
-— holding the whole spec, not confined to the touched slice (rebuild-spec §4.1, §6.4); it
+Acceptance (spec/worker, ADR 0003): a worker is grounded in its capability's spec slice by
+construction — holding the whole spec, not confined to the touched slice (ADR 0009); it
 runs fenced in its own git worktree; and its raw output reaches the operator through no
 path — the architect authors every operator-facing word and folds the refined delta.
 Drives propose→apply→archive end to end with scripted transports over the real graph and a
@@ -38,7 +38,7 @@ def check(root: str) -> None:
         kind="decide", parent=ask.id))                    # the ratified contract
 
     # 1. the grounding, by construction: the whole spec, with the touched capabilities marked
-    # as grounding — the worker is NOT slice-confined (rebuild-spec §4.1, §6.4)
+    # as grounding — the worker is NOT slice-confined (ADR 0009)
     ctx = worker.context(ask)
     allcaps = {c.name for c in spec.read_spec(root).capabilities}
     ok(ctx.touched == {"worker", "conversation"},
@@ -51,7 +51,7 @@ def check(root: str) -> None:
     ok("import " not in prompt and "curses" not in prompt,
        "the worker is grounded in the spec, never the code")
 
-    # the keystone (rebuild-spec §6.4): a handed delta that mis-names a capability does not
+    # the keystone (ADR 0009): a handed delta that mis-names a capability does not
     # shrink the worker's context — it still holds the whole spec, so the rescan can catch the
     # mis-mapping. A slice-confined worker (context = {graph}) would have been blind to it.
     mis = graph.file_intent("a change whose handed delta mis-maps the capability")

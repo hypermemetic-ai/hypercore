@@ -4,7 +4,7 @@ Status: machine-owned, awaiting ratification. [machine]
 
 ## Context
 
-Slice 3 builds intent extraction by grilling (rebuild-spec §5): the floor, the
+Slice 3 builds intent extraction by grilling: the floor, the
 one-question-at-a-time interview, the four products, and the gate that holds work
 until the operator ratifies the view entry. ADR 0001 anticipated this behavior as a
 sixth capability ("later slices add ... grilling/extraction"). The seam had to be

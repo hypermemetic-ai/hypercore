@@ -1,19 +1,19 @@
 """The depth disciplines, single-sourced from the synthesis — no frozen copy.
 
-The worker is grounded in the depth disciplines every episode (rebuild-spec §7.1, ADR
-0006/0009): the deep-module criterion, strategic-over-tactical, and the red flags of
-shallowness. Those disciplines have **one home** — `research/aposd.md`, the faithful
-synthesis of Ousterhout's *A Philosophy of Software Design* — and this module is their
-single render into the channels that carry them: the worker's prompt-side grounding
-today (`disciplines`), and a `depth` **skill** artifact (`skill`/`materialize`) for when
-the harness seam lands and the worker loads skills natively.
+The worker is grounded in the depth disciplines every episode (ADR 0006/0009): the
+deep-module criterion, strategic-over-tactical, and the red flags of shallowness. Those
+disciplines have **one home** — `spec/depth.md`, the faithful synthesis of Ousterhout's
+*A Philosophy of Software Design* — and this module is their single render into the
+channels that carry them: the worker's prompt-side grounding today (`disciplines`), and a
+`depth` **skill** artifact (`skill`/`materialize`) for when the harness seam lands and the
+worker loads skills natively.
 
-This kills the `worker.DEPTH` smell ADR 0009 names: a hand-compression of aposd.md frozen
-in a Python constant was a second copy that drifted the moment the synthesis was
-sharpened. Here the disciplines are *derived* from aposd.md's two canonical lists — the
+This kills the `worker.DEPTH` smell ADR 0009 names: a hand-compression of the synthesis
+frozen in a Python constant was a second copy that drifted the moment the synthesis was
+sharpened. Here the disciplines are *derived* from spec/depth.md's two canonical lists — the
 **design principles** (§3, the positive disciplines to build toward) and the **red flags**
-(§2, the symptoms to build away from) — so the moment aposd.md changes, every channel that
-carries them changes with it. It is the operator view's discipline pointed at one more
+(§2, the symptoms to build away from) — so the moment spec/depth.md changes, every channel
+that carries them changes with it. It is the operator view's discipline pointed at one more
 target: the as-built is derived, only the vision is authored, and a derived channel cannot
 drift from its source.
 """
@@ -26,13 +26,13 @@ from . import graph
 
 # The disciplines' one home, relative to a root. The render reads it live (like the spec),
 # never caches — so a sharpened synthesis is in the next worker's grounding with no second step.
-APOSD = os.path.join("research", "aposd.md")
+SOURCE = os.path.join("spec", "depth.md")
 
 # The repo this ships in — the fallback source. The depth disciplines are hypercore's own
-# methodology, present even when a project root carries no `research/` of its own (the
-# acceptance harness runs against a bare temp root), so the package's aposd.md backs the render
-# when the root has none. A project root takes precedence, which is what lets the harness plant a
-# controlled source and prove the render is derived from it.
+# methodology, present even when a project root carries no `spec/depth.md` of its own (the
+# acceptance harness runs against a bare temp root), so the package's spec/depth.md backs the
+# render when the root has none. A project root takes precedence, which is what lets the harness
+# plant a controlled source and prove the render is derived from it.
 _REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 _ITEM = re.compile(r"^\d+\.\s+(.*)")          # a numbered list item: "1. <text>"
@@ -51,7 +51,7 @@ def disciplines(root: str | None = None) -> str:
     return (
         "The depth disciplines — you are held to these; build deep up front, so your work folds "
         "without tripping the depth gate. hypercore's standing engineering disciplines, "
-        "single-sourced from research/aposd.md (Ousterhout, A Philosophy of Software Design):\n\n"
+        "single-sourced from spec/depth.md (Ousterhout, A Philosophy of Software Design):\n\n"
         "Build toward these (the design principles):\n" + _bullets(principles) + "\n\n"
         "Build away from these (the red flags of shallowness):\n" + _bullets(red_flags)
     )
@@ -61,7 +61,7 @@ def skill(root: str | None = None) -> str:
     """The `depth` skill — the same disciplines rendered as a progressive-disclosure SKILL.md for
     a harness that loads skills natively (ADR 0009 §5). The metadata names *when* to load it (the
     ~50-token level), the body is the disciplines (single-sourced), and the resource pointer is
-    aposd.md itself for the full reasoning. Created now for the parked harness seam."""
+    spec/depth.md itself for the full reasoning. Created now for the parked harness seam."""
     principles, red_flags = _lists(root)
     return (
         "---\n"
@@ -77,7 +77,7 @@ def skill(root: str | None = None) -> str:
         "## Build away from these — the red flags of shallowness\n\n" + _bullets(red_flags) + "\n\n"
         "## Going deeper\n\n"
         "The full synthesis — the reasoning behind each discipline, the *Clean Code* contrast, and "
-        "the epistemic status — is `research/aposd.md`, this skill's single source.\n"
+        "the epistemic status — is `spec/depth.md`, this skill's single source.\n"
     )
 
 
@@ -91,20 +91,20 @@ def materialize(root: str | None = None) -> str:
     return path
 
 
-# ── the render: aposd.md's two canonical lists → the disciplines ──────────────
+# ── the render: spec/depth.md's two canonical lists → the disciplines ─────────
 
 def _lists(root: str | None) -> tuple[list[str], list[str]]:
     """The (design principles, red flags) of the synthesis — its two canonical numbered lists,
-    extracted from the one source. These *are* the disciplines; everything else in aposd.md is the
-    reasoning that justifies them."""
+    extracted from the one source. These *are* the disciplines; everything else in spec/depth.md
+    is the reasoning that justifies them."""
     text = open(_source(root), encoding="utf-8", errors="ignore").read()
     return _numbered(_section(text, "design principles")), _numbered(_section(text, "red flags"))
 
 
 def _source(root: str | None) -> str:
-    """aposd.md, the disciplines' one home — the project root first, the shipping repo as fallback."""
-    here = os.path.join(root or graph._root(), APOSD)
-    return here if os.path.isfile(here) else os.path.join(_REPO, APOSD)
+    """spec/depth.md, the disciplines' one home — the project root first, the shipping repo as fallback."""
+    here = os.path.join(root or graph._root(), SOURCE)
+    return here if os.path.isfile(here) else os.path.join(_REPO, SOURCE)
 
 
 def _section(text: str, title: str) -> list[str]:

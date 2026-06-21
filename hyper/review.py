@@ -1,13 +1,13 @@
 """The architecture review — the standing scan that keeps the system deep.
 
-A periodic scan for deepening opportunities (rebuild-spec §7.4), run as a standing
+A periodic scan for deepening opportunities (ADR 0005), run as a standing
 process, not a one-off: read live off the source tree every time, never a stored
 report. It has two roles, and this module serves both from one scan:
 
 - **The engine of deepening.** It surfaces god-files-in-the-making before they set —
   a module past the length signal, or one nearing it — each as a finding carrying its
   measure and a recommendation strength. This is the deepening backlog.
-- **The operator view's "what the system is" upper levels (§4.2).** The same scan
+- **The operator view's "what the system is" upper levels.** The same scan
   renders the structural map of as-built reality — every module by length against the
   signal, debt marked — so the operator reads the shape of the system at a glance,
   without reading code. The review is *not a separate artifact*: its output is the
@@ -18,7 +18,7 @@ re-grounding (ADR 0006) keeps as one **signal** of depth, not the criterion. Dep
 the criterion: a deep module, a lot of behavior behind a small interface. The
 deeper, **model-driven red-flag scan** — the deletion test, the shallow-module and
 information-leakage flags, testable-through-the-interface — is the depth assessment
-this review is meant to grow, and it is **not yet built** (slice 7, F1). That
+this review is meant to grow, and it is **not yet built** (ADR 0006). That
 shallowness is recorded here and in the operator's gap, never fabricated into a
 verdict. Length is the lens this slice ships; the red flags are the lens it will grow.
 
@@ -36,7 +36,7 @@ from . import conditions, graph
 
 # A module within this margin of the length signal is a god-file in the making — flagged
 # early so deepening pressure is felt before a split is painful. A starting value to
-# tune (§11), like the signal itself, not a deep question.
+# tune, like the signal itself, not a deep question.
 NEAR = int(conditions.SIGNAL * 0.8)
 BAR = 20                                  # the visual bar's width, the signal full
 
@@ -75,7 +75,7 @@ class Review:
 # The honest record that the depth lens beyond length is not yet built — surfaced in the
 # operator's gap rather than hidden, the self-honesty the operator view is built to practice.
 DEPTH_NOT_YET = ("the depth scan beyond length — the red flags, the deletion test — is not "
-                 "yet built (rebuild-spec §7.4, ADR 0006); length is the signal shown here")
+                 "yet built (ADR 0006); length is the signal shown here")
 
 
 def review(root: str | None = None) -> Review:

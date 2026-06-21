@@ -21,8 +21,8 @@ A worker MUST be handed the living spec with the capabilities its change touches
 its grounding — their requirements and scenarios foregrounded — AND the rest of the spec
 carried beside them for scan, with the glossary and the system's decisions, assembled before
 it runs, so there is no path that runs a worker without its grounding. It holds the spec,
-never raw code, and never the operator view. A worker is **not slice-confined** (rebuild-spec
-§4.1, §6.4): a delta cannot be authored or verified from one capability in isolation, so its
+never raw code, and never the operator view. A worker is **not slice-confined** (ADR 0009): a
+delta cannot be authored or verified from one capability in isolation, so its
 rescan covers the whole spec and catches a capability the handed delta mis-named or missed.
 
 #### Scenario: assembling the context
@@ -41,14 +41,14 @@ A worker MUST be handed the **depth disciplines** as standing grounding in every
 deep-module framework (a lot of behavior behind a small interface; a simple interface matters
 more than a simple implementation; pull complexity downward), strategic over tactical
 programming, and the **red flags** of shallowness — so it builds **deep up front** rather than
-relying on the gate to catch shallowness after the fact (rebuild-spec §7.1, ADR 0006). This is
+relying on the gate to catch shallowness after the fact (ADR 0006). This is
 the *proactive* primary anti-complexity defense: a worker that shares the long-term-health
 concern produces deep modules, so the folding-conditions depth gate stays a rarely-tripped
 backstop, not an operator-load generator. The grounding is assembled into the worker's prompt
 by construction, like its spec slice — there is no path that runs a worker without it.
 
 The disciplines MUST be **single-sourced**, not a frozen copy: they are *rendered* from their one
-home, `research/aposd.md` (the faithful synthesis), so a sharpened synthesis reaches the next
+home, `spec/depth.md` (the faithful synthesis), so a sharpened synthesis reaches the next
 worker with no second copy to drift (ADR 0009). The same render also produces a `depth` **skill**
 artifact, materialized on disk, for the harness that loads skills natively — one source, the
 channels derived from it, the way the as-built is derived from the model and only the vision is
@@ -60,7 +60,7 @@ authored.
   disciplines it is held to, so it builds deep up front
 
 #### Scenario: the disciplines are derived from their source
-- WHEN the depth synthesis (`research/aposd.md`) is sharpened
+- WHEN the depth synthesis (`spec/depth.md`) is sharpened
 - THEN the next worker's depth grounding renders the change with nothing hand-copied, and the
   retired frozen constant cannot drift from the source because it no longer exists
 
@@ -80,7 +80,7 @@ The fence MUST compose: several workers MAY hold distinct worktrees at once, eac
 committing on its own branch, none touching a sibling's tree or the main line, and each folding
 its own delta into the one spec independently. Isolation is the concurrency model — throughput is
 many fences at once, and the same composition is what `design-it-twice` runs a contest of
-candidates on (rebuild-spec §7.5).
+candidates on (ADR 0007).
 
 #### Scenario: two workers advance at once
 - WHEN two workers hold two distinct fences at the same time

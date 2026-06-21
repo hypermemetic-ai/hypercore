@@ -18,7 +18,7 @@ The operator settled the direction: when a length signal is accepted, **set a hi
 next trip** — do not silence the file forever, and do not nag on every touch. The acceptance is
 bounded to the length it was accepted at; renewed growth past it re-opens the decision at the new,
 higher level. What had to be settled to build it is machine-side (the operator's anchor is the
-contract, not the machine-side design — rebuild-spec §6.4): where the accepted length is recorded,
+contract, not the machine-side design): where the accepted length is recorded,
 how "materially past" is drawn, and how the standing review renders a stale acceptance.
 
 ## Decision
@@ -34,7 +34,7 @@ growth.**
   that shrinks and regrows back to its old size never re-nags.
 - **`accepted` is bounded; it clears only within the bar plus a materiality margin.** A
   depth-decision `accepted@N` clears the gate while the file's current length is `≤ N + N·SLACK`
-  (`SLACK = 0.1`, a starting value to tune, §11). The margin is so a one-line edit past the bar
+  (`SLACK = 0.1`, a starting value to tune). The margin is so a one-line edit past the bar
   does not re-open a settled decision — only **material** growth does. Past it the depth decision
   re-fires and the acceptance must be **renewed** at the new length (`accepted@<new N>`), which
   ratchets the bar up. A stable or shrinking file stays quiet.

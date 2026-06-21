@@ -1,9 +1,11 @@
-# A Philosophy of Software Design — a faithful synthesis
+# Depth — hypercore's standing engineering disciplines
 
-*Slice 7, phase 1 (rebuild-spec §7.1 re-grounding). Durable material, not throwaway chat: the
-ideas hypercore's architectural constraints are about to be grilled against. John Ousterhout, *A
-Philosophy of Software Design* (1st ed. 2018, 2nd ed. 2021), Stanford. Read this before the
-grilling (phase 2); it is the thing the forks are measured against.*
+*The positive criterion the system is built to: deep modules — a lot of behavior behind a small
+interface — built away from the red flags of shallowness. A faithful synthesis of John Ousterhout's
+*A Philosophy of Software Design* (1st ed. 2018, 2nd ed. 2021, Stanford): the **single source**
+`hyper/depth.py` renders into the worker's every-episode grounding and the `depth` skill, and the
+criterion the architecture review scans for. These are **judgment, not a gate** (§4); the
+re-grounding that adopted them — length demoted to a context-cost signal — is ADR 0006.*
 
 **Provenance.** §5 (the *Clean Code* debate) is **primary** — Ousterhout's and Martin's own
 words, from their 2024–25 written exchange at `github.com/johnousterhout/aposd-vs-clean-code`,
@@ -121,10 +123,9 @@ that the *number of places that must reason about the error* is a design variabl
 *"Design it twice."* For any consequential design — an interface, a class, a module boundary —
 the first idea is rarely the best, and the cost of considering a *genuinely different* second
 (and third) approach before committing is trivial against the cost of living with a poor shape.
-Even when the first design wins, comparing it to a real alternative sharpens it. (This is the
-exact idea hypercore's slice 8 — the now-deferred parallelism re-grounding — means to operate
-mechanically with parallel worktrees; phase 2 should hold the two apart: Ousterhout's design-it-
-twice is a *judgment* discipline, not a throughput one.)
+Even when the first design wins, comparing it to a real alternative sharpens it. (hypercore
+operates this mechanically with parallel worktrees for load-bearing interfaces, as a *judgment*
+discipline distinct from the throughput use of the same fence — ADR 0007.)
 
 ### 1.6 Comments as part of design
 
@@ -175,7 +176,9 @@ probably more complex than it needs to be, collected in a summary at the back. F
 variables** — a parameter threaded through a long call chain only to reach a distant user.)
 
 Note the character of every one of these: they are **smells a reader judges**, not thresholds a
-tool measures. None has a number. That property is the whole pivot of slice 7 (§6).
+tool measures. None has a number. That property is why the gate keeps at most a length tripwire
+while the red flags live in the standing architecture-review as judgment, not gate thresholds (ADR
+0006).
 
 ---
 
@@ -203,7 +206,7 @@ before quoting any as canonical):
 
 ---
 
-## 4. Epistemic status — *this is the load-bearing section for slice 7*
+## 4. Epistemic status — *what these disciplines are, and are not*
 
 Ousterhout is explicit, in the book's own framing, that this is **an opinion piece**: a set of
 design principles distilled from one experienced practitioner's judgment, offered to be argued
@@ -226,10 +229,12 @@ with, not a proven method. The honest reading of its standing:
   eye to see complexity accruing and gives shared names (deep, shallow, leakage, classitis) to
   argue about it. That is real and large; it is also, precisely, not a gate.
 
-This is the seam slice 7 runs along. hypercore's folding conditions are **mechanical** — a
-line-count number a graph either clears or doesn't. Ousterhout's framework is **judgment**. The
-re-grounding is the question of how a judgment framework is honored by a system whose enforcement
-must be mechanical. §6 frames that without deciding it.
+This is the seam the system is cut along. hypercore's folding conditions are **mechanical** — a
+line-count number a graph either clears or doesn't. This framework is **judgment**. How a judgment
+framework is honored by a system whose enforcement must be mechanical is resolved in ADR 0006: the
+mechanical gate keeps a minimal length tripwire (length is what a module costs an agent's context
+window — a real cost a number can track), and the red flags live as a standing, model-driven
+**architecture-review** scan. Judgment kept judgment; the gate kept a backstop.
 
 ---
 
@@ -307,43 +312,6 @@ hypercore's 400-line *ceiling* is the mirror image of *Clean Code*'s small-funct
 are line-count rules; the question slice 7 must answer is whether hypercore's escapes Ousterhout's
 objection (a ceiling punishes *un-deepened length*, a floor punishes *cohesive length*) or merely
 inverts it.
-
----
-
-## 6. The seam to hypercore — what phase 2 grills (open, not decided here)
-
-This synthesis decides nothing about hypercore; that is the operator's grilling (phase 2). It
-only sets the table. The design spine, stated as a tension:
-
-> Ousterhout's framework is **judgment**; hypercore's folding conditions are **mechanical gates**.
-> A judgment framework cannot be enforced mechanically without becoming the kind of rule it warns
-> against — yet hypercore's anti-dilution guarantee *requires* a mechanical gate (bad
-> implementation must be *un-foldable*, not merely discouraged). The re-grounding lives in how
-> that tension is resolved along the seam hypercore already cut: a **mechanical gate**
-> (`folding-conditions`) and a **judgment layer** (`architecture-review`).
-
-The forks next-work.md names for phase 2, each to be put one at a time with a lean and what flips
-it:
-
-- **The line budget — replace, demote, or keep?** Is the 400-line ceiling kept as a minimal
-  tripwire, demoted beneath a depth signal, or replaced — and by what? (Ousterhout would say
-  length is the *wrong* measure; hypercore's defense is that length is what a module *costs an
-  agent's context window*, which is a real cost a number can track. Both can be true.)
-- **Which signals stay mechanical, which become judgment?** The red flags are judgments — do any
-  admit a mechanical proxy worth gating on (pass-through methods, duplication, interface/
-  implementation ratio), or does the gate keep at most the tripwire and the *review* (likely
-  model-driven) carry the red flags as a standing scan?
-- **Was the slice-6 `check.py` split classitis — and does it revert?** The split that satisfied
-  the budget produced six near-identical `sliceN` modules. On Ousterhout's terms that is a
-  candidate for the shallow-module / over-decomposition charge. Re-decide it on the new criteria
-  and record the reasoning either way.
-- **Scope — in-place §7 revision, or a larger constraint rebuild?** Does this touch only
-  rebuild-spec §7.1 and ADRs 0004/0005, or does the constraint set get rebuilt?
-
-The acceptance check the slice is held to (next-work.md): the constraints read in Ousterhout's
-terms (deep modules, the red flags); the mechanical gate and the standing review reflect them; the
-operator reads the system's **depth**, not merely its **length**; and the slice-6 split is
-re-decided on the new criteria with its reasoning recorded.
 
 ---
 

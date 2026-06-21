@@ -4,7 +4,7 @@ Status: machine-owned, awaiting ratification. [machine]
 
 ## Context
 
-Slice 4 builds the worker (rebuild-spec §6, §9.4): the system-facing half of the
+Slice 4 builds the worker: the system-facing half of the
 architect/worker split, fenced in its own worktree and grounded in its
 capability's spec slice. ADR 0001 forecast "workers" as a later capability; ADR 0002
 set the counter-precedent of folding a new behavior into the existing five rather than

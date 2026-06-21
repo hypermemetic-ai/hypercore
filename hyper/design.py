@@ -1,4 +1,4 @@
-"""Design-it-twice — the judgment use of the worktree concurrency (rebuild-spec §7.5).
+"""Design-it-twice — the judgment use of the worktree concurrency (ADR 0007).
 
 The worktree fence is hypercore's concurrency model. Slice 4 used it for *throughput*: one
 worker per node, fenced from its siblings. This is the second use the model already affords —
@@ -11,7 +11,7 @@ most: the shape of a deep module.
 
 Four things define it, and each is structural:
 
-- **The candidates are genuinely different, and isolated.** One per brief (§7.5: minimize the
+- **The candidates are genuinely different, and isolated.** One per brief (minimize the
   interface / maximize flexibility / optimize the common caller / ports-and-adapters), each in
   its own fence (`worker.worktree`, tagged per candidate). They never see each other; several
   shapes advance one decision at once, exactly as several workers advance the graph at once.
@@ -26,11 +26,11 @@ Four things define it, and each is structural:
   0007).** The architect compares on depth/locality/seam, picks or hybridizes, and records the
   pick as a structured **design-decision** ADR — a load-bearing interface choice is hard to
   reverse, so it is ADR-worthy. The operator's trust anchor is the contract, not the
-  machine-side design (rebuild-spec §6.4), so the pick does not spend the operator's go.
+  machine-side design (ADR 0007), so the pick does not spend the operator's go.
 
 - **A stake-bearing difference still reaches the operator.** When the comparison reveals a
   difference the operator has a stake in — operator-visible behavior, hard to reverse, real
-  cost — it re-enters grilling as a card (the standing-guard floor, §5.1). Only that
+  cost — it re-enters grilling as a card (the standing-guard floor). Only that
   architect-authored stake crosses; the candidate designs and the reasoning stay machine-side.
 
 The contest is driven by the same transport as the rest of the system — `claude -p` live, a
@@ -44,7 +44,7 @@ from dataclasses import dataclass, field
 
 from . import conversation, graph, grill, spec, worker
 
-# The four briefs (rebuild-spec §7.5): each pushes a candidate toward a radically different
+# The four briefs (ADR 0007): each pushes a candidate toward a radically different
 # shape, so the contest spans real alternatives rather than minor variations of one instinct.
 BRIEFS = [
     ("minimal", "Minimize the interface — the smallest surface the callers can live with; "
@@ -167,7 +167,7 @@ def record(node: graph.Node, selection: Selection, root: str | None = None) -> s
         "## Context\n\n"
         f"A load-bearing interface for {subject!r} was designed twice — candidates "
         f"{briefs}, each fenced, each built to a different brief — and compared on depth, "
-        "locality, and seam placement (rebuild-spec §7.5, ADR 0007).\n\n"
+        "locality, and seam placement (ADR 0007).\n\n"
         "## Decision\n\n"
         f"design-decision: {subject} → {selection.chosen} — {selection.reasoning}\n\n"
         "## Grounds\n\n"
@@ -178,7 +178,7 @@ def record(node: graph.Node, selection: Selection, root: str | None = None) -> s
 
 def escalate(node: graph.Node, selection: Selection) -> graph.Node:
     """A stake-bearing difference re-enters grilling: a decision card on the operator's queue,
-    parented to the decision node (the standing-guard floor, §5.1). Only the architect-authored
+    parented to the decision node (the standing-guard floor). Only the architect-authored
     stake crosses — the candidate designs and the reasoning stay machine-side, in the ADR."""
     return graph.raise_card(selection.stake, kind="decide", parent=node.id)
 

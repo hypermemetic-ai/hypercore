@@ -6,7 +6,7 @@ reads the operator's words and lands one concrete consequence on the graph.
 The role is named **architect** because it holds the operator-aligned **design
 judgment** — it authors the spec delta (the design of the change), renders it back to
 the operator, judges **depth** at the archive gate, and **selects** among design-it-twice
-candidates — and communicating a design is part of designing it (rebuild-spec §6, ADR 0006).
+candidates — and communicating a design is part of designing it (ADR 0006).
 The capability stays `conversation`: the thread is a conversation and the operator-facing
 channel is what it owns.
 
@@ -64,7 +64,7 @@ input to that judgment, never output.
 The architect MUST hold the design judgment the worker cannot hold over its own product: at
 the archive gate, a result whose material is past the length signal with no depth-decision
 accepting it raises a **depth decision** — re-cut / deepen / accept-with-reason — on the
-operator's queue, never a silent veto and never a silent pass (rebuild-spec §7.1, ADR 0006).
+operator's queue, never a silent veto and never a silent pass (ADR 0006).
 Depth surfaces to the operator as a decision rather than hiding in a number, so the operator
 reads the system's depth; the architect's structural opposition to the worker's investment in
 its own product is the defense against self-judging.
@@ -77,9 +77,9 @@ its own product is the defense against self-judging.
 ### Requirement: the architect selects among design-it-twice candidates
 For a load-bearing interface designed twice (`design-it-twice`), the architect MUST compare the
 candidates on depth, locality, and seam placement and pick or hybridize — machine-side design
-judgment recorded as an ADR, not an operator decision (rebuild-spec §6.4, §7.5, ADR 0007). It
+judgment recorded as an ADR, not an operator decision (ADR 0007). It
 surfaces a card only when the comparison reveals a stake-bearing difference, which re-enters
-grilling (§5.1). The candidate designs and the reasoning stay machine-side; only the
+grilling. The candidate designs and the reasoning stay machine-side; only the
 architect-authored stake crosses to the operator, the same routing as a raw worker output.
 
 #### Scenario: the architect picks the interface

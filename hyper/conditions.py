@@ -1,21 +1,21 @@
 """The folding conditions — the engineering disciplines made structural.
 
 The disciplines that keep the model from drifting into a god-file of tangled code
-(rebuild-spec §7) bite only because each is a *folding condition* in hypercore's
+bite only because each is a *folding condition* in hypercore's
 existing sense: the thing that lets a graph fold. Advice can be ignored; a folding
 condition cannot. This module is the gate, run at the archive stage before the merge.
 
 Two of the three conditions are **non-negotiable facts** — they refuse the fold
 automatically, exactly as before, because there is nothing to judge:
 
-- **the spec delta applies** (§3.3) — the delta the graph carries lands cleanly on the
+- **the spec delta applies** — the delta the graph carries lands cleanly on the
   current spec. (Owned by the self-model; re-checked here so the gate gives one verdict.)
-- **a recorded red→green feedback loop** (§7.2) — a behavior-changing graph hands back a
+- **a recorded red→green feedback loop** — a behavior-changing graph hands back a
   loop that drove the behavior red before the fix and green after. The feedback loop *is*
   the skill; a correct narrative with no harness is the failure this kills.
 
-The third condition is a **judgment**, and so it is shaped differently (rebuild-spec §7.1,
-re-grounded in Ousterhout — `research/aposd.md`, ADR 0006):
+The third condition is a **judgment**, and so it is shaped differently (re-grounded in
+Ousterhout — `spec/depth.md`, ADR 0006):
 
 - **depth** — the criterion is a *deep module*: a lot of behavior behind a small interface.
   Length is not the criterion; it is one **signal** of it, kept for a reason Ousterhout
@@ -26,7 +26,7 @@ re-grounded in Ousterhout — `research/aposd.md`, ADR 0006):
   `conversation.integrate` puts on the operator's queue. The fold is held until that depth
   decision is settled; it is never silently refused and never silently passed.
 
-**There is no second, higher length ceiling that auto-refuses** (slice 7, F2). A ceiling at
+**There is no second, higher length ceiling that auto-refuses** (ADR 0006). A ceiling at
 any number would be the very thing this re-grounding removes — a number standing in for the
 judgment of depth — and would force back the escape hatch it deletes. Length raises a
 decision across its whole range; judgment and the operator carry it. The anti-dilution
@@ -34,7 +34,7 @@ guarantee still holds: over-signal material is *un-foldable* until the operator 
 depth decision — stronger than the old coincidental-ADR escape, not weaker.
 
 The model-driven red-flag depth *verdict* (is it actually shallow?) is the architecture
-review's standing job to grow and is not yet built (slice 7, F1); this slice ships the
+review's standing job to grow and is not yet built (ADR 0006); this slice ships the
 mechanical scaffold — length raises the decision, the operator judges depth — honestly.
 """
 from __future__ import annotations
@@ -44,8 +44,8 @@ import subprocess
 
 from . import delta, spec
 
-# The length signal (rebuild-spec §7.1). Past this many lines a touched source file raises a
-# depth decision — not a refusal. A starting value to tune (§11), not a law: the 6,348-line
+# The length signal (ADR 0006). Past this many lines a touched source file raises a
+# depth decision — not a refusal. A starting value to tune, not a law: the 6,348-line
 # `window.py` it exists to catch early is ~16× this. Keyed to length because length is what a
 # file costs the worker's window, whatever each line means — its context cost, not its depth.
 SIGNAL = 400
@@ -55,7 +55,7 @@ SIGNAL = 400
 # file grows *materially* past that bar, so a one-line edit past it does not re-open a settled
 # decision. SLACK is that margin, proportional to the accepted length: renewed growth past
 # `bar + bar·SLACK` re-opens the depth decision; a stable or shrinking file stays cleared. A
-# starting value to tune (§11), like the signal itself.
+# starting value to tune, like the signal itself.
 SLACK = 0.1
 
 
@@ -77,19 +77,19 @@ def _delta(d: delta.Delta, sp: spec.Spec) -> str | None:
 def _feedback_loop(d: delta.Delta, result) -> str | None:
     """A behavior-changing graph (a non-trivial delta) MUST hand back a loop that records its
     invocation, its red verdict on the behavior before the fix, and its green verdict after
-    it (§7.2). A trivial graph changes no behavior and needs none."""
+    it. A trivial graph changes no behavior and needs none."""
     if d.trivial:
         return None
     loop = result.loop if isinstance(result.loop, dict) else {}
     missing = [k for k in ("command", "red", "green") if not str(loop.get(k, "")).strip()]
     if missing:
         return ("no recorded red→green feedback loop: the result's loop is missing "
-                f"{', '.join(missing)} (rebuild-spec §7.2)")
+                f"{', '.join(missing)}")
     return None
 
 
 def _depth(result, root: str | None) -> str | None:
-    """Depth is the criterion; length is its signal (§7.1). A source file this graph created or
+    """Depth is the criterion; length is its signal (ADR 0006). A source file this graph created or
     grew past the length signal, with no depth-decision accepting it *at a length it is still
     within*, raises a depth decision — re-cut / deepen / accept-with-reason — never a silent
     refusal and never a silent pass. Scoped to what this graph touched — the .py files in its own
@@ -118,13 +118,13 @@ def _depth_decision(rel: str, n: int, root: str | None) -> str:
     if bar is not None:
         return (f"depth decision: {rel} is {n} lines, materially past the {bar}-line bar a "
                 f"depth-decision accepted it at — the acceptance is stale (it ratchets, it does "
-                f"not silence later growth; rebuild-spec §7.1, ADR 0008). Re-cut it, deepen it, "
+                f"not silence later growth; ADR 0008). Re-cut it, deepen it, "
                 f"or renew the acceptance at the new length: `depth-decision: {rel} accepted@{n} "
                 f"— <reason>`. Length is a context-cost signal, not a depth verdict; the depth "
                 f"judgment is the operator's.")
     return (f"depth decision: {rel} is {n} lines, past the {SIGNAL}-line length signal — re-cut "
             f"it, deepen it, or record a depth-decision accepting it at this length: "
-            f"`depth-decision: {rel} accepted@{n} — <reason>` (rebuild-spec §7.1). Length is a "
+            f"`depth-decision: {rel} accepted@{n} — <reason>`. Length is a "
             f"context-cost signal, not a depth verdict; the depth judgment is the operator's.")
 
 
@@ -139,7 +139,7 @@ def _touched_py(tree: str) -> list[str]:
 
 def accepted(rel: str, lines: int, root: str | None) -> bool:
     """True when a **structured depth-decision** accepts this exact file at a length it is still
-    within (rebuild-spec §7.1, ADR 0006/0008). Acceptance is **bounded, not permanent**: a
+    within (ADR 0006/0008). Acceptance is **bounded, not permanent**: a
     depth-decision records the file accepted *at a stated length* and clears the gate only while
     the file stays within that bar plus the materiality margin (`SLACK`). Renewed growth
     materially past the accepted length re-opens the depth decision; a stable or shrinking file
