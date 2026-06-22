@@ -25,8 +25,13 @@ import os
 
 from . import graph, spec
 
-# Where a methodology skill artifact lands, mirroring depth's: skills/<cap>/SKILL.md.
+# Where a methodology skill artifact lands. Two derived locations, one source: the harness-neutral
+# `skills/<cap>/SKILL.md` (the open convention, what a custom harness or a reader expects), and
+# `.claude/skills/<cap>/SKILL.md` — where stock Claude Code actually *discovers* project skills (a bare
+# root `skills/` is not a discovery location; verified against the Claude Code skills doc, 2026-06-22).
+# Both are rendered from the one slice on every fold, so the mirror can no more drift than the original.
 SKILL_DIR = "skills"
+SKILL_DIRS = ("skills", os.path.join(".claude", "skills"))
 
 # The capability skills: capability slice → the authored *when to load it*. The body is
 # single-sourced from the slice; only this operational framing is authored, and only the
@@ -79,24 +84,28 @@ def skill(cap: str, root: str | None = None) -> str:
     )
 
 
-def materialize(cap: str, root: str | None = None) -> str:
+def materialize(cap: str, root: str | None = None, skill_dir: str = SKILL_DIR) -> str:
     """Write the `cap` methodology skill to disk and return its path — the render `channels` runs on
-    fold so the artifact follows its slice. One skill per call."""
-    path = os.path.join(root or graph._root(), SKILL_DIR, cap, "SKILL.md")
+    fold so the artifact follows its slice. One skill per call, to one of the mirrored skill
+    directories (`skill_dir`); the registry splices a render per (cap, dir) so both stay derived."""
+    path = os.path.join(root or graph._root(), skill_dir, cap, "SKILL.md")
     graph.atomic_write(path, skill(cap, root))
     return path
 
 
 def materializers() -> tuple:
-    """One materializer per registered skill, for `channels.CHANNELS` — each a `(root) -> path`
-    render, so the registry stays one flat list of single-skill renders and the fold re-derives
-    every skill with no special case."""
-    return tuple(functools.partial(materialize, cap) for cap in METHODOLOGIES)
+    """One materializer per registered skill *per mirrored location*, for `channels.CHANNELS` — each a
+    `(root) -> path` render, so the registry stays one flat list of single-skill renders and the fold
+    re-derives every skill into both `skills/` and `.claude/skills/` with no special case. Both
+    locations carry the same render of the same slice, so neither can drift from the other or the spec."""
+    return tuple(functools.partial(materialize, cap, skill_dir=d)
+                 for cap in METHODOLOGIES for d in SKILL_DIRS)
 
 
-def skill_path(cap: str) -> str:
-    """The artifact's path relative to a root — `skills/<cap>/SKILL.md` — the form the harness checks."""
-    return os.path.join(SKILL_DIR, cap, "SKILL.md")
+def skill_path(cap: str, skill_dir: str = SKILL_DIR) -> str:
+    """The artifact's path relative to a root — `<skill_dir>/<cap>/SKILL.md` — the form the harness
+    checks. Defaults to the harness-neutral `skills/`; pass a mirror dir for the `.claude/skills/` copy."""
+    return os.path.join(skill_dir, cap, "SKILL.md")
 
 
 # ── the render: a capability slice → its methodology overview and disciplines ──────────────

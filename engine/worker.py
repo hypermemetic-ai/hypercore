@@ -39,6 +39,19 @@ Delta authorship crosses the seam (ADR 0009): the architect *proposes*
 the delta during grilling; the worker *applies* — rescans the current spec to verify the
 handed delta against present reality, builds, and refines the delta as the code reveals
 what the spec could not; the architect *archives* it.
+
+The worker's **discipline prose is single-sourced from `spec/worker.md`**, not hand-frozen in this
+module. The old `WORKER` constant restated the slice by hand — the exact `worker.DEPTH`-constant
+drift-by-copy ADR 0019 retired for depth, left unretired here. Now the prompt renders the worker's
+own requirement statements through the same `methodology` seam the skills use, so a sharpened
+`spec/worker.md` reaches the next worker with no second copy to drift. Only the genuinely
+non-inferable envelope stays authored in this module: the JSON reply shape, and two grounding facts
+the slice does not carry — the **corrected single-writer invariant** (stage the exact files a change
+touches, never `-A` over a shared parent; a repo-level lock spans write→commit) and the
+machine-readable **gated-vs-watched register** (which disciplines a check *gates* versus which the
+operator merely *watches*, so a scripted judgment is never mistaken for a tested one). These land here
+with `engine-hardening`'s engine fix; the grounding the worker is taught and the lock the engine
+enforces fold together.
 """
 from __future__ import annotations
 
@@ -46,21 +59,40 @@ import os
 import subprocess
 from dataclasses import dataclass, field
 
-from . import conversation, delta, graph, grill, spec
+from . import conversation, delta, graph, grill, methodology, spec
 from .transport import call, parse
 
-WORKER = (
-    "You are a hypercore worker — the system-facing half of the split. Your audience is "
-    "the architect and the spec, never the operator: write for the machine, in "
-    "precise technical terms, no operator-facing prose. You are grounded in the capabilities "
-    "marked below and hold the whole spec beside them. Rescan the WHOLE spec to verify the "
-    "handed delta against current reality — catch any capability it mis-named or missed, "
-    "because a delta cannot be authored from one capability in isolation — do the work behind "
-    "a feedback loop, and refine the delta to match what you built. BUILD DEEP UP FRONT: "
-    "honor the depth disciplines below — a lot of behavior behind a small interface, no "
-    "shallow modules, no red flags — so your work folds without tripping the depth gate. "
-    "Reply with ONLY a JSON "
-    "object:\n"
+# The salutation — who the worker is, in one line; the disciplines that follow are single-sourced from
+# spec/worker.md (the methodology seam), not restated here, so they cannot drift from the slice.
+SALUTATION = (
+    "You are a hypercore worker — the system-facing half of the split. Your audience is the architect "
+    "and the spec, never the operator. The disciplines below are the standing ones you are held to; "
+    "honor them, then build."
+)
+
+# The genuinely non-inferable grounding the slice does not carry — two engine facts the worker must be
+# told because it cannot read them off the spec. They land here with engine-hardening's engine fix.
+GROUNDING = (
+    "Two facts about the shared record you cannot infer from the spec, and must respect:\n"
+    "- **The single-writer record.** The one git record is shared across concurrent fences. Stage the "
+    "*exact* files your change touches — never `git add -A` over a shared parent, which can sweep a "
+    "sibling worker's uncommitted material into your commit. A repo-level lock spans write→commit, so "
+    "your write and your commit are one indivisible act on the record; do nothing that reaches outside "
+    "your own worktree between them.\n"
+    "- **Gated versus watched.** A discipline is *gated* only when a check in `python3 -m engine "
+    "--check` actually exercises it; otherwise the operator merely *watches* it, and a scripted or "
+    "narrated judgment is not a tested one. Gated by a real check: the **delta applies**, the **length "
+    "ratchet**, the **mechanical red-flag scan** (it reads dead module-level symbols and "
+    "circular-dependency cycles), and the **red→green loop must execute** — a recorded loop whose "
+    "command did not run, or whose red equals its green, is not a pass. "
+    "Watched, not gated: **depth**, **coherence**, the **grilling floor**, and "
+    "**design-it-twice** selection are model judgment the harness cannot certify — hold them yourself, "
+    "because no gate will. Do not record a loop you did not run."
+)
+
+# The one authored residue that is neither discipline nor grounding: the reply shape the transport parses.
+ENVELOPE = (
+    "Reply with ONLY a JSON object:\n"
     '{"report": <the technical result and all relevant facts, for the architect>, '
     '"delta": <the refined spec delta — ADDED/MODIFIED/REMOVED markdown over the '
     'capabilities the change touches>, '
@@ -68,6 +100,15 @@ WORKER = (
     '"red": <its failing verdict on the behavior before the fix>, '
     '"green": <its passing verdict after the fix>}}'
 )
+
+
+def _worker_disciplines(root: str | None = None) -> str:
+    """The worker's standing disciplines, rendered from `spec/worker.md`'s requirement statements through
+    the same `methodology` seam the skills use — single-sourced, so a sharpened slice reaches the next
+    worker with no second copy to drift (the retired `WORKER`-constant restatement). The depth disciplines
+    are foregrounded separately by `prompt`; these are the worker's own."""
+    text = methodology._read_slice("worker", root)
+    return methodology._bullets(methodology._disciplines(text))
 
 @dataclass
 class WorkerContext:
@@ -115,18 +156,23 @@ def context(node: graph.Node, root: str | None = None) -> WorkerContext:
     return WorkerContext(caps, sp.glossary, _decisions(root), handed, touched)
 
 
-def prompt(node: graph.Node, ctx: WorkerContext) -> str:
-    """The worker's grounding, rendered to one prompt — the depth disciplines first (the
-    proactive defense), then the touched capabilities foregrounded as the grounding, the rest
-    of the spec carried for the rescan, then the glossary, decisions, the handed delta, and the
-    ask. This is the whole of what the worker is given."""
+def prompt(node: graph.Node, ctx: WorkerContext, root: str | None = None) -> str:
+    """The worker's grounding, rendered to one prompt — the salutation, then the worker's own
+    disciplines single-sourced from `spec/worker.md`, the non-inferable record grounding, and the JSON
+    envelope; then the depth disciplines (the proactive defense), the touched capabilities foregrounded
+    as the grounding, the rest of the spec carried for the rescan, the glossary, decisions, the handed
+    delta, and the ask. This is the whole of what the worker is given."""
     def render(items):
         return "\n\n".join(f"### capability: {n}\n{t.strip()}" for n, t in items)
     depth_text = next((t.strip() for n, t in ctx.capabilities if n == "depth"), "")
     grounding = render([(n, t) for n, t in ctx.capabilities if n in ctx.touched and n != "depth"])
     scan = render([(n, t) for n, t in ctx.capabilities if n not in ctx.touched and n != "depth"])
     return (
-        f"{WORKER}\n\n"
+        f"{SALUTATION}\n\n"
+        f"Your standing disciplines (single-sourced from spec/worker.md — what good looks like):\n"
+        f"{_worker_disciplines(root)}\n\n"
+        f"{GROUNDING}\n\n"
+        f"{ENVELOPE}\n\n"
         f"The depth disciplines — you are held to these every episode; build deep up front:\n"
         f"{depth_text}\n\n"
         f"The ask:\n{grill.contract_of(node) or node.text}\n\n"
@@ -185,7 +231,7 @@ def apply(node: graph.Node, transport=None, root: str | None = None) -> WorkerRe
     worker's own tree — its commit reaching the record in isolation — and handed back."""
     transport = transport or call
     ctx = context(node, root)                          # no apply without the grounding
-    obj = parse(transport(prompt(node, ctx)))
+    obj = parse(transport(prompt(node, ctx, root)))
     report = (obj.get("report") or "").strip()
     refined = (obj.get("delta") or ctx.delta).strip()
     loop = obj.get("loop") if isinstance(obj.get("loop"), dict) else {}

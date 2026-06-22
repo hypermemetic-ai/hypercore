@@ -71,8 +71,9 @@ def check(root: str) -> None:
     paths = channels.materialize(root)
     ok(channels.CHANNELS and any(os.path.samefile(p, art) for p in paths),
        "the depth skill is one of channels.materialize's re-renders — the registry the fold drives")
-    ok(len(channels.CHANNELS) == len(methodology.METHODOLOGIES) + 1,
-       "the registry is every capability skill plus the agents-file anchor — one flat fold-driven set")
+    ok(len(channels.CHANNELS) == len(methodology.METHODOLOGIES) * len(methodology.SKILL_DIRS) + 2,
+       "the registry is every capability skill per mirrored location plus the anchor and its CLAUDE.md "
+       "bridge — one flat fold-driven set")
 
     # ── 4. a real behavior fold carries the render step too (not only trivial deltas) ──────
     graph.atomic_write(src, planted.replace(NONCE, "REALFOLD-" + NONCE))

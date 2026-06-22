@@ -80,5 +80,6 @@ def check(root: str) -> None:
         p = os.path.join(root, methodology.skill_path(cap))
         ok(os.path.isfile(p) and any(os.path.samefile(p, q) for q in paths),
            f"the {cap} skill materializes through the channels registry")
-    ok(len(channels.CHANNELS) == len(methodology.METHODOLOGIES) + 1,
-       "every capability skill (incl. the worker's depth) and the agents-file anchor share the one fold-driven registry")
+    ok(len(channels.CHANNELS) == len(methodology.METHODOLOGIES) * len(methodology.SKILL_DIRS) + 2,
+       "every capability skill (incl. the worker's depth), per mirrored location, with the anchor and its "
+       "CLAUDE.md bridge, share the one fold-driven registry")
