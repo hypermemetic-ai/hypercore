@@ -22,7 +22,7 @@ Row = list
 
 
 def main_body(nodes: list[graph.Node], sel: int, width: int = 76) -> list[Row]:
-    """The resting face of the system: the queue over the threads."""
+    """The resting face of the system: the queue over the work."""
     rows: list[Row] = [[("hypercore", TITLE)], []]
 
     rows.append([("queue", HEAD)])
@@ -39,11 +39,11 @@ def main_body(nodes: list[graph.Node], sel: int, width: int = 76) -> list[Row]:
             rows.extend(_card_detail(c, width))
 
     rows.append([])
-    rows.append([("threads", HEAD)])
-    threads = graph.work(nodes)
-    if not threads:
+    rows.append([("work", HEAD)])
+    items = graph.work(nodes)
+    if not items:
         rows.append([("  — no standing work —", DIM)])
-    for n in threads:
+    for n in items:
         if n.is_live:
             rows.append([("  ⟳ ", LIVE), (_subject(n.text), CARD),
                          ("   a worker is on it", LIVE)])

@@ -33,7 +33,7 @@ The interface shows everything the operator wants to know and nothing they don't
 
 The interface is keyboard-only, high-contrast, and set in deliberate type, with color spent only where it earns its place. It opens fullscreen at login: the day starts where the decisions are.
 
-The main screen is the face of the system and wears its best design — immaculate, tasteful. The queue of decisions and the threads of work are its two principal elements, each its own place; reference detail lives in the views built for reading it.
+The main screen is the face of the system and wears its best design — immaculate, tasteful. The queue of decisions and the standing work are its two principal elements, each its own place; reference detail lives in the views built for reading it.
 
 The operator can speak from anywhere in the interface: their words land on disk verbatim, the place they spoke from travels with them, and nothing more is asked of them.
 
@@ -47,9 +47,9 @@ Reading the operator's words is machine work. Whether a word is new intent, a ne
 
 The queue is a view, not a place. Each decision lives where it arose — on a statement, on a node, on a piece of evidence — and showing the queue means reading all of those places fresh, every time. There is no list of its own to add to, remove from, or keep in sync, so nothing can be lost in motion and nothing can go stale.
 
-The thread is the interface's one work surface. Every operator word and every unit of work lives on a thread that traces to the operator action which began it; a queue card is a view onto its thread; a running session shows as the thread of the action that spawned it; settling the card folds it into its thread, where its decision and grounds are kept. A fully-handled system shows an empty surface — the system at rest, not a fault.
+The graph is the interface's one work surface; a thread is the throwaway conversation opened on it. Every operator word and every unit of work lives on the graph, traced to the operator action that began it; a queue card is a view onto its node; a running session shows as the live work on the node that spawned it; settling the card folds it into that node, where its decision and grounds are kept. The thread itself keeps none of this — it opens when the operator speaks, lands one consequence on the graph, and closes. A fully-handled system shows an empty surface — the system at rest, not a fault.
 
-Threads are the open working channel; the queue is for decisions. A thread maps onto its work graph — entering a node opens that part's thread — so a conversation stays scoped to one part of the arc and never spans the whole. A thread is a durable view into a graph's conversations and stays whether or not a session is on it; a live indicator shows when one is. Standing work is readable from the interface, and setting priorities takes nothing the interface does not show.
+The open work is the operator's working channel; the queue is for decisions. A thread is scoped to one node — speaking on a node opens a thread there — so a conversation stays scoped to one part of the arc and never spans the whole. The thread is throwaway and holds no durable state; the node it spoke on keeps what was decided, and a live indicator shows when a session is on it. Standing work is readable from the interface, and setting priorities takes nothing the interface does not show.
 
 The order of the queue is the machine's claim about what the operator's attention is worth next, and it answers for that claim: every decision wears the cost of its own delay — what it blocks, what compounds while it waits. The operator's word overrides the order instantly and unconditionally — the word is the reorder, not a request for one.
 
@@ -113,7 +113,7 @@ A folder holds one execution graph; the unit on disk is the graph, not the singl
 
 Work is made of operations, each one move on the problem state, of four kinds — ask, check, decide, and do, one word for each thing a statement must find and do for everything else. A new kind of operation enters only in the same edit as the statement that needs it, and stays only while a statement reads it. An operation earns a node on two grounds only: it crossed the operator–machine boundary, or the fold's trust rests on it; everything else is do, absorbed into the operation it served. The graph is a ledger of commitments, not a trace of thought.
 
-When the work is done, the execution graph folds into the node whose ask spawned it: the result becomes that node's material and the steps become its history. Folding preserves relations, so the history reads as the graph it was, not a flat log; the folded graph's folder holds that history whole, and everything else the work made lands in the parent as if made there directly. An open graph sits in its parent's work/; the act that folds it moves it to archive/; neither exists empty.
+When the work is done, the execution graph folds into the node whose ask spawned it: the result becomes that node's material and the steps become its history. Folding preserves relations, so the history reads as the graph it was, not a flat log; the folded graph's folder holds that history whole, and everything else the work made lands in the parent as if made there directly. An open graph sits in its parent's work/; the act that folds it moves it into that work/'s own archive/, tucked one level below the live work so the front of the tree stays legible; neither work/ nor its archive/ exists empty.
 
 A folding condition is what makes a graph ready to fold: its ask is met, or it is abandoned. A graph that cannot meet its condition does not fold dirty — it returns as a decision to abandon, re-cut, or change the ask, and a changed ask that touches endorsed intent is the operator's.
 

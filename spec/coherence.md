@@ -6,7 +6,7 @@ worker hands a result back, the architect holds it against the contract at the *
 altitude** — a coherence check, not a code review — and against the **depth** bar. The raw report
 is *input* to that judgment, never output: every operator-facing word is authored fresh, so the
 report crosses to the operator through no path. A result that honors the contract folds its
-refined delta into the spec — the work leaving the threads view in the same act; a result that
+refined delta into the spec — the work leaving the work view in the same act; a result that
 does not, or whose material is past the length signal with no depth-decision accepting it, raises
 a **decision** (re-cut / deepen / accept-with-reason / abandon / change the ask) on the operator's
 queue rather than folding — never a silent veto and never a silent pass (ADR 0006). The architect's
@@ -16,7 +16,7 @@ self-judging.
 ### Requirement: the architect integrates the worker's hand-off
 The architect MUST archive a worker's result: coherence-check it against the
 contract at the operator's altitude — not a code review — and on a pass fold the refined
-delta into the spec, the work leaving the threads view in the same act. The raw report is
+delta into the spec, the work leaving the work view in the same act. The raw report is
 input to that judgment, never output.
 
 #### Scenario: coherence decides the fold
