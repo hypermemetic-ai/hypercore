@@ -1,4 +1,5 @@
 __pycache__/
 *.pyc
 work/worktrees/
+.claude/worktrees/
 LOCAL.md

@@ -2,16 +2,18 @@
 
 Acceptance (ADR 0009): the agents file is a single **minimal shared anchor, non-inferable content only** —
 the check command, the build/hand-back convention, and a pointer to the skills — materialized on fold like
-every derived channel. One file (`AGENTS.md`) serves both roles, since Claude reads it directly when no
-`CLAUDE.md` is present and OMP reads it natively, so the `CLAUDE.md` symlink is dropped as redundant
-(ADR 0009 §4 amended). The skills index is *derived* from the registry, so it cannot drift; the operational
-lines are the authored non-inferable residue. (Whether the file helps a live model is the A/B the field
-warns to run before leaning on it — a measurement, not a check; ADR 0009 §6.)
+every derived channel. The anchor is authored once at `AGENTS.md`; the harness that loads it is reached by
+a **derived bridge**, because stock Claude Code reads `CLAUDE.md`, not a bare `AGENTS.md` (verified
+2026-06-22). So the fold also materializes a `CLAUDE.md` that imports the anchor (`@AGENTS.md`) — the
+symlink ADR 0009 §4 first dropped, reinstated as a derived import once the harness fact was confirmed. The
+skills index is *derived* from the registry, so it cannot drift; the operational lines are the authored
+non-inferable residue. (Whether the file helps a live model is the A/B the field warns to run before
+leaning on it — a measurement, not a check; ADR 0009 §6.)
 
 1. **minimal and non-inferable** — the anchor carries the check command and the hand-back convention, and
    nothing inferable: no per-capability requirements, no code, no identity prose;
 2. **the skills index is derived** — every registered skill is listed, pulled from the registry, not hand-typed;
-3. **the fold materializes it** — a fold writes the anchor through the channels registry;
+3. **the fold materializes it** — a fold writes the anchor and its `CLAUDE.md` bridge through the registry;
 4. **drift is impossible** — a newly registered skill appears in the anchor by construction.
 """
 from __future__ import annotations
@@ -48,8 +50,11 @@ def check(root: str) -> None:
        "the fold materializes the anchor on disk — a pure render through the channels registry")
     ok(anchor.materialize in channels.CHANNELS,
        "the anchor is registered in the channels registry beside the skills")
-    ok(not os.path.exists(os.path.join(root, "CLAUDE.md")),
-       "no CLAUDE.md is materialized — one AGENTS.md serves both roles (ADR 0009 §4 amended)")
+    bridge = os.path.join(root, anchor.BRIDGE_PATH)
+    ok(os.path.isfile(bridge) and "@AGENTS.md" in open(bridge, encoding="utf-8").read(),
+       "the fold materializes a CLAUDE.md that imports the anchor (@AGENTS.md) — the harness reads it")
+    ok(anchor.bridge_materialize in channels.CHANNELS,
+       "the bridge is a derived channel beside the anchor — it cannot drift from the anchor")
 
     # ── 4. drift is impossible: a newly registered skill appears in the anchor ─────────────
     methodology.METHODOLOGIES["__planted__"] = "a planted methodology — load when testing drift."
