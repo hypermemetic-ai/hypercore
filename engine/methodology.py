@@ -1,23 +1,22 @@
-"""The architect's design methodologies, single-sourced as skills from their capability slices.
+"""The capability skills, single-sourced as `SKILL.md` artifacts from their spec slices.
 
-The architect carries its specialization in **skills** (ADR 0009): the design methodologies it
-routes to when the work calls for them — `design-it-twice` (judge a load-bearing interface as a
-contest of isolated candidates) and `architecture-review` (the standing depth scan) — each a clean
-standalone capability with its own `spec/<cap>.md`. This module renders each slice into a
-progressive-disclosure `SKILL.md`: the metadata names *when* to load it, the body is the slice's
-methodology overview (its preamble) and its disciplines (each requirement's statement), and the
-resource pointer is the slice itself for the full requirements and their scenarios.
+An agent carries its specialization in **skills** (ADR 0009): the disciplines it routes to when the
+work calls for them — the architect's `design-it-twice`, `architecture-review`, `grilling`, and
+`coherence`, and the worker's `depth` — each a clean standalone capability with its own
+`spec/<cap>.md`. This module renders each slice into a progressive-disclosure `SKILL.md`: the
+metadata names *when* to load it, the body is the slice's methodology overview (its preamble) and its
+disciplines (each requirement's statement), and the resource pointer is the slice itself for the full
+requirements and their scenarios.
 
-It is `depth.py` for the architect: one render of one source into the skill channel, no hand-copy,
-so a sharpened slice reaches the next architect with no second copy to drift. `channels` drives it on
-fold (role-assembly step 4) exactly as it drives the worker's `depth` skill — the registry the fold
-re-renders so a committed artifact can never disagree with its spec slice.
+One render of one source into the skill channel, no hand-copy, so a sharpened slice reaches the next
+agent with no second copy to drift. `channels` drives it on fold (role-assembly step 4) — the
+registry the fold re-renders so a committed artifact can never disagree with its spec slice.
 
-All four of the architect's methodologies (ADR 0009 §1) render here: `design-it-twice` and
-`architecture-review` were already their own capabilities, and `grilling` and `coherence` were carved
-out of `conversation` into their own slices so they render through this one seam too (ADR 0013,
-role-assembly step 4b) — rather than a requirement-subset render, which would have added a second copy
-of the requirement set to drift. Each is one clean `spec/<cap>.md`; new methodologies add one line.
+`depth` renders here exactly like the others (ADR 0019): an imported design discipline is a capability
+like `design-it-twice` (ADR 0007), not a special type, so it dropped its bespoke `depth.py` render and
+joined this one seam. `grilling` and `coherence` were likewise carved out of `conversation` into their
+own slices (ADR 0013) rather than a requirement-subset render, which would have added a second copy of
+the requirement set to drift. Each is one clean `spec/<cap>.md`; a new skill adds one line.
 """
 from __future__ import annotations
 
@@ -29,9 +28,9 @@ from . import graph, spec
 # Where a methodology skill artifact lands, mirroring depth's: skills/<cap>/SKILL.md.
 SKILL_DIR = "skills"
 
-# The architect's methodology skills: capability slice → the authored *when to load it*. The body is
-# single-sourced from the slice; only this operational framing is authored (like depth's header), and
-# only the capabilities with a clean standalone slice are here. New methodologies add one line.
+# The capability skills: capability slice → the authored *when to load it*. The body is
+# single-sourced from the slice; only this operational framing is authored, and only the
+# capabilities with a clean standalone slice are here. A new skill adds one line.
 METHODOLOGIES = {
     "design-it-twice":
         "hypercore's design-it-twice methodology — design a load-bearing interface as a contest of "
@@ -51,6 +50,10 @@ METHODOLOGIES = {
         "it against the contract at the operator's altitude (not a code review) and against the depth "
         "bar, folding on a pass and raising a decision otherwise. Load when integrating or archiving "
         "a worker's result.",
+    "depth":
+        "hypercore's depth disciplines — build deep modules (a lot of behavior behind a small "
+        "interface) and avoid the red flags of shallowness. Load when designing, building, or "
+        "refining a module's interface or implementation.",
 }
 
 # The shipping repo — the fallback source, so the render works against a bare root (the harness plants
@@ -68,7 +71,7 @@ def skill(cap: str, root: str | None = None) -> str:
         f"name: {cap}\n"
         f"description: {METHODOLOGIES[cap]}\n"
         "---\n\n"
-        f"# {cap} — an architect methodology\n\n"
+        f"# {cap}\n\n"
         f"{_overview(text)}\n\n"
         "## The disciplines — what good looks like\n\n" + _bullets(_disciplines(text)) + "\n\n"
         "## Going deeper\n\n"
@@ -78,16 +81,16 @@ def skill(cap: str, root: str | None = None) -> str:
 
 def materialize(cap: str, root: str | None = None) -> str:
     """Write the `cap` methodology skill to disk and return its path — the render `channels` runs on
-    fold so the artifact follows its slice. One skill per call, like `depth.materialize`."""
+    fold so the artifact follows its slice. One skill per call."""
     path = os.path.join(root or graph._root(), SKILL_DIR, cap, "SKILL.md")
     graph.atomic_write(path, skill(cap, root))
     return path
 
 
 def materializers() -> tuple:
-    """One materializer per registered methodology, for `channels.CHANNELS` to splice in beside
-    `depth.materialize` — each a `(root) -> path` render, so the registry stays one flat list of
-    single-skill renders and the fold re-derives every architect skill with no special case."""
+    """One materializer per registered skill, for `channels.CHANNELS` — each a `(root) -> path`
+    render, so the registry stays one flat list of single-skill renders and the fold re-derives
+    every skill with no special case."""
     return tuple(functools.partial(materialize, cap) for cap in METHODOLOGIES)
 
 

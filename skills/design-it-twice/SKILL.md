@@ -3,7 +3,7 @@ name: design-it-twice
 description: hypercore's design-it-twice methodology — design a load-bearing interface as a contest of isolated candidates, then pick or hybridize on depth, locality, and seam placement. Load when designing or judging a load-bearing interface decision.
 ---
 
-# design-it-twice — an architect methodology
+# design-it-twice
 
 The judgment use of the worktree concurrency (ADR 0007). The fence that isolates a
 worker for throughput also isolates several candidates for design quality: for an interface the

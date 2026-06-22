@@ -3,7 +3,7 @@ name: architecture-review
 description: hypercore's architecture-review methodology — the standing scan that keeps the system deep, surfacing god-files-in-the-making by the length signal against the depth-decision record. Load when assessing structural depth or reading the deepening backlog.
 ---
 
-# architecture-review — an architect methodology
+# architecture-review
 
 The standing scan that keeps the system deep (ADR 0005). It reads the source
 tree live for deepening opportunities and renders two things from one scan: the

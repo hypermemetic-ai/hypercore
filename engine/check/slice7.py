@@ -43,7 +43,7 @@ def check(root: str) -> None:
         return ask
 
     def longfile(tree: str, name: str, lines: int) -> None:
-        graph.atomic_write(os.path.join(tree, "hyper", name),
+        graph.atomic_write(os.path.join(tree, "engine", name),
                            "# a long module\n" + "x = 0\n" * lines)
 
     def decide(name: str, body: str):
@@ -75,7 +75,7 @@ def check(root: str) -> None:
     # still only raises a decision, and a structured depth-decision accepting it lets it fold.
     # No number refuses outright; judgment + the operator-decision carry the whole range.
     decide("0101-pathological-depth.md",
-           f"# ADR 0101\n\ndepth-decision: hyper/huge.py accepted@{conditions.SIGNAL * 6 + 1} — "
+           f"# ADR 0101\n\ndepth-decision: engine/huge.py accepted@{conditions.SIGNAL * 6 + 1} — "
            "generated table, deep behind a three-call interface; length is context-cost, not "
            "shallowness.\n")
     ask = staged("a pathologically long but accepted module", "a far-past-signal module folds")
@@ -95,17 +95,17 @@ def check(root: str) -> None:
     # the old loose-substring escape — does NOT clear the gate. Only the structured
     # `depth-decision: <path> accepted` record does. This is the regression the re-grounding adds.
     decide("0102-coincidental.md",
-           "# ADR 0102\n\nWe discussed hyper/wide.py at length; it is over the old budget but "
+           "# ADR 0102\n\nWe discussed engine/wide.py at length; it is over the old budget but "
            "the team is fine with it.\n")                                # prose only — no structured record
     ask = staged("a change naming the file only in prose", "the substring hole stays closed")
-    graph.atomic_write(os.path.join(worker._tree_path(ask, root), "hyper", "wide.py"),
+    graph.atomic_write(os.path.join(worker._tree_path(ask, root), "engine", "wide.py"),
                        "# coincidentally named in an ADR, but no structured depth-decision\n"
                        + "x = 0\n" * (conditions.SIGNAL + 50))
     result = worker.apply(ask, scripted(json.dumps({
         "report": "grew a module merely mentioned in an ADR",
         "delta": delta_for("the substring hole stays closed"),
         "loop": {"command": "run", "red": "failed", "green": "passed"}})), root)
-    ok(conditions.accepted("hyper/wide.py", conditions.SIGNAL + 51, root) is False,
+    ok(conditions.accepted("engine/wide.py", conditions.SIGNAL + 51, root) is False,
        "a coincidental prose mention is not a structured depth-decision — the hole stays closed")
     ok(conditions.unmet(result, root) is not None,
        "the file mentioned only in prose still raises a depth decision — no free pass by spelling")
@@ -117,8 +117,7 @@ def check(root: str) -> None:
     ask = staged("any worker episode", "the worker is grounded in depth")
     ctx = worker.context(ask, root)
     text = worker.prompt(ask, ctx)
-    ok(all(s in text for s in ("Modules should be deep", "Pull complexity downward",
-                               "strategic", "red flags", "Shallow module")),
+    ok(all(s in text for s in ("deep modules", "downward", "strategic", "red flags", "shallow module")),
        "the worker's prompt carries the deep-module framework and the red flags by construction")
     worker.teardown(ask, root)
 

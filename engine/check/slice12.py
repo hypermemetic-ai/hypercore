@@ -28,7 +28,7 @@ from .harness import ok
 
 
 def check(root: str) -> None:
-    from .. import channels, delta, depth, graph, methodology, spec
+    from .. import channels, delta, graph, methodology, spec
 
     print("\nslice 12 — acceptance check  (the architect's methodology skills, single-sourced)\n")
 
@@ -80,5 +80,5 @@ def check(root: str) -> None:
         p = os.path.join(root, methodology.skill_path(cap))
         ok(os.path.isfile(p) and any(os.path.samefile(p, q) for q in paths),
            f"the {cap} skill materializes through the channels registry")
-    ok(depth.materialize in channels.CHANNELS and len(channels.CHANNELS) >= 3,
-       "the worker's depth skill and the architect's methodology skills share the one fold-driven registry")
+    ok(len(channels.CHANNELS) == len(methodology.METHODOLOGIES) + 1,
+       "every capability skill (incl. the worker's depth) and the agents-file anchor share the one fold-driven registry")

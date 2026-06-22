@@ -3,7 +3,7 @@ name: grilling
 description: hypercore's grilling methodology — turn a filed ask into a ratified contract and spec delta by resolving what the spec and intent already settle and surfacing only the stake-bearing residue, one question at a time, each with a lean and a flip. Load when extracting intent from an ask or judging whether it is ready to become work.
 ---
 
-# grilling — an architect methodology
+# grilling
 
 Intent extraction by grilling — how the architect turns a filed ask into ratified work
 without authoring on the operator's behalf (ADR 0013, carved from `conversation`). Before an

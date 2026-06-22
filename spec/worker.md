@@ -47,12 +47,12 @@ concern produces deep modules, so the folding-conditions depth gate stays a rare
 backstop, not an operator-load generator. The grounding is assembled into the worker's prompt
 by construction, like its spec slice — there is no path that runs a worker without it.
 
-The disciplines MUST be **single-sourced**, not a frozen copy: they are *rendered* from their one
-home, `spec/depth.md` (the faithful synthesis), so a sharpened synthesis reaches the next
-worker with no second copy to drift (ADR 0009). The same render also produces a `depth` **skill**
-artifact, materialized on disk, for the harness that loads skills natively — one source, the
-channels derived from it, the way the as-built is derived from the model and only the vision is
-authored.
+The disciplines MUST be **single-sourced**, not a frozen copy: depth is a capability like any other
+(`spec/depth.md`, ADR 0019), carried in the worker's whole-spec grounding and foregrounded in its
+prompt, so a sharpened slice reaches the next worker with no second copy to drift (ADR 0009). The
+same slice renders the `depth` **skill** through the methodology seam, materialized on disk for the
+harness that loads skills natively — one source, the channels derived from it, the way the as-built
+is derived from the model and only the vision is authored.
 
 #### Scenario: the depth disciplines are in the grounding
 - WHEN a worker is assembled to run
@@ -60,7 +60,7 @@ authored.
   disciplines it is held to, so it builds deep up front
 
 #### Scenario: the disciplines are derived from their source
-- WHEN the depth synthesis (`spec/depth.md`) is sharpened
+- WHEN the depth capability (`spec/depth.md`) is sharpened
 - THEN the next worker's depth grounding renders the change with nothing hand-copied, and the
   retired frozen constant cannot drift from the source because it no longer exists
 
@@ -97,5 +97,5 @@ delta. The crossing is propose (architect) → apply (worker) → archive
 #### Scenario: the result integrates
 - WHEN a worker hands back a refined delta and the architect judges the result
   coherent with the contract
-- THEN the delta folds into the spec and the work leaves the threads view in the same act;
+- THEN the delta folds into the spec and the work leaves the work view in the same act;
   an incoherent result raises a decision instead of folding

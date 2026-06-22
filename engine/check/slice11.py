@@ -28,7 +28,7 @@ from .harness import ok
 
 
 def check(root: str) -> None:
-    from .. import channels, delta, depth, graph
+    from .. import channels, delta, graph, methodology, spec
 
     print("\nslice 11 — acceptance check  (materialize-on-fold: derived channels follow the spec)\n")
 
@@ -36,18 +36,18 @@ def check(root: str) -> None:
     # artifact must reproduce THIS source, not a frozen copy and not the package fallback.
     NONCE = "ZQX-fold-rendered"
     planted = (
-        "# Depth — synthesis (planted)\n\n"
-        "## 2. The red flags\n\nFaithful list:\n\n"
-        "1. **Shallow module** — interface nearly as complex as the implementation.\n\n"
-        "## 3. The design principles\n\nFaithful set:\n\n"
-        "1. Modules should be deep.\n"
-        f"2. {NONCE} — pull complexity downward.\n"
+        "# depth\n\n"
+        f"Planted depth overview — {NONCE}: build deep modules.\n\n"
+        "### Requirement: a planted depth discipline\n"
+        f"The worker MUST hold the planted discipline — {NONCE}-stmt.\n"
+        "#### Scenario: a module is built\n"
+        "- WHEN a worker builds a module\n- THEN the planted discipline applies\n"
     )
-    src = os.path.join(root, "spec", "depth.md")
+    src = spec.cap_path("depth", root)               # spec/depth.md — the capability slice
     graph.atomic_write(src, planted)
 
     # Remove any prior artifact so the proof is that the FOLD created it, not that it lingered.
-    art = os.path.join(root, depth.SKILL_PATH)
+    art = os.path.join(root, methodology.skill_path("depth"))
     if os.path.isfile(art):
         os.remove(art)
 
@@ -56,9 +56,9 @@ def check(root: str) -> None:
     ok(os.path.isfile(art),
        "the fold materialized the depth skill artifact on disk — the render step the fold gained")
     rendered = open(art, encoding="utf-8").read()
-    ok(NONCE in rendered and "Shallow module" in rendered,
-       "the artifact is rendered from the planted spec/depth.md — derived by the fold, not hand-authored")
-    ok(rendered == depth.skill(root),
+    ok(NONCE in rendered and NONCE + "-stmt" in rendered,
+       "the artifact is rendered from the planted depth slice — derived by the fold, not hand-authored")
+    ok(rendered == methodology.skill("depth", root),
        "the materialized artifact is exactly the render of its source — pure derived output, nothing edited")
 
     # ── 2. drift is impossible: edit the source, fold again, the artifact follows ──────────
@@ -69,10 +69,10 @@ def check(root: str) -> None:
 
     # ── 3. the registry is the seam steps 3–4 plug into ───────────────────────────────────
     paths = channels.materialize(root)
-    ok(channels.CHANNELS and depth.materialize in channels.CHANNELS,
-       "depth is registered in channels.CHANNELS — the one place the agents file and architect skills append to")
-    ok(any(os.path.samefile(p, art) for p in paths),
-       "channels.materialize regenerates the channels and returns the artifact paths it wrote")
+    ok(channels.CHANNELS and any(os.path.samefile(p, art) for p in paths),
+       "the depth skill is one of channels.materialize's re-renders — the registry the fold drives")
+    ok(len(channels.CHANNELS) == len(methodology.METHODOLOGIES) + 1,
+       "the registry is every capability skill plus the agents-file anchor — one flat fold-driven set")
 
     # ── 4. a real behavior fold carries the render step too (not only trivial deltas) ──────
     graph.atomic_write(src, planted.replace(NONCE, "REALFOLD-" + NONCE))

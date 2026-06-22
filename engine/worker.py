@@ -25,15 +25,15 @@ not a discipline to remember:
   (`conversation.integrate`) — so the old raw-worker-prose-on-a-card failure is not a
   bug to avoid but a path that does not exist.
 
-- **It is grounded in the depth disciplines, every episode.** The prompt carries the
-  deep-module framework and the red flags — **single-sourced from `spec/depth.md`** via
-  the `depth` module (ADR 0009), not a frozen copy — so the worker builds
+- **It is grounded in the depth disciplines, every episode.** The prompt foregrounds the `depth`
+  capability — the deep-module framework and the red flags — ahead of the ask, so the worker builds
   **deep up front**, strategic, not tactical. This is the *proactive* primary defense against
   complexity (ADR 0006): a worker that shares the long-term-health concern produces deep
   modules, so the folding-conditions depth gate stays a rarely-tripped backstop rather than an
   operator-load generator. Design awareness is the first anti-complexity mechanism; the gate is
-  the second. The grounding is *derived* from the synthesis, so a sharpened spec/depth.md reaches the
-  next worker with no second copy to drift — the old `worker.DEPTH` constant's smell, retired.
+  the second. Depth is a capability like any other (ADR 0019), single-sourced from `spec/depth.md`,
+  so a sharpened slice reaches the next worker with no second copy to drift — the old `worker.DEPTH`
+  constant's smell, retired.
 
 Delta authorship crosses the seam (ADR 0009): the architect *proposes*
 the delta during grilling; the worker *applies* — rescans the current spec to verify the
@@ -46,7 +46,7 @@ import os
 import subprocess
 from dataclasses import dataclass, field
 
-from . import conversation, delta, depth, graph, grill, spec
+from . import conversation, delta, graph, grill, spec
 
 WORKER = (
     "You are a hypercore worker — the system-facing half of the split. Your audience is "
@@ -73,15 +73,14 @@ class WorkerContext:
     """The grounding a worker runs on — assembled from the model, never free-form. It carries
     the *whole* spec (the worker is not slice-confined): `capabilities` is every capability, and
     `touched` marks the ones the change names as its grounding/focus; the rest is carried for the
-    rescan that catches a mis-named or missed capability. `depth` is the standing depth
-    disciplines, rendered from `spec/depth.md` (single-sourced, never a frozen copy). Nothing
+    rescan that catches a mis-named or missed capability. The `depth` capability is among them, and
+    the prompt foregrounds it every episode (ADR 0019). Nothing
     of the operator view and nothing of the code is in here."""
     capabilities: list[tuple[str, str]] = field(default_factory=list)  # (name, spec text) — all
     glossary: str = ""
     decisions: str = ""
     delta: str = ""                                   # the handed delta, to verify + refine
     touched: set[str] = field(default_factory=set)    # the grounding: capabilities the delta names
-    depth: str = ""                                   # the depth disciplines, rendered from spec/depth.md
 
     @property
     def names(self) -> list[str]:
@@ -104,15 +103,15 @@ class WorkerResult:
 def context(node: graph.Node, root: str | None = None) -> WorkerContext:
     """Assemble the grounding for a node: the *whole* spec — every capability's text, the
     glossary, the decisions — with the capabilities the handed delta names marked as the
-    worker's grounding (`touched`), plus the depth disciplines rendered from `spec/depth.md`.
+    worker's grounding (`touched`); the `depth` capability is among them and the prompt foregrounds
+    it every episode (ADR 0019).
     The worker is not slice-confined: it holds full scan access so its rescan can verify the
     handed delta against the whole spec, not trust its list (ADR 0009)."""
     sp = spec.read_spec(root)
     handed = _handed_delta(node)
     touched = _touched(handed, sp)
-    caps = [(c.name, _cap_text(c.name, root)) for c in sp.capabilities]   # all — full scan
-    return WorkerContext(caps, sp.glossary, _decisions(root), handed, touched,
-                         depth.disciplines(root))   # single-sourced from spec/depth.md, not frozen
+    caps = [(c.name, _cap_text(c.name, root)) for c in sp.capabilities]   # all — full scan, incl. depth
+    return WorkerContext(caps, sp.glossary, _decisions(root), handed, touched)
 
 
 def prompt(node: graph.Node, ctx: WorkerContext) -> str:
@@ -122,11 +121,13 @@ def prompt(node: graph.Node, ctx: WorkerContext) -> str:
     ask. This is the whole of what the worker is given."""
     def render(items):
         return "\n\n".join(f"### capability: {n}\n{t.strip()}" for n, t in items)
-    grounding = render([(n, t) for n, t in ctx.capabilities if n in ctx.touched])
-    scan = render([(n, t) for n, t in ctx.capabilities if n not in ctx.touched])
+    depth_text = next((t.strip() for n, t in ctx.capabilities if n == "depth"), "")
+    grounding = render([(n, t) for n, t in ctx.capabilities if n in ctx.touched and n != "depth"])
+    scan = render([(n, t) for n, t in ctx.capabilities if n not in ctx.touched and n != "depth"])
     return (
         f"{WORKER}\n\n"
-        f"{ctx.depth}\n\n"
+        f"The depth disciplines — you are held to these every episode; build deep up front:\n"
+        f"{depth_text}\n\n"
         f"The ask:\n{grill.contract_of(node) or node.text}\n\n"
         f"The handed delta (verify and refine it against the WHOLE spec):\n"
         f"{ctx.delta or '(none — author it from the full scan)'}\n\n"

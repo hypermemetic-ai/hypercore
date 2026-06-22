@@ -28,7 +28,7 @@ import os
 from . import graph
 
 PATH = "AGENTS.md"
-CHECK = "python3 -m hyper --check"  # the textbook non-inferable detail — the exact harness command
+CHECK = "python3 -m engine --check"  # the textbook non-inferable detail — the exact harness command
 
 
 def agents_file(root: str | None = None) -> str:
@@ -47,7 +47,7 @@ def agents_file(root: str | None = None) -> str:
         "**Working *on* hypercore** — a person, or a coding assistant editing this repo — rather than "
         "running as the system's own architect or worker? This file is not your instructions: read "
         "`README.md`, then `intent.md` and `spec/`; run the acceptance harness with "
-        f"`{CHECK}` and the operator interface with `python3 -m hyper`. The rest below is the runtime "
+        f"`{CHECK}` and the operator interface with `python3 -m engine`. The rest below is the runtime "
         "**role anchor** — the minimal always-on context the system loads into the architect and the "
         "fenced worker. It is deliberately minimal: only the non-inferable operational lines, with the "
         "specialization in the skills and the living spec, not here.\n\n"
@@ -74,11 +74,11 @@ def materialize(root: str | None = None) -> str:
 # ── the skills index: derived from the channels' registries, so it cannot drift ───────────
 
 def _skills_index() -> str:
-    """The available skills as a derived list — the worker's `depth` and the architect's methodologies,
-    pulled from the same registries the skills themselves render from. The order is render order
-    (`channels.CHANNELS`): the worker's discipline, then the architect's methodologies."""
-    from . import depth, methodology
-    skills = [("depth", depth.DESCRIPTION), *methodology.METHODOLOGIES.items()]
+    """The available skills as a derived list — the architect's methodologies and the worker's `depth`,
+    all pulled from the one skills registry the skills themselves render from (`methodology.METHODOLOGIES`),
+    so the index cannot drift from the set."""
+    from . import methodology
+    skills = list(methodology.METHODOLOGIES.items())
     return "\n".join(f"- `{name}` — {_first_sentence(desc)}" for name, desc in skills)
 
 
