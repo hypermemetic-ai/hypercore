@@ -38,14 +38,25 @@ delta that does not apply cleanly to the current spec.
 - THEN the fold is refused and the spec is left untouched
 
 ### Requirement: folding applies the delta to the spec, atomically, both directions
-The act that folds a graph MUST apply its delta to the living spec and re-render the
-operator view. The spec is never merged unless the graph folds, and the graph never
-folds unless the delta merges; the living spec is therefore never separately edited.
+The act that folds a graph MUST apply its delta to the living spec, re-render the derived
+artifacts, and archive the node — **in one commit**. The spec change and the node's archive
+land together or not at all: a crash can never leave the spec merged while the node is
+un-archived, nor the reverse. The spec is never merged unless the graph folds, and the graph
+never folds unless the delta merges; the living spec is therefore never separately edited.
+The act is **idempotently retryable**: a retry after a crash that landed the spec change on
+disk but did not commit completes the fold — it does not refuse the already-applied delta as
+a conflict.
 
 #### Scenario: an added requirement lands
 - WHEN a graph with an ADDED requirement folds
-- THEN that requirement is present in the capability's spec file and committed in the
-  same act
+- THEN that requirement is present in the capability's spec file and the node is archived,
+  both committed in the same single act
+
+#### Scenario: a crash mid-fold is retried
+- WHEN a fold is interrupted after the spec change lands on disk but before it commits, and
+  the fold is retried
+- THEN the retry completes — the requirement is present exactly once and the node is
+  archived — rather than wedging on a permanent "already exists" refusal
 
 #### Scenario: a fold grows a new capability
 - WHEN a delta ADDS a requirement in a capability that does not yet exist
