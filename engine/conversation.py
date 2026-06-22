@@ -117,8 +117,7 @@ def integrate(node: graph.Node, result, transport=None, root: str | None = None)
                                 "the result did not honor the contract",
                                 kind="decide", parent=node.id)
         return Reply(say=say, card=card)
-    delta.fold(delta.parse(result.delta), root)        # archive ⟺ fold, one act
-    graph.integrated(node)
+    delta.fold(delta.parse(result.delta), root, node=node)   # archive ⟺ fold, ONE atomic act (H1)
     return Reply(say=say, done=True)
 
 

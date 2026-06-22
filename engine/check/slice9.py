@@ -24,7 +24,7 @@ import json
 import os
 import tempfile
 
-from .harness import ok, scripted
+from .harness import LOOP, ok, scripted
 
 
 def check(root: str) -> None:
@@ -103,7 +103,7 @@ def check(root: str) -> None:
     result = worker.apply(ask, scripted(json.dumps({
         "report": "grew a once-accepted file far past its accepted bar",
         "delta": delta_for("the ratchet re-fires"),
-        "loop": {"command": "run", "red": "failed", "green": "passed"}})), root)
+        "loop": LOOP})), root)
     blocked = conditions.unmet(result, root)
     ok(blocked is not None and "materially past" in blocked and str(GROWN_BAR) in blocked,
        "a file grown materially past its accepted bar re-raises the depth decision, naming the bar")

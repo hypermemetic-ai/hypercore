@@ -12,6 +12,15 @@ because advice can be ignored and a discipline in the spec cannot. The load-bear
 interface matters more than a simple implementation, because the interface is paid by every caller
 forever while the implementation is paid once — so when something must be hard, make it hard inside.
 
+**Depth is a decision the gate raises, never a threshold it enforces.** Nothing in the system scores
+or certifies depth: the only mechanical facts are length (a context-cost signal that raises a
+decision) and the structural red flags a tool can read (dead symbols, circular dependencies). The
+model-driven verdict — is this module actually shallow? — is **not yet built** (ADR 0006). So "the
+depth gate" is honest only as *length raises a decision the operator settles*; it is not a depth
+threshold a rebuild can pass by shipping short, shallow modules. The proactive defense is the worker
+building deep up front, not a backstop that measures depth — there is none to lean on. The spec says
+so plainly precisely so a regenerating author does not assume a gate that does not exist.
+
 ### Requirement: modules are deep — much behavior behind a small interface
 A module MUST hide far more than it exposes — a powerful implementation under a simple interface,
 its depth the ratio of the two. A **shallow module**, whose interface is nearly as complex as the

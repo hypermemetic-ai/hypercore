@@ -18,10 +18,12 @@ import subprocess
 import tempfile
 
 from . import (harness, slice1, slice2, slice3, slice4, slice5, slice6, slice7, slice8,
-               slice9, slice10, slice11, slice12, slice13, slice14, slice15, slice16)
+               slice9, slice10, slice11, slice12, slice13, slice14, slice15, slice16, slice17,
+               slice18, slice19, slice20, slice21)
 
 SLICES = (slice1, slice2, slice3, slice4, slice5, slice6, slice7, slice8, slice9, slice10,
-          slice11, slice12, slice13, slice14, slice15, slice16)
+          slice11, slice12, slice13, slice14, slice15, slice16, slice17, slice18, slice19, slice20,
+          slice21)
 
 
 def run() -> int:

@@ -47,7 +47,7 @@ import subprocess
 from dataclasses import dataclass, field
 
 from . import conversation, delta, graph, grill, spec
-from .transport import call, parse
+from .transport import call, parse_object
 
 WORKER = (
     "You are a hypercore worker — the system-facing half of the split. Your audience is "
@@ -160,12 +160,17 @@ def worktree(node: graph.Node, root: str | None = None, tag: str = "") -> str:
 
 
 def teardown(node: graph.Node, root: str | None = None, tag: str = "") -> None:
-    """Tear the fence down once the result has integrated: remove the worktree and its
-    branch. The work has reached the one record through the fold, not through this branch."""
+    """Tear the fence down — remove the worktree and its branch — on *every* path out of a worker
+    crossing, not only the integrating one (C2). The work reaches the one record through the fold, not
+    through this branch, so the fence is always disposable once the crossing ends. Best-effort and
+    idempotent: a fence never cut, already torn down, or half-removed leaves no part standing and
+    raises nothing, so `run`'s `finally` can call it unconditionally without a refusal or an error
+    leaking a worktree or branch."""
     base = root or graph._root()
     path = _tree_path(node, base, tag)
-    _git(base, "worktree", "remove", "--force", path)
-    _git(base, "branch", "-D", _branch(node, tag))
+    _git_quiet(base, "worktree", "remove", "--force", path)
+    _git_quiet(base, "worktree", "prune")               # clear any stale administrative entry
+    _git_quiet(base, "branch", "-D", _branch(node, tag))
 
 
 def commit_tree(tree: str, message: str) -> None:
@@ -185,7 +190,7 @@ def apply(node: graph.Node, transport=None, root: str | None = None) -> WorkerRe
     worker's own tree — its commit reaching the record in isolation — and handed back."""
     transport = transport or call
     ctx = context(node, root)                          # no apply without the grounding
-    obj = parse(transport(prompt(node, ctx)))
+    obj = parse_object(transport(prompt(node, ctx)))   # strict: a malformed reply is a failure, not a no-op (H3)
     report = (obj.get("report") or "").strip()
     refined = (obj.get("delta") or ctx.delta).strip()
     loop = obj.get("loop") if isinstance(obj.get("loop"), dict) else {}
@@ -195,16 +200,29 @@ def apply(node: graph.Node, transport=None, root: str | None = None) -> WorkerRe
 
 
 def run(node: graph.Node, transport=None, root: str | None = None):
-    """The whole crossing for one node: take it (it goes live), build it fenced, hand to
-    the architect to coherence-check and archive, then tear the fence down. The
-    worker speaks only to the architect; what reaches the operator is its reply."""
+    """The whole crossing for one node: take it (it goes live), build it fenced, hand to the architect
+    to coherence-check and archive, then tear the fence down — on *every* exit, not only the
+    integrating one. The worker speaks only to the architect; what reaches the operator is its reply.
+
+    Refusal is the steady-state path, not an edge: a folding-condition block, a failed coherence
+    judgment, or a malformed model reply returns not-done, and an error mid-build raises. On any of
+    these the fence must not leak and the node must not strand `IN_FLIGHT` with no live worker (C2).
+    So the fence is torn down in a `finally`, and a non-integrating crossing recovers the node to
+    standing (its decision card, parented to it, blocks re-dispatch until the operator settles it). The
+    error path recovers the node too, then re-raises so the scheduler raises its own decision card."""
     graph.delegate(node)
-    worktree(node, root)
-    result = apply(node, transport, root)
-    reply = conversation.integrate(node, result, transport, root=root)  # one transport, build → archive
-    if reply.done:                                     # archived: the result integrated
-        teardown(node, root)
-    return reply
+    try:
+        worktree(node, root)
+        result = apply(node, transport, root)
+        reply = conversation.integrate(node, result, transport, root=root)  # one transport, build → archive
+        if not reply.done:                             # refused or judged incoherent — recover, don't strand
+            graph.recover(node)
+        return reply
+    except Exception:
+        graph.recover(node)                            # an error mid-build must not leave the node in flight
+        raise                                          # the scheduler turns it into a decision card
+    finally:
+        teardown(node, root)                           # the fence never leaks, on any path out of the crossing
 
 
 # ── internals ────────────────────────────────────────────────────────────────
@@ -264,4 +282,14 @@ def _git(cwd: str, *args: str) -> None:
     shared `.git`. The slow build between these calls (the model transport) runs unlocked, so the
     fences are cut and committed serially but the work in them proceeds in parallel."""
     subprocess.run(["git", *args], cwd=cwd, check=True,
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+@graph.serialized
+def _git_quiet(cwd: str, *args: str) -> None:
+    """A best-effort git invocation under the one record lock — like `_git` but tolerant of failure,
+    for teardown, where the fence to remove may already be gone (C2 `finally`). The act it would undo
+    has already left the fence, so a no-op removal loses nothing; never raising lets `run`'s `finally`
+    tear down on every path without an absent fence masking the real outcome."""
+    subprocess.run(["git", *args], cwd=cwd, check=False,
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

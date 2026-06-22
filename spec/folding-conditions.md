@@ -16,21 +16,34 @@ held on the operator's queue. An unmet fact refuses the fold and returns its rea
 depth condition returns a decision; never a silent pass.
 
 ### Requirement: a behavior-changing graph cannot fold without a recorded red→green loop
-A graph that carries a non-trivial delta MUST hand back a feedback-loop record — the
-invocation that drives the behavior, the failing (red) verdict on that behavior before the
-fix, and the passing (green) verdict after it. A missing or incomplete record refuses the
-fold. The feedback loop is the skill; a correct narrative with no harness is the failure
-this kills. A trivial graph changes no behavior and needs none.
+A graph that carries a non-trivial delta MUST hand back a feedback-loop record naming the
+invocation that drives the behavior. A missing or incomplete record refuses the fold. A
+trivial graph changes no behavior and needs none.
 
 #### Scenario: a fix without a loop
 - WHEN a behavior-changing graph hands back a result whose loop record lacks the invocation
   or the red or the green verdict
 - THEN the fold is refused, a decision is returned, and the spec is left untouched
 
-#### Scenario: a recorded loop
-- WHEN the result records the loop's invocation, its red verdict on the behavior, and its
-  green verdict after the fix
-- THEN the feedback-loop condition is met and the fold may proceed
+### Requirement: the recorded loop is executed, not trusted as narration
+The gate MUST **run** the recorded command in the fence and require a real red→green
+transition, never trust the loop's words. The command is executed against the fork base and
+the tip: it MUST fail at the base (red — the behavior was not yet built) and pass at the tip
+(green — the fix works), and identical or absent verdicts are no transition. The feedback
+loop is the skill; a correct narrative with no executed harness is the failure this kills —
+so a fabricated loop whose words say it passed, or that it never ran, cannot fold, because
+the exit codes are the gate, not the strings.
+
+#### Scenario: a loop that is executed and transitions
+- WHEN the result records a command that fails at the fork base and passes at the tip
+- THEN the gate runs it, observes the red→green transition, and the feedback-loop condition
+  is met
+
+#### Scenario: a fabricated loop that did not run
+- WHEN the result records a loop whose command does not make the red→green transition — it
+  passes at the base, fails at the tip, cannot run, or names identical red and green verdicts
+- THEN the gate runs the command, observes no transition, and refuses the fold — the loop's
+  narration is never the gate
 
 ### Requirement: length past the signal raises a depth decision, never a silent refusal
 A source file a graph created or grew past the **length signal** MUST raise a **depth
@@ -84,3 +97,35 @@ rises).
 #### Scenario: a bare acceptance names no bound
 - WHEN a depth-decision records the file `accepted` with no stated length
 - THEN it does not clear the gate — an acceptance must name the length it is bounded to
+
+### Requirement: the disciplines declare gated or watched, machine-readably
+The system MUST carry a **machine-readable register** of every discipline, each declared either
+**gated** — a check fails unless the discipline actually happened — or **watched** — the operator
+watches it, no check gates it because the judgment lives on the model side. The register exists so a
+regenerating author cannot mistake advice for a gate: a scripted transport is licensed only for
+behavior the engine computes deterministically; any model-side judgment a check cannot drive against
+an adversarial fixture is declared *watched, not gated*, never scripted-and-called-tested. Each entry
+is a parseable line — `register: <discipline> — <gated|watched> — <how>` — so a check reads the
+classification rather than trusting prose. A discipline declared *gated* MUST have a real gate behind
+it; one declared *watched* is honestly recorded as not mechanically enforced.
+
+The register, as it stands (the honest classification the research established):
+
+- register: delta-applies — gated — `delta.check` parses the delta against the live spec; a mismatch refuses
+- register: red-green-loop — gated — `conditions._feedback_loop` executes the command in the fence and requires a real red→green transition
+- register: length-ratchet — gated — `conditions.accepted`/`accepted_at` bound an accepted length and re-raise on material growth
+- register: mechanical-red-flags — gated — `review.red_flags` scans for dead module-level symbols and circular dependencies
+- register: depth-verdict — watched — the model-driven shallow/leakage/deletion-test judgment is not yet built (ADR 0006); length raises a decision, never a verdict
+- register: coherence — watched — the architect's archive-gate judgment is the model's; the incoherent→decision *branch* is exercised, but whether a result truly honors the contract is watched, not gated
+- register: grilling-floor — watched — whether the floor surfaced the right stakes is the model's judgment; the harness drives the routing, not the finding
+- register: design-it-twice-selection — watched — whether the deepest candidate was picked is the model's judgment; the fences and the ADR record are gated, the pick is watched
+
+#### Scenario: a discipline is classified
+- WHEN the register is read for a discipline
+- THEN it declares the discipline gated or watched on a parseable line, so a check can read the
+  classification and a regenerating author cannot script a watched judgment and call it gated
+
+#### Scenario: a gated discipline has a real gate
+- WHEN the register declares a discipline gated
+- THEN a check fails unless the discipline actually happened — the gate is real, not a presence-of-
+  strings check — and a watched discipline is honestly recorded as not mechanically enforced

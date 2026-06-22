@@ -121,14 +121,17 @@ def bars(rv: Review) -> list[str]:
 
 def backlog(rv: Review) -> list[str]:
     """The deepening backlog as the operator reads it — the gap: the length findings, then the
-    mechanical red flags. Honest about a clean tree rather than inventing work, and honest that
-    the model-driven depth verdict beyond the mechanical subset is not yet built."""
+    mechanical red flags, and **always** the honest record that the model-driven depth verdict beyond
+    them is not yet built. The unbuilt-verdict line is unconditional, not shown only on a clean tree:
+    depth is judgment, never a threshold the scan enforces (depth de-claim, ADR 0006), so the review
+    states the verdict is unbuilt whether or not a length finding happens to be present — a length
+    finding is a context-cost signal, not the depth verdict, and must never read as one."""
     out = [f"{f.subject}: {f.note} ({f.strength})" for f in rv.findings]
     out += [f"{rf.subject}: {rf.detail} (red flag: {rf.rule})" for rf in rv.flags]
-    if out:
-        return out
-    return [f"no deepening opportunities — every module is within the length signal "
-            f"({conditions.SIGNAL} lines), no dead symbols, no circular imports; " + DEPTH_NOT_YET]
+    if not out:
+        out = [f"no deepening opportunities — every module is within the length signal "
+               f"({conditions.SIGNAL} lines), no dead symbols, no circular imports"]
+    return out + [DEPTH_NOT_YET]
 
 
 # ── internals ────────────────────────────────────────────────────────────────

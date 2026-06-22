@@ -21,7 +21,7 @@ import json
 import os
 import subprocess
 
-from .harness import ok, scripted
+from .harness import LOOP, ok, scripted
 
 
 def check(root: str) -> None:
@@ -30,7 +30,7 @@ def check(root: str) -> None:
     print("\nslice 8 — acceptance check  (parallelism re-grounded: design-it-twice)\n")
 
     coherent = lambda: scripted(json.dumps({"coherent": True, "say": "it landed.", "card": None}))
-    loop = {"command": "python3 -m engine --check", "red": "absent — failed", "green": "present — passed"}
+    loop = LOOP                                      # the executable red→green loop the gate runs (keystone)
 
     def built(cap: str, report: str) -> str:
         return json.dumps({"report": report,

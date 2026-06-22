@@ -22,10 +22,11 @@ import shutil
 import time
 from dataclasses import dataclass
 
-# The durable-write floor the graph rests on — atomic write, scoped commit, and the single-writer lock
-# that lets concurrent workers fold without colliding on the record (intent §62). Re-exported so the
-# graph's callers read one façade: `graph.atomic_write`, `graph.commit`, `graph.serialized`, `graph._root`.
-from .record import _DEFAULT_ROOT, _root, atomic_write, commit, serialized
+# The durable-write floor the graph rests on — atomic write, exact-path commit, the write→commit
+# transaction, and the single-writer line that lets concurrent workers fold without colliding on the
+# record (intent §62). Re-exported so the graph's callers read one façade: `graph.atomic_write`,
+# `graph.commit`, `graph.transact`, `graph.serialized`, `graph._root`.
+from .record import _DEFAULT_ROOT, _root, atomic_write, commit, serialized, transact
 
 # States. A graph under archive/ is folded whatever its field says — location is authoritative.
 AWAITING = "awaiting you"    # a card on the queue: a decision to settle, or a surfaced question
@@ -130,24 +131,21 @@ def children(parent_id: str, nodes: list[Node] | None = None) -> list[Node]:
 
 def file_intent(ask: str) -> Node:
     """Record the operator's captured intent as standing work — a new top-level graph."""
-    n = _new(ask, "ask", STANDING, "operator", machine=False)
-    _persist(n, f"file intent: {_subject(ask)}")
-    return n
+    return _create(ask, "ask", STANDING, "operator", machine=False,
+                   message=f"file intent: {_subject(ask)}")
 
 
 def raise_card(statement: str, kind: str = "decide", parent: str = "") -> Node:
     """Put a machine-owned statement or decision on the queue — a graph awaiting the operator,
     nested in `parent`'s work/ when one is given (the decision lives where it arose), else top-level."""
-    n = _new(statement, kind, AWAITING, "machine", machine=True, parent=parent)
-    _persist(n, f"raise {kind}: {_subject(statement)}")
-    return n
+    return _create(statement, kind, AWAITING, "machine", machine=True, parent=parent,
+                   message=f"raise {kind}: {_subject(statement)}")
 
 
 def hold(ask: str) -> Node:
     """Hold the operator's ask while its grilling pass runs — the graph exists, not yet work."""
-    n = _new(ask, "ask", GRILLING, "operator", machine=False)
-    _persist(n, f"hold ask: {_subject(ask)}")
-    return n
+    return _create(ask, "ask", GRILLING, "operator", machine=False,
+                   message=f"hold ask: {_subject(ask)}")
 
 
 def spawn(node: Node) -> Node:
@@ -167,10 +165,12 @@ def approve(node: Node) -> Node:
 
 
 def cut(node: Node) -> None:
-    """Remove the words: the graph's folder leaves (recoverable from git)."""
-    if os.path.isdir(node.path):
-        shutil.rmtree(node.path)
-    commit([os.path.dirname(node.path)], f"cut: {_subject(node.text)}")
+    """Remove the words: the graph's folder leaves (recoverable from git). Held as one act and staged
+    at exactly the removed folder — `git add -A -- <folder>` stages that subtree's deletions and
+    nothing else, so a cut never sweeps a sibling's uncommitted work (C1)."""
+    path = node.path
+    transact(lambda: shutil.rmtree(path) if os.path.isdir(path) else None,
+             [path], f"cut: {_subject(node.text)}")
 
 
 def delegate(node: Node) -> Node:
@@ -180,14 +180,48 @@ def delegate(node: Node) -> Node:
     return node
 
 
-def integrated(node: Node) -> Node:
-    """The worker's result folded in: the work is done and its folder moves to work/archive/."""
+def archive_in_place(node: Node) -> list[str]:
+    """Land the node's DONE state and move its folder into archive/ **without its own commit**, and
+    return the move's two path endpoints (source, dest) for the caller to stage (H1). This is the node
+    half of the transactional fold: `delta.fold` calls it *inside* its one held act so the spec change
+    and the node's archive land in a single commit — atomic, both directions — rather than two separate
+    acts a crash could split (the wedge). Idempotent: a node already folded returns its current path and
+    moves nothing, so a retry completes cleanly; the DONE intent.md is written before the move so the
+    archived folder carries the final state."""
+    if node.folded:
+        return [node.path]
     node.state = DONE
-    _persist(node, f"integrate: {_subject(node.text)}")
-    return _fold(node, f"fold: {_subject(node.text)}")
+    atomic_write(os.path.join(node.path, "intent.md"), _render(node))
+    return _relocate(node)
+
+
+def recover(node: Node) -> Node:
+    """Return a live node to standing when its worker crossing did not integrate — a refusal, a
+    failed coherence judgment, a malformed model reply, or an error mid-build (C2). The node leaves
+    IN_FLIGHT so it is not a lie (no live worker is on it) and not silently dropped on a restart; the
+    decision card the refusal raised is parented to it, so `ready` excludes it (a node blocked on an
+    open child is not taken) until the operator settles the recovery. Idempotent on an already-folded
+    node — a node that did integrate is not pulled back out."""
+    if node.folded or node.state == DONE:
+        return node
+    node.state = STANDING
+    _persist(node, f"recover: {_subject(node.text)}")
+    return node
 
 
 # ── on-disk form: one folder per graph, its intent.md the legible record ─────
+
+@serialized
+def _create(text, kind, state, owner, machine, parent="", message="") -> Node:
+    """Reserve a slug and land the new graph's intent.md as **one** act on the held line (C3). The
+    slug is read off the live tree (`_slug`) and the folder written under the same line, so the
+    read-the-taken-set → write-the-folder window is closed: two concurrent creations — two failing
+    workers both raising a recovery card, say — can never compute the same slug and overwrite each
+    other's folder. Persisting under the same line that read the taken set is the reservation."""
+    n = _new(text, kind, state, owner, machine, parent)
+    _persist(n, message)
+    return n
+
 
 def _new(text, kind, state, owner, machine, parent="") -> Node:
     slug = _slug(text)
@@ -243,26 +277,41 @@ def _read(path: str, parent: str) -> Node:
     )
 
 
-def _persist(node: Node, message: str) -> None:
+def _render(node: Node) -> str:
+    """The node's intent.md text — front-matter and body, the marker re-appended for a machine node.
+    One place the on-disk form lives, so `_persist` and the archive write never drift apart."""
     body = node.text + (f"\n\n{MARKER}" if node.machine else "")
-    raw = (f"---\nkind: {node.kind}\nstate: {node.state}\n"
-           f"owner: {node.owner}\ncreated: {node.created:.0f}\n---\n{body}\n")
-    atomic_write(os.path.join(node.path, "intent.md"), raw)   # the act lands at once
-    commit([node.path], message)                              # durability follows behind
+    return (f"---\nkind: {node.kind}\nstate: {node.state}\n"
+            f"owner: {node.owner}\ncreated: {node.created:.0f}\n---\n{body}\n")
+
+
+def _relocate(node: Node) -> list[str]:
+    """Move the node's folder into its work/'s archive/ (ADR 0017) and return the move's two endpoints
+    — the source (now deleted) and the dest (now present). The bare move, no commit: the caller stages
+    these exact endpoints, never the shared `.../work` parent (C1). One place the fold's move lives."""
+    src = node.path
+    dest = os.path.join(os.path.dirname(src), "archive", os.path.basename(src))
+    os.makedirs(os.path.dirname(dest), exist_ok=True)
+    shutil.move(src, dest)
+    node.path = dest
+    return [src, dest]
+
+
+def _persist(node: Node, message: str) -> None:
+    # The write and its commit are one held act (`transact`): the line spans atomic_write → commit, so
+    # no sibling's uncommitted change or live temp is visible to this commit's `git add`. The pathspec
+    # is exactly this node's own folder — never a shared parent — so the commit stages only its own act.
+    transact(lambda: atomic_write(os.path.join(node.path, "intent.md"), _render(node)),
+             [node.path], message)
 
 
 def _fold(node: Node, message: str) -> Node:
-    """Move a graph's folder from its work/ into that work/'s own archive/ — the fold
-    (intent §work, ADR 0017): the folded history tucks one level down, under the live work."""
+    """Move a graph's folder into archive/ as one held, exact-path act (intent §work, ADR 0017) — the
+    standalone fold (`approve`'s settle). The transactional delta-fold archives the node *inside* its
+    own act via `archive_in_place`; this is the fold with no delta beside it."""
     if node.folded:
         return node
-    parent_dir = os.path.dirname(node.path)                   # .../work
-    dest_base = os.path.join(parent_dir, "archive")           # .../work/archive
-    dest = os.path.join(dest_base, os.path.basename(node.path))
-    os.makedirs(dest_base, exist_ok=True)
-    shutil.move(node.path, dest)
-    node.path = dest
-    commit([parent_dir, dest_base], message)
+    transact(lambda: _relocate(node), None, message)
     return node
 
 
