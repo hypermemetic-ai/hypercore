@@ -110,16 +110,19 @@ def atomic_write(path: str, text: str) -> None:
 
 
 @serialized
-def transact(write, paths: list[str], message: str):
+def transact(write, paths, message: str):
     """One git-touching act, the line held across its write *and* its commit. `write` performs the
-    on-disk landing (atomic writes, a folder move) and returns whatever the caller needs; then `paths`
-    are staged and committed in the same held line, so no sibling's uncommitted change or live temp is
-    ever visible to this commit's `git add`. This is the single-writer guarantee made real: the window
-    between landing and commit — where C1's `git add -A work` swept a foreign file — is closed because
-    nothing else can touch the index until the act completes."""
-    result = write()
-    commit(paths, message)
-    return result
+    on-disk landing (atomic writes, a folder move) and returns the **exact paths** its act touched (or
+    `paths` is a fixed list when the act's files are known up front); they are staged and committed in
+    the same held line, so no sibling's uncommitted change or live temp is ever visible to this
+    commit's `git add`. This is the single-writer guarantee made real: the window between landing and
+    commit — where C1's `git add -A work` swept a foreign file — is closed, because nothing else can
+    touch the index until the act completes. Passing the paths *out of* `write` lets an act that only
+    learns its files as it lands them (the fold's rendered channels, a node's move endpoints) stage
+    exactly what it wrote, in one act."""
+    landed = write()
+    commit(landed if isinstance(landed, list) else paths, message)
+    return landed
 
 
 @serialized

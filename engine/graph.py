@@ -180,11 +180,19 @@ def delegate(node: Node) -> Node:
     return node
 
 
-def integrated(node: Node) -> Node:
-    """The worker's result folded in: the work is done and its folder moves to work/archive/."""
+def archive_in_place(node: Node) -> list[str]:
+    """Land the node's DONE state and move its folder into archive/ **without its own commit**, and
+    return the move's two path endpoints (source, dest) for the caller to stage (H1). This is the node
+    half of the transactional fold: `delta.fold` calls it *inside* its one held act so the spec change
+    and the node's archive land in a single commit — atomic, both directions — rather than two separate
+    acts a crash could split (the wedge). Idempotent: a node already folded returns its current path and
+    moves nothing, so a retry completes cleanly; the DONE intent.md is written before the move so the
+    archived folder carries the final state."""
+    if node.folded:
+        return [node.path]
     node.state = DONE
-    _persist(node, f"integrate: {_subject(node.text)}")
-    return _fold(node, f"fold: {_subject(node.text)}")
+    atomic_write(os.path.join(node.path, "intent.md"), _render(node))
+    return _relocate(node)
 
 
 def recover(node: Node) -> Node:
@@ -269,34 +277,41 @@ def _read(path: str, parent: str) -> Node:
     )
 
 
-def _persist(node: Node, message: str) -> None:
+def _render(node: Node) -> str:
+    """The node's intent.md text — front-matter and body, the marker re-appended for a machine node.
+    One place the on-disk form lives, so `_persist` and the archive write never drift apart."""
     body = node.text + (f"\n\n{MARKER}" if node.machine else "")
-    raw = (f"---\nkind: {node.kind}\nstate: {node.state}\n"
-           f"owner: {node.owner}\ncreated: {node.created:.0f}\n---\n{body}\n")
+    return (f"---\nkind: {node.kind}\nstate: {node.state}\n"
+            f"owner: {node.owner}\ncreated: {node.created:.0f}\n---\n{body}\n")
+
+
+def _relocate(node: Node) -> list[str]:
+    """Move the node's folder into its work/'s archive/ (ADR 0017) and return the move's two endpoints
+    — the source (now deleted) and the dest (now present). The bare move, no commit: the caller stages
+    these exact endpoints, never the shared `.../work` parent (C1). One place the fold's move lives."""
+    src = node.path
+    dest = os.path.join(os.path.dirname(src), "archive", os.path.basename(src))
+    os.makedirs(os.path.dirname(dest), exist_ok=True)
+    shutil.move(src, dest)
+    node.path = dest
+    return [src, dest]
+
+
+def _persist(node: Node, message: str) -> None:
     # The write and its commit are one held act (`transact`): the line spans atomic_write → commit, so
     # no sibling's uncommitted change or live temp is visible to this commit's `git add`. The pathspec
     # is exactly this node's own folder — never a shared parent — so the commit stages only its own act.
-    transact(lambda: atomic_write(os.path.join(node.path, "intent.md"), raw), [node.path], message)
+    transact(lambda: atomic_write(os.path.join(node.path, "intent.md"), _render(node)),
+             [node.path], message)
 
 
 def _fold(node: Node, message: str) -> Node:
-    """Move a graph's folder from its work/ into that work/'s own archive/ — the fold
-    (intent §work, ADR 0017): the folded history tucks one level down, under the live work. Held as
-    one act (`transact`) and staged at exactly the move's two endpoints — the source (now deleted) and
-    the dest (now present) — never the shared `.../work` parent, so the fold stages only this node's
-    move and never sweeps a sibling's uncommitted work into it (C1)."""
+    """Move a graph's folder into archive/ as one held, exact-path act (intent §work, ADR 0017) — the
+    standalone fold (`approve`'s settle). The transactional delta-fold archives the node *inside* its
+    own act via `archive_in_place`; this is the fold with no delta beside it."""
     if node.folded:
         return node
-    src = node.path
-    dest_base = os.path.join(os.path.dirname(src), "archive")  # .../work/archive
-    dest = os.path.join(dest_base, os.path.basename(src))
-
-    def move():
-        os.makedirs(dest_base, exist_ok=True)
-        shutil.move(src, dest)
-        node.path = dest
-
-    transact(move, [src, dest], message)
+    transact(lambda: _relocate(node), None, message)
     return node
 
 
