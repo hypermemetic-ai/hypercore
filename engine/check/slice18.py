@@ -72,24 +72,39 @@ def check(_shared_root: str) -> None:
        "a decision card is raised on the node — the refusal is recoverable, not a silent drop")
 
     # ── 3. a malformed model reply is a failure, not a silent no-op success (H3) ─────────────────────
-    # An empty reply parses to the {"say": "", "done": True} fallback → empty report/delta/loop. The old
-    # path folds that no-op as a clean success. It must instead take the failure path and recover.
+    # A reply with no JSON object is the dangerous case: the old lenient parse degraded it to
+    # {"say": raw, "done": True} → empty report/delta/loop → a trivial delta that `unmet` passes → a
+    # no-op folded as a clean success, indistinguishable from a real minimal result. The worker now
+    # reads its hand-off STRICTLY (`parse_object`): a malformed reply raises at apply, BEFORE coherence
+    # is ever consulted — so the guard is not incidental to the coherence parse happening to fail.
+    from ..transport import MalformedReply
     root = _init("engine-check-s18b-")
     os.environ["ENGINE_ROOT"] = root
     garbage = graph.file_intent("a worker whose model returns garbage")
+    apply_raised = False
+    try:
+        worker.context(garbage, root)                                # grounding ok
+        worker.apply(garbage, transport=lambda _p: "prose, not a JSON object at all", root=root)
+    except MalformedReply:
+        apply_raised = True
+    ok(apply_raised,
+       "a reply with no JSON object raises MalformedReply at apply — not a foldable no-op (H3)")
+
+    # and end to end through the crossing: the malformed reply recovers the node and tears the fence
+    # down (the C2 path), never folding a silent success.
+    garbage2 = graph.file_intent("another worker whose model returns nothing structured")
     raised = False
     try:
-        reply2 = worker.run(garbage, transport=lambda _p: "this is prose, not a JSON object at all",
-                            root=root)
+        reply2 = worker.run(garbage2, transport=lambda _p: "still no object here", root=root)
         done = reply2.done
-    except Exception:
-        raised = True
-        done = False
-    ok(not done, "a malformed/empty model reply does not fold a no-op as a clean success (H3)")
-    g2 = graph.find(garbage.id)
+    except MalformedReply:
+        raised, done = True, False
+    ok(raised and not done,
+       "a malformed model reply takes the failure path through the crossing — never a clean fold (H3)")
+    g2 = graph.find(garbage2.id)
     ok(g2 is not None and g2.state != graph.IN_FLIGHT,
        "a worker whose model fails recovers off IN_FLIGHT — the fence's failure is not a silent success")
-    ok(not os.path.isdir(worker._tree_path(garbage, root)),
+    ok(not os.path.isdir(worker._tree_path(garbage2, root)),
        "the fence is torn down when the model reply is malformed — no leak on the error path (H3+C2)")
 
     # ── 4. through the real scheduler: a refusing worker is a decision, the fence is gone, loop idle ──

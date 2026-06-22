@@ -47,7 +47,7 @@ import subprocess
 from dataclasses import dataclass, field
 
 from . import conversation, delta, graph, grill, spec
-from .transport import call, parse
+from .transport import call, parse_object
 
 WORKER = (
     "You are a hypercore worker — the system-facing half of the split. Your audience is "
@@ -190,7 +190,7 @@ def apply(node: graph.Node, transport=None, root: str | None = None) -> WorkerRe
     worker's own tree — its commit reaching the record in isolation — and handed back."""
     transport = transport or call
     ctx = context(node, root)                          # no apply without the grounding
-    obj = parse(transport(prompt(node, ctx)))
+    obj = parse_object(transport(prompt(node, ctx)))   # strict: a malformed reply is a failure, not a no-op (H3)
     report = (obj.get("report") or "").strip()
     refined = (obj.get("delta") or ctx.delta).strip()
     loop = obj.get("loop") if isinstance(obj.get("loop"), dict) else {}

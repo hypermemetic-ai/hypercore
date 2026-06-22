@@ -24,20 +24,34 @@ MODEL = "claude-opus-4-8"
 MODEL_LABEL = "opus 4.8"
 
 
+class MalformedReply(Exception):
+    """The model returned no JSON object where a structured reply was required — a failure to surface,
+    not a no-op to fold (H3). The lenient `parse` degrades such a reply to a spoken answer (right for
+    the architect answering in prose); a caller that *needs* structure (`parse_object`, the worker)
+    raises this so an empty/truncated/timed-out reply takes the failure path instead of folding as a
+    silent success."""
+
+
 def call(prompt: str) -> str:
-    """Summon the model once with `prompt` and return its stdout — the live transport. The one
-    place the `claude -p` invocation lives, so every role reaches the model the same way."""
+    """Summon the model once with `prompt` and return its stdout — the live transport. The one place
+    the `claude -p` invocation lives, so every role reaches the model the same way. A non-zero exit or
+    empty stdout is a failed summon, not a silent empty reply: it raises `MalformedReply`, so a timeout
+    or a crashed `claude` becomes a surfaced failure (the C2 recovery handles it) rather than a
+    `{"done": True}` no-op fold (H3)."""
     r = subprocess.run(
         ["claude", "-p", prompt, "--model", MODEL],
         capture_output=True, text=True, timeout=120,
     )
+    if r.returncode != 0 or not r.stdout.strip():
+        raise MalformedReply(f"the model call failed (exit {r.returncode}, "
+                             f"{len(r.stdout)} bytes out)")
     return r.stdout
 
 
-def parse(raw: str) -> dict:
-    """Extract the first JSON object from a model reply; fall back to treating the whole text as
-    'say'. The lenient read every role shares — a model that wraps its JSON in prose still parses,
-    and a reply with no object at all degrades to a plain spoken answer rather than an error."""
+def _object(raw: str) -> dict | None:
+    """The first JSON object in a reply, or None when there is none — the one read of the model's
+    structured form, shared by the lenient and the strict parse so they never diverge on what counts
+    as an object."""
     start = raw.find("{")
     if start != -1:
         try:
@@ -46,4 +60,26 @@ def parse(raw: str) -> dict:
                 return obj
         except ValueError:
             pass
-    return {"say": raw.strip(), "done": True}
+    return None
+
+
+def parse(raw: str) -> dict:
+    """Extract the first JSON object from a model reply; fall back to treating the whole text as
+    'say'. The lenient read the prose-friendly roles share — a model that wraps its JSON in prose
+    still parses, and a reply with no object at all degrades to a plain spoken answer rather than an
+    error (the architect answering a question)."""
+    obj = _object(raw)
+    return obj if obj is not None else {"say": raw.strip(), "done": True}
+
+
+def parse_object(raw: str) -> dict:
+    """The strict read for a caller that *requires* a structured reply (the worker's hand-off): the
+    first JSON object, or `MalformedReply` when there is none. This is the H3 fix — a worker whose
+    model returns prose, a truncated object, or nothing must take the failure path, never fold the
+    lenient `{"say": raw, "done": True}` fallback as a no-op success. Structure is the worker's
+    contract; its absence is a failure to surface, not a clean fold."""
+    obj = _object(raw)
+    if obj is None:
+        raise MalformedReply("the worker's model returned no JSON object — a malformed hand-off, "
+                             "not a foldable result")
+    return obj
