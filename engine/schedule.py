@@ -60,10 +60,11 @@ class Scheduler:
     # ── the loop ──────────────────────────────────────────────────────────────
 
     def step(self) -> None:
-        """One pass: reap finished workers, then dispatch the ready frontier up to the limit. Never
-        blocks — the slow build runs on the dispatched worker's own thread, not here — so the caller
-        (the window's input loop) is free the instant this returns."""
+        """One pass: reap finished workers, recover any crash-stranded node, then dispatch the ready
+        frontier up to the limit. Never blocks — the slow build runs on the dispatched worker's own
+        thread, not here — so the caller (the window's input loop) is free the instant this returns."""
         self._reap()
+        self._recover_stranded()
         for node in graph.ready():
             with self._lock:
                 if len(self._threads) >= self.limit:
@@ -124,3 +125,17 @@ class Scheduler:
     def _reap(self) -> None:
         with self._lock:
             self._threads = {i: t for i, t in self._threads.items() if t.is_alive()}
+
+    def _recover_stranded(self) -> None:
+        """Recover a node left IN_FLIGHT with no live worker on it — a crash-stranded node (C2). The
+        live worker's `run` recovers the node on every in-process exit; this catches the one path that
+        bypasses it — a process killed mid-crossing, whose on-disk node still claims a worker. A node
+        IN_FLIGHT that this scheduler is not running is that lie: return it to standing so the frontier
+        picks it up again, never silently dropped on restart (the steady-state promise: a node never
+        vanishes). The dispatched node is held under `_lock` so a just-started worker is never mistaken
+        for stranded — its thread is recorded before its `delegate` lands the IN_FLIGHT state."""
+        with self._lock:
+            running = set(self._threads)
+        for node in graph.read_graph():
+            if node.is_live and node.id not in running:
+                graph.recover(node)

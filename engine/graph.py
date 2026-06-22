@@ -187,6 +187,20 @@ def integrated(node: Node) -> Node:
     return _fold(node, f"fold: {_subject(node.text)}")
 
 
+def recover(node: Node) -> Node:
+    """Return a live node to standing when its worker crossing did not integrate — a refusal, a
+    failed coherence judgment, a malformed model reply, or an error mid-build (C2). The node leaves
+    IN_FLIGHT so it is not a lie (no live worker is on it) and not silently dropped on a restart; the
+    decision card the refusal raised is parented to it, so `ready` excludes it (a node blocked on an
+    open child is not taken) until the operator settles the recovery. Idempotent on an already-folded
+    node — a node that did integrate is not pulled back out."""
+    if node.folded or node.state == DONE:
+        return node
+    node.state = STANDING
+    _persist(node, f"recover: {_subject(node.text)}")
+    return node
+
+
 # ── on-disk form: one folder per graph, its intent.md the legible record ─────
 
 @serialized
