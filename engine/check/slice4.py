@@ -13,7 +13,7 @@ import json
 import os
 import subprocess
 
-from .harness import ok, scripted
+from .harness import LOOP, ok, scripted
 
 
 def check(root: str) -> None:
@@ -78,9 +78,7 @@ def check(root: str) -> None:
     result = worker.apply(ask, scripted(json.dumps({
         "report": "Implemented the checkpoint behind a red→green loop. " + SENTINEL,
         "delta": handed,
-        "loop": {"command": "python3 -m engine --check",
-                 "red": "asserted the checkpoint was absent — the loop failed",
-                 "green": "added the checkpoint — the loop passed"}})), root)
+        "loop": LOOP})), root)
     ok(SENTINEL in result.report, "the worker produced a raw, machine-facing report")
 
     # its own commit reached the record in its own tree, fenced from the main line

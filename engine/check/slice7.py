@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 import os
 
-from .harness import ok, scripted
+from .harness import LOOP, ok, scripted
 
 
 def check(root: str) -> None:
@@ -59,7 +59,7 @@ def check(root: str) -> None:
     result = worker.apply(ask, scripted(json.dumps({
         "report": "grew a long module",
         "delta": delta_for("a depth decision is raised"),
-        "loop": {"command": "run", "red": "failed", "green": "passed"}})), root)
+        "loop": LOOP})), root)
     blocked = conditions.unmet(result, root)
     ok(blocked is not None and "depth decision" in blocked
        and all(w in blocked for w in ("re-cut", "deepen", "accept")),
@@ -83,7 +83,7 @@ def check(root: str) -> None:
     result = worker.apply(ask, scripted(json.dumps({
         "report": "grew a very long but depth-accepted module",
         "delta": delta_for("a far-past-signal module folds"),
-        "loop": {"command": "run", "red": "failed", "green": "passed"}})), root)
+        "loop": LOOP})), root)
     ok(conditions.unmet(result, root) is None,
        "even ~6× the signal does not auto-refuse — a structured depth-decision lets it fold (F2)")
     reply = conversation.integrate(ask, result, coherent(), root)
@@ -104,7 +104,7 @@ def check(root: str) -> None:
     result = worker.apply(ask, scripted(json.dumps({
         "report": "grew a module merely mentioned in an ADR",
         "delta": delta_for("the substring hole stays closed"),
-        "loop": {"command": "run", "red": "failed", "green": "passed"}})), root)
+        "loop": LOOP})), root)
     ok(conditions.accepted("engine/wide.py", conditions.SIGNAL + 51, root) is False,
        "a coincidental prose mention is not a structured depth-decision — the hole stays closed")
     ok(conditions.unmet(result, root) is not None,

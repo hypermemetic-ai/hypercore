@@ -35,3 +35,14 @@ def scripted(*replies):
     order, so a check drives the real graph and the real conditions without an LLM."""
     q = list(replies)
     return lambda _prompt: q.pop(0)
+
+
+# A genuinely executable red→green loop for the harness — the feedback-loop gate now EXECUTES the
+# command (the keystone), so a fold's loop can no longer be inert prose. Every worker fence commits
+# RESULT.md at its tip (HEAD) and not at its fork base (HEAD~1), so this command FAILS at the base
+# (red) and PASSES at the tip (green) — a real transition the gate can run, keyed to material the
+# worker actually committed. A slice testing something other than the loop itself uses this as its
+# loop so its non-trivial delta folds through the real gate.
+LOOP = {"command": "test -f RESULT.md",
+        "red": "RESULT.md absent at the fork base — the behavior was not yet built",
+        "green": "RESULT.md present at the tip — the worker's result is committed"}

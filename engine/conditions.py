@@ -40,9 +40,16 @@ mechanical scaffold — length raises the decision, the operator judges depth �
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
+import tempfile
 
 from . import delta, spec
+
+# The env guard that stops a loop execution from recursing: set while the gate runs a loop's command,
+# so if that command is the engine's own acceptance harness, the inner engine does not re-execute loops
+# (the outer run still measures the real red→green transition). One name, system-wide.
+_LOOP_GUARD = "HYPERCORE_LOOP_RUNNING"
 
 # The length signal (ADR 0006). Past this many lines a touched source file raises a
 # depth decision — not a refusal. A starting value to tune, not a law: the prior epoch's
@@ -76,9 +83,15 @@ def _delta(d: delta.Delta, sp: spec.Spec) -> str | None:
 
 
 def _feedback_loop(d: delta.Delta, result) -> str | None:
-    """A behavior-changing graph (a non-trivial delta) MUST hand back a loop that records its
-    invocation, its red verdict on the behavior before the fix, and its green verdict after
-    it. A trivial graph changes no behavior and needs none."""
+    """A behavior-changing graph (a non-trivial delta) MUST hand back a loop that **drove** the
+    behavior — and the gate **executes it**, never trusts its narration (the keystone). The recorded
+    command is run in the fence at the fork base (red — it must FAIL on the behavior before the fix)
+    and at the tip (green — it must PASS after it). A loop whose command does not run, or does not make
+    that red→green transition (it passes at the base, or fails at the tip, or the verdicts are
+    identical), refuses the fold. This kills the central theater the research proved: a fabricated loop
+    whose own field says it never ran — `{red:"PASSED",green:"PASSED"}`, `{red:".",green:"."}`,
+    `{red:"i did not run this"}` — no longer folds, because the strings are not what is checked; the
+    actual exit codes of the actual command are. A trivial graph changes no behavior and needs none."""
     if d.trivial:
         return None
     loop = result.loop if isinstance(result.loop, dict) else {}
@@ -86,7 +99,60 @@ def _feedback_loop(d: delta.Delta, result) -> str | None:
     if missing:
         return ("no recorded red→green feedback loop: the result's loop is missing "
                 f"{', '.join(missing)}")
-    return None
+    if str(loop["red"]).strip() == str(loop["green"]).strip():
+        return ("the recorded loop does not transition: its red and green verdicts are identical — a "
+                "loop that does not go red→green did not drive the behavior")
+    return _execute_loop(str(loop["command"]).strip(), result.worktree)
+
+
+def _execute_loop(command: str, tree: str) -> str | None:
+    """Run the loop's command in the fence and require a real red→green transition: FAIL at the fork
+    base (HEAD~1), PASS at the tip (HEAD). The command is run against an isolated checkout of each
+    commit (a throwaway worktree, so the fence's own tree is untouched), and only the exit codes are
+    trusted — narration is never the gate. The execution is guarded against re-entry (`_LOOP_GUARD`):
+    when the command is the engine's own acceptance harness, the inner engine instance sees the guard
+    and does not recursively re-execute loops, so the outer run still measures the real transition with
+    no infinite regress. A command that cannot run, or that does not transition, refuses the fold."""
+    if os.environ.get(_LOOP_GUARD):
+        return None                                    # already inside a loop execution — do not recurse
+    base = _run_at(command, tree, "HEAD~1")
+    tip = _run_at(command, tree, "HEAD")
+    if base is None or tip is None:
+        return ("the recorded loop command could not be executed in the fence — a loop that cannot run "
+                "is not a loop that drove the behavior")
+    if base == 0:
+        return ("the recorded loop passed at the fork base — it did not go red before the fix, so it "
+                "does not prove the behavior was driven")
+    if tip != 0:
+        return ("the recorded loop did not pass at the tip — the behavior is not green after the fix, "
+                "so the result cannot fold")
+    return None                                        # FAIL→PASS: a real red→green transition
+
+
+def _run_at(command: str, tree: str, ref: str) -> int | None:
+    """Run `command` against an isolated checkout of `ref` cut from the fence, returning its exit code
+    (or None if the checkout or the run could not happen). A throwaway worktree at `ref` keeps the
+    fence's own checkout and HEAD untouched, so running red at HEAD~1 never disturbs the green tip. The
+    `_LOOP_GUARD` env stops the command — if it is the engine harness — from recursively re-executing
+    loops within this run."""
+    co = tempfile.mkdtemp(prefix="loop-")
+    try:
+        add = subprocess.run(["git", "worktree", "add", "--detach", "-q", co, ref], cwd=tree,
+                             capture_output=True, text=True)
+        if add.returncode != 0:
+            return None
+        env = {**os.environ, _LOOP_GUARD: "1"}
+        try:
+            r = subprocess.run(command, cwd=co, shell=True, env=env, timeout=120,
+                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return r.returncode
+        except (OSError, subprocess.SubprocessError):
+            return None
+    finally:
+        subprocess.run(["git", "worktree", "remove", "--force", co], cwd=tree,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if os.path.isdir(co):
+            shutil.rmtree(co, ignore_errors=True)
 
 
 def _depth(result, root: str | None) -> str | None:

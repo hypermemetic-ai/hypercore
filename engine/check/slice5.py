@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import os
 
-from .harness import ok, scripted
+from .harness import LOOP, ok, scripted
 
 
 def check(root: str) -> None:
@@ -62,7 +62,7 @@ def check(root: str) -> None:
     result = worker.apply(ask, scripted(json.dumps({
         "report": "grew a giant module",
         "delta": delta_for("a god-file is gated"),
-        "loop": {"command": "run", "red": "failed", "green": "passed"}})), root)
+        "loop": LOOP})), root)
     blocked = conditions.unmet(result, root)
     ok(blocked is not None and "depth" in blocked and "length signal" in blocked
        and "giant.py" in blocked,
@@ -78,7 +78,7 @@ def check(root: str) -> None:
     result = worker.apply(ask, scripted(json.dumps({
         "report": "did the work behind a loop",
         "delta": delta_for("a clean change folds"),
-        "loop": {"command": "python3 -m engine --check", "red": "absent", "green": "present"}})), root)
+        "loop": LOOP})), root)
     ok(conditions.unmet(result, root) is None,
        "a recorded loop and an in-signal module meet every folding condition")
     reply = conversation.integrate(ask, result, coherent(), root)
@@ -96,7 +96,7 @@ def check(root: str) -> None:
     result = worker.apply(ask, scripted(json.dumps({
         "report": "grew a depth-accepted module",
         "delta": delta_for("a depth-accepted module folds"),
-        "loop": {"command": "run", "red": "failed", "green": "passed"}})), root)
+        "loop": LOOP})), root)
     ok(conditions.unmet(result, root) is None,
        "a file past the signal with a structured depth-decision accepting it clears the gate")
     reply = conversation.integrate(ask, result, coherent(), root)
@@ -110,7 +110,7 @@ def check(root: str) -> None:
     result = worker.apply(ask, scripted(json.dumps({
         "report": "built it",
         "delta": "## MODIFIED — folding-conditions\n### Requirement: nonexistent\nx\n",
-        "loop": {"command": "run", "red": "failed", "green": "passed"}})), root)
+        "loop": LOOP})), root)
     reply = conversation.integrate(ask, result, coherent(), root)
     ok(reply.card is not None and not reply.done,
        "a delta that will not apply is caught by the gate as a decision, not a crash")
