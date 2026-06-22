@@ -45,8 +45,9 @@ import subprocess
 from . import delta, spec
 
 # The length signal (ADR 0006). Past this many lines a touched source file raises a
-# depth decision — not a refusal. A starting value to tune, not a law: the 6,348-line
-# `window.py` it exists to catch early is ~16× this. Keyed to length because length is what a
+# depth decision — not a refusal. A starting value to tune, not a law: the prior epoch's
+# 6,348-line god-file (the `window.py` torn down 2026-06-20, not this repo's small one) was
+# ~16× this — the kind of file it exists to catch early. Keyed to length because length is what a
 # file costs the worker's window, whatever each line means — its context cost, not its depth.
 SIGNAL = 400
 

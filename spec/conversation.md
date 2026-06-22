@@ -1,4 +1,5 @@
 # conversation
+<!-- vision: thread, architect, conversation, speak -->
 
 The thread and the architect. A thread is one throwaway session; the architect is the single
 voice between the operator and the system, reading the operator's words and landing one concrete

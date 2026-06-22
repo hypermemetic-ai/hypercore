@@ -62,7 +62,7 @@ _REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def skill(cap: str, root: str | None = None) -> str:
-    """The `cap` methodology rendered as a SKILL.md, single-sourced from `spec/<cap>/spec.md`: the
+    """The `cap` methodology rendered as a SKILL.md, single-sourced from `spec/<cap>.md`: the
     metadata (when to load), the slice's methodology overview, its disciplines (each requirement's
     statement, the scenarios left in the slice), and the pointer back to the slice for the full detail."""
     text = _read_slice(cap, root)
@@ -110,14 +110,17 @@ def _read_slice(cap: str, root: str | None) -> str:
 
 def _overview(text: str) -> str:
     """The slice's preamble — the methodology prose between the `# <cap>` title and the first
-    requirement. This is the 'how and why you do this well' the skill leads with."""
+    requirement. This is the 'how and why you do this well' the skill leads with. HTML comment
+    lines (the operator view's `<!-- vision: ... -->` binding lives in the preamble) are metadata,
+    not prose, and are left out so the binding never leaks into the rendered skill."""
     lines = text.splitlines()
     start = 1 if lines and lines[0].startswith("# ") else 0
     out: list[str] = []
     for ln in lines[start:]:
         if ln.startswith(spec.REQ):
             break
-        out.append(ln)
+        if not ln.lstrip().startswith("<!--"):
+            out.append(ln)
     return "\n".join(out).strip()
 
 

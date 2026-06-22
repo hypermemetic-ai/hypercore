@@ -80,6 +80,31 @@ def check(root: str) -> None:
     ok("the order is the machine's claim about attention" in queue_node.asbuilt,
        "the view's as-built is derived — the folded requirement appears, unedited")
 
+    # the per-capability vision is a DERIVED binding (ADR 0020), not a hand-typed map: a capability
+    # declares the intent it realizes in its own spec slice (`<!-- vision: ... -->`), so a newly
+    # carved capability gets its vision with NO edit to view.py — and one that declares none (pure
+    # machinery) correctly shows no vision, distinct from a bug.
+    graph.atomic_write(os.path.join(root, "spec", "lighthouse.md"),
+        "# lighthouse\n<!-- vision: legibility -->\n\nA planted capability.\n\n"
+        "### Requirement: it shines\n#### Scenario: night\n- WHEN dark\n- THEN light\n")
+    graph.atomic_write(os.path.join(root, "spec", "boiler.md"),
+        "# boiler\n\nA planted machinery capability, declaring no vision.\n\n"
+        "### Requirement: it heats\n#### Scenario: cold\n- WHEN cold\n- THEN warm\n")
+    v2 = view.operator_view()
+    lh = next(c for c in v2.children if c.title == "lighthouse")
+    bo = next(c for c in v2.children if c.title == "boiler")
+    ok(any("legibility" in s.lower() for s in lh.vision),
+       "a newly-carved capability's declared vision is derived — no edit to view.py")
+    ok(bo.vision == [],
+       "a capability that declares no vision shows none — pure machinery, distinct from a bug")
+
+    # every requirement carries at least one scenario — the mechanical floor of requirement↔scenario
+    # coverage (ADR 0020). The deeper overclaim (a requirement whose prose claims more than its
+    # scenarios cover — the atomic-fold case) stays the model-driven judgment scan, not-yet-built.
+    uncovered = [r.name for c in spec.read_spec().capabilities
+                 for r in c.requirements if not r.scenarios]
+    ok(not uncovered, f"every requirement carries a scenario (uncovered: {uncovered})")
+
     # the fold is committed to the durable record, atomic with the spec change
     log = subprocess.run(["git", "log", "--oneline"], cwd=root,
                          capture_output=True, text=True).stdout

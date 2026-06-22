@@ -1,4 +1,5 @@
 # grilling
+<!-- vision: extraction, intent-setting -->
 
 Intent extraction by grilling — how the architect turns a filed ask into ratified work
 without authoring on the operator's behalf (ADR 0013, carved from `conversation`). Before an

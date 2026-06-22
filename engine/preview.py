@@ -14,7 +14,7 @@ WIDTH = 76
 def run() -> int:
     real = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     os.environ["ENGINE_ROOT"] = tempfile.mkdtemp(prefix="engine-frame-")
-    from . import conversation, graph, grill, render, view
+    from . import graph, grill, render, transport, view
 
     graph.raise_card("the intake box pulls torrents from nyaa")
     graph.file_intent("download the new Berserk episodes")
@@ -22,7 +22,7 @@ def run() -> int:
     print("\n  ── the resting face ──\n")
     for row in render.main_body(graph.read_graph(), 0, WIDTH):
         print("  " + _flat(row))
-    print("  " + _flat(render.footer(conversation.MODEL_LABEL, "input", "", "", WIDTH)))
+    print("  " + _flat(render.footer(transport.MODEL_LABEL, "input", "", "", WIDTH)))
 
     # a grilling question on the queue: its lean and what would flip it, expanded
     held = graph.hold("absorb the seasonal anime tracker")
@@ -36,14 +36,14 @@ def run() -> int:
     print("\n  ── grilling: one question, with the machine's lean ──\n")
     for row in render.main_body(graph.read_graph(), sel, WIDTH):
         print("  " + _flat(row))
-    print("  " + _flat(render.footer(conversation.MODEL_LABEL, "browse", "", "", WIDTH)))
+    print("  " + _flat(render.footer(transport.MODEL_LABEL, "browse", "", "", WIDTH)))
 
     # a worker on a thread: the live indicator the threads view shows while it runs
     graph.delegate(graph.standing()[0])
     print("\n  ── a worker on a thread (live) ──\n")
     for row in render.main_body(graph.read_graph(), -1, WIDTH):
         print("  " + _flat(row))
-    print("  " + _flat(render.footer(conversation.MODEL_LABEL, "input", "", "", WIDTH)))
+    print("  " + _flat(render.footer(transport.MODEL_LABEL, "input", "", "", WIDTH)))
 
     # the operator view root, with the architecture review's standing output: the
     # structural map of as-built reality (modules by length against the signal, debt marked)
@@ -52,7 +52,7 @@ def run() -> int:
     root = view.operator_view(root=real)
     for row in render.view_body(root, 0, WIDTH):
         print("  " + _flat(row))
-    print("  " + _flat(render.footer(conversation.MODEL_LABEL, "view", "", "", WIDTH)))
+    print("  " + _flat(render.footer(transport.MODEL_LABEL, "view", "", "", WIDTH)))
     print()
     return 0
 

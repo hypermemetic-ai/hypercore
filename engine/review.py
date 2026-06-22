@@ -29,6 +29,7 @@ same file the review flags, by construction.
 """
 from __future__ import annotations
 
+import ast
 import os
 from dataclasses import dataclass, field
 
@@ -67,15 +68,32 @@ class Finding:
 
 
 @dataclass
+class RedFlag:
+    """One mechanical structural red flag the standing scan reads without judgment (ADR 0020):
+    a module-level symbol referenced nowhere in the package (dead code), or an import cycle
+    among modules (the structural signature of information leakage — a circular dependency).
+    `rule` is the smell, `subject` where it sits, `detail` the recommendation. These are the
+    subset a tool can read; the model-driven red-flag *verdicts* (shallow module, leakage,
+    pass-through) stay judgment and are still not built — recorded, never fabricated."""
+    rule: str            # dead symbol | import cycle
+    subject: str
+    detail: str
+
+
+@dataclass
 class Review:
     modules: list[Module] = field(default_factory=list)   # the structural map, largest first
-    findings: list[Finding] = field(default_factory=list)  # the deepening backlog
+    findings: list[Finding] = field(default_factory=list)  # the deepening backlog (length)
+    flags: list[RedFlag] = field(default_factory=list)     # the mechanical structural red flags
 
 
-# The honest record that the depth lens beyond length is not yet built — surfaced in the
-# operator's gap rather than hidden, the self-honesty the operator view is built to practice.
-DEPTH_NOT_YET = ("the depth scan beyond length — the red flags, the deletion test — is not "
-                 "yet built (ADR 0006); length is the signal shown here")
+# The honest record of what the depth scan does and does not yet reach (ADR 0006/0020). The
+# mechanical structural subset — dead symbols, import cycles — now runs every scan; the
+# model-driven *verdict* (shallow module, information leakage, the deletion test) is judgment
+# and stays not-yet-built, surfaced in the operator's gap rather than hidden.
+DEPTH_NOT_YET = ("the model-driven red-flag verdict — shallow module, information leakage, the "
+                 "deletion test — is judgment, not yet built (ADR 0006); the mechanical red flags "
+                 "(dead symbols, circular imports) and the length signal are what the scan reads here")
 
 
 def review(root: str | None = None) -> Review:
@@ -83,11 +101,12 @@ def review(root: str | None = None) -> Review:
     the length signal, and gathers the ones over (no depth-decision), past a stale accepted bar
     (exceeded), or nearing it into the deepening backlog. A file within its depth-decision's
     accepted length shows on the map, marked, but is not in the backlog — its size is a recorded
-    decision; a file that has outgrown that bar returns to the backlog (ADR 0008)."""
+    decision; a file that has outgrown that bar returns to the backlog (ADR 0008). The same scan
+    reads the mechanical structural red flags (dead symbols, import cycles; ADR 0020)."""
     src = os.path.join(root or graph._root(), "engine")
     modules = [_module(rel, n, root) for rel, n in _sources(src)]
     modules.sort(key=lambda m: -m.lines)
-    return Review(modules, [f for m in modules if (f := _finding(m))])
+    return Review(modules, [f for m in modules if (f := _finding(m))], red_flags(root))
 
 
 def bars(rv: Review) -> list[str]:
@@ -101,12 +120,15 @@ def bars(rv: Review) -> list[str]:
 
 
 def backlog(rv: Review) -> list[str]:
-    """The deepening backlog as the operator reads it — the gap. Honest about a clean tree
-    rather than inventing work, and honest that the depth lens beyond length is not yet built."""
-    if not rv.findings:
-        return [f"no deepening opportunities — every module is within the length signal "
-                f"({conditions.SIGNAL} lines); " + DEPTH_NOT_YET]
-    return [f"{f.subject}: {f.note} ({f.strength})" for f in rv.findings]
+    """The deepening backlog as the operator reads it — the gap: the length findings, then the
+    mechanical red flags. Honest about a clean tree rather than inventing work, and honest that
+    the model-driven depth verdict beyond the mechanical subset is not yet built."""
+    out = [f"{f.subject}: {f.note} ({f.strength})" for f in rv.findings]
+    out += [f"{rf.subject}: {rf.detail} (red flag: {rf.rule})" for rf in rv.flags]
+    if out:
+        return out
+    return [f"no deepening opportunities — every module is within the length signal "
+            f"({conditions.SIGNAL} lines), no dead symbols, no circular imports; " + DEPTH_NOT_YET]
 
 
 # ── internals ────────────────────────────────────────────────────────────────
@@ -165,18 +187,130 @@ def _mark(m: Module) -> str:
 
 
 def _sources(src: str) -> list[tuple[str, int]]:
-    """Every .py under the source tree, as (path-relative-to-src, line count). Recurses
-    into subpackages (the per-slice check/), skips bytecode."""
-    out: list[tuple[str, int]] = []
+    """Every .py under the source tree, as (path-relative-to-src, line count), for the map."""
+    return sorted((os.path.relpath(p, src), _count(p)) for p in _py_paths(src))
+
+
+def _py_paths(src: str) -> list[str]:
+    """Every .py under the source tree, as absolute paths. Recurses into subpackages (the
+    per-slice check/), skips bytecode — the one file walk the whole review reads off."""
+    out: list[str] = []
     for dirpath, dirs, files in os.walk(src):
         dirs[:] = [d for d in dirs if d != "__pycache__"]
-        for f in files:
-            if f.endswith(".py"):
-                full = os.path.join(dirpath, f)
-                out.append((os.path.relpath(full, src), _count(full)))
+        out += [os.path.join(dirpath, f) for f in files if f.endswith(".py")]
     return sorted(out)
 
 
 def _count(path: str) -> int:
+    return len(_read(path).splitlines())
+
+
+def _read(path: str) -> str:
     with open(path, encoding="utf-8", errors="ignore") as f:
-        return sum(1 for _ in f)
+        return f.read()
+
+
+# ── the mechanical structural red flags (ADR 0020) ─────────────────────────────
+
+def red_flags(root: str | None = None) -> list[RedFlag]:
+    """The mechanical subset of the depth scan, read live off the engine package: the structural
+    red flags a tool can read without judgment — dead module-level symbols and import cycles — so
+    they bite every scan, while the model-driven verdict (shallow module, leakage) stays the
+    review's to grow (ADR 0006). One file walk feeds both rules."""
+    files = _py_paths(os.path.join(root or graph._root(), "engine"))
+    return _dead_symbols(files) + _import_cycles(files)
+
+
+def _dead_symbols(files: list[str]) -> list[RedFlag]:
+    """Module-level names (assignments, functions, classes) used nowhere in the package — dead
+    code, the floor of the nonobvious-code red flag. A name counts as used when it is *loaded* or
+    reached as an attribute anywhere in the package's code (`_used_names`) — read off the AST, so
+    a mention in a docstring or comment is prose, not a use, and cannot mask a dead symbol.
+    Conservative: any real use — by a sibling, a check, or its own module — clears it; dunders are
+    framework hooks, skipped."""
+    used = _used_names(files)
+    defined: dict[str, list[str]] = {}                 # name -> the modules defining it at top level
+    for path in files:
+        for name in _module_level_names(_read(path)):
+            defined.setdefault(name, []).append(_modname(path))
+    return [RedFlag("dead symbol", f"{mod}.{name}",
+                    "defined at module level but used nowhere in the package — dead; cut it")
+            for name, mods in sorted(defined.items())
+            for mod in mods
+            if name not in used]
+
+
+def _used_names(files: list[str]) -> set[str]:
+    """Every name the package's code *uses* — loaded as a name or reached as an attribute —
+    across all files, read off the AST so docstrings, comments, and the definitions themselves
+    (assignment targets are stores, not loads) are excluded. The complement of this set, among the
+    module-level definitions, is dead code."""
+    used: set[str] = set()
+    for path in files:
+        try:
+            tree = ast.parse(_read(path))
+        except SyntaxError:
+            continue
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load):
+                used.add(node.id)
+            elif isinstance(node, ast.Attribute):
+                used.add(node.attr)
+    return used
+
+
+def _import_cycles(files: list[str]) -> list[RedFlag]:
+    """Import cycles among the package's modules — a circular dependency, the structural signature
+    of information leakage (depth.md's gravest red flag after shallowness): two modules that each
+    reach into the other cannot be read or changed apart, and usually one is reaching past the
+    other's interface. Reads module-level sibling imports; catches the two-module cycle (the
+    common shape — a longer ring is the model-driven scan's still-unbuilt job)."""
+    deps = {_modname(p): _sibling_imports(_read(p)) for p in files}
+    mods, flags, seen = set(deps), [], set()
+    for a in sorted(deps):
+        for b in sorted(deps[a]):
+            if b in mods and a in deps.get(b, set()) and (b, a) not in seen:
+                seen.add((a, b))
+                flags.append(RedFlag("import cycle", f"{a} ↔ {b}",
+                    f"{a} and {b} depend on each other — a circular dependency; pull the shared "
+                    "knowledge into a module they both rest on, downward"))
+    return flags
+
+
+def _module_level_names(text: str) -> list[str]:
+    """The names a module binds at top level — assignment targets, functions, classes — skipping
+    dunders. The granularity dead-code is judged at: a module-level name, not a method or local."""
+    try:
+        body = ast.parse(text).body
+    except SyntaxError:
+        return []
+    out: list[str] = []
+    for node in body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            out.append(node.name)
+        elif isinstance(node, ast.Assign):
+            out += [t.id for t in node.targets if isinstance(t, ast.Name)]
+        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            out.append(node.target.id)
+    return [n for n in out if not n.startswith("__")]
+
+
+def _sibling_imports(text: str) -> set[str]:
+    """The sibling modules a module imports at top level — `from . import x` and `from .x import y`
+    — the edges of the package's import graph. Deferred (in-function) imports are left out: they do
+    not bind the module at load and are how a real cycle is usually broken."""
+    try:
+        body = ast.parse(text).body
+    except SyntaxError:
+        return set()
+    out: set[str] = set()
+    for node in body:
+        if isinstance(node, ast.ImportFrom) and node.level >= 1:
+            if node.module:
+                out.add(node.module.split(".")[0])
+            out.update(a.name for a in node.names)
+    return out
+
+
+def _modname(path: str) -> str:
+    return os.path.splitext(os.path.basename(path))[0]

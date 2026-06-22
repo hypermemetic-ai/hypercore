@@ -10,7 +10,7 @@ import curses
 import threading
 from dataclasses import dataclass, field
 
-from . import conversation, graph, grill, render, view
+from . import conversation, graph, grill, render, transport, view
 from .conversation import Thread
 
 ESC, ENTER, BACKSPACES = 27, (10, 13, curses.KEY_ENTER), (8, 127, curses.KEY_BACKSPACE)
@@ -231,7 +231,7 @@ def _paint(scr, st: State, nodes) -> None:
     status = ""
     if st.pending is not None:
         status = SPIN[st.tick % len(SPIN)] + " the machine is thinking"
-    foot = render.footer(conversation.MODEL_LABEL, st.mode, st.buffer, status, w)
+    foot = render.footer(transport.MODEL_LABEL, st.mode, st.buffer, status, w)
     _paint_row(scr, h - 1, 0, foot, w)
     scr.noutrefresh()
     curses.doupdate()

@@ -1,4 +1,5 @@
 # worker
+<!-- vision: worker, worktree, isolat, concurren, fence, parallel -->
 
 The system-facing half of the split. A worker carries out a spawned ask: it builds,
 fenced in its own git worktree and grounded in its capability's spec slice, and hands

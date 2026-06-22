@@ -21,7 +21,8 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
-from . import conversation, graph, spec
+from . import graph, spec
+from .transport import call, parse
 
 FLOOR = (
     "You are hypercore's architect running a grilling pass on an ask before "
@@ -68,7 +69,7 @@ class _Pass:
 def consider(ask: str, transport=None) -> tuple[graph.Node, list[Question]]:
     """Run the floor on a filed ask. Below it: file standing work, no questions. Above it: hold the
     ask as its own graph and surface its first question on the queue (the held graph goes AWAITING)."""
-    transport = transport or conversation._claude
+    transport = transport or call
     questions = floor(ask, transport)
     if not questions:
         return graph.file_intent(ask), []
@@ -82,7 +83,7 @@ def advance(held: graph.Node, answer: str, transport=None) -> graph.Node:
     """Record the operator's answer to the surfaced question and surface the next, or — when the
     last is answered — produce the contract + delta on the graph. Returns the held graph, re-read:
     still on the queue (AWAITING), now showing the next question or the entry to ratify."""
-    transport = transport or conversation._claude
+    transport = transport or call
     p = _load(held)
     if p is None:
         return held
@@ -106,10 +107,10 @@ def ratify(held: graph.Node) -> graph.Node:
 
 def floor(ask: str, transport=None) -> list[Question]:
     """The residual stake-bearing decisions — empty means the ask is below the floor."""
-    transport = transport or conversation._claude
+    transport = transport or call
     raw = transport(f"{FLOOR}\n\nThe living spec:\n{_digest()}\n\nThe ask: {ask}\n\n"
                     "Reply with the JSON object now.")
-    obj = conversation._parse(raw)
+    obj = parse(raw)
     return [Question(q.get("q", ""), q.get("lean", ""), q.get("flip", ""))
             for q in (obj.get("questions") or []) if q.get("q")]
 
@@ -117,11 +118,11 @@ def floor(ask: str, transport=None) -> list[Question]:
 def products(ask: str, qa: list[tuple[str, str]], transport=None) -> tuple[str, str]:
     """The two machine-authored products of a folded pass: the operator-facing contract and the
     machine-side spec delta the change will realize."""
-    transport = transport or conversation._claude
+    transport = transport or call
     answers = "\n".join(f"- {q}: {a}" for q, a in qa) or "- (none)"
     raw = transport(f"{PRODUCTS}\n\nThe ask: {ask}\n\nResolved:\n{answers}\n\n"
                     "Reply with the JSON object now.")
-    obj = conversation._parse(raw)
+    obj = parse(raw)
     return obj.get("entry", "").strip(), obj.get("delta", "").strip()
 
 

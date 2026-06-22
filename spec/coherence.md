@@ -1,4 +1,5 @@
 # coherence
+<!-- vision: coherence -->
 
 The architect's judgment at the archive gate — how it integrates a worker's hand-off without
 the worker's raw output ever reaching the operator (ADR 0013, carved from `conversation`). When a

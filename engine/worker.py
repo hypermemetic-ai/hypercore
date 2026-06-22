@@ -47,6 +47,7 @@ import subprocess
 from dataclasses import dataclass, field
 
 from . import conversation, delta, graph, grill, spec
+from .transport import call, parse
 
 WORKER = (
     "You are a hypercore worker — the system-facing half of the split. Your audience is "
@@ -182,9 +183,9 @@ def apply(node: graph.Node, transport=None, root: str | None = None) -> WorkerRe
     """Run the worker on a node: assemble its spec slice (the grounding, by construction),
     summon it, and take its machine-facing result. The result is committed inside the
     worker's own tree — its commit reaching the record in isolation — and handed back."""
-    transport = transport or conversation._claude
+    transport = transport or call
     ctx = context(node, root)                          # no apply without the grounding
-    obj = conversation._parse(transport(prompt(node, ctx)))
+    obj = parse(transport(prompt(node, ctx)))
     report = (obj.get("report") or "").strip()
     refined = (obj.get("delta") or ctx.delta).strip()
     loop = obj.get("loop") if isinstance(obj.get("loop"), dict) else {}

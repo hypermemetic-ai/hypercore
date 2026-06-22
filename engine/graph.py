@@ -33,7 +33,6 @@ STANDING = "standing"        # ready work, no worker yet — the ready frontier
 IN_FLIGHT = "in flight"      # a worker is on it: still work, now live
 DONE = "done"               # folded: integrated and moved to work/archive/
 GRILLING = "grilling"        # an ask held while its grilling pass runs: not work, not a card
-PENDING = "pending"          # a grilling question waiting its turn (held in grilling.md)
 MARKER = "[machine]"
 
 

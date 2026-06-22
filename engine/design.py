@@ -42,7 +42,8 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 
-from . import conversation, graph, grill, spec, worker
+from . import graph, grill, spec, worker
+from .transport import call, parse
 
 # The four briefs (ADR 0007): each pushes a candidate toward a radically different
 # shape, so the contest spans real alternatives rather than minor variations of one instinct.
@@ -119,11 +120,11 @@ def contest(node: graph.Node, briefs=None, transport=None,
     """Design the decision several ways at once, each in its own fence: one candidate per
     brief, each producing a design (not an implementation) for the same interface, isolated
     from the others exactly as concurrent workers are isolated."""
-    transport = transport or conversation._claude
+    transport = transport or call
     out: list[Candidate] = []
     for name, instruction in (briefs or BRIEFS):
         tree = worker.worktree(node, root, tag=name)
-        design = conversation._parse(transport(_candidate_prompt(node, instruction)))
+        design = parse(transport(_candidate_prompt(node, instruction)))
         _record_design(tree, name, instruction, design)
         out.append(Candidate(name, tree, design))
     return out
@@ -133,8 +134,8 @@ def select(node: graph.Node, candidates: list[Candidate], transport=None) -> Sel
     """The architect compares the candidates on depth/locality/seam and picks or hybridizes —
     machine-side design judgment. The pick, the reasoning, and any stake-bearing difference
     come back; the architect authors the stake for the operator, never the raw designs."""
-    transport = transport or conversation._claude
-    v = conversation._parse(transport(_select_prompt(node, candidates)))
+    transport = transport or call
+    v = parse(transport(_select_prompt(node, candidates)))
     chosen = (v.get("chosen") or "").strip() or (candidates[0].brief if candidates else "")
     return Selection(
         chosen=chosen,

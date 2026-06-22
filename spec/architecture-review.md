@@ -30,11 +30,12 @@ debt. A module that has grown **materially past** the length a depth-decision on
 distinct from a never-decided over-signal file, so the operator reads the two differently. The
 measure shipped here is **length** — what a module costs a worker's window, one signal of
 depth — the same record `folding-conditions` consults at the fold, applied to the whole
-standing tree. **Depth is the criterion, not length**: the deeper, model-driven **red-flag
-depth scan** — the deletion test, the shallow-module and information-leakage flags,
-testable-through-the-interface — is the assessment this review is meant to grow, and is **not
-yet built** (ADR 0006). That shallowness is recorded here and in the operator's gap, never
-fabricated into a depth verdict.
+standing tree. **Depth is the criterion, not length**: the *mechanical* structural red flags a
+tool can read — dead module-level symbols and circular dependencies — the scan now reads (ADR
+0020) are a subset; the deeper, model-driven **red-flag depth verdict** — the deletion test, the
+shallow-module and information-leakage judgments, testable-through-the-interface — is the
+assessment this review is still meant to grow, and is **not yet built** (ADR 0006). That
+shallowness is recorded here and in the operator's gap, never fabricated into a depth verdict.
 
 #### Scenario: a god-file in the making
 - WHEN a source file crosses the length signal with no depth-decision accepting it
@@ -50,6 +51,25 @@ fabricated into a depth verdict.
 - WHEN a source file has grown materially past the length a depth-decision accepted it at
 - THEN it returns to the deepening backlog as a strong opportunity, the map marks it as having
   outgrown its bar (the decision re-opened), distinct from a never-decided over-signal file
+
+### Requirement: the review reads the mechanical structural red flags
+The architecture review MUST scan the source tree for the structural red flags a tool can read
+without judgment — a module-level name used nowhere in the package (dead code) and a pair of
+modules that depend on each other (a circular dependency, the structural signature of information
+leakage) — and surface each in the deepening backlog beside the length findings, computed live.
+These are the **mechanical subset** of the red flags (ADR 0020); the model-driven *verdict* —
+shallow module, information leakage, the deletion test — stays judgment and is recorded as
+not-yet-built, never fabricated. A newly introduced instance of either rule returns the scan to
+red, so the discipline bites by construction rather than by a reviewer remembering it.
+
+#### Scenario: a dead module-level symbol
+- WHEN a module-level name is defined but used nowhere in the package
+- THEN the scan surfaces it as a dead-symbol red flag in the deepening backlog
+
+#### Scenario: a circular dependency
+- WHEN two modules depend on each other
+- THEN the scan surfaces the pair as a circular-dependency red flag; a tree with no dead symbols
+  and no cycles reports a clean structural scan, not a fabricated verdict
 
 ### Requirement: the review's output is the operator view's upper levels and the backlog
 The review's output MUST be the operator view's "what the system is" upper levels — the

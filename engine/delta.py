@@ -63,15 +63,6 @@ class Delta:
 
 # ── reading ──────────────────────────────────────────────────────────────────
 
-def load(graph_dir: str) -> Delta | None:
-    """The delta a graph carries, or None when it carries none (a missing delta)."""
-    path = os.path.join(graph_dir, "delta.md")
-    if not os.path.isfile(path):
-        return None
-    with open(path) as f:
-        return parse(f.read())
-
-
 def parse(text: str) -> Delta:
     subject, verb, cap, block = "", None, None, []
     ops: list[Op] = []

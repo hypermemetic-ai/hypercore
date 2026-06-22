@@ -16,8 +16,9 @@ target (ADR 0009 §3, the one new mechanism).
 The skills were the first targets — the architect's four methodologies and the worker's `depth`, each
 rendered by `methodology` from its capability slice (role-assembly step 4; depth normalized into a
 capability in ADR 0019); and the minimal shared **agents file** (`anchor`, step 3) is the last static
-channel — the always-on anchor both roles auto-load, derived like the rest and symlinked as
-`CLAUDE.md`. The registry is the only place that knows the set.
+channel — the always-on anchor both roles auto-load, derived like the rest (one `AGENTS.md` serves
+both roles, the `CLAUDE.md` symlink dropped as redundant — ADR 0009 §4). The registry is the only
+place that knows the set.
 """
 from __future__ import annotations
 

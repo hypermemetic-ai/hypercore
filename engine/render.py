@@ -17,7 +17,6 @@ TITLE, HEAD, CARD, SEL, TAG, DIM, LIVE, HINT, MODEL, YOU, SAY = (
     "hint", "model", "you", "say",
 )
 
-Span = tuple
 Row = list
 
 

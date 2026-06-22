@@ -17,22 +17,12 @@ gathers the system-wide deepening work at the root.
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass, field
 
 from . import graph, review, spec
 
 DEBT = ("NOTE:", "unbuilt", "shallow")
-
-# How the whole vision is sliced per capability — the terms each one speaks in.
-TERMS = {
-    "interface": ("interface", "window", "screen", "keyboard"),
-    "graph": ("graph", "node", "durable", "version-controlled"),
-    "queue": ("queue", "card", "decision", "approve", "endorse"),
-    "conversation": ("thread", "architect", "conversation", "speak"),
-    "self-model": ("model of the system", "state at a glance", "source of truth",
-                   "self-model", "as-built"),
-    "worker": ("worker", "worktree", "isolat", "concurren", "fence", "parallel"),
-}
 
 
 @dataclass
@@ -49,7 +39,7 @@ def operator_view(root: str | None = None) -> ViewNode:
     sp = spec.read_spec(root)
     intent = _read_intent(root)
     rv = review.review(root)
-    caps = [_capability_node(c, intent) for c in sp.capabilities]
+    caps = [_capability_node(c, intent, root) for c in sp.capabilities]
 
     cap_debt = [f"{c.title}: {g}" for c in caps for g in c.gap]
     return ViewNode(
@@ -73,10 +63,10 @@ def resolve(node: ViewNode, path: list[int]) -> ViewNode:
     return node
 
 
-def _capability_node(cap: spec.Capability, intent) -> ViewNode:
+def _capability_node(cap: spec.Capability, intent, root: str | None) -> ViewNode:
     return ViewNode(
         title=cap.name,
-        vision=_vision_for(cap.name, intent)[:6],
+        vision=_vision_for(cap.name, intent, root)[:6],
         asbuilt=[r.name for r in cap.requirements],
         gap=[r.name for r in cap.requirements if _is_debt(r.block)],
         children=[ViewNode(title=r.name, asbuilt=r.scenarios or ["(no scenario)"])
@@ -88,10 +78,30 @@ def _is_debt(block: str) -> bool:
     return any(mark in block for mark in DEBT)
 
 
-def _vision_for(cap: str, intent) -> list[str]:
-    terms = TERMS.get(cap, (cap,))
+def _vision_for(cap: str, intent, root: str | None) -> list[str]:
+    """The vision a capability realizes: the `intent.md` statements that speak its terms — where
+    the capability *declares* those terms itself, in a `<!-- vision: ... -->` line in its spec
+    slice (authored at carve time, the binding landing with the as-built where it belongs). A
+    capability that declares none — pure machinery like `folding-conditions` or
+    `architecture-review` — correctly shows no vision, distinct from a bug; nothing here is
+    hand-mapped, so a newly carved capability gets its vision with no edit to this module."""
+    terms = _vision_terms(cap, root)
+    if not terms:
+        return []
     return [stmt for _title, stmts in intent for stmt in stmts
             if any(t in stmt.lower() for t in terms)]
+
+
+def _vision_terms(cap: str, root: str | None) -> list[str]:
+    """The terms a capability's spec slice declares it realizes — the `<!-- vision: a, b, c -->`
+    line in its preamble — lowered and split. The binding lives with the as-built capability, the
+    operator view's one writable region, not in a table this module has to hand-tend and drift."""
+    path = spec.cap_path(cap, root)
+    if not os.path.isfile(path):
+        return []
+    text = open(path, encoding="utf-8", errors="ignore").read()
+    m = re.search(r"<!--\s*vision:\s*(.+?)\s*-->", text)
+    return [t.strip().lower() for t in m.group(1).split(",") if t.strip()] if m else []
 
 
 def _read_intent(root: str | None) -> list[tuple[str, list[str]]]:

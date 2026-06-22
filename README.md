@@ -22,7 +22,8 @@ folder, not the node — hypercore dogfooding its own §structure. Run the accep
 
 ## Where it stands
 
-Build proceeds in slices, slice 1 first. **Slices 1–14 are built.**
+Build proceeds in slices, slice 1 first. **Slices 1–15 are built.** (The check count is not
+restated here — it drifts; `python3 -m engine --check` is its single source.)
 
 - **1–6 — the spine.** The graph and the fold; intent extraction by grilling; the worker and
   its git-worktree fence; the folding conditions; the architecture review. Slice 6 split the
@@ -44,12 +45,12 @@ Since the slices, the repo was made to obey its own §structure (ADR 0010–0012
 the graph — `work/` (open) + `archive/` (folded), each graph a folder with its `intent.md`.
 `engine/graph.py` is now folder-native (fold = move the folder, `work/`→`work/archive/`) and grilling lives
 in each graph's `grilling.md`; `next-work.md` is retired and `research/` dissolved into material on
-its node. 157 checks green.
+its node. The acceptance harness is green.
 
 **Item 2 (role assembly, ADR 0009) — the pre-seam build is complete (slices 11–14).** Two roles, each
 maximally specialized, assembled from the repo documents (the single source) across three derived
-channels: a minimal shared `AGENTS.md` (symlinked as `CLAUDE.md`), on-demand **skills**, and the
-per-episode **prompt**. The worker holds the whole spec preloaded by construction (the slice-4
+channels: a minimal shared `AGENTS.md` (one file serves both roles — ADR 0009 §4), on-demand
+**skills**, and the per-episode **prompt**. The worker holds the whole spec preloaded by construction (the slice-4
 keystone); just-in-time is reserved for the reference tail. The single-source-on-fold spine is built:
 **depth single-sourcing** (step 1, slice 10), **materialize-on-fold** (step 2, slice 11 — the fold
 re-derives the static channels from the spec via `engine/channels.py`, so `skills/` is regenerated
@@ -58,10 +59,21 @@ slices 12 + 14 — `engine/methodology.py` renders all four — `design-it-twice
 and now `grilling` and `coherence`, carved into their own capabilities (ADR 0013) — from their spec
 slices into the same fold-driven registry), and the **minimal shared `AGENTS.md` anchor** (step 3,
 slice 13 — `engine/anchor.py`, non-inferable operational lines plus a registry-derived skills index,
-materialized on fold and symlinked as `CLAUDE.md`). What remains is parked: the fenced-worker side on
+materialized on fold; one `AGENTS.md` serves both roles, the `CLAUDE.md` symlink dropped as redundant,
+ADR 0009 §4). What remains is parked: the fenced-worker side on
 the multi-model harness seam (steps 5–6, the autonomy unlock — transport `cwd` = the fence, the
 reference tail pulled just-in-time, the OMP flip). The open arc is `work/role-assembly/` (its
 `intent.md` carries the steps). The engine conformance is done (`work/archive/graph-on-disk/`).
+
+**15 — the mechanical red-flag scan (ADR 0020).** A coherence pass over the repo (`work/archive/coherence-audit/`)
+found that the one anti-drift mechanism wired to the fold — derive-on-render — never rotted, while every
+hand-maintained restatement did. So two surfaces were generalized toward derive-don't-hand-tend: the
+architecture review grew the *mechanical* subset of its red-flag scan — dead module-level symbols and
+circular imports, read live off the tree, surfaced in the operator-view gap (the model-driven shallow/leakage
+*verdict* stays judgment, still not built); and the operator view's per-capability vision became a binding each
+capability declares in its own spec slice, replacing a hand-typed keyword map. The same arc named the model
+**transport** (`engine/transport.py`), dissolving a `conversation↔grill` cycle, and cut the dead code the new
+scan caught. It is the repo's first red→green dogfood of its own feedback-loop discipline.
 
 ## On documents
 

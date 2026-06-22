@@ -2,7 +2,7 @@
 transport every slice check is written against.
 
 The harness is itself under the deep-module discipline it exercises: the slice checks
-are one module each (`slice1` … `slice7`), so no single file grows past the length signal
+are one module each (`slice1` … `slice15`), so no single file grows past the length signal
 the architecture review scans for — a split along the per-slice seam (locality), not
 classitis (ADR 0004 anticipated it; ADR 0006 re-grounds why it keeps). This module holds
 only what they all share.

@@ -1,4 +1,5 @@
 # self-model
+<!-- vision: model of the system, state at a glance, source of truth, self-model, as-built -->
 
 The system's maintained model of itself, rendered two ways: the **living spec**
 for the agent and the **operator view** for the operator. One model, kept current
@@ -66,6 +67,12 @@ so the operator reads depth, not just a line count.
 - WHEN the operator opens the view
 - THEN it shows the vision, the as-built capabilities and their requirements, and the
   gap; drilling into a capability zooms the same three to that grain
+
+#### Scenario: a capability's vision is a declared binding
+- WHEN the view slices the vision per capability
+- THEN it reads the intent each capability declares it realizes, recorded in the capability's own
+  spec slice (ADR 0020), so a newly carved capability shows its vision with no change to the view,
+  and a capability that declares none — pure machinery — shows no vision, distinct from a bug
 
 #### Scenario: the root's upper levels
 - WHEN the operator opens the root of the view

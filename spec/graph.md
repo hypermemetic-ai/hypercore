@@ -1,4 +1,5 @@
 # graph
+<!-- vision: graph, node, durable, version-controlled -->
 
 The durable model: execution graphs as folders on disk, read live, written atomically and
 committed. A graph is a **folder** — the unit on disk is the graph, not the single node (intent

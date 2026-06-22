@@ -15,14 +15,10 @@ scripted fake in the acceptance check.
 """
 from __future__ import annotations
 
-import json
-import subprocess
 from dataclasses import dataclass, field
 
 from . import conditions, delta, graph, grill
-
-MODEL = "claude-opus-4-8"
-MODEL_LABEL = "opus 4.8"
+from .transport import call, parse
 
 SYSTEM = (
     "You are hypercore's architect — the single voice between the "
@@ -63,9 +59,9 @@ def speak(thread: Thread, text: str, transport=None) -> Reply:
     whatever consequence it returns on the graph. A filed ask does not become
     work directly — it enters grilling, and only files straight through when
     it is below the floor."""
-    transport = transport or _claude
+    transport = transport or call
     thread.add("operator", text)
-    intent = _parse(transport(_prompt(thread)))
+    intent = parse(transport(_prompt(thread)))
 
     filed = grilling = None
     questions: list[graph.Node] = []
@@ -105,13 +101,13 @@ def integrate(node: graph.Node, result, transport=None, root: str | None = None)
     depth-decision — re-cut / deepen / accept-with-reason), or that the architect judges
     incoherent raises a decision rather than folding. Depth surfaces to the operator as a
     decision, never a silent veto and never a silent pass (ADR 0006)."""
-    transport = transport or _claude
+    transport = transport or call
     blocked = conditions.unmet(result, root)           # the folding conditions, before the merge
     if blocked:
         card = graph.raise_card(blocked, kind="decide", parent=node.id)
         return Reply(say="The result can't fold yet — a folding condition isn't met; "
                          "the reason is on your queue.", card=card)
-    verdict = _parse(transport(
+    verdict = parse(transport(
         f"{COHERENCE}\n\nThe contract:\n{grill.contract_of(node)}\n\n"
         f"The worker's report (machine-facing — do not forward):\n{result.report}\n\n"
         "Reply with the JSON object now."))
@@ -128,7 +124,7 @@ def integrate(node: graph.Node, result, transport=None, root: str | None = None)
 
 def explain(node: graph.Node, transport=None) -> str:
     """Tell the story toward a decision; the card stays on the queue."""
-    transport = transport or _claude
+    transport = transport or call
     prompt = (
         "You are hypercore's architect. The operator pressed explain on "
         "this card and wants help toward the decision — tell the story plainly: "
@@ -136,7 +132,7 @@ def explain(node: graph.Node, transport=None) -> str:
         "Reply with ONLY a JSON object {\"say\": <your explanation>}.\n\n"
         f"Card: {node.text}"
     )
-    return _parse(transport(prompt)).get("say", "").strip()
+    return parse(transport(prompt)).get("say", "").strip()
 
 
 def _prompt(thread: Thread) -> str:
@@ -145,24 +141,3 @@ def _prompt(thread: Thread) -> str:
         for who, text in thread.turns
     )
     return f"{SYSTEM}\n\n{convo}\n\nReply with the JSON object now."
-
-
-def _parse(raw: str) -> dict:
-    """Extract the first JSON object; fall back to treating the text as 'say'."""
-    start = raw.find("{")
-    if start != -1:
-        try:
-            obj, _ = json.JSONDecoder().raw_decode(raw[start:])
-            if isinstance(obj, dict):
-                return obj
-        except ValueError:
-            pass
-    return {"say": raw.strip(), "done": True}
-
-
-def _claude(prompt: str) -> str:
-    r = subprocess.run(
-        ["claude", "-p", prompt, "--model", MODEL],
-        capture_output=True, text=True, timeout=120,
-    )
-    return r.stdout

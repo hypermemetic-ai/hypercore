@@ -1,4 +1,5 @@
 # queue
+<!-- vision: queue, card, decision, approve, endorse -->
 
 The decision surface. The queue is a view of every node awaiting the operator,
 read fresh each time. A card carries the weight of its call, and the operator

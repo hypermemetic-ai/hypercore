@@ -1,4 +1,5 @@
 # interface
+<!-- vision: interface, window, screen, keyboard -->
 
 The window: the operator's whole world. Keyboard-only, fullscreen, high-contrast
 — a thin paint-and-input layer over the graph and the architect that holds
