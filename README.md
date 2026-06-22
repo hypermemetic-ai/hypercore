@@ -60,10 +60,13 @@ and now `grilling` and `coherence`, carved into their own capabilities (ADR 0013
 slices into the same fold-driven registry), and the **minimal shared `AGENTS.md` anchor** (step 3,
 slice 13 — `engine/anchor.py`, non-inferable operational lines plus a registry-derived skills index,
 materialized on fold; one `AGENTS.md` serves both roles, the `CLAUDE.md` symlink dropped as redundant,
-ADR 0009 §4). What remains parked here is the fenced-worker side on
-the multi-model harness seam (steps 5–6 — transport `cwd` = the fence, the reference tail pulled
-just-in-time, the OMP flip to GPT-5.5). The open arc is `work/role-assembly/` (its `intent.md` carries
-the steps). The engine conformance is done (`work/archive/graph-on-disk/`).
+ADR 0009 §4). The fenced-worker side on the multi-model harness seam is now **built** (steps 5–6,
+slice 23): the worker's model transport runs at its fence (cwd = its worktree, `transport.worker_transport`),
+the ADR/reference tail is pulled just-in-time while the spec stays preloaded whole, and the worker is
+flipped to GPT via `omp` — a *different* model from the architect (ADR 0009), the operator's settled
+spend decision. The live loading (`omp` auto-loading the fence's anchor and discovering its skills) is
+watched evidence the first autonomous run verifies, never faked into the harness (the honest limit). The
+arc folded to `work/archive/role-assembly/`. The engine conformance is done (`work/archive/graph-on-disk/`).
 
 **15 — the mechanical red-flag scan (ADR 0020).** A coherence pass over the repo (`work/archive/coherence-audit/`)
 found that the one anti-drift mechanism wired to the fold — derive-on-render — never rotted, while every
@@ -85,8 +88,8 @@ a worker that cannot complete returns as a decision rather than stalling. Concur
 git line single-writer, which deepened `graph` by lifting its durable-write floor into `engine/record.py`
 (atomic write, scoped commit, the one lock). Wiring `worker.run` end-to-end also surfaced a latent bug
 the harness had never exercised: it dropped the scripted transport on the integrate step, falling back
-to a live model call — fixed. The worker is still `claude -p`; the OMP/multi-model flip stays parked
-(role-assembly steps 5–6).
+to a live model call — fixed. The worker has since been flipped to GPT via `omp`, fenced at its
+worktree (role-assembly steps 5–6, slice 23).
 
 ## On documents
 

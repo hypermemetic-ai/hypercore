@@ -1,18 +1,26 @@
 """The model transport — the one call to the model and the one read of its reply.
 
 A small deep module the rest of the engine depends on **downward**: summon the model with a
-prompt and get its text back (`call`), and read the first JSON object out of a reply (`parse`).
-It carries the model identity too — the id the call runs against and the label the window shows.
+prompt and get its text back (`call` for the architect, `worker_transport` for the fenced worker),
+and read the first JSON object out of a reply (`parse`). It carries the two role identities too —
+the model each role runs against and the label the window shows.
 
 It was named out of `conversation` (ADR 0021). The architect's voice and the worker's, the
-grilling pass and the design contest all need the same `claude -p` call and the same lenient JSON
+grilling pass and the design contest all need the same model invocation and the same lenient JSON
 read, and they had been reaching into `conversation`'s privates for them
 (`conversation._claude`, `conversation._parse`) — five modules past one module's interface (the
 information-leakage red flag) and a `conversation ↔ grill` import cycle besides. The transport is
 the shared knowledge; giving it its own module lets `conversation`, `grill`, `design`, and
 `worker` each depend on it downward, so the cycle and the reaching-through-privates both dissolve.
 
-The transport is **injectable** — the live `claude -p` here, a scripted fake in the acceptance
+The two live transports share one summon (`_summon`) and differ only where they must: the
+**architect** runs at the repo root, the **worker** runs at its fence (`worker_transport`, cwd =
+its worktree) so the harness auto-loads the fence's anchor and discovers its skills and the worker
+reads the reference tail from its own checkout (role-assembly step 5). The worker runs a *different*
+model from the architect by ratified design (ADR 0009) — GPT via `omp` — named in one place
+(`WORKER_CMD`/`WORKER_MODEL`, role-assembly step 6), the operator's settled spend decision.
+
+The transport is **injectable** — the live invocation here, a scripted fake in the acceptance
 check — so the whole system drives deterministically under the harness without an LLM.
 """
 from __future__ import annotations
@@ -23,6 +31,13 @@ import subprocess
 MODEL = "claude-opus-4-8"
 MODEL_LABEL = "opus 4.8"
 
+# The worker's model identity — its own line, the role-assembly step-6 flip point. The worker runs a
+# *different* model from the architect (Opus) by ratified design (ADR 0009): GPT via the `omp`
+# multi-model harness, which auto-loads the fence's anchor and discovers its skills at the worktree.
+# The flip to a new vendor was the operator's spend decision (2026-06-22); nothing else names them.
+WORKER_CMD = "omp"
+WORKER_MODEL = "gpt-5.2"
+
 
 class MalformedReply(Exception):
     """The model returned no JSON object where a structured reply was required — a failure to surface,
@@ -32,20 +47,45 @@ class MalformedReply(Exception):
     silent success."""
 
 
-def call(prompt: str) -> str:
-    """Summon the model once with `prompt` and return its stdout — the live transport. The one place
-    the `claude -p` invocation lives, so every role reaches the model the same way. A non-zero exit or
-    empty stdout is a failed summon, not a silent empty reply: it raises `MalformedReply`, so a timeout
-    or a crashed `claude` becomes a surfaced failure (the C2 recovery handles it) rather than a
-    `{"done": True}` no-op fold (H3)."""
-    r = subprocess.run(
-        ["claude", "-p", prompt, "--model", MODEL],
-        capture_output=True, text=True, timeout=120,
-    )
+def _summon(argv: list[str], cwd: str | None = None) -> str:
+    """Run one model invocation and return its stdout — the shared body of every live transport
+    (the architect at the repo root, the worker at its fence). A non-zero exit or empty stdout is a
+    failed summon, not a silent empty reply: it raises `MalformedReply`, so a timeout or a crashed
+    harness becomes a surfaced failure (the C2 recovery handles it) rather than a `{"done": True}`
+    no-op fold (H3)."""
+    r = subprocess.run(argv, capture_output=True, text=True, timeout=120, cwd=cwd)
     if r.returncode != 0 or not r.stdout.strip():
         raise MalformedReply(f"the model call failed (exit {r.returncode}, "
                              f"{len(r.stdout)} bytes out)")
     return r.stdout
+
+
+def call(prompt: str) -> str:
+    """Summon the model once with `prompt` and return its stdout — the architect's live transport,
+    run at the repo root. The one place the architect's invocation lives, so its voice, the grilling
+    pass, and the design contest all reach the model the same way."""
+    return _summon(["claude", "-p", prompt, "--model", MODEL])
+
+
+def worker_argv(prompt: str) -> list[str]:
+    """The argv the worker's live transport runs — the one place the worker's harness binary and
+    model are named, so the role-assembly OMP/GPT flip (step 6) repoints them here and nowhere else.
+    Pure (it spawns nothing), so the scaffold check can assert the worker targets its own model
+    without a live call (the honest harness limit)."""
+    return [WORKER_CMD, "-p", prompt, "--model", WORKER_MODEL]
+
+
+def worker_transport(cwd: str):
+    """Bind the worker's live transport to its fence (role-assembly step 5): every worker call runs
+    with its working directory set to `cwd` = its worktree, so the harness auto-loads the fence's
+    anchor and discovers its skills and the worker reads the ADR/reference tail from its own checkout.
+    The injection boundary stays `(prompt) -> str` — the fence is closed over, not threaded through it,
+    so the scripted fakes are untouched — and the binding carries `.cwd` so the scaffold check can
+    assert the worker runs at its fence without a live model."""
+    def at_fence(prompt: str) -> str:
+        return _summon(worker_argv(prompt), cwd=cwd)
+    at_fence.cwd = cwd
+    return at_fence
 
 
 def _object(raw: str) -> dict | None:

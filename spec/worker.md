@@ -20,16 +20,22 @@ operator-facing word from the result.
 ### Requirement: a worker is grounded in its capability's spec slice, by construction
 A worker MUST be handed the living spec with the capabilities its change touches marked as
 its grounding — their requirements and scenarios foregrounded — AND the rest of the spec
-carried beside them for scan, with the glossary and the system's decisions, assembled before
-it runs, so there is no path that runs a worker without its grounding. It holds the spec,
-never raw code, and never the operator view. A worker is **not slice-confined** (ADR 0009): a
-delta cannot be authored or verified from one capability in isolation, so its
-rescan covers the whole spec and catches a capability the handed delta mis-named or missed.
+carried beside them for scan, with the glossary, assembled before it runs, so there is no path
+that runs a worker without its grounding. The spec capabilities and the glossary are
+**preloaded whole** — the small, scannable, high-signal core, the defense against the architect's
+mis-scoping and against worker myopia. The system's **decisions (the ADR/reference tail)** are NOT
+preloaded into the prompt: they are the long reference with no whole-picture stake, so the worker
+runs at its fence and pulls them **just-in-time** from its own checkout (`spec/decisions/`) as the
+change needs. It holds the spec, never raw code, and never the operator view. A worker is **not
+slice-confined** (ADR 0009): a delta cannot be authored or verified from one capability in
+isolation, so its rescan covers the whole spec and catches a capability the handed delta mis-named
+or missed.
 
 #### Scenario: assembling the context
 - WHEN a worker is run on a node whose handed delta names a set of capabilities
 - THEN its context contains the whole spec — the named capabilities marked as grounding and
-  the rest carried for scan — plus the glossary and decisions, and its prompt foregrounds the
+  the rest carried for scan — plus the glossary, all preloaded whole; the ADR/reference tail is
+  not inlined but reachable in its checkout for a just-in-time pull, and its prompt foregrounds the
   grounding while keeping the full scan
 
 #### Scenario: the rescan catches a mis-mapping
@@ -69,12 +75,20 @@ is derived from the model and only the vision is authored.
 A worker MUST run in its own git worktree — a separate checkout on its own branch, fenced
 from its siblings and the main line. It builds in isolation and its own commits reach the
 shared record without touching another worker's tree or the main line until the result
-integrates.
+integrates. The worker's **model transport runs with its working directory set to that
+worktree**, so the checkout is the worker's working directory: its source, the reference tail
+(`spec/decisions/`), and the derived channel files (the anchor and skills) are read from the
+checkout, and the harness auto-loads the fence's anchor and discovers its skills.
 
 #### Scenario: the fence holds
 - WHEN a worker is delegated a node
 - THEN it gets a worktree distinct from the main tree, commits its result there on its own
   branch, and that commit is reachable in the record but absent from the main line
+
+#### Scenario: the worker runs at its fence
+- WHEN a worker's model is summoned to build
+- THEN its transport runs with the worktree as its working directory, so it reads the reference
+  tail and its channel files from its own checkout rather than from an inlined prompt
 
 ### Requirement: concurrent workers advance the graph in isolation, each folding its own delta
 The fence MUST compose: several workers MAY hold distinct worktrees at once, each building and

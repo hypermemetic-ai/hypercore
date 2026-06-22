@@ -8,16 +8,23 @@ not a discipline to remember:
 - **It is grounded in its capability's spec slice, with full scan of the whole spec.**
   Before a worker runs, `context` assembles the living spec for it — the capabilities its
   change touches marked as its *grounding*, the rest of the spec carried beside them for
-  scan, plus the glossary and the system's decisions — so there is no path that runs a
-  worker without it. A worker is *not* slice-confined (ADR 0009): a delta
+  scan, plus the glossary — so there is no path that runs a worker without it. The spec is
+  **preloaded whole** (the small, scannable high-signal core); the ADR/reference tail is *not*
+  inlined — it carries no whole-picture stake, so the worker runs at its fence and pulls the
+  decisions **just-in-time** from its own checkout (`spec/decisions/`) as the change needs
+  (role-assembly step 5). A worker is *not* slice-confined (ADR 0009): a delta
   cannot be authored or verified from one capability in isolation, so the worker rescans
   the whole spec and its rescan catches a capability the handed delta mis-named or missed.
   It holds the spec, never raw code, and never the operator view.
 
 - **It runs fenced in its own git worktree.** Its tree is a separate checkout on its
   own branch; it builds in isolation and its commits reach the one record without ever
-  touching a sibling's tree or the main line. (intent.md's full fence — the rest of the
-  host read-only — is the system's to enforce around this; the worktree is the seam.)
+  touching a sibling's tree or the main line. Its model transport runs with its working
+  directory set to that worktree (`transport.worker_transport`), so the checkout — its source,
+  the reference tail, and the derived channel files (the anchor and skills) — is what it reads,
+  and the harness auto-loads the fence's anchor and discovers its skills. (intent.md's full
+  fence — the rest of the host read-only — is the system's to enforce around this; the worktree
+  is the seam.)
 
 - **Its output cannot reach the operator.** `apply` returns a `WorkerResult`, written
   for the machine. It has no operator-facing field and is never rendered. The only
@@ -60,7 +67,7 @@ import subprocess
 from dataclasses import dataclass, field
 
 from . import conversation, delta, graph, grill, methodology, spec
-from .transport import call, parse_object
+from .transport import parse_object, worker_transport
 
 # The salutation — who the worker is, in one line; the disciplines that follow are single-sourced from
 # spec/worker.md (the methodology seam), not restated here, so they cannot drift from the slice.
@@ -116,11 +123,11 @@ class WorkerContext:
     the *whole* spec (the worker is not slice-confined): `capabilities` is every capability, and
     `touched` marks the ones the change names as its grounding/focus; the rest is carried for the
     rescan that catches a mis-named or missed capability. The `depth` capability is among them, and
-    the prompt foregrounds it every episode (ADR 0019). Nothing
-    of the operator view and nothing of the code is in here."""
+    the prompt foregrounds it every episode (ADR 0019). The ADR/reference tail is *not* here — the
+    worker pulls it just-in-time from its fence checkout (step 5). Nothing of the operator view and
+    nothing of the code is in here."""
     capabilities: list[tuple[str, str]] = field(default_factory=list)  # (name, spec text) — all
     glossary: str = ""
-    decisions: str = ""
     delta: str = ""                                   # the handed delta, to verify + refine
     touched: set[str] = field(default_factory=set)    # the grounding: capabilities the delta names
 
@@ -143,25 +150,27 @@ class WorkerResult:
 # ── the spec slice (assembled by construction; no worker runs without it) ─────
 
 def context(node: graph.Node, root: str | None = None) -> WorkerContext:
-    """Assemble the grounding for a node: the *whole* spec — every capability's text, the
-    glossary, the decisions — with the capabilities the handed delta names marked as the
-    worker's grounding (`touched`); the `depth` capability is among them and the prompt foregrounds
-    it every episode (ADR 0019).
+    """Assemble the grounding for a node: the *whole* spec — every capability's text and the
+    glossary — with the capabilities the handed delta names marked as the worker's grounding
+    (`touched`); the `depth` capability is among them and the prompt foregrounds it every episode
+    (ADR 0019). The ADR/reference tail is left out by design: the worker pulls it just-in-time from
+    its fence checkout (step 5), so the preloaded grounding stays the small, scannable spec.
     The worker is not slice-confined: it holds full scan access so its rescan can verify the
     handed delta against the whole spec, not trust its list (ADR 0009)."""
     sp = spec.read_spec(root)
     handed = _handed_delta(node)
     touched = _touched(handed, sp)
     caps = [(c.name, _cap_text(c.name, root)) for c in sp.capabilities]   # all — full scan, incl. depth
-    return WorkerContext(caps, sp.glossary, _decisions(root), handed, touched)
+    return WorkerContext(caps, sp.glossary, handed, touched)
 
 
 def prompt(node: graph.Node, ctx: WorkerContext, root: str | None = None) -> str:
     """The worker's grounding, rendered to one prompt — the salutation, then the worker's own
     disciplines single-sourced from `spec/worker.md`, the non-inferable record grounding, and the JSON
     envelope; then the depth disciplines (the proactive defense), the touched capabilities foregrounded
-    as the grounding, the rest of the spec carried for the rescan, the glossary, decisions, the handed
-    delta, and the ask. This is the whole of what the worker is given."""
+    as the grounding, the rest of the spec carried for the rescan, the glossary, the handed delta, and
+    the ask. The ADR/reference tail is *not* inlined: the prompt points the worker at `spec/decisions/`
+    in its fence checkout to pull just-in-time (step 5). This is the whole of what the worker is given."""
     def render(items):
         return "\n\n".join(f"### capability: {n}\n{t.strip()}" for n, t in items)
     depth_text = next((t.strip() for n, t in ctx.capabilities if n == "depth"), "")
@@ -183,7 +192,10 @@ def prompt(node: graph.Node, ctx: WorkerContext, root: str | None = None) -> str
         f"The rest of the spec, for your rescan (catch any capability the delta mis-named or "
         f"missed):\n{scan or '(none — this is the whole spec)'}\n\n"
         f"The glossary:\n{ctx.glossary}\n\n"
-        f"The decisions:\n{ctx.decisions or '(none)'}\n\n"
+        f"The ADR/reference tail is not inlined here — it is the long reference, carrying no "
+        f"whole-picture stake, so you pull it just-in-time from your own checkout: the decisions are "
+        f"in `spec/decisions/` at your worktree root; read or grep them as the change needs. The spec "
+        f"capabilities above are preloaded whole — your scannable high-signal core.\n\n"
         "Reply with the JSON object now."
     )
 
@@ -232,15 +244,17 @@ def commit_tree(tree: str, message: str) -> None:
 
 def apply(node: graph.Node, transport=None, root: str | None = None) -> WorkerResult:
     """Run the worker on a node: assemble its spec slice (the grounding, by construction),
-    summon it, and take its machine-facing result. The result is committed inside the
-    worker's own tree — its commit reaching the record in isolation — and handed back."""
-    transport = transport or call
+    summon it at its fence, and take its machine-facing result. With no injected transport the live
+    worker runs via `worker_transport(tree)` — cwd = its worktree (step 5), so it reads the reference
+    tail and its skills from its own checkout; the harness injects a scripted fake instead. The result
+    is committed inside the worker's own tree — its commit reaching the record in isolation."""
     ctx = context(node, root)                          # no apply without the grounding
+    tree = _tree_path(node, root or graph._root())
+    transport = transport or worker_transport(tree)    # the live worker runs at its fence (step 5)
     obj = parse_object(transport(prompt(node, ctx, root)))  # strict: a malformed reply is a failure, not a no-op (H3)
     report = (obj.get("report") or "").strip()
     refined = (obj.get("delta") or ctx.delta).strip()
     loop = obj.get("loop") if isinstance(obj.get("loop"), dict) else {}
-    tree = _tree_path(node, root or graph._root())
     _record(tree, report, refined, loop)               # the worker's own commit, fenced
     return WorkerResult(report, refined, loop, tree)
 
@@ -290,14 +304,6 @@ def _touched(handed: str, sp: spec.Spec) -> set[str]:
 def _cap_text(name: str, root: str | None) -> str:
     path = spec.cap_path(name, root)
     return open(path).read() if os.path.isfile(path) else ""
-
-
-def _decisions(root: str | None) -> str:
-    d = os.path.join(spec.spec_dir(root), "decisions")
-    if not os.path.isdir(d):
-        return ""
-    return "\n\n".join(open(os.path.join(d, n)).read()
-                       for n in sorted(os.listdir(d)) if n.endswith(".md"))
 
 
 def _tree_path(node: graph.Node, base: str, tag: str = "") -> str:

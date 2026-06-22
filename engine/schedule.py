@@ -36,7 +36,6 @@ import threading
 import time
 
 from . import graph, worker
-from .transport import call
 
 LIMIT = 2          # workers at once — a starting value to tune, like the length signal, not a law
 POLL = 0.2         # seconds between frontier reads while the background loop runs
@@ -49,7 +48,11 @@ class Scheduler:
     work-list."""
 
     def __init__(self, transport=None, root: str | None = None, limit: int = LIMIT) -> None:
-        self.transport = transport or call
+        # The injection point, forwarded to `worker.run` as-is. Left None for the live loop on purpose:
+        # the worker then binds its own fence transport (cwd = its worktree, step 5) while the architect's
+        # integrate uses the repo-root `call` — one collapsed `call` here would run the worker unfenced.
+        # The harness injects a scripted fake, which both roles share.
+        self.transport = transport
         self.root = root
         self.limit = limit
         self._threads: dict[str, threading.Thread] = {}
