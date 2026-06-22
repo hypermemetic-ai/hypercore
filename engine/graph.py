@@ -4,10 +4,11 @@ The graph is hypercore's one source of truth. A graph is a **folder** — intent
 unit on disk is the graph, not the single node." Its `intent.md` carries the ask or statement and
 its state; material and child graphs sit alongside; while a grilling pass runs, the pass lives in
 `grilling.md` within the folder (resumable across episodes — `grill.py` owns it). Open graphs live
-under `work/`, folded ones under `archive/`; folding **moves** the folder, `work/` → `archive/`
-(L116), so location is itself state and cannot disagree with the record.
+under `work/`; folding **moves** the folder into that work/'s own `archive/`, one level down so the
+live work sits at the front of the tree (intent §work; ADR 0017) — location is itself state and
+cannot disagree with the record.
 
-The queue (cards) and the standing work (threads) are **views** computed by scanning the tree (L110),
+The queue (cards) and the standing work are **views** computed by scanning the tree (L110),
 never lists kept in sync. A "card" is a graph awaiting the operator — never a stored card file
 (ADR 0011, Design B): a machine-owned decision the operator must settle, or a held ask whose grilling
 has surfaced a question. Every mutation writes one `intent.md` atomically and commits it; a fold or a
@@ -29,15 +30,15 @@ _DEFAULT_ROOT = os.path.dirname(_HERE)
 # States. A graph under archive/ is folded whatever its field says — location is authoritative.
 AWAITING = "awaiting you"    # a card on the queue: a decision to settle, or a surfaced question
 STANDING = "standing"        # ready work, no worker yet — the ready frontier
-IN_FLIGHT = "in flight"      # a worker is on it: still work, now live on its thread
-DONE = "done"               # folded: integrated and moved to archive/
+IN_FLIGHT = "in flight"      # a worker is on it: still work, now live
+DONE = "done"               # folded: integrated and moved to work/archive/
 GRILLING = "grilling"        # an ask held while its grilling pass runs: not work, not a card
 PENDING = "pending"          # a grilling question waiting its turn (held in grilling.md)
 MARKER = "[machine]"
 
 
 def _root() -> str:
-    return os.environ.get("HYPER_ROOT", _DEFAULT_ROOT)
+    return os.environ.get("ENGINE_ROOT", _DEFAULT_ROOT)
 
 
 @dataclass
@@ -70,16 +71,18 @@ class Node:
         return self.state == IN_FLIGHT and not self.folded
 
 
-# ── reading: scan work/ and archive/ recursively for graph folders ───────────
+# ── reading: scan work/ (its archive/ nested) recursively for graph folders ──
 
 def read_graph() -> list[Node]:
     out: list[Node] = []
-    for top in ("work", "archive"):
-        _scan(os.path.join(_root(), top), "", out)
+    _scan(os.path.join(_root(), "work"), "", out)
     return sorted(out, key=lambda n: n.created)
 
 
 def _scan(base: str, parent: str, out: list[Node]) -> None:
+    """Scan a work/ directory: each child folder with an intent.md is a graph (recurse into
+    its own work/); the lone `archive/` holds the folded siblings (same parent), tucked one
+    level down so the live work sits at the front of the tree (ADR 0017)."""
     if not os.path.isdir(base):
         return
     for name in sorted(os.listdir(base)):
@@ -88,8 +91,9 @@ def _scan(base: str, parent: str, out: list[Node]) -> None:
         if os.path.isfile(intent):
             node = _read(intent, parent)
             out.append(node)
-            _scan(os.path.join(folder, "work"), node.id, out)       # nested open graphs
-            _scan(os.path.join(folder, "archive"), node.id, out)    # nested folded graphs
+            _scan(os.path.join(folder, "work"), node.id, out)       # its open children + their archive
+        elif name == "archive":
+            _scan(folder, parent, out)                              # folded siblings, one level down
 
 
 def cards(nodes: list[Node] | None = None) -> list[Node]:
@@ -102,7 +106,7 @@ def standing(nodes: list[Node] | None = None) -> list[Node]:
 
 
 def work(nodes: list[Node] | None = None) -> list[Node]:
-    """The threads view: every unit of work, standing or in flight; folded has left it."""
+    """The work view: every unit of work, standing or in flight; folded has left it."""
     pool = read_graph() if nodes is None else nodes
     return [n for n in pool if n.state in (STANDING, IN_FLIGHT) and not n.folded]
 
@@ -112,7 +116,7 @@ def find(node_id: str) -> Node | None:
 
 
 def children(parent_id: str, nodes: list[Node] | None = None) -> list[Node]:
-    """The child graphs nested in a parent's work/ or archive/."""
+    """The child graphs nested in a parent's work/ (its archive/ included once folded)."""
     pool = read_graph() if nodes is None else nodes
     return [n for n in pool if n.parent == parent_id]
 
@@ -172,7 +176,7 @@ def delegate(node: Node) -> Node:
 
 
 def integrated(node: Node) -> Node:
-    """The worker's result folded in: the work is done and its folder moves to archive/."""
+    """The worker's result folded in: the work is done and its folder moves to work/archive/."""
     node.state = DONE
     _persist(node, f"integrate: {_subject(node.text)}")
     return _fold(node, f"fold: {_subject(node.text)}")
@@ -264,11 +268,12 @@ def _persist(node: Node, message: str) -> None:
 
 
 def _fold(node: Node, message: str) -> Node:
-    """Move a graph's folder from its work/ to the sibling archive/ — the fold (L116)."""
+    """Move a graph's folder from its work/ into that work/'s own archive/ — the fold
+    (intent §work, ADR 0017): the folded history tucks one level down, under the live work."""
     if node.folded:
         return node
     parent_dir = os.path.dirname(node.path)                   # .../work
-    dest_base = os.path.join(os.path.dirname(parent_dir), "archive")
+    dest_base = os.path.join(parent_dir, "archive")           # .../work/archive
     dest = os.path.join(dest_base, os.path.basename(node.path))
     os.makedirs(dest_base, exist_ok=True)
     shutil.move(node.path, dest)

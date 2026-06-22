@@ -30,7 +30,7 @@ def check(root: str) -> None:
     print("\nslice 8 — acceptance check  (parallelism re-grounded: design-it-twice)\n")
 
     coherent = lambda: scripted(json.dumps({"coherent": True, "say": "it landed.", "card": None}))
-    loop = {"command": "python3 -m hyper --check", "red": "absent — failed", "green": "present — passed"}
+    loop = {"command": "python3 -m engine --check", "red": "absent — failed", "green": "present — passed"}
 
     def built(cap: str, report: str) -> str:
         return json.dumps({"report": report,
@@ -135,7 +135,7 @@ def check(root: str) -> None:
 
     frame = "".join(t for row in render.main_body(graph.read_graph(), -1) for t, _s in row)
     nodefiles = ""
-    for top in ("work", "archive"):                          # graph nodes only — not the scratch fence
+    for top in ("work",):                                    # graph nodes only — not the scratch fence
         for dp, dirs, fs in os.walk(os.path.join(root, top)):
             if "worktrees" in dirs:
                 dirs.remove("worktrees")

@@ -71,14 +71,14 @@ def check(root: str) -> None:
     ok(ask.id in listed, "the worktree is a real, registered git worktree")
     graph.delegate(ask)
     ok(graph.find(ask.id).is_live and ask.id in [n.id for n in graph.work()],
-       "the delegated work goes live on the threads view while the worker runs")
+       "the delegated work goes live on the work view while the worker runs")
 
     # the worker builds and hands back a machine-facing result carrying raw prose
     SENTINEL = "<<RAW WORKER RAMBLE — walls of rambling text>>"
     result = worker.apply(ask, scripted(json.dumps({
         "report": "Implemented the checkpoint behind a red→green loop. " + SENTINEL,
         "delta": handed,
-        "loop": {"command": "python3 -m hyper --check",
+        "loop": {"command": "python3 -m engine --check",
                  "red": "asserted the checkpoint was absent — the loop failed",
                  "green": "added the checkpoint — the loop passed"}})), root)
     ok(SENTINEL in result.report, "the worker produced a raw, machine-facing report")
@@ -108,7 +108,7 @@ def check(root: str) -> None:
     # the raw report has no operator-facing or durable home anywhere
     frame = "".join(t for row in render.main_body(graph.read_graph(), -1) for t, _s in row)
     nodefiles = ""
-    for top in ("work", "archive"):                          # graph nodes only — not the scratch fence
+    for top in ("work",):                                    # graph nodes only — not the scratch fence
         for dp, dirs, fs in os.walk(os.path.join(root, top)):
             if "worktrees" in dirs:
                 dirs.remove("worktrees")
@@ -119,7 +119,7 @@ def check(root: str) -> None:
        "the raw worker report reaches no card, no render, and no node — the leak path does not exist")
 
     ok(graph.find(ask.id).state == graph.DONE and ask.id not in [n.id for n in graph.work()],
-       "the integrated work folded out of the threads view")
+       "the integrated work folded out of the work view")
 
     worker.teardown(ask, root)
     ok(not os.path.isdir(tree), "the fence is torn down once the result integrates")

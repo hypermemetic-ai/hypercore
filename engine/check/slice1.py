@@ -65,8 +65,8 @@ def check(root: str) -> None:
     ok(len(graph.cards()) == 0, "approve clears the card from the queue")
     endorsed = graph.find(card.id)
     ok(endorsed is not None and not endorsed.machine, "the endorsed node drops its [machine] marker")
-    ok(os.path.isfile(os.path.join(root, "archive", card.id, "intent.md")),
-       "approving folds the decision — its folder moves to archive/ (location is authoritative)")
+    ok(os.path.isfile(os.path.join(root, "work", "archive", card.id, "intent.md")),
+       "approving folds the decision — its folder moves to work/archive/ (location is authoritative)")
 
     # 7. cut removes the words: the node file leaves
     doomed = graph.raise_card("a statement to cut")
