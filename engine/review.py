@@ -84,7 +84,7 @@ def review(root: str | None = None) -> Review:
     (exceeded), or nearing it into the deepening backlog. A file within its depth-decision's
     accepted length shows on the map, marked, but is not in the backlog — its size is a recorded
     decision; a file that has outgrown that bar returns to the backlog (ADR 0008)."""
-    src = os.path.join(root or graph._root(), "hyper")
+    src = os.path.join(root or graph._root(), "engine")
     modules = [_module(rel, n, root) for rel, n in _sources(src)]
     modules.sort(key=lambda m: -m.lines)
     return Review(modules, [f for m in modules if (f := _finding(m))])
@@ -127,9 +127,9 @@ def _module(rel: str, n: int, root: str | None) -> Module:
 
 
 def _canon(rel: str) -> str:
-    """The file's path relative to the repo root (e.g. `hyper/foo.py`) — the form the
+    """The file's path relative to the repo root (e.g. `engine/foo.py`) — the form the
     structured depth-decision names, so the standing scan and the per-graph gate agree."""
-    return os.path.join("hyper", rel).replace(os.sep, "/")
+    return os.path.join("engine", rel).replace(os.sep, "/")
 
 
 def _finding(m: Module) -> Finding | None:

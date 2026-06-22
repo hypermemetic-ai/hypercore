@@ -1,5 +1,5 @@
-"""Entry point: `python3 -m hyper` opens the window; `--check` runs the
-slice-1 acceptance loop headlessly."""
+"""Entry point: `python3 -m engine` opens the window; `--check` runs the
+per-slice acceptance loop headlessly."""
 import sys
 
 

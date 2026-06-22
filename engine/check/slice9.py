@@ -39,42 +39,42 @@ def check(root: str) -> None:
         graph.atomic_write(os.path.join(spec.spec_dir(root), "decisions", name), body)
 
     # ── 1. acceptance is BOUNDED to the length it names ───────────────────────────────────
-    # A depth-decision accepts hyper/ratchet.py at 450 lines. It clears the gate within the bar
+    # A depth-decision accepts engine/ratchet.py at 450 lines. It clears the gate within the bar
     # plus the materiality margin, and stops clearing once the file grows materially past it —
     # the hole (unbounded acceptance) closed.
     BAR = 450
     decide("0103-ratchet.md",
-           f"# ADR 0103\n\ndepth-decision: hyper/ratchet.py accepted@{BAR} — deep behind a small "
+           f"# ADR 0103\n\ndepth-decision: engine/ratchet.py accepted@{BAR} — deep behind a small "
            "interface; its length is context-cost, not shallowness.\n")
-    ok(conditions.accepted_at("hyper/ratchet.py", root) == BAR,
+    ok(conditions.accepted_at("engine/ratchet.py", root) == BAR,
        f"the structured record names the accepted length — accepted_at reads it as {BAR}")
-    ok(conditions.accepted("hyper/ratchet.py", BAR, root) is True
-       and conditions.accepted("hyper/ratchet.py", BAR + margin(BAR), root) is True,
+    ok(conditions.accepted("engine/ratchet.py", BAR, root) is True
+       and conditions.accepted("engine/ratchet.py", BAR + margin(BAR), root) is True,
        "within the bar plus the materiality margin, the acceptance clears the gate")
-    ok(conditions.accepted("hyper/ratchet.py", BAR + margin(BAR) + 5, root) is False,
+    ok(conditions.accepted("engine/ratchet.py", BAR + margin(BAR) + 5, root) is False,
        "materially past the bar, the acceptance no longer clears — acceptance is not unbounded")
 
     # ── 2. a stable or shrinking file stays cleared; the bar RATCHETS up on renewal ────────
-    ok(conditions.accepted("hyper/ratchet.py", 300, root) is True,
+    ok(conditions.accepted("engine/ratchet.py", 300, root) is True,
        "a shrunk file stays cleared — the bar lives in the record, a shrink never lowers it")
     # renewing the acceptance at a higher length raises the bar; the highest recorded bar governs.
     HIGHER = 600
-    ok(conditions.accepted("hyper/ratchet.py", HIGHER - 20, root) is False,
+    ok(conditions.accepted("engine/ratchet.py", HIGHER - 20, root) is False,
        "before renewal, a length near the higher bar does not clear")
     decide("0104-ratchet-renewed.md",
-           f"# ADR 0104\n\ndepth-decision: hyper/ratchet.py accepted@{HIGHER} — renewed at the "
+           f"# ADR 0104\n\ndepth-decision: engine/ratchet.py accepted@{HIGHER} — renewed at the "
            "grown size after a deepening pass kept it deep.\n")
-    ok(conditions.accepted_at("hyper/ratchet.py", root) == HIGHER,
+    ok(conditions.accepted_at("engine/ratchet.py", root) == HIGHER,
        "the highest recorded bar governs — the ratchet only rises")
-    ok(conditions.accepted("hyper/ratchet.py", HIGHER - 20, root) is True,
+    ok(conditions.accepted("engine/ratchet.py", HIGHER - 20, root) is True,
        "after renewal at the new length, the higher bar clears what the old one did not")
 
     # ── 3. a BARE acceptance names no bound — it does not clear the gate ───────────────────
     decide("0105-bare.md",
-           "# ADR 0105\n\ndepth-decision: hyper/bare.py accepted — we are fine with its size.\n")
-    ok(conditions.accepted_at("hyper/bare.py", root) is None,
+           "# ADR 0105\n\ndepth-decision: engine/bare.py accepted — we are fine with its size.\n")
+    ok(conditions.accepted_at("engine/bare.py", root) is None,
        "a bare `accepted` names no length — accepted_at finds no bar")
-    ok(conditions.accepted("hyper/bare.py", conditions.SIGNAL + 10, root) is False,
+    ok(conditions.accepted("engine/bare.py", conditions.SIGNAL + 10, root) is False,
        "a bare acceptance clears nothing — the exception is the decision at a stated size")
 
     # ── 4. the gate end to end: a file grown past its bar re-raises the depth decision ─────
@@ -93,12 +93,12 @@ def check(root: str) -> None:
 
     GROWN_BAR = conditions.SIGNAL + 10
     decide("0106-grown.md",
-           f"# ADR 0106\n\ndepth-decision: hyper/grown.py accepted@{GROWN_BAR} — accepted when it "
+           f"# ADR 0106\n\ndepth-decision: engine/grown.py accepted@{GROWN_BAR} — accepted when it "
            "was barely over; deep behind its interface.\n")
     ask = staged("a graph that grows a once-accepted file far past its bar", "the ratchet re-fires")
     tree = worker._tree_path(ask, root)
     grown_n = conditions.SIGNAL * 2
-    graph.atomic_write(os.path.join(tree, "hyper", "grown.py"),
+    graph.atomic_write(os.path.join(tree, "engine", "grown.py"),
                        "# once accepted small, since grown\n" + "x = 0\n" * (grown_n - 1))
     result = worker.apply(ask, scripted(json.dumps({
         "report": "grew a once-accepted file far past its accepted bar",
@@ -115,23 +115,23 @@ def check(root: str) -> None:
        "the architect raises the re-opened decision on the queue — the fold is held, not silenced")
     # renewing the acceptance at the new length clears the same material — the ratchet, completed.
     decide("0107-grown-renewed.md",
-           f"# ADR 0107\n\ndepth-decision: hyper/grown.py accepted@{grown_n} — renewed at the new "
+           f"# ADR 0107\n\ndepth-decision: engine/grown.py accepted@{grown_n} — renewed at the new "
            "length; re-judged deep at this size.\n")
     ok(conditions.unmet(result, root) is None,
        "renewing the acceptance at the grown length lets the same file fold — the bar ratcheted up")
     worker.teardown(ask, root)
 
     # ── 5. the review distinguishes EXCEEDED from over from accepted ──────────────────────
-    scan = tempfile.mkdtemp(prefix="hyper-ratchet-")
+    scan = tempfile.mkdtemp(prefix="engine-ratchet-")
     N = conditions.SIGNAL + 100                               # one over-signal length, three fates
     for name in ("over", "exceeded", "accepted"):
-        graph.atomic_write(os.path.join(scan, "hyper", f"{name}.py"), "x = 0\n" * N)
+        graph.atomic_write(os.path.join(scan, "engine", f"{name}.py"), "x = 0\n" * N)
     LOW, HIGH = conditions.SIGNAL + 10, conditions.SIGNAL + 200   # below N+margin; above N
     graph.atomic_write(os.path.join(scan, "spec", "decisions", "0001-exceeded.md"),
-                       f"# ADR\n\ndepth-decision: hyper/exceeded.py accepted@{LOW} — accepted small, "
+                       f"# ADR\n\ndepth-decision: engine/exceeded.py accepted@{LOW} — accepted small, "
                        "since outgrown.\n")
     graph.atomic_write(os.path.join(scan, "spec", "decisions", "0002-accepted.md"),
-                       f"# ADR\n\ndepth-decision: hyper/accepted.py accepted@{HIGH} — deep; within "
+                       f"# ADR\n\ndepth-decision: engine/accepted.py accepted@{HIGH} — deep; within "
                        "the accepted length.\n")
     rv = review.review(scan)
     by = {m.rel: m for m in rv.modules}

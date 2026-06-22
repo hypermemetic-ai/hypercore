@@ -1,7 +1,7 @@
 """A plain-text snapshot of the window's faces — the same renders the curses
 window paints, flattened to stdout so the look can be seen without a TTY.
 
-    python3 -m hyper --frame
+    python3 -m engine --frame
 """
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ WIDTH = 76
 
 def run() -> int:
     real = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    os.environ["HYPER_ROOT"] = tempfile.mkdtemp(prefix="hyper-frame-")
+    os.environ["ENGINE_ROOT"] = tempfile.mkdtemp(prefix="engine-frame-")
     from . import conversation, graph, grill, render, view
 
     graph.raise_card("the intake box pulls torrents from nyaa")

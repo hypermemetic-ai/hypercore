@@ -35,10 +35,10 @@ def check(root: str) -> None:
 
     # 3. it surfaces a god-file-in-the-making before it sets: plant one in a scan tree, the
     # review flags it as a strong deepening opportunity; an in-budget sibling is left alone.
-    scan = tempfile.mkdtemp(prefix="hyper-review-")
-    graph.atomic_write(os.path.join(scan, "hyper", "giant.py"),
+    scan = tempfile.mkdtemp(prefix="engine-review-")
+    graph.atomic_write(os.path.join(scan, "engine", "giant.py"),
                        "# a shallow god-file\n" + "x = 0\n" * (conditions.SIGNAL + 60))
-    graph.atomic_write(os.path.join(scan, "hyper", "small.py"), "y = 1\n")
+    graph.atomic_write(os.path.join(scan, "engine", "small.py"), "y = 1\n")
     planted = review.review(scan)
     big = next((f for f in planted.findings if f.subject.endswith("giant.py")), None)
     ok(big is not None and big.strength == "strong" and big.kind == "past the length signal",
@@ -49,7 +49,7 @@ def check(root: str) -> None:
     # 4. the depth-decision record — the same record folding-conditions consults: a structured
     # depth-decision naming the file clears it from the backlog, but the map still shows it.
     graph.atomic_write(os.path.join(scan, "spec", "decisions", "0099-giant.md"),
-                       f"# ADR 0099\n\ndepth-decision: hyper/giant.py accepted@{conditions.SIGNAL + 61} "
+                       f"# ADR 0099\n\ndepth-decision: engine/giant.py accepted@{conditions.SIGNAL + 61} "
                        "— deep behind a small interface; its length is context-cost, not shallowness.\n")
     dec = review.review(scan)
     ok(not any(f.subject.endswith("giant.py") for f in dec.findings),

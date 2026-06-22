@@ -24,21 +24,21 @@ whole spec unchanged; the worker-fenced side is parked, not faked, on the pi/OMP
 ## folded (history)
 
 - **step 1 — retire `worker.DEPTH`.** The depth grounding renders from `spec/depth.md`
-  (`hyper/depth.py`); the `depth` skill artifact materializes at `skills/depth/SKILL.md`; slice 10
+  (`engine/depth.py`); the `depth` skill artifact materializes at `skills/depth/SKILL.md`; slice 10
   pins it. (slice 10, ADR 0009; the source moved to `spec/depth.md` in ADR 0010.)
 - **step 2 — materialize-on-fold.** The fold (`delta.fold`) gained a render step that re-derives the
   static channels from the spec and commits them in the same act, so a committed artifact cannot drift
-  from its source. `hyper/channels.py` is the registry — one `CHANNELS` list, `materialize()` the one
+  from its source. `engine/channels.py` is the registry — one `CHANNELS` list, `materialize()` the one
   act — with `depth.materialize` its first (today only) target; steps 3–4 append to it. `skills/` is
   now regenerated output, not a loose root render. (slice 11, ADR 0009 §3.)
-- **step 4 — the architect's methodology skills.** `hyper/methodology.py` renders the architect's
+- **step 4 — the architect's methodology skills.** `engine/methodology.py` renders the architect's
   design methodologies as skills from their capability slices — `design-it-twice` and
   `architecture-review`, each a clean standalone `spec/<cap>/spec.md` → `skills/<cap>/SKILL.md`
   (metadata, the slice's overview, the disciplines as requirement statements, scenarios left in the
   slice). Single-sourced and spliced into the channels registry via `methodology.materializers()`, so
   the fold re-derives them beside `depth`. (slice 12, ADR 0009 §5.4.) Grilling/coherence followed in
   step 4b once they had slices of their own.
-- **step 3 — the minimal shared `AGENTS.md` + `CLAUDE.md` symlink.** `hyper/anchor.py` renders the
+- **step 3 — the minimal shared `AGENTS.md` + `CLAUDE.md` symlink.** `engine/anchor.py` renders the
   anchor — the non-inferable operational lines (the check command, the build/hand-back convention) the
   operator set, plus a skills index *derived* from the registries (`depth.DESCRIPTION` +
   `methodology.METHODOLOGIES`) so a new skill lists itself by construction. Registered in the channels

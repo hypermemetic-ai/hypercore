@@ -147,7 +147,7 @@ def accepted(rel: str, lines: int, root: str | None) -> bool:
     the old size never re-nags. `lines` is the file's current length. Public because the
     architecture review (`review`) consults the same record — one criterion, the per-graph gate
     and the standing scan. `rel` is the file's path relative to the repo root (e.g.
-    `hyper/foo.py`)."""
+    `engine/foo.py`)."""
     bar = accepted_at(rel, root)
     return bar is not None and lines <= bar + round(bar * SLACK)
 

@@ -38,7 +38,7 @@ def check(root: str) -> None:
         return ask
 
     def godfile(tree: str) -> None:
-        graph.atomic_write(os.path.join(tree, "hyper", "giant.py"),
+        graph.atomic_write(os.path.join(tree, "engine", "giant.py"),
                            "# a shallow god-file\n" + "x = 0\n" * (conditions.SIGNAL + 60))
 
     # 1. a behavior change handed back with no recorded loop cannot fold
@@ -78,7 +78,7 @@ def check(root: str) -> None:
     result = worker.apply(ask, scripted(json.dumps({
         "report": "did the work behind a loop",
         "delta": delta_for("a clean change folds"),
-        "loop": {"command": "python3 -m hyper --check", "red": "absent", "green": "present"}})), root)
+        "loop": {"command": "python3 -m engine --check", "red": "absent", "green": "present"}})), root)
     ok(conditions.unmet(result, root) is None,
        "a recorded loop and an in-signal module meet every folding condition")
     reply = conversation.integrate(ask, result, coherent(), root)
@@ -89,7 +89,7 @@ def check(root: str) -> None:
     # 4. a file past the signal folds when a structured depth-decision accepts it — the
     # decision's accept-with-reason outcome, recorded as a parseable record (not a substring).
     graph.atomic_write(os.path.join(spec.spec_dir(root), "decisions", "0099-giant-depth.md"),
-                       f"# ADR 0099\n\ndepth-decision: hyper/giant.py accepted@{conditions.SIGNAL + 61} "
+                       f"# ADR 0099\n\ndepth-decision: engine/giant.py accepted@{conditions.SIGNAL + 61} "
                        "— deep behind a small interface; its length is context-cost, not shallowness.\n")
     ask = staged("a depth-accepted large module", "a depth-accepted module folds")
     godfile(worker._tree_path(ask, root))
