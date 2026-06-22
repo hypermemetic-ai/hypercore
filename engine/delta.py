@@ -114,11 +114,14 @@ def check(delta: Delta | None, sp: spec.Spec) -> str | None:
 
 # ── the fold (applies the delta; atomic with the commit, both directions) ─────
 
+@graph.serialized
 def fold(delta: Delta | None, root: str | None = None) -> None:
     """Apply the delta to the living spec and commit, or refuse — one act.
 
     Raises CannotFold if the folding condition is not met; on refusal the spec is
-    untouched. A trivial delta folds and applies nothing.
+    untouched. A trivial delta folds and applies nothing. Serialized on the one record
+    (`graph.serialized`): concurrent workers' folds land one at a time, so two folds never
+    interleave their spec writes into one commit, while their builds still ran in parallel.
     """
     sp = spec.read_spec(root)
     reason = check(delta, sp)

@@ -22,7 +22,7 @@ folder, not the node — hypercore dogfooding its own §structure. Run the accep
 
 ## Where it stands
 
-Build proceeds in slices, slice 1 first. **Slices 1–15 are built.** (The check count is not
+Build proceeds in slices, slice 1 first. **Slices 1–16 are built.** (The check count is not
 restated here — it drifts; `python3 -m engine --check` is its single source.)
 
 - **1–6 — the spine.** The graph and the fold; intent extraction by grilling; the worker and
@@ -60,10 +60,10 @@ and now `grilling` and `coherence`, carved into their own capabilities (ADR 0013
 slices into the same fold-driven registry), and the **minimal shared `AGENTS.md` anchor** (step 3,
 slice 13 — `engine/anchor.py`, non-inferable operational lines plus a registry-derived skills index,
 materialized on fold; one `AGENTS.md` serves both roles, the `CLAUDE.md` symlink dropped as redundant,
-ADR 0009 §4). What remains is parked: the fenced-worker side on
-the multi-model harness seam (steps 5–6, the autonomy unlock — transport `cwd` = the fence, the
-reference tail pulled just-in-time, the OMP flip). The open arc is `work/role-assembly/` (its
-`intent.md` carries the steps). The engine conformance is done (`work/archive/graph-on-disk/`).
+ADR 0009 §4). What remains parked here is the fenced-worker side on
+the multi-model harness seam (steps 5–6 — transport `cwd` = the fence, the reference tail pulled
+just-in-time, the OMP flip to GPT-5.5). The open arc is `work/role-assembly/` (its `intent.md` carries
+the steps). The engine conformance is done (`work/archive/graph-on-disk/`).
 
 **15 — the mechanical red-flag scan (ADR 0020).** A coherence pass over the repo (`work/archive/coherence-audit/`)
 found that the one anti-drift mechanism wired to the fold — derive-on-render — never rotted, while every
@@ -74,6 +74,19 @@ circular imports, read live off the tree, surfaced in the operator-view gap (the
 capability declares in its own spec slice, replacing a hand-typed keyword map. The same arc named the model
 **transport** (`engine/transport.py`), dissolving a `conversation↔grill` cycle, and cut the dead code the new
 scan caught. It is the repo's first red→green dogfood of its own feedback-loop discipline.
+
+**16 — the autonomy seam (ADR 0022; `engine/schedule.py`).** The system's most distinctive promise —
+continuous, concurrent autonomous work (intent §60/§62) — was unreachable from the interface: `graph`
+computed the ready frontier but nothing consumed it, so a ratified ask landed as standing work and the
+system idled, the exact §60 defect. The **scheduler** is the loop that consumes it — it reads the
+frontier (`graph.ready`, the §110 readiness predicate) and runs `worker.run` (delegate → build fenced →
+integrate → fold) off the operator's input loop, continuous and concurrent, idling only on a decision;
+a worker that cannot complete returns as a decision rather than stalling. Concurrency made the shared
+git line single-writer, which deepened `graph` by lifting its durable-write floor into `engine/record.py`
+(atomic write, scoped commit, the one lock). Wiring `worker.run` end-to-end also surfaced a latent bug
+the harness had never exercised: it dropped the scripted transport on the integrate step, falling back
+to a live model call — fixed. The worker is still `claude -p`; the OMP/multi-model flip stays parked
+(role-assembly steps 5–6).
 
 ## On documents
 

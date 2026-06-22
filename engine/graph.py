@@ -19,13 +19,13 @@ from __future__ import annotations
 import os
 import re
 import shutil
-import subprocess
-import tempfile
 import time
 from dataclasses import dataclass
 
-_HERE = os.path.dirname(os.path.abspath(__file__))
-_DEFAULT_ROOT = os.path.dirname(_HERE)
+# The durable-write floor the graph rests on — atomic write, scoped commit, and the single-writer lock
+# that lets concurrent workers fold without colliding on the record (intent §62). Re-exported so the
+# graph's callers read one façade: `graph.atomic_write`, `graph.commit`, `graph.serialized`, `graph._root`.
+from .record import _DEFAULT_ROOT, _root, atomic_write, commit, serialized
 
 # States. A graph under archive/ is folded whatever its field says — location is authoritative.
 AWAITING = "awaiting you"    # a card on the queue: a decision to settle, or a surfaced question
@@ -34,10 +34,6 @@ IN_FLIGHT = "in flight"      # a worker is on it: still work, now live
 DONE = "done"               # folded: integrated and moved to work/archive/
 GRILLING = "grilling"        # an ask held while its grilling pass runs: not work, not a card
 MARKER = "[machine]"
-
-
-def _root() -> str:
-    return os.environ.get("ENGINE_ROOT", _DEFAULT_ROOT)
 
 
 @dataclass
@@ -100,8 +96,18 @@ def cards(nodes: list[Node] | None = None) -> list[Node]:
 
 
 def standing(nodes: list[Node] | None = None) -> list[Node]:
-    """The ready frontier: standing work no worker has taken yet."""
+    """The standing work the operator sees; `ready` narrows it to the schedulable frontier."""
     return [n for n in (read_graph() if nodes is None else nodes) if n.is_standing]
+
+
+def ready(nodes: list[Node] | None = None) -> list[Node]:
+    """The schedulable frontier (intent §110): standing work with nothing open beneath it — the same
+    readiness that gates spawning gates scheduling, read live, so a node blocked on an open child is
+    not taken and nothing in the schedule can go stale."""
+    pool = read_graph() if nodes is None else nodes
+    open_states = (STANDING, IN_FLIGHT, GRILLING, AWAITING)
+    blocked = {n.parent for n in pool if n.parent and not n.folded and n.state in open_states}
+    return [n for n in pool if n.is_standing and n.id not in blocked]
 
 
 def work(nodes: list[Node] | None = None) -> list[Node]:
@@ -179,27 +185,6 @@ def integrated(node: Node) -> Node:
     node.state = DONE
     _persist(node, f"integrate: {_subject(node.text)}")
     return _fold(node, f"fold: {_subject(node.text)}")
-
-
-# ── durable write (the act lands atomically; the commit follows behind) ──────
-
-def atomic_write(path: str, text: str) -> None:
-    d = os.path.dirname(path)
-    os.makedirs(d, exist_ok=True)
-    fd, tmp = tempfile.mkstemp(dir=d)
-    with os.fdopen(fd, "w") as f:
-        f.write(text)
-    os.replace(tmp, path)                      # atomic; the act lands here
-
-
-def commit(paths: list[str], message: str) -> None:
-    try:
-        subprocess.run(["git", "add", "-A", *paths], cwd=_root(), check=True,
-                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        subprocess.run(["git", "commit", "-m", message], cwd=_root(), check=True,
-                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    except Exception:
-        pass  # already on disk; a failed commit does not lose the act
 
 
 # ── on-disk form: one folder per graph, its intent.md the legible record ─────

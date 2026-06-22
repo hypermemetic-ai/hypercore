@@ -201,7 +201,7 @@ def run(node: graph.Node, transport=None, root: str | None = None):
     graph.delegate(node)
     worktree(node, root)
     result = apply(node, transport, root)
-    reply = conversation.integrate(node, result, root=root)
+    reply = conversation.integrate(node, result, transport, root=root)  # one transport, build → archive
     if reply.done:                                     # archived: the result integrated
         teardown(node, root)
     return reply
@@ -257,6 +257,11 @@ def _record(tree: str, report: str, refined: str, loop: dict) -> None:
     commit_tree(tree, "worker: result")
 
 
+@graph.serialized
 def _git(cwd: str, *args: str) -> None:
+    """Every git invocation the worker makes — cutting and tearing down a fence, committing inside
+    it — under the one record lock (`graph.serialized`), so concurrent workers never collide on the
+    shared `.git`. The slow build between these calls (the model transport) runs unlocked, so the
+    fences are cut and committed serially but the work in them proceeds in parallel."""
     subprocess.run(["git", *args], cwd=cwd, check=True,
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

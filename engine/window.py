@@ -10,7 +10,7 @@ import curses
 import threading
 from dataclasses import dataclass, field
 
-from . import conversation, graph, grill, render, transport, view
+from . import conversation, graph, grill, render, schedule, transport, view
 from .conversation import Thread
 
 ESC, ENTER, BACKSPACES = 27, (10, 13, curses.KEY_ENTER), (8, 127, curses.KEY_BACKSPACE)
@@ -61,20 +61,25 @@ def _main(scr) -> None:
     _init_colors()
     scr.timeout(80)
     st = State()
-    while True:
-        nodes = graph.read_graph()
-        _paint(scr, st, nodes)
-        ch = scr.getch()
-        if st.pending is not None:
-            st.tick += 1
-            if st.pending.done:
-                _land(st, st.pending.result)
-                st.pending = None
-            continue
-        if ch == -1:
-            continue
-        if not _dispatch(scr, st, ch, nodes):
-            return
+    sched = schedule.Scheduler()       # the autonomous loop runs off this thread (intent §60/§62)
+    sched.start()
+    try:
+        while True:
+            nodes = graph.read_graph()
+            _paint(scr, st, nodes)
+            ch = scr.getch()
+            if st.pending is not None:
+                st.tick += 1
+                if st.pending.done:
+                    _land(st, st.pending.result)
+                    st.pending = None
+                continue
+            if ch == -1:
+                continue
+            if not _dispatch(scr, st, ch, nodes):
+                return
+    finally:
+        sched.stop()
 
 
 # ── input dispatch ───────────────────────────────────────────────────────────
