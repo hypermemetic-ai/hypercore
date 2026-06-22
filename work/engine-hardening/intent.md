@@ -1,7 +1,7 @@
 ---
 kind: ask
 state: standing
-owner: machine
+owner: operator
 created: 2026-06-22
 ---
 # engine-hardening — close the real weaknesses, and stop them regenerating
@@ -25,6 +25,17 @@ check or spec change that makes the rebuild reproduce the fix, not the bug). The
 the regeneration contract: a rebuild that passes it should be good, and today it can pass while being
 bad. Lead every fix with a real red→green loop — a check that is **RED on the live defect**, GREEN
 after — because that loop is both the fix's proof and the guard against its return.
+
+## ratified — operator decisions (2026-06-22)
+
+Settled in session before the build opens; the arc is operator-owned from here.
+
+- **Depth gate → de-claim depth as enforced.** Make the spec and the `architecture-review` skill
+  honest that depth is judgment-only — a decision the gate raises, never a threshold it enforces — and
+  that the model-driven verdict stays unbuilt; no new machinery. This arc owns that spec wording.
+- **Fold atomicity (H1) → make it transactional.** Stage all writes and the folder move into one
+  commit with idempotent retry; the spec's "atomically, both directions" becomes true, not weakened.
+- **Sequencing → parallel** with `agent-facing-hardening`.
 
 ## critical — corrupts the source of truth or loses operator work
 
@@ -52,9 +63,11 @@ after — because that loop is both the fix's proof and the guard against its re
 - **H1 — the fold is not atomic.** The spec asserts the delta applies "atomically, both directions,"
   but the implementation is sequential (delta apply → state write → folder move): a crash between
   steps leaves the spec merged while the node is un-archived, and the retried `delta.fold` then hits
-  `CannotFold` permanently — operator work wedged with its change already in the spec. Fix: stage all
-  writes and the move into one commit with idempotent retry, **or** weaken the spec to the honest
-  land-then-commit wording the rest of the engine uses (the overclaim is itself a finding).
+  `CannotFold` permanently — operator work wedged with its change already in the spec. Fix (ratified —
+  make it transactional): stage all writes and the folder move into one commit with idempotent retry,
+  so the spec's "atomically, both directions" becomes true rather than weakened. Guard: a check that
+  fault-injects a crash mid-fold and asserts the retry completes cleanly — neither a wedged half-fold
+  nor a permanent `CannotFold`.
 - **H3 — malformed model output degrades to a silent no-op success.** An empty or unparseable model
   reply falls through to an empty object and folds a no-op delta as success. Fix: treat an unparseable
   reply as a failure path (which C2's recovery then handles), never as a clean fold.
@@ -74,10 +87,12 @@ answer, not the judgment. Proven by mutation (`research.md`, Part D).
   actual red→green transition; reject red == green. This is the guard that makes every other fix's
   loop real.
 - **"Depth" — the system's central criterion — has no real gate.** The model-driven verdict is "not
-  yet built," so only line count stands; a rebuild can ship short, shallow modules and pass. Fix: ship
-  a mechanical shallowness proxy (e.g. an AST interface/implementation ratio, the way ADR 0020 shipped
-  the red-flag scan) **or** de-claim depth as enforced in the spec and the `architecture-review` skill.
-  **Coupled to `agent-facing-hardening`** — that arc's overclaim wording follows this decision.
+  yet built," so only line count stands; a rebuild can ship short, shallow modules and pass. Fix
+  (ratified — de-claim): make the spec (`spec/depth.md`, `spec/architecture-review.md`) and the
+  `architecture-review` skill honest that depth is judgment-only — a decision the gate raises, never a
+  threshold it enforces (intent: "depth is a decision, never a threshold") — and that the model-driven
+  verdict stays unbuilt; no new machinery. This arc owns that spec wording; `agent-facing-hardening`
+  then confirms the rendered skill reads honestly.
 - **The coherence gate is never driven to "incoherent."** No check exercises the refusal branch; a
   mutation forcing always-coherent survived green. Fix: a judgment-harness tier that holds coherence
   (and the grilling floor, and design-it-twice selection) against recorded adversarial fixtures at
@@ -104,6 +119,9 @@ files; lock spanning write→commit; filesystem-level), and the loop the groundi
 that is **executed, not narrated**. Otherwise the next teardown regenerates exactly these weaknesses —
 including reproducing the false safety docstring in `record.py`. The grounding change lives in the
 agent-facing arc; the engine fix lives here; they fold together. Also fix the false docstring here.
+This arc owns the `spec/architecture-review.md` de-claim (the depth-gate call); `agent-facing-hardening`
+confirms the rendered skill. The arcs run in parallel; only that one render-confirmation waits on this
+de-claim to fold.
 
 ## what this arc deliberately does NOT do
 
@@ -126,5 +144,6 @@ Every critical and high finding is closed by a delta carrying a real red→green
 RED on the live defect and GREEN after the fix — or consciously deferred with a recorded reason on its
 node, none silently dropped; the new concurrency and failure-path checks run in
 `python3 -m engine --check` and are green; the red→green folding condition executes the recorded
-command rather than checking non-empty strings; the depth gate ships a mechanical proxy or the spec
-de-claims depth as enforced; and the full harness is green. [machine]
+command rather than checking non-empty strings; the fold is transactional (atomic both directions,
+idempotent retry); the spec de-claims depth as enforced (judgment-only, the model-driven verdict
+marked unbuilt); and the full harness is green.

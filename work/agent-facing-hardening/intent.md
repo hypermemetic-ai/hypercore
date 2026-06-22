@@ -1,7 +1,7 @@
 ---
 kind: ask
 state: standing
-owner: machine
+owner: operator
 created: 2026-06-22
 ---
 # agent-facing-hardening — make the derived channels bulletproof (structure) and correct (content)
@@ -23,6 +23,19 @@ or a generator — never in the rendered file.** This is the discipline that alr
 channels zero drift (the one anti-drift mechanism the repo proved); the work is to point it at what
 it does not yet reach, not to bypass it.
 
+## ratified — operator decisions (2026-06-22)
+
+Settled in session before the build opens; the arc is operator-owned from here.
+
+- **Channel targeting → verify empirically first.** A fresh session probes what the architect's
+  `claude -p` harness actually loads, then ships the derived bridge if the channels do not auto-load,
+  or records native loading if they do — the `anchor.py` docstring fix lands either way.
+- **The `architecture-review` overclaim → de-claim** (with `engine-hardening`'s depth call): depth is
+  judgment-only, the model-driven verdict marked unbuilt. The spec edit is owned there; this arc
+  confirms the rendered skill reads honestly once it folds.
+- **Sequencing → parallel** with `engine-hardening`; the one cross-dependency (the de-claim → skill
+  confirmation) is honored across the two concurrent sessions.
+
 ## P0 — defects the channels must not ship with
 
 - **The channels may target the wrong harness — the highest-stakes finding.** Current Anthropic /
@@ -30,17 +43,18 @@ it does not yet reach, not to bypass it.
   discovers skills under `.claude/skills/`, not a root `skills/`. `engine/anchor.py`'s docstring
   claims "Claude reads it directly when no `CLAUDE.md` is present" — false for stock Claude Code, in
   which the anchor and all five skills would load as **nothing**. The deciding variable is which
-  harness the architect actually runs at runtime; this is the open question below. Fix: confirm the
-  harness, then either (a) materialize a `CLAUDE.md` bridge (`@AGENTS.md`) and mirror skills to
-  `.claude/skills/` as derived channels in `channels.py`, or (b) record that the architect's harness
-  loads `AGENTS.md` + root skills natively. Either way, correct the false docstring in `anchor.py`.
+  harness the architect actually runs at runtime. **Ratified: verify first** — a fresh session
+  empirically probes what the architect's `claude -p` harness actually loads, then ships either
+  (a) a derived `CLAUDE.md` bridge (`@AGENTS.md`) plus skills mirrored to `.claude/skills/` in
+  `channels.py` if the channels do not auto-load, or (b) a recorded note that they load natively if
+  they do. The false docstring in `anchor.py` is corrected either way.
 - **`architecture-review` overclaims a capability the engine does not have.** The skill advertises a
   model-driven shallow/leakage/deletion-test "depth verdict"; the engine ships only the length signal
   plus two mechanical AST rules (ADR 0020). The honest limit is currently buried at the end of a long
-  bullet. Fix in `spec/architecture-review.md`: lead the requirement with what is built, relegate the
-  verdict to a marked roadmap line; the faithful render fixes the skill automatically. **Coupled to
-  `engine-hardening`'s depth-gate call** — if that arc ships a mechanical depth proxy, the claim
-  narrows rather than disappears; sequence the wording after that decision.
+  bullet. **Resolved by `engine-hardening`'s depth-gate call — de-claim:** that arc rewrites
+  `spec/architecture-review.md` (and `spec/depth.md`) so depth is judgment-only and the model-driven
+  verdict is marked unbuilt, and the skill renders from that slice. This arc's job narrows to
+  confirming the rendered skill reads honestly once the de-claim folds.
 - **Machine-costly prose — the writing the channels are made of.** The research tied specific
   constructions to measured instruction-following degradation: a single ~167-word requirement
   statement (`spec/architecture-review.md`), compound negation (`spec/coherence.md` —
@@ -87,17 +101,18 @@ unchanged in count; the defects are in their content and targeting, not their nu
 
 ## recommended sequencing — verify, then dogfood the red→green
 
-1. **Resolve the deciding variable first** (the open question below): confirm the architect's runtime
-   harness. The harness answer scopes the P0 targeting fix from "ship a bridge" to "record a fact."
+1. **Verify the harness first** (ratified): a fresh session probes what the architect's `claude -p`
+   harness actually loads, which scopes the P0 targeting fix to shipping the bridge or recording a fact.
 2. **Build the conformance gate to go red on a live defect, then green** as the P0/P1 source fixes
    land — a genuine feedback-loop record, the discipline applied to the channels themselves.
-3. The prose and overclaim fixes ride along; the overclaim wording waits on `engine-hardening`'s
-   depth-gate decision.
+3. The prose fixes ride along; the `architecture-review` skill confirmation waits only on
+   `engine-hardening`'s de-claim folding (the two arcs otherwise run in parallel).
 
 ## cross-arc coupling — `engine-hardening`
 
-- The `architecture-review` overclaim resolves differently depending on whether the engine ships a
-  mechanical depth proxy; sequence the wording after that call.
+- The `architecture-review` de-claim wording is owned by `engine-hardening` (its depth-gate call); this
+  arc only confirms the rendered skill once it folds. The arcs run in parallel; only that one
+  confirmation waits.
 - The worker grounding (P1) must encode what `engine-hardening` finds the harness does **not** gate —
   a machine-readable gated-vs-watched register — and must teach the corrected single-writer invariant
   (stage exact files, lock spanning write→commit) rather than the current false one. The grounding
@@ -121,4 +136,4 @@ Every P0 defect is closed by a spec-slice or generator delta — or consciously 
 reason on its node, none silently dropped; the external-conformance gate runs in
 `python3 -m engine --check` and is green; the architect's runtime harness is confirmed to load the
 channels, or a derived bridge makes it so; the five-skill roster stands as ratified. The depth-related
-overclaim wording folds with `engine-hardening`'s depth call. [machine]
+overclaim wording folds with `engine-hardening`'s de-claim.
