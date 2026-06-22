@@ -1,8 +1,9 @@
 """The living spec, read from disk into a structured model.
 
 The agent's render of the self-model: the spec is **one specification**, segmented into capabilities
-for reading — each a flat `spec/<capability>.md` listing requirements with scenarios, beside the
-non-capability segments `spec/glossary.md` and `spec/depth.md`. A capability bears no material of its
+for reading — each a flat `spec/<capability>.md` listing requirements with scenarios (depth among
+them, a capability like the rest — ADR 0019). The ubiquitous-language `glossary.md` is root-level
+(ADR 0018). A capability bears no material of its
 own (a section of a document, not a node), so its on-disk form is a flat file, never a folder — the
 folder shape is reserved for what genuinely bears material, the graph node (ADR 0014). A capability is
 told from a cross-cutting segment by content: it declares `### Requirement:`.
@@ -70,7 +71,7 @@ def read_spec(root: str | None = None) -> Spec:
         reqs = _requirements(open(os.path.join(d, fname)).read())
         if reqs:                                  # a capability declares requirements; glossary/depth do not
             caps.append(Capability(fname[:-3], reqs))
-    gloss = os.path.join(d, "glossary.md")
+    gloss = os.path.join(root or graph._root(), "glossary.md")   # root-level ubiquitous language (ADR 0018)
     glossary = open(gloss).read() if os.path.isfile(gloss) else ""
     return Spec(caps, glossary)
 

@@ -20,7 +20,9 @@ def check(root: str) -> None:
     src = graph._DEFAULT_ROOT
     shutil.copytree(os.path.join(src, "spec"), os.path.join(root, "spec"))
     shutil.copyfile(os.path.join(src, "intent.md"), os.path.join(root, "intent.md"))
-    graph.commit([os.path.join(root, "spec"), os.path.join(root, "intent.md")],
+    shutil.copyfile(os.path.join(src, "glossary.md"), os.path.join(root, "glossary.md"))
+    graph.commit([os.path.join(root, "spec"), os.path.join(root, "intent.md"),
+                  os.path.join(root, "glossary.md")],
                  "seed: hypercore's own spec and vision")
 
     print("\nslice 2 — acceptance check  (self-hosted on hypercore's own spec)\n")
