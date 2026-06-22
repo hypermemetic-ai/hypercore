@@ -147,3 +147,118 @@ node, none silently dropped; the new concurrency and failure-path checks run in
 command rather than checking non-empty strings; the fold is transactional (atomic both directions,
 idempotent retry); the spec de-claims depth as enforced (judgment-only, the model-driven verdict
 marked unbuilt); and the full harness is green.
+
+## result
+
+Landed on branch `worktree-agent-a3a6b9cfc935b7483` (fenced worktree; NOT pushed, NOT integrated —
+the operator folds at integration). `python3 -m engine --check` is green end to end: 238 PASS, 0 FAIL,
+exit 0, ~9s. The red-flag scan on the tree is clean (no dead symbols, no cycles). Six commits, each a
+loop or the ratified de-claim. Every critical/high finding is closed by a real red→green loop — a
+check RED on the live defect, GREEN after — and each loop has a mutation guard proving it fails on the
+defect's data, not a lint.
+
+### the red→green loops (each: command / red / green / the guard)
+
+- **C1 + C3 — real single-writer.** `record.LINE` was a thread lock and `commit` staged shared parent
+  dirs with `git add -A`, so one worker's fold could sweep a sibling's uncommitted `intent.md`; slug
+  reserve→persist raced. Fix: a repo-level `flock` backing the line (`record._held`), `record.transact`
+  spanning write→commit, exact-path staging (`git add -A -- <act-paths>`, never a parent), and slug
+  reservation under the same held line (`graph._create`). False `record.py` docstring corrected.
+  - command `python3 -m engine --check` (slice 17)
+  - RED: with `serialized`→no-op, 3 assertions fail on record-corruption data (line not held, same-file
+    fold loses a requirement, history not two clean commits); with `commit` staging a shared parent, the
+    C1-sweep assertion fails (sibling's uncommitted file swept in).
+  - GREEN: all 5 pass — exact-path commits don't sweep, the line serializes a second holder, two workers
+    fold the SAME spec file with both landing, 8 identical-text creations get 8 distinct folders.
+  - guard: slice 17 fails on the data if the line is removed or the pathspec widened (closes research
+    Experiment 10, which previously died only to a dead-symbol lint).
+
+- **C2 — failure paths recover the node, the fence never leaks.** `worker.run` tore down only on
+  `reply.done`; every refusal (the steady-state path) leaked the worktree/branch and stranded the node
+  IN_FLIGHT forever. Fix: teardown in a `finally` on every exit (idempotent `worker._git_quiet`); a
+  non-integrating crossing recovers the node to standing (`graph.recover`) so its decision card blocks
+  re-dispatch; the error path recovers then re-raises for the scheduler's card; the scheduler recovers a
+  crash-stranded IN_FLIGHT node with no live worker each step (`schedule._recover_stranded`).
+  - command `python3 -m engine --check` (slice 18)
+  - RED on current code: fence leaks (worktree + branch), node strands IN_FLIGHT, through every refusal
+    path and the scheduler.
+  - GREEN: fence torn down on refusal, node leaves IN_FLIGHT, decision card raised, crash-stranded node
+    recovered.
+
+- **H1 — transactional fold (ratified).** The fold was two acts (`delta.fold` then `graph.integrated`);
+  a crash between left the delta merged but the node un-archived, and the retry hit a permanent
+  `CannotFold` (operator work wedged). Fix: `delta.fold(delta, root, node=node)` lands the spec change
+  AND the node's archive in ONE commit via `graph.archive_in_place`; `delta.check` is idempotent (an
+  ADDED requirement that already exists identically is already-applied, not a conflict); `graph.integrated`
+  removed (subsumed), the front-matter and the move deduplicated into `_render`/`_relocate`.
+  - command `python3 -m engine --check` (slice 19)
+  - RED with the non-idempotent `check`: the retry after a fault-injected crash mid-fold hits a permanent
+    CannotFold and the node stays un-archived.
+  - GREEN: one commit for spec-merge + node-archive; the crash retry completes idempotently (requirement
+    present once, node archived).
+
+- **H3 — malformed model output is a failure path.** `transport.parse` degraded any reply with no JSON
+  object to `{say: raw, done: True}`, folding a no-op as success. Fix: `transport.parse_object` (strict,
+  raises `MalformedReply`), a returncode/empty-stdout guard in `call`, and the worker reads its hand-off
+  strictly — a malformed reply raises at apply, BEFORE coherence, so the C2 recovery turns it into a
+  decision. Lenient `parse` stays for the prose-friendly architect path.
+  - command `python3 -m engine --check` (slice 18, part 3)
+  - RED reverting the worker to lenient `parse`: a no-JSON reply no longer raises (would fold a no-op).
+  - GREEN: a no-object reply raises `MalformedReply` at apply, recovers the node, tears the fence down.
+
+- **Keystone — the red→green loop is EXECUTED, not narrated.** `conditions._feedback_loop` checked three
+  non-empty strings; a fabricated loop folded clean (research Experiment 2). Fix: the gate runs the
+  command in the fence at the fork base (must FAIL = red) and the tip (must PASS = green), trusting exit
+  codes not narration; rejects red==green; a `_LOOP_GUARD` env stops the engine harness recursing when it
+  is itself the command. The harness gained an executable `LOOP` fixture (`test -f RESULT.md`); the
+  slices that handed inert prose loops (4, 5, 7, 8, 9, 16) now carry it, so their folds pass through the
+  real gate. The spec's loop requirement is split into shape + the executed-transition gate (strengthened).
+  - command `python3 -m engine --check` (slice 20)
+  - RED reverting to the string-presence gate: 7 assertions fail — every Experiment-2 fabricated loop
+    folds again, red==green folds, the un-runnable command folds.
+  - GREEN: each fabricated loop is gated; a genuinely transitioning command folds.
+
+- **Keystone — coherence incoherent branch + gated-vs-watched register.** No check drove `coherent:false`
+  (an always-coherent mutant survived green, research Experiment 3/6). Fix: slice 21 feeds `coherent:false`
+  and asserts the fold is refused, the spec untouched, the node live, a decision card raised — and that a
+  coherent result still folds. And `spec/folding-conditions.md` gains the machine-readable gated-vs-watched
+  register (`register: <discipline> — <gated|watched> — <how>`), parsed by slice 21: delta-applies,
+  red-green-loop, length-ratchet, mechanical-red-flags are gated; depth-verdict, coherence, grilling-floor,
+  design-it-twice-selection are watched (model-side, not scripted-and-called-tested).
+  - command `python3 -m engine --check` (slice 21)
+  - RED with an always-coherent integrate: the incoherent result folds (`done=True`), failing the
+    incoherent-branch assertions.
+  - GREEN: the incoherent branch refuses; the register is honest and machine-readable.
+
+### the ratified de-claim (depth is judgment-only)
+
+`spec/depth.md` and `spec/architecture-review.md` now state plainly that depth is a decision the gate
+RAISES off the length signal and the mechanical red flags, never a threshold it ENFORCES; a green scan
+means length-clean / no dead symbols / no cycles, never "deep"; the model-driven shallow/leakage/
+deletion-test verdict stays not-yet-built (ADR 0006). The over-packed ~167-word god-file requirement
+statement in `architecture-review.md` is split into one-instruction sentences. `review.backlog` now
+ALWAYS carries the unbuilt-verdict honesty (it could previously be silenced by any length finding
+appearing). `spec/self-model.md`'s "atomically, both directions" is brought up to the now-true H1
+behavior (one commit, idempotent retry) — strengthened, not weakened. The rendered `architecture-review`
+and `depth` skills re-derive honest on fold; the sibling arc confirms the rendered skill.
+
+### parked, with reasons (medium/low findings, deliberately not drawn ahead)
+
+Per the arc's "findings below critical/high are taken or parked as the work reaches them, not drawn
+ahead": H2 (stale-worktree reuse) is largely mooted by C2's idempotent teardown but the live-base check
+is unbuilt; H4 (commit swallows all exceptions) unnarrowed; H5 (`channels.materialize` non-transactional
+on a missing slice) — the fold now renders into one act but `_read_slice` still lacks an `isfile` guard;
+M1–M6 and L1–L5 (operator-mutation staleness, design-it-twice contest leak + ADR race, the `grill`
+accessor cluster, `review.py` three-job split, typed `conditions.unmet`, the loop-schema dup, the delta
+separator and `surfaced:` parse, encoding/`with` hygiene). All remain recorded in `research.md`. None
+silently dropped.
+
+### one surfaced scope decision (operator, please note)
+
+I edited `engine/review.py` (`backlog` now always carries the unbuilt-verdict honesty line, not only on
+a clean tree). It was not in my explicit owned list, but the change is squarely the de-claim's spirit —
+the review must ALWAYS declare the model-driven verdict unbuilt, never let a length finding silence that
+honesty — and it was required for the de-claim to hold while `graph.py` legitimately grew past the
+"nearing" mark. `review.py` is engine code unlikely to collide with the agent-facing arc, but flagging
+it for your awareness at integration. The change is one function body (`review.backlog`), conservative
+(it only appends a line), and slice 7/15/2 stay green.
