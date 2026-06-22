@@ -25,4 +25,4 @@ self-judging.
 
 ## Going deeper
 
-The full requirements and their scenarios are `spec/coherence/spec.md`, this skill's single source.
+The full requirements and their scenarios are `spec/coherence.md`, this skill's single source.

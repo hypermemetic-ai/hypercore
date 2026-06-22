@@ -26,4 +26,4 @@ and the **spec delta** the change will realize.
 
 ## Going deeper
 
-The full requirements and their scenarios are `spec/grilling/spec.md`, this skill's single source.
+The full requirements and their scenarios are `spec/grilling.md`, this skill's single source.

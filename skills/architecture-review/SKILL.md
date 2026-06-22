@@ -23,4 +23,4 @@ the fold, this standing whole-tree scan.
 
 ## Going deeper
 
-The full requirements and their scenarios are `spec/architecture-review/spec.md`, this skill's single source.
+The full requirements and their scenarios are `spec/architecture-review.md`, this skill's single source.

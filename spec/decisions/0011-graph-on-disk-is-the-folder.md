@@ -67,7 +67,7 @@ reasoning from the intent's own §work.
 - **`hyper/graph.py` is superseded** in its on-disk layout. It makes the node the unit
   (`work/nodes/<id>.md`), has no `archive/`, and folds by field-flip — a direct violation of
   L112/L116. It must be reworked to the graph-folder form (or replaced), with the acceptance harness
-  (`spec/graph/spec.md` scenarios, the `hyper/check` slices that pin it) updated to assert the
+  (`spec/graph.md` scenarios, the `hyper/check` slices that pin it) updated to assert the
   folder-and-move shape. This is **the first finding the dogfooding surfaces** — the engine bends to
   the structure, not the reverse.
 - **`next-work.md` is retired**: standing work becomes graph folders under `work/`, the frontier
@@ -84,4 +84,4 @@ reasoning from the intent's own §work.
 
 Independent of ADR 0010 (research provenance). Supersedes `hyper/graph.py`'s on-disk layout
 (`work/nodes/<id>.md`); the engine's read-live / atomic-write / commit-behind mechanics
-(`spec/graph/spec.md`) stand — only the on-disk *shape* moves from node-as-unit to graph-as-folder.
+(`spec/graph.md`) stand — only the on-disk *shape* moves from node-as-unit to graph-as-folder.

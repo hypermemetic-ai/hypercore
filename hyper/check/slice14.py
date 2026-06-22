@@ -2,7 +2,7 @@
 
 Acceptance (ADR 0009 §1 + ADR 0013): the architect's remaining methodologies — `grilling` (pre-work intent
 extraction) and `coherence` (the archive-gate judgment) — are carved out of `conversation` into their own
-capabilities, each a clean standalone `spec/<cap>/spec.md`, and render as skills through the SAME methodology
+capabilities, each a clean standalone `spec/<cap>.md`, and render as skills through the SAME methodology
 seam as `design-it-twice` / `architecture-review`: single-sourced from their slice and materialized by the fold.
 
 Read against the real spec (seeded into the harness root by slice 2), so the check sees the live carve — no
@@ -45,11 +45,11 @@ def check(root: str) -> None:
     ok({"grilling", "coherence"} <= set(methodology.METHODOLOGIES),
        "grilling and coherence are registered methodologies — they render like design-it-twice")
     gk = methodology.skill("grilling")
-    ok(gk.startswith("---") and "name: grilling" in gk and "spec/grilling/spec.md" in gk
+    ok(gk.startswith("---") and "name: grilling" in gk and "spec/grilling.md" in gk
        and "**a filed ask is grilled before it becomes work**" in gk,
        "the grilling skill is a progressive-disclosure render of its carved slice, single-sourced")
     ck = methodology.skill("coherence")
-    ok(ck.startswith("---") and "name: coherence" in ck and "spec/coherence/spec.md" in ck
+    ok(ck.startswith("---") and "name: coherence" in ck and "spec/coherence.md" in ck
        and "**the architect integrates the worker's hand-off**" in ck,
        "the coherence skill is a progressive-disclosure render of its carved slice, single-sourced")
     ok("- WHEN a worker hands a result back" not in ck,

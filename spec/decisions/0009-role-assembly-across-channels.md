@@ -13,6 +13,12 @@ and the harness-seam build — remain [machine] and land with the build.
 > into `intent.md`, the living spec, and the ADRs. The single-sourcing channel decided below is
 > unchanged — only the source's location moved (`research/aposd.md` → `spec/depth.md`).
 
+> **§4 amended (2026-06-21, the spec-as-segments pass).** The `CLAUDE.md → AGENTS.md` symlink is
+> **dropped as redundant**: Claude reads `AGENTS.md` directly when no `CLAUDE.md` is present (this
+> ADR's own fact 1) and OMP reads it natively, so a single `AGENTS.md` already serves both roles —
+> keeping a second file was the duplicate-layer smell the placement was meant to avoid. Placement is
+> now one `AGENTS.md`, no symlink, no second role-file.
+
 ## Context
 
 Item 2 was investigated (`work/role-assembly/context-files.md`), designed (`work/role-assembly/assembly.md`), and

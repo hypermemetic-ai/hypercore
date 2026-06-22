@@ -24,4 +24,4 @@ advance the graph at once.
 
 ## Going deeper
 
-The full requirements and their scenarios are `spec/design-it-twice/spec.md`, this skill's single source.
+The full requirements and their scenarios are `spec/design-it-twice.md`, this skill's single source.

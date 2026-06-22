@@ -47,7 +47,7 @@ whole spec unchanged; the worker-fenced side is parked, not faked, on the pi/OMP
   faked check (the honest harness limit). (slice 13, ADR 0009 §0/§4.)
 - **step 4b — the grilling/coherence skills.** Carved (the operator's call over a requirement-subset
   render — the whole-slice render has no drift surface): `grilling` and `coherence` are now their own
-  capabilities (`spec/grilling/spec.md`, `spec/coherence/spec.md`), the five requirements moved out of
+  capabilities (`spec/grilling.md`, `spec/coherence.md`), the five requirements moved out of
   `conversation` verbatim. Both register in `methodology.METHODOLOGIES` and render through the same seam
   as the step-4 pair, materialized by the fold — completing ADR 0009 §1's four architect methodologies.
   (slice 14, ADR 0013.)

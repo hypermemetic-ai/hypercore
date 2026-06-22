@@ -1,10 +1,15 @@
 """The living spec, read from disk into a structured model.
 
-The agent's render of the self-model: `spec/<capability>/spec.md`, each a list of
-requirements with scenarios, plus `spec/glossary.md`. This module is the one place
-that knows the on-disk shape; everything else (the delta, the operator view) works
-against the structure it returns, so the markdown form can change without touching
-them. Read live every time, like the graph — never cached.
+The agent's render of the self-model: the spec is **one specification**, segmented into capabilities
+for reading — each a flat `spec/<capability>.md` listing requirements with scenarios, beside the
+non-capability segments `spec/glossary.md` and `spec/depth.md`. A capability bears no material of its
+own (a section of a document, not a node), so its on-disk form is a flat file, never a folder — the
+folder shape is reserved for what genuinely bears material, the graph node (ADR 0014). A capability is
+told from a cross-cutting segment by content: it declares `### Requirement:`.
+
+This module is the one place that knows the on-disk shape; everything else (the delta, the operator
+view) works against the structure it returns, so the markdown form can change without touching them.
+Read live every time, like the graph — never cached.
 """
 from __future__ import annotations
 
@@ -51,7 +56,7 @@ def spec_dir(root: str | None = None) -> str:
 
 
 def cap_path(name: str, root: str | None = None) -> str:
-    return os.path.join(spec_dir(root), name, "spec.md")
+    return os.path.join(spec_dir(root), name + ".md")
 
 
 def read_spec(root: str | None = None) -> Spec:
@@ -59,11 +64,12 @@ def read_spec(root: str | None = None) -> Spec:
     if not os.path.isdir(d):
         return Spec()
     caps = []
-    for name in sorted(os.listdir(d)):
-        path = os.path.join(d, name, "spec.md")
-        if os.path.isfile(path):
-            with open(path) as f:
-                caps.append(Capability(name, _requirements(f.read())))
+    for fname in sorted(os.listdir(d)):
+        if not fname.endswith(".md"):
+            continue                              # decisions/ is a dir; skip non-.md entries
+        reqs = _requirements(open(os.path.join(d, fname)).read())
+        if reqs:                                  # a capability declares requirements; glossary/depth do not
+            caps.append(Capability(fname[:-3], reqs))
     gloss = os.path.join(d, "glossary.md")
     glossary = open(gloss).read() if os.path.isfile(gloss) else ""
     return Spec(caps, glossary)

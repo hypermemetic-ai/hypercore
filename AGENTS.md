@@ -1,6 +1,6 @@
 # hypercore — the operating anchor
 
-**Working *on* hypercore** — a person, or a coding assistant editing this repo — rather than running as the system's own architect or worker? This file is not your instructions: read `README.md`, then `intent.md` and `spec/`; run the acceptance harness with `python3 -m hyper --check` and the operator interface with `python3 -m hyper`. The rest below is the runtime **role anchor** — the minimal always-on context the system loads into the architect (via the `CLAUDE.md` symlink) and the fenced worker (via `AGENTS.md`). It is deliberately minimal: only the non-inferable operational lines, with the specialization in the skills and the living spec, not here.
+**Working *on* hypercore** — a person, or a coding assistant editing this repo — rather than running as the system's own architect or worker? This file is not your instructions: read `README.md`, then `intent.md` and `spec/`; run the acceptance harness with `python3 -m hyper --check` and the operator interface with `python3 -m hyper`. The rest below is the runtime **role anchor** — the minimal always-on context the system loads into the architect and the fenced worker. It is deliberately minimal: only the non-inferable operational lines, with the specialization in the skills and the living spec, not here.
 
 ## Operating (the runtime roles)
 

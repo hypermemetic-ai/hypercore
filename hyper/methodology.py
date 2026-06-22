@@ -3,7 +3,7 @@
 The architect carries its specialization in **skills** (ADR 0009): the design methodologies it
 routes to when the work calls for them — `design-it-twice` (judge a load-bearing interface as a
 contest of isolated candidates) and `architecture-review` (the standing depth scan) — each a clean
-standalone capability with its own `spec/<cap>/spec.md`. This module renders each slice into a
+standalone capability with its own `spec/<cap>.md`. This module renders each slice into a
 progressive-disclosure `SKILL.md`: the metadata names *when* to load it, the body is the slice's
 methodology overview (its preamble) and its disciplines (each requirement's statement), and the
 resource pointer is the slice itself for the full requirements and their scenarios.
@@ -17,7 +17,7 @@ All four of the architect's methodologies (ADR 0009 §1) render here: `design-it
 `architecture-review` were already their own capabilities, and `grilling` and `coherence` were carved
 out of `conversation` into their own slices so they render through this one seam too (ADR 0013,
 role-assembly step 4b) — rather than a requirement-subset render, which would have added a second copy
-of the requirement set to drift. Each is one clean `spec/<cap>/spec.md`; new methodologies add one line.
+of the requirement set to drift. Each is one clean `spec/<cap>.md`; new methodologies add one line.
 """
 from __future__ import annotations
 
@@ -72,7 +72,7 @@ def skill(cap: str, root: str | None = None) -> str:
         f"{_overview(text)}\n\n"
         "## The disciplines — what good looks like\n\n" + _bullets(_disciplines(text)) + "\n\n"
         "## Going deeper\n\n"
-        f"The full requirements and their scenarios are `spec/{cap}/spec.md`, this skill's single source.\n"
+        f"The full requirements and their scenarios are `spec/{cap}.md`, this skill's single source.\n"
     )
 
 
@@ -101,7 +101,7 @@ def skill_path(cap: str) -> str:
 def _read_slice(cap: str, root: str | None) -> str:
     """The capability's spec slice — the project root first, the shipping repo as fallback."""
     here = spec.cap_path(cap, root)
-    path = here if os.path.isfile(here) else os.path.join(_REPO, "spec", cap, "spec.md")
+    path = here if os.path.isfile(here) else os.path.join(_REPO, "spec", cap + ".md")
     return open(path, encoding="utf-8", errors="ignore").read()
 
 

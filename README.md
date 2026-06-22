@@ -7,7 +7,8 @@ Start here (a fresh session reads these, in order — all in this repo):
 
 1. `intent.md` — the durable vision: what the system is for. Every statement is
    machine-owned until the operator ratifies it; the markers say what still awaits a word.
-2. `spec/` — the living spec: each capability's `spec.md`, the cross-cutting `glossary.md`,
+2. `spec/` — the living spec: one specification segmented into flat `spec/<capability>.md` files
+   (a capability is a document segment, not a folder — ADR 0014), the cross-cutting `glossary.md`,
    and `spec/depth.md` (the depth disciplines the system is built to). Small by design and
    meant to be scanned whole — the high-signal core.
 3. `spec/decisions/` — the ADRs: every decision and its grounds, in order. The reference tail.
