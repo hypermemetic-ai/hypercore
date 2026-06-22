@@ -41,6 +41,15 @@ _ITEM = re.compile(r"^\d+\.\s+(.*)")          # a numbered list item: "1. <text>
 # file an external harness auto-loads, regenerated from source by the fold's render step.
 SKILL_PATH = os.path.join("skills", "depth", "SKILL.md")
 
+# The skill's *when to load* (the ~50-token metadata level) — authored, like the methodologies'
+# descriptions, and the one source for it: the skill renders it into its frontmatter and the
+# agents-file anchor lists it from here, so the two never carry a second copy to drift.
+DESCRIPTION = (
+    "hypercore's depth disciplines — build deep modules (a lot of behavior behind a small "
+    "interface) and avoid the red flags of shallowness. Load when designing, building, or "
+    "refining a module's interface or implementation."
+)
+
 
 def disciplines(root: str | None = None) -> str:
     """The worker's prompt-side depth grounding, rendered from aposd.md — what replaces the
@@ -66,9 +75,7 @@ def skill(root: str | None = None) -> str:
     return (
         "---\n"
         "name: depth\n"
-        "description: hypercore's depth disciplines — build deep modules (a lot of behavior "
-        "behind a small interface) and avoid the red flags of shallowness. Load when designing, "
-        "building, or refining a module's interface or implementation.\n"
+        f"description: {DESCRIPTION}\n"
         "---\n\n"
         "# Depth — build deep modules\n\n"
         "You are held to these standing disciplines; build deep up front so your work folds "

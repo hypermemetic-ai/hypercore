@@ -19,7 +19,7 @@ acceptance harness with `python3 -m hyper --check`; open the live system with `p
 
 ## Where it stands
 
-Build proceeds in slices, slice 1 first. **Slices 1–10 are built.**
+Build proceeds in slices, slice 1 first. **Slices 1–14 are built.**
 
 - **1–6 — the spine.** The graph and the fold; intent extraction by grilling; the worker and
   its git-worktree fence; the folding conditions; the architecture review. Slice 6 split the
@@ -42,20 +42,22 @@ the graph — `work/` (open) + `archive/` (folded), each graph a folder with its
 in each graph's `grilling.md`; `next-work.md` is retired and `research/` dissolved into material on
 its node. 157 checks green.
 
-**Next — item 2 (role assembly, ADR 0009).** Two roles, each maximally specialized, assembled
-from the repo documents (the single source) across three derived channels: a minimal shared
-`AGENTS.md` (symlinked as `CLAUDE.md`), on-demand **skills**, and the per-episode **prompt**. The
-worker holds the whole spec preloaded by construction (the slice-4 keystone); just-in-time is
-reserved for the reference tail. The single-source-on-fold spine is built: **depth single-sourcing**
-(step 1), **materialize-on-fold** (step 2, slice 11 — the fold re-derives the static channels from the
-spec via `hyper/channels.py`, so `skills/` is regenerated output a committed artifact can't drift
-from), and the **architect's methodology skills** (step 4, slice 12 — `hyper/methodology.py` renders
-`design-it-twice` and `architecture-review` from their spec slices into the same fold-driven registry).
-Open: the minimal shared `AGENTS.md` anchor (step 3, blocked on the operator's word on its content);
-a grilling/coherence skill (step 4b, needs a slice-shape decision — those methodologies live inside
-`conversation`, not a standalone slice); and the fenced-worker side on the parked multi-model harness
-seam (the autonomy unlock). The open arc is `work/role-assembly/` (its `intent.md` carries the steps).
-The engine conformance is done (`archive/graph-on-disk/`).
+**Item 2 (role assembly, ADR 0009) — the pre-seam build is complete (slices 11–14).** Two roles, each
+maximally specialized, assembled from the repo documents (the single source) across three derived
+channels: a minimal shared `AGENTS.md` (symlinked as `CLAUDE.md`), on-demand **skills**, and the
+per-episode **prompt**. The worker holds the whole spec preloaded by construction (the slice-4
+keystone); just-in-time is reserved for the reference tail. The single-source-on-fold spine is built:
+**depth single-sourcing** (step 1, slice 10), **materialize-on-fold** (step 2, slice 11 — the fold
+re-derives the static channels from the spec via `hyper/channels.py`, so `skills/` is regenerated
+output a committed artifact can't drift from), the **architect's methodology skills** (steps 4 + 4b,
+slices 12 + 14 — `hyper/methodology.py` renders all four — `design-it-twice`, `architecture-review`,
+and now `grilling` and `coherence`, carved into their own capabilities (ADR 0013) — from their spec
+slices into the same fold-driven registry), and the **minimal shared `AGENTS.md` anchor** (step 3,
+slice 13 — `hyper/anchor.py`, non-inferable operational lines plus a registry-derived skills index,
+materialized on fold and symlinked as `CLAUDE.md`). What remains is parked: the fenced-worker side on
+the multi-model harness seam (steps 5–6, the autonomy unlock — transport `cwd` = the fence, the
+reference tail pulled just-in-time, the OMP flip). The open arc is `work/role-assembly/` (its
+`intent.md` carries the steps). The engine conformance is done (`archive/graph-on-disk/`).
 
 ## On documents
 

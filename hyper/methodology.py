@@ -13,10 +13,11 @@ so a sharpened slice reaches the next architect with no second copy to drift. `c
 fold (role-assembly step 4) exactly as it drives the worker's `depth` skill — the registry the fold
 re-renders so a committed artifact can never disagree with its spec slice.
 
-`grilling` and the coherence judgment (the architect's other methodologies, ADR 0009 §1) are *not*
-here: they live as requirements inside `conversation`, not as a standalone slice, so they have no
-`spec/<cap>/spec.md` to render. Skilling them needs either a `grilling` slice carved from
-`conversation` or a requirement-subset render — a follow-up recorded on the work graph, not hacked in.
+All four of the architect's methodologies (ADR 0009 §1) render here: `design-it-twice` and
+`architecture-review` were already their own capabilities, and `grilling` and `coherence` were carved
+out of `conversation` into their own slices so they render through this one seam too (ADR 0013,
+role-assembly step 4b) — rather than a requirement-subset render, which would have added a second copy
+of the requirement set to drift. Each is one clean `spec/<cap>/spec.md`; new methodologies add one line.
 """
 from __future__ import annotations
 
@@ -40,6 +41,16 @@ METHODOLOGIES = {
         "hypercore's architecture-review methodology — the standing scan that keeps the system deep, "
         "surfacing god-files-in-the-making by the length signal against the depth-decision record. "
         "Load when assessing structural depth or reading the deepening backlog.",
+    "grilling":
+        "hypercore's grilling methodology — turn a filed ask into a ratified contract and spec delta "
+        "by resolving what the spec and intent already settle and surfacing only the stake-bearing "
+        "residue, one question at a time, each with a lean and a flip. Load when extracting intent "
+        "from an ask or judging whether it is ready to become work.",
+    "coherence":
+        "hypercore's coherence methodology — the archive-gate judgment over a worker's hand-off: check "
+        "it against the contract at the operator's altitude (not a code review) and against the depth "
+        "bar, folding on a pass and raising a decision otherwise. Load when integrating or archiving "
+        "a worker's result.",
 }
 
 # The shipping repo — the fallback source, so the render works against a bare root (the harness plants

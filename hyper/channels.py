@@ -14,17 +14,18 @@ guarantee `delta.fold` gives the spec and the operator view gives the self-model
 target (ADR 0009 §3, the one new mechanism).
 
 `depth` (the worker's discipline skill) was the first target; the architect's methodology skills join
-it (role-assembly step 4), each its own module's `materialize`. The minimal shared agents file (step 3)
-appends next. The registry is the only place that knows the set.
+it (role-assembly step 4), each its own module's `materialize`; and the minimal shared **agents file**
+(`anchor`, step 3) is the last static channel — the always-on anchor both roles auto-load, derived like
+the rest and symlinked as `CLAUDE.md`. The registry is the only place that knows the set.
 """
 from __future__ import annotations
 
-from . import depth, methodology
+from . import anchor, depth, methodology
 
 # The static channels, in render order — each a `(root) -> path` render of one artifact from the spec.
 # `depth` is the worker's skill; `methodology.materializers()` splices in one render per architect
-# methodology skill. New channels (the agents file) append here as their steps land.
-CHANNELS = (depth.materialize, *methodology.materializers())
+# methodology skill; `anchor` is the shared agents file. New channels append here as their steps land.
+CHANNELS = (depth.materialize, *methodology.materializers(), anchor.materialize)
 
 
 def materialize(root: str | None = None) -> list[str]:

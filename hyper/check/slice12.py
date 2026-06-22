@@ -16,8 +16,9 @@ sentinel in its preamble and a sentinel requirement) so a derived skill must rep
 3. **drift is impossible** — editing the slice and folding again re-renders the skill to match;
 4. **every architect methodology is registered** — each one materializes through the channels registry.
 
-`grilling`/coherence are deliberately absent — they are requirements inside `conversation`, not a
-standalone slice; skilling them is recorded as a follow-up, not hacked into this render.
+At this step `grilling`/coherence were still requirements inside `conversation`, with no standalone
+slice to render — skilling them was left as a follow-up (since landed: carved into their own
+capabilities and skilled through this same seam in slice 14, ADR 0013).
 """
 from __future__ import annotations
 
@@ -74,7 +75,7 @@ def check(root: str) -> None:
     # ── 4. every architect methodology is registered and materializes ──────────────────────
     paths = channels.materialize(root)
     ok(set(methodology.METHODOLOGIES) >= {"design-it-twice", "architecture-review"},
-       "both clean standalone architect methodologies are registered (grilling deferred — it has no slice)")
+       "the architect's standalone methodologies are registered (step-4 pair; grilling/coherence land in slice 14)")
     for cap in methodology.METHODOLOGIES:
         p = os.path.join(root, methodology.skill_path(cap))
         ok(os.path.isfile(p) and any(os.path.samefile(p, q) for q in paths),
