@@ -17,6 +17,9 @@ review over a planted scan tree — pinning the four properties that define the 
    to the length);
 4. **the review distinguishes exceeded from over from accepted** — a stale acceptance returns to
    the backlog, marked as having outgrown its bar.
+5. **the durable home and the one writer** (accepted-length-home) — the record lives at
+   `engine/accepted-lengths.md`, beside its reader and apart from any node, written through the one
+   `conditions.accept` seam: a record at the retired repo-root home is dead, the writer ratchets.
 """
 from __future__ import annotations
 
@@ -36,8 +39,8 @@ def check(root: str) -> None:
     margin = lambda bar: round(bar * SLACK)
 
     def decide(body: str) -> None:
-        # the gate's source is the repo-root accepted-lengths.md; append so plants accumulate
-        f = os.path.join(root, "accepted-lengths.md")
+        # the gate's source is engine/accepted-lengths.md; append so plants accumulate
+        f = os.path.join(root, "engine", "accepted-lengths.md")
         prior = open(f, encoding="utf-8").read() if os.path.isfile(f) else ""
         tree.atomic_write(f, prior + body)
 
@@ -125,8 +128,8 @@ def check(root: str) -> None:
     for name in ("over", "exceeded", "accepted"):
         tree.atomic_write(os.path.join(scan, "engine", f"{name}.py"), "x = 0\n" * N)
     LOW, HIGH = conditions.SIGNAL + 10, conditions.SIGNAL + 200   # below N+margin; above N
-    # both records live in the one accepted-lengths.md the gate and the review read
-    tree.atomic_write(os.path.join(scan, "accepted-lengths.md"),
+    # both records live in the one engine/accepted-lengths.md the gate and the review read
+    tree.atomic_write(os.path.join(scan, "engine", "accepted-lengths.md"),
                        f"accepted: engine/exceeded.py @{LOW} — accepted small, since outgrown.\n"
                        f"accepted: engine/accepted.py @{HIGH} — deep; within the accepted length.\n")
     rv = review.review(scan)
@@ -147,3 +150,25 @@ def check(root: str) -> None:
     mark = "".join(review.bars(rv))
     ok("grew past its accepted bar" in mark and "decision re-opened" in mark,
        "the structural map marks the exceeded file distinctly from a never-decided over file")
+
+    # ── 6. the durable home and the one writer (accepted-length-home) ─────────────────────
+    # The record's home is engine/accepted-lengths.md, beside its reader — not the repo root — and the
+    # one writer is conditions.accept. RED→GREEN on the relocation: a record at the retired repo-root
+    # home is dead; the gate reads the engine/ home the writer lands in.
+    REL = "engine/relocated.py"
+    tree.atomic_write(os.path.join(root, "accepted-lengths.md"),
+                       f"accepted: {REL} @{conditions.SIGNAL + 50} — at the retired repo-root home.\n")
+    ok(conditions.accepted_at(REL, root) is None,
+       "a record at the retired repo-root home is not read — the home moved to engine/")
+    BAR6 = conditions.SIGNAL + 120
+    ok(conditions.accept(REL, BAR6, "deep behind a small interface", root) is True
+       and conditions.accepted_at(REL, root) == BAR6,
+       "conditions.accept writes the record the reader honors — one seam over one durable store")
+    ok(os.path.isfile(os.path.join(root, "engine", "accepted-lengths.md")),
+       "the durable store is engine/accepted-lengths.md — beside its reader, apart from any node")
+    ok(conditions.accept(REL, BAR6, "again", root) is False
+       and conditions.accept(REL, BAR6 - 10, "lower", root) is False,
+       "re-accepting at the same or a lower length writes nothing — the bar only rises (idempotent)")
+    ok(conditions.accept(REL, BAR6 + 80, "renewed deeper", root) is True
+       and conditions.accepted_at(REL, root) == BAR6 + 80,
+       "re-accepting at a higher length ratchets the bar up")

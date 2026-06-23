@@ -98,6 +98,20 @@ only rises).
 - WHEN an accepted-length record names the file with no `@<N>`
 - THEN it does not clear the gate — an acceptance must name the length it is bounded to
 
+### Requirement: the accepted-length record is durable authored state, written through one seam
+The accepted-length record is the gate's one piece of **live authored state**, and it MUST outlive
+the work that grew the file past the signal: the file stays long after its tree folds, so the record
+cannot ride a node (a node archives with its work) and is not re-derived on fold like the channels.
+It MUST therefore live in **one durable store**, read and written through a **single seam** — the
+gate reads the accepted length, and one writer records it — so the store's location is a hidden
+decision and the record can never be written two ways. The writer **ratchets**: it records a higher
+length and is a no-op at an already-cleared one.
+
+#### Scenario: the writer records an accepted length the reader then honors
+- WHEN the writer records a file accepted at length N
+- THEN the gate reads back N for that file from the one durable store — held apart from any node —
+  and re-recording at N or lower writes nothing, the bar only rising
+
 ### Requirement: the standards declare gated or watched, machine-readably
 The system MUST carry a **machine-readable classification** of every standard, each declared either
 **gated** — a check fails unless the standard actually happened — or **watched** — the operator
@@ -113,7 +127,7 @@ The standards, as they stand (the honest classification the research established
 
 - standard: delta-applies — gated — `delta.check` parses the delta against the live spec; a mismatch refuses
 - standard: red-green-loop — gated — `conditions._feedback_loop` executes the command in the fence and requires a real red→green transition
-- standard: length-ratchet — gated — `conditions.accepted`/`accepted_at` bound an accepted length and re-raise on material growth
+- standard: length-ratchet — gated — `conditions.accepted`/`accepted_at` read a bounded accepted length (and `accept` writes one) from the one durable store, re-raising on material growth
 - standard: mechanical-red-flags — gated — `review.red_flags` scans for dead module-level symbols and circular dependencies
 - standard: module-depth-judgment — watched — the model-driven shallow/leakage/deletion-test judgment is not yet built; length raises a decision, never a verdict
 - standard: coherence — watched — the architect's archive-gate judgment is the model's; the incoherent→decision *branch* is exercised, but whether a result truly honors the contract is watched, not gated

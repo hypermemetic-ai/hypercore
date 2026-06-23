@@ -88,7 +88,7 @@ def check(root: str) -> None:
 
     # 4. a file past the signal folds when an accepted-length record accepts it — the
     # decision's accept-with-reason outcome, recorded as a parseable record (not a substring).
-    tree.atomic_write(os.path.join(root, "accepted-lengths.md"),
+    tree.atomic_write(os.path.join(root, "engine", "accepted-lengths.md"),
                        f"accepted: engine/giant.py @{conditions.SIGNAL + 61} "
                        "— deep behind a small interface; its length is context-cost, not shallowness.\n")
     ask = staged("an accepted-length large module", "an accepted-length module folds")

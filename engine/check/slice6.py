@@ -48,7 +48,7 @@ def check(root: str) -> None:
 
     # 4. the accepted-length record — the same record folding-conditions consults: an
     # accepted-length record naming the file clears it from the backlog, but the map still shows it.
-    tree.atomic_write(os.path.join(scan, "accepted-lengths.md"),
+    tree.atomic_write(os.path.join(scan, "engine", "accepted-lengths.md"),
                        f"accepted: engine/giant.py @{conditions.SIGNAL + 61} "
                        "— deep behind a small interface; its length is context-cost, not shallowness.\n")
     dec = review.review(scan)

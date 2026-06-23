@@ -45,6 +45,7 @@ import subprocess
 import tempfile
 
 from . import delta, spec
+from .record import atomic_write, transact
 
 # The env guard that stops a loop execution from recursing: set while the gate runs a loop's command,
 # so if that command is the engine's own acceptance harness, the inner engine does not re-execute loops
@@ -221,8 +222,7 @@ def accepted(rel: str, lines: int, root: str | None) -> bool:
 
 def accepted_at(rel: str, root: str | None) -> int | None:
     """The length an accepted-length record records this file accepted at — the **ratchet
-    bar** — or None when none accepts it. The record is a line in the repo-root
-    `accepted-lengths.md` record:
+    bar** — or None when none accepts it. The record is a line in the durable store (`_ledger`):
 
         accepted: <repo-relative path> @<N> — <reason>
 
@@ -233,16 +233,46 @@ def accepted_at(rel: str, root: str | None) -> int | None:
     the exception is the decision *at a stated size*, not the spelling. When several records name
     the same file — each re-acceptance as the file grows writes a new one — the **highest** bar
     governs: the ratchet only rises, so the most permissive recorded acceptance is the live one."""
-    # PROVISIONAL: the accepted-length records are live gate-state that must outlive the work that
-    # grew the file, so they cannot archive on a node. They live in a repo-root `accepted-lengths.md`
-    # the gate reads here; the proper home + write path are debt (`work/accepted-length-home/`).
-    f = os.path.join(os.path.dirname(spec.spec_dir(root)), "accepted-lengths.md")
+    f = _ledger(root)
     if not os.path.isfile(f):
         return None
     want = rel.replace(os.sep, "/")
     bars = [rec[1] for line in open(f, encoding="utf-8", errors="ignore")
             if (rec := _depth_record(line)) and rec[0] == want]
     return max(bars) if bars else None
+
+
+def accept(rel: str, n: int, reason: str, root: str | None = None) -> bool:
+    """Record `rel` accepted at `n` lines — the settle side of the length decision the gate raises,
+    and the **one writer** of the accepted-length record. Ratcheting and idempotent: a no-op when the
+    file is already accepted at `n` or higher (the bar only rises, so re-accepting at the same or a
+    lower length writes nothing), else it appends one parseable `accepted: <rel> @<n> — <reason>` line
+    to the durable store under the single-writer line and commits it. Returns whether a record was
+    written. The store's location lives behind this seam and `accepted_at`, so a caller — the architect
+    settling the decision today, the operator's acceptance card (`card-kind`) tomorrow — names only the
+    file, the length, and the reason, never where the record sleeps."""
+    rel = rel.replace(os.sep, "/")
+    bar = accepted_at(rel, root)
+    if bar is not None and bar >= n:
+        return False
+    f = _ledger(root)
+    line = f"accepted: {rel} @{n} — {reason.strip()}\n"
+    def write() -> list[str]:
+        prior = open(f, encoding="utf-8").read() if os.path.isfile(f) else ""
+        atomic_write(f, prior + line)
+        return [f]
+    transact(write, [f], f"accept length: {rel} @{n}")
+    return True
+
+
+def _ledger(root: str | None) -> str:
+    """The accepted-length record's durable home: `engine/accepted-lengths.md`, beside its only
+    reader (this gate) and the standing review that shares it. It is the system's one piece of
+    **authored, mutable** state — live gate-state that must outlive the work that grew a file past the
+    length signal, so it cannot ride a node (a node archives with its work, intent §50/§116) and is not
+    re-derived on fold like the channels. Reached only through `accepted_at` and `accept`, so the
+    location is a hidden decision the rest of the system never names."""
+    return os.path.join(os.path.dirname(spec.spec_dir(root)), "engine", "accepted-lengths.md")
 
 
 def _depth_record(line: str) -> tuple[str, int] | None:

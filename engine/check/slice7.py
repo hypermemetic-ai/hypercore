@@ -47,8 +47,8 @@ def check(root: str) -> None:
                            "# a long module\n" + "x = 0\n" * lines)
 
     def decide(body: str):
-        # the gate's source is the repo-root accepted-lengths.md; append so plants accumulate
-        f = os.path.join(root, "accepted-lengths.md")
+        # the gate's source is engine/accepted-lengths.md; append so plants accumulate
+        f = os.path.join(root, "engine", "accepted-lengths.md")
         prior = open(f, encoding="utf-8").read() if os.path.isfile(f) else ""
         tree.atomic_write(f, prior + body)
 
