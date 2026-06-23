@@ -27,9 +27,21 @@ whenever a stake-bearing choice surfaces mid-work.
   what it can from intent and the spec
 - THEN the ask is held and grilled, and no standing work exists for it yet
 
+  ```check
+  ask above-floor
+  held grilled
+  standing none
+  ```
+
 #### Scenario: below the floor
 - WHEN every decision a filed ask needs is already determined by intent or the spec
 - THEN it files directly as standing work, with no grilling
+
+  ```check
+  ask below-floor
+  filed standing
+  grilled none
+  ```
 
 ### Requirement: grilling asks one question at a time, each carrying a lean
 A grilling pass MUST surface its residual decisions as questions on the queue one at a
@@ -41,6 +53,14 @@ or answering in their own words, so they ratify far more often than they author.
 - WHEN a grilling question is on the queue
 - THEN the pass's later questions are held off the queue until it is answered, and
   answering it surfaces the next one
+
+  ```check
+  ask above-floor
+  question one
+  answer lean
+  question next
+  standing none
+  ```
 
 ### Requirement: a grilling pass yields the contract and the spec delta
 A resolved grilling pass MUST produce the operator-view entry — the contract the
@@ -54,3 +74,12 @@ only what to build but the oracle that will judge it, owned by the side that doe
 - WHEN the last grilling question is answered
 - THEN the architect produces the view entry and a well-formed spec delta whose scenarios carry the
   executable checks the behavior is gated by, and raises the entry on the queue for ratification
+
+  ```check
+  ask above-floor
+  answer lean
+  answer words
+  entry raised
+  delta folds
+  ratify spawns
+  ```
