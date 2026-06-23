@@ -5,12 +5,12 @@ unit on disk is the tree, not the single node." Its `intent.md` carries the ask 
 its state; material and child trees sit alongside; while a grilling pass runs, the pass lives in
 `grilling.md` within the folder (resumable across episodes — `grill.py` owns it). Open trees live
 under `work/`; folding **moves** the folder into that work/'s own `archive/`, one level down so the
-live work sits at the front of the tree (intent §work; ADR 0017) — location is itself state and
+live work sits at the front of the tree (intent §work) — location is itself state and
 cannot disagree with the record.
 
 The queue (cards) and the standing work are **views** computed by scanning the tree (L110),
 never lists kept in sync. A "card" is a tree awaiting the operator — never a stored card file
-(ADR 0011, Design B): a machine-owned decision the operator must settle, or a held ask whose grilling
+(Design B): a machine-owned decision the operator must settle, or a held ask whose grilling
 has surfaced a question. Every mutation writes one `intent.md` atomically and commits it; a fold or a
 cut moves or removes the folder. The act lands on disk at once; the commit follows behind.
 """
@@ -78,7 +78,7 @@ def read_tree() -> list[Node]:
 def _scan(base: str, parent: str, out: list[Node]) -> None:
     """Scan a work/ directory: each child folder with an intent.md is a tree (recurse into
     its own work/); the lone `archive/` holds the folded siblings (same parent), tucked one
-    level down so the live work sits at the front of the tree (ADR 0017)."""
+    level down so the live work sits at the front of the tree."""
     if not os.path.isdir(base):
         return
     for name in sorted(os.listdir(base)):
@@ -286,7 +286,7 @@ def _render(node: Node) -> str:
 
 
 def _relocate(node: Node) -> list[str]:
-    """Move the node's folder into its work/'s archive/ (ADR 0017) and return the move's two endpoints
+    """Move the node's folder into its work/'s archive/ and return the move's two endpoints
     — the source (now deleted) and the dest (now present). The bare move, no commit: the caller stages
     these exact endpoints, never the shared `.../work` parent (C1). One place the fold's move lives."""
     src = node.path
@@ -306,7 +306,7 @@ def _persist(node: Node, message: str) -> None:
 
 
 def _fold(node: Node, message: str) -> Node:
-    """Move a tree's folder into archive/ as one held, exact-path act (intent §work, ADR 0017) — the
+    """Move a tree's folder into archive/ as one held, exact-path act (intent §work) — the
     standalone fold (`approve`'s settle). The transactional delta-fold archives the node *inside* its
     own act via `archive_in_place`; this is the fold with no delta beside it."""
     if node.folded:

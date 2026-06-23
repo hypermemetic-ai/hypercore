@@ -1,9 +1,9 @@
 """Slice 7 — the architecture re-grounded in depth (Ousterhout).
 
-Acceptance (ADR 0006): the constraints read in Ousterhout's
+Acceptance: the constraints read in Ousterhout's
 terms (deep modules, the red flags); the mechanical gate and the standing review reflect them;
 **the operator reads the system's depth, not merely its length**; and the slice-6 check.py split
-is re-decided on the new criteria (kept, on locality — see ADR 0006). This check drives the
+is re-decided on the new criteria (kept, on locality). This check drives the
 re-grounded gate, review, and worker grounding deterministically, and pins the two properties
 that distinguish the re-grounding from slice 5's budget:
 
@@ -46,12 +46,15 @@ def check(root: str) -> None:
         tree.atomic_write(os.path.join(fence, "engine", name),
                            "# a long module\n" + "x = 0\n" * lines)
 
-    def decide(name: str, body: str):
-        tree.atomic_write(os.path.join(spec.spec_dir(root), "decisions", name), body)
+    def decide(body: str):
+        # the gate's source is the repo-root accepted-lengths.md; append so plants accumulate
+        f = os.path.join(root, "accepted-lengths.md")
+        prior = open(f, encoding="utf-8").read() if os.path.isfile(f) else ""
+        tree.atomic_write(f, prior + body)
 
     # 1. length raises a DECISION, never a silent veto — and the reason names the three
     # outcomes (re-cut / deepen / accept). The gate hands the operator a depth judgment, not a
-    # number's verdict (ADR 0006; spec/folding-conditions, spec/communication-as-architect).
+    # number's verdict (spec/folding-conditions, spec/communication-as-architect).
     # (A file with no accepted-length record of its own — names are unique so a sibling slice's
     # record can't clear it.)
     ask = staged("a change past the signal", "a decision is raised")
@@ -74,8 +77,7 @@ def check(root: str) -> None:
     # 2. NO hard auto-refusing ceiling (F2): a file FAR past the signal — pathological length —
     # still only raises a decision, and an accepted-length record accepting it lets it fold.
     # No number refuses outright; judgment + the operator-decision carry the whole range.
-    decide("0101-pathological-depth.md",
-           f"# ADR 0101\n\naccepted: engine/huge.py @{conditions.SIGNAL * 6 + 1} — "
+    decide(f"accepted: engine/huge.py @{conditions.SIGNAL * 6 + 1} — "
            "generated table, deep behind a three-call interface; length is context-cost, not "
            "shallowness.\n")
     ask = staged("a pathologically long but accepted module", "a far-past-signal module folds")
@@ -91,18 +93,17 @@ def check(root: str) -> None:
        "length has no hard ceiling: judgment + the operator-decision carry the whole range")
     worker.teardown(ask, root)
 
-    # 3. THE HOLE CLOSED BY CONSTRUCTION: a coincidental mention of the file in decision prose —
+    # 3. THE HOLE CLOSED BY CONSTRUCTION: a coincidental mention of the file in record prose —
     # the old loose-substring escape — does NOT clear the gate. Only the structured
     # `accepted: <path> @<N>` record does. This is the regression the re-grounding adds.
-    decide("0102-coincidental.md",
-           "# ADR 0102\n\nWe discussed engine/wide.py at length; it is over the old budget but "
+    decide("We discussed engine/wide.py at length; it is over the old budget but "
            "the team is fine with it.\n")                                # prose only — no structured record
     ask = staged("a change naming the file only in prose", "the substring hole stays closed")
     tree.atomic_write(os.path.join(worker._tree_path(ask, root), "engine", "wide.py"),
-                       "# coincidentally named in an ADR, but no accepted-length record\n"
+                       "# coincidentally named in a record's prose, but no accepted-length record\n"
                        + "x = 0\n" * (conditions.SIGNAL + 50))
     result = worker.apply(ask, scripted(json.dumps({
-        "report": "grew a module merely mentioned in an ADR",
+        "report": "grew a module merely mentioned in a record's prose",
         "delta": delta_for("the substring hole stays closed"),
         "loop": LOOP})), root)
     ok(conditions.accepted("engine/wide.py", conditions.SIGNAL + 51, root) is False,
@@ -111,8 +112,8 @@ def check(root: str) -> None:
        "the file mentioned only in prose still raises a decision — no free pass by spelling")
     worker.teardown(ask, root)
 
-    # 4. the worker is grounded in the depth standards EVERY episode — the proactive defense
-    # (ADR 0006): the deep-module framework and the red flags are in its prompt by
+    # 4. the worker is grounded in the depth standards EVERY episode — the proactive defense:
+    # the deep-module framework and the red flags are in its prompt by
     # construction, so it builds deep up front and the gate stays a rarely-tripped backstop.
     ask = staged("any worker episode", "the worker is grounded in depth")
     ctx = worker.context(ask, root)

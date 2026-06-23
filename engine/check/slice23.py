@@ -1,10 +1,10 @@
-"""Slice 23 — the OMP worker seam (role-assembly step 5): the worker runs at its fence, the
-ADR/reference tail pulled just-in-time, the spec preloaded whole.
+"""Slice 23 — the OMP worker seam (role-assembly step 5): the worker runs at its fence, the long
+history and grounds of past decisions greped just-in-time from `work/archive/`, the spec preloaded whole.
 
-Acceptance (spec/worker, role-assembly steps 5–6, ADR 0009): the worker's model transport runs with
+Acceptance (spec/worker, role-assembly steps 5–6): the worker's model transport runs with
 its working directory = its worktree, so the harness auto-loads the fence's anchor and discovers its
-skills and the worker reads the reference tail from its own checkout; the ADR/reference tail is dropped
-from the prompt (pulled just-in-time), while the spec capabilities, the glossary, and the depth
+skills and the worker greps `work/archive/` for past grounds from its own checkout; that history is
+dropped from the prompt (greped just-in-time), while the spec capabilities, the glossary, and the depth
 disciplines stay **preloaded whole** — the whole-picture keystone is intact. The scheduler forwards the
 live injection point untouched, so the worker binds its fence while the architect's integrate uses the
 repo-root call.
@@ -26,14 +26,15 @@ def check(root: str) -> None:
     from .. import tree, grill, schedule, spec, transport, worker
 
     print("\nslice 23 — acceptance check  (the OMP worker seam: the worker runs at its fence, "
-          "the reference tail pulled JIT)\n")
+          "past grounds greped JIT from work/archive/)\n")
 
     os.environ["ENGINE_ROOT"] = root        # re-establish the shared root (slice 16 ran on its own)
 
-    # a real ADR in the checkout, carrying a sentinel — the reference tail the worker must NOT inline
-    TAIL = "<<ADR-TAIL — long reference, pulled JIT from the checkout, never preloaded into the prompt>>"
-    tree.atomic_write(os.path.join(spec.spec_dir(root), "decisions", "0099-tail.md"),
-                       f"# 0099 — a long reference ADR\n\n{TAIL}\n")
+    # a real archived node in the checkout, carrying a sentinel — the past-decision history the worker
+    # must NOT inline; it greps work/archive/ for it just-in-time as the change needs
+    TAIL = "<<ARCHIVE-GROUNDS — long history, greped JIT from work/archive/, never preloaded into the prompt>>"
+    tree.atomic_write(os.path.join(root, "work", "archive", "0099-past-decision", "intent.md"),
+                       f"# a past decision — its long grounds\n\n{TAIL}\n")
 
     handed = ("## ADDED — worker\n### Requirement: the worker fences its working directory\n"
               "The worker MUST run at its fence.\n#### Scenario: s\n- WHEN it builds\n- THEN it is fenced\n")
@@ -53,17 +54,17 @@ def check(root: str) -> None:
     ok("depth standards" in prompt,
        "the depth standards stay foregrounded in the prompt — held every episode")
 
-    # GREEN: the ADR/reference tail is NOT inlined — it is pulled just-in-time from the checkout
+    # GREEN: the long history/grounds of past decisions is NOT inlined — it is greped JIT from the checkout
     ok(TAIL not in prompt,
-       "the ADR/reference tail is not inlined into the prompt — it carries no whole-picture stake")
-    ok("spec/decisions/" in prompt and "just-in-time" in prompt,
-       "the prompt points the worker at spec/decisions/ in its checkout for a just-in-time pull")
+       "the long history of past decisions is not inlined into the prompt — it carries no whole-picture stake")
+    ok("work/archive/" in prompt and "spec/decisions/" not in prompt and "just-in-time" in prompt,
+       "the prompt points the worker at work/archive/ in its checkout for a just-in-time grep, not spec/decisions/")
 
-    # RED: the retired shape inlined the tail; show that shape fails the gate the GREEN passes
+    # RED: the retired shape inlined the history; show that shape fails the gate the GREEN passes
     inlines_tail = lambda p: TAIL in p
     prefix_prompt = prompt + f"\n\nThe decisions:\n{TAIL}\n"   # the retired preloaded-decisions block
     ok(inlines_tail(prefix_prompt) and not inlines_tail(prompt),
-       "RED→GREEN: the pre-fix prompt inlined the ADR tail; the live prompt pulls it JIT instead")
+       "RED→GREEN: the pre-fix prompt inlined the history; the live prompt points at work/archive/ instead")
 
     # the worker's live transport binds cwd = the fence — the scaffold §6 asserts without a live model
     fence = worker.worktree(ask, root)

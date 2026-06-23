@@ -100,7 +100,7 @@ def integrate(node: tree.Node, result, transport=None, root: str | None = None) 
     not apply), trips the **depth** condition (a module past the length signal with no
     accepted-length record — re-cut / deepen / accept-with-reason), or that the architect judges
     incoherent raises a decision rather than folding. Depth surfaces to the operator as a
-    decision, never a silent veto and never a silent pass (ADR 0006)."""
+    decision, never a silent veto and never a silent pass."""
     transport = transport or call
     blocked = conditions.unmet(result, root)           # the folding conditions, before the merge
     if blocked:

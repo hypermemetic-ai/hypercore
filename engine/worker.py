@@ -9,10 +9,10 @@ not a discipline to remember:
   Before a worker runs, `context` assembles the living spec for it — the capabilities its
   change touches marked as its *grounding*, the rest of the spec carried beside them for
   scan, plus the glossary — so there is no path that runs a worker without it. The spec is
-  **preloaded whole** (the small, scannable high-signal core); the ADR/reference tail is *not*
-  inlined — it carries no whole-picture stake, so the worker runs at its fence and pulls the
-  decisions **just-in-time** from its own checkout (`spec/decisions/`) as the change needs
-  (role-assembly step 5). A worker is *not* slice-confined (ADR 0009): a delta
+  **preloaded whole** (the small, scannable high-signal core); the long history and grounds of
+  past decisions are *not* inlined — they carry no whole-picture stake, so the worker runs at its
+  fence and greps `work/archive/` in its own checkout **just-in-time** as the change needs
+  (role-assembly step 5). A worker is *not* slice-confined: a delta
   cannot be authored or verified from one capability in isolation, so the worker rescans
   the whole spec and its rescan catches a capability the handed delta mis-named or missed.
   It holds the spec, never raw code, and never the operator view.
@@ -21,7 +21,7 @@ not a discipline to remember:
   own branch; it builds in isolation and its commits reach the one record without ever
   touching a sibling's tree or the main line. Its model transport runs with its working
   directory set to that worktree (`transport.worker_transport`), so the checkout — its source,
-  the reference tail, and the derived channel files (the anchor and skills) — is what it reads,
+  the archived grounds, and the derived channel files (the anchor and skills) — is what it reads,
   and the harness auto-loads the fence's anchor and discovers its skills. (intent.md's full
   fence — the rest of the host read-only — is the system's to enforce around this; the worktree
   is the seam.)
@@ -35,21 +35,21 @@ not a discipline to remember:
 - **It is grounded in the depth standards, every episode.** The prompt foregrounds the `depth`
   capability — the deep-module framework and the red flags — ahead of the ask, so the worker builds
   **deep up front**, strategic, not tactical. This is the *proactive* primary defense against
-  complexity (ADR 0006): a worker that shares the long-term-health concern produces deep
+  complexity: a worker that shares the long-term-health concern produces deep
   modules, so the folding-conditions depth gate stays a rarely-tripped backstop rather than an
   operator-load generator. Design awareness is the first anti-complexity mechanism; the gate is
-  the second. Depth is a capability like any other (ADR 0019), single-sourced from `spec/depth.md`,
+  the second. Depth is a capability like any other, single-sourced from `spec/depth.md`,
   so a sharpened slice reaches the next worker with no second copy to drift — the old `worker.DEPTH`
   constant's smell, retired.
 
-Delta authorship crosses the seam (ADR 0009): the architect *proposes*
+Delta authorship crosses the seam: the architect *proposes*
 the delta during grilling; the worker *applies* — rescans the current spec to verify the
 handed delta against present reality, builds, and refines the delta as the code reveals
 what the spec could not; the architect *archives* it.
 
 The worker's **discipline prose is single-sourced from `spec/worker.md`**, not hand-frozen in this
 module. The old `WORKER` constant restated the slice by hand — the exact `worker.DEPTH`-constant
-drift-by-copy ADR 0019 retired for depth, left unretired here. Now the prompt renders the worker's
+drift-by-copy retired for depth, left unretired here. Now the prompt renders the worker's
 own requirement statements through the same `methodology` seam the skills use, so a sharpened
 `spec/worker.md` reaches the next worker with no second copy to drift. Only the genuinely
 non-inferable envelope stays authored in this module: the JSON reply shape, and two grounding facts
@@ -123,9 +123,9 @@ class WorkerContext:
     the *whole* spec (the worker is not slice-confined): `capabilities` is every capability, and
     `touched` marks the ones the change names as its grounding/focus; the rest is carried for the
     rescan that catches a mis-named or missed capability. The `depth` capability is among them, and
-    the prompt foregrounds it every episode (ADR 0019). The ADR/reference tail is *not* here — the
-    worker pulls it just-in-time from its fence checkout (step 5). Nothing of the operator view and
-    nothing of the code is in here."""
+    the prompt foregrounds it every episode. The long history and grounds of past decisions are *not*
+    here — the worker greps `work/archive/` in its fence checkout just-in-time (step 5). Nothing of
+    the operator view and nothing of the code is in here."""
     capabilities: list[tuple[str, str]] = field(default_factory=list)  # (name, spec text) — all
     glossary: str = ""
     delta: str = ""                                   # the handed delta, to verify + refine
@@ -152,11 +152,11 @@ class WorkerResult:
 def context(node: tree.Node, root: str | None = None) -> WorkerContext:
     """Assemble the grounding for a node: the *whole* spec — every capability's text and the
     glossary — with the capabilities the handed delta names marked as the worker's grounding
-    (`touched`); the `depth` capability is among them and the prompt foregrounds it every episode
-    (ADR 0019). The ADR/reference tail is left out by design: the worker pulls it just-in-time from
-    its fence checkout (step 5), so the preloaded grounding stays the small, scannable spec.
-    The worker is not slice-confined: it holds full scan access so its rescan can verify the
-    handed delta against the whole spec, not trust its list (ADR 0009)."""
+    (`touched`); the `depth` capability is among them and the prompt foregrounds it every episode.
+    The long history and grounds of past decisions are left out by design: the worker greps
+    `work/archive/` in its fence checkout just-in-time (step 5), so the preloaded grounding stays the
+    small, scannable spec. The worker is not slice-confined: it holds full scan access so its rescan
+    can verify the handed delta against the whole spec, not trust its list."""
     sp = spec.read_spec(root)
     handed = _handed_delta(node)
     touched = _touched(handed, sp)
@@ -169,8 +169,9 @@ def prompt(node: tree.Node, ctx: WorkerContext, root: str | None = None) -> str:
     disciplines single-sourced from `spec/worker.md`, the non-inferable record grounding, and the JSON
     envelope; then the depth standards (the proactive defense), the touched capabilities foregrounded
     as the grounding, the rest of the spec carried for the rescan, the glossary, the handed delta, and
-    the ask. The ADR/reference tail is *not* inlined: the prompt points the worker at `spec/decisions/`
-    in its fence checkout to pull just-in-time (step 5). This is the whole of what the worker is given."""
+    the ask. The long history and grounds of past decisions are *not* inlined: the prompt points the
+    worker at `work/archive/` in its fence checkout to grep just-in-time (step 5). This is the whole of
+    what the worker is given."""
     def render(items):
         return "\n\n".join(f"### capability: {n}\n{t.strip()}" for n, t in items)
     depth_text = next((t.strip() for n, t in ctx.capabilities if n == "depth"), "")
@@ -192,10 +193,11 @@ def prompt(node: tree.Node, ctx: WorkerContext, root: str | None = None) -> str:
         f"The rest of the spec, for your rescan (catch any capability the delta mis-named or "
         f"missed):\n{scan or '(none — this is the whole spec)'}\n\n"
         f"The glossary:\n{ctx.glossary}\n\n"
-        f"The ADR/reference tail is not inlined here — it is the long reference, carrying no "
-        f"whole-picture stake, so you pull it just-in-time from your own checkout: the decisions are "
-        f"in `spec/decisions/` at your worktree root; read or grep them as the change needs. The spec "
-        f"capabilities above are preloaded whole — your scannable high-signal core.\n\n"
+        f"The long history and grounds of past decisions are not inlined here — they carry no "
+        f"whole-picture stake, so you pull them just-in-time from your own checkout: the archived "
+        f"nodes are in `work/archive/` at your worktree root; grep them for a past decision's grounds "
+        f"as the change needs. The spec capabilities above are preloaded whole — your scannable "
+        f"high-signal core.\n\n"
         "Reply with the JSON object now."
     )
 
@@ -245,8 +247,8 @@ def commit_tree(tree: str, message: str) -> None:
 def apply(node: tree.Node, transport=None, root: str | None = None) -> WorkerResult:
     """Run the worker on a node: assemble its spec slice (the grounding, by construction),
     summon it at its fence, and take its machine-facing result. With no injected transport the live
-    worker runs via `worker_transport(tree)` — cwd = its worktree (step 5), so it reads the reference
-    tail and its skills from its own checkout; the harness injects a scripted fake instead. The result
+    worker runs via `worker_transport(tree)` — cwd = its worktree (step 5), so it reads the archived
+    grounds and its skills from its own checkout; the harness injects a scripted fake instead. The result
     is committed inside the worker's own tree — its commit reaching the record in isolation."""
     ctx = context(node, root)                          # no apply without the grounding
     fence = _tree_path(node, root or tree._root())

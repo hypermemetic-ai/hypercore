@@ -1,6 +1,6 @@
-"""Slice 10 — item 2, build step 1: retire the worker.DEPTH smell (ADR 0009 §5 step 1).
+"""Slice 10 — item 2, build step 1: retire the worker.DEPTH smell.
 
-Acceptance (ADR 0009): the worker's depth grounding is no longer a frozen
+Acceptance: the worker's depth grounding is no longer a frozen
 hand-compression of `spec/depth.md` in a Python constant — it is **rendered from spec/depth.md,
 single-sourced**, so the moment the synthesis changes the grounding changes with it. A `depth`
 **skill** artifact carries the same disciplines for the parked harness seam. The worker's
@@ -47,7 +47,7 @@ def check(root: str) -> None:
     src = spec.cap_path("depth", root)
     tree.atomic_write(src, planted)
 
-    # ── 2. depth is a capability in the model, like the others (ADR 0019) ──────────────────
+    # ── 2. depth is a capability in the model, like the others ─────────────────────────────
     ok(spec.read_spec(root).capability("depth") is not None,
        "depth is a capability segment — read from spec/depth.md by content, no longer a special type")
 

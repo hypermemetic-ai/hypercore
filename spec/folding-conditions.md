@@ -9,7 +9,7 @@ bite by construction rather than by a reviewer remembering them.
 Two of the conditions are **non-negotiable facts** — the delta applies, and a
 behavior-changing tree carries a recorded red→green loop — and they auto-refuse the fold.
 The third is a **judgment**: **depth** is the criterion (a deep module, a lot of behavior
-behind a small interface — re-grounded in Ousterhout, ADR 0006), and
+behind a small interface — re-grounded in Ousterhout), and
 **length** is one signal of it, never the criterion. So the depth condition does not
 auto-refuse on length; it raises a **decision** — re-cut, deepen, or accept-with-reason —
 held on the operator's queue. An unmet fact refuses the fold and returns its reason; the
@@ -115,10 +115,10 @@ The standards, as they stand (the honest classification the research established
 - standard: red-green-loop — gated — `conditions._feedback_loop` executes the command in the fence and requires a real red→green transition
 - standard: length-ratchet — gated — `conditions.accepted`/`accepted_at` bound an accepted length and re-raise on material growth
 - standard: mechanical-red-flags — gated — `review.red_flags` scans for dead module-level symbols and circular dependencies
-- standard: module-depth-judgment — watched — the model-driven shallow/leakage/deletion-test judgment is not yet built (ADR 0006); length raises a decision, never a verdict
+- standard: module-depth-judgment — watched — the model-driven shallow/leakage/deletion-test judgment is not yet built; length raises a decision, never a verdict
 - standard: coherence — watched — the architect's archive-gate judgment is the model's; the incoherent→decision *branch* is exercised, but whether a result truly honors the contract is watched, not gated
 - standard: grilling-floor — watched — whether the floor surfaced the right stakes is the model's judgment; the harness drives the routing, not the finding
-- standard: design-it-twice-selection — watched — whether the deepest candidate was picked is the model's judgment; the fences and the ADR record are gated, the pick is watched
+- standard: design-it-twice-selection — watched — whether the deepest candidate was picked is the model's judgment; the fences and the design-decision record are gated, the pick is watched
 
 #### Scenario: a standard is classified
 - WHEN the classification is read for a standard

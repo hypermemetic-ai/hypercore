@@ -1,6 +1,6 @@
 """Slice 9 — the accepted-length ratchet: acceptance is bounded, and ratchets.
 
-Acceptance (ADR 0008): an accepted-length record that accepts a file no
+Acceptance: an accepted-length record that accepts a file no
 longer silences it forever. The acceptance is **bounded to the length it names** and **ratchets**:
 it clears the gate only while the file stays within that bar (plus a materiality margin), renewed
 growth past it re-opens the decision, and renewing the acceptance at the new length raises
@@ -28,23 +28,25 @@ from .harness import LOOP, ok, scripted
 
 
 def check(root: str) -> None:
-    from .. import conditions, communication, tree, review, spec, worker
+    from .. import conditions, communication, tree, review, worker
 
     print("\nslice 9 — acceptance check  (the accepted-length ratchet)\n")
 
     SLACK = conditions.SLACK
     margin = lambda bar: round(bar * SLACK)
 
-    def decide(name: str, body: str) -> None:
-        tree.atomic_write(os.path.join(spec.spec_dir(root), "decisions", name), body)
+    def decide(body: str) -> None:
+        # the gate's source is the repo-root accepted-lengths.md; append so plants accumulate
+        f = os.path.join(root, "accepted-lengths.md")
+        prior = open(f, encoding="utf-8").read() if os.path.isfile(f) else ""
+        tree.atomic_write(f, prior + body)
 
     # ── 1. acceptance is BOUNDED to the length it names ───────────────────────────────────
     # An accepted-length record accepts engine/ratchet.py at 450 lines. It clears the gate within the bar
     # plus the materiality margin, and stops clearing once the file grows materially past it —
     # the hole (unbounded acceptance) closed.
     BAR = 450
-    decide("0103-ratchet.md",
-           f"# ADR 0103\n\naccepted: engine/ratchet.py @{BAR} — deep behind a small "
+    decide(f"accepted: engine/ratchet.py @{BAR} — deep behind a small "
            "interface; its length is context-cost, not shallowness.\n")
     ok(conditions.accepted_at("engine/ratchet.py", root) == BAR,
        f"the structured record names the accepted length — accepted_at reads it as {BAR}")
@@ -61,8 +63,7 @@ def check(root: str) -> None:
     HIGHER = 600
     ok(conditions.accepted("engine/ratchet.py", HIGHER - 20, root) is False,
        "before renewal, a length near the higher bar does not clear")
-    decide("0104-ratchet-renewed.md",
-           f"# ADR 0104\n\naccepted: engine/ratchet.py @{HIGHER} — renewed at the "
+    decide(f"accepted: engine/ratchet.py @{HIGHER} — renewed at the "
            "grown size after a deepening pass kept it deep.\n")
     ok(conditions.accepted_at("engine/ratchet.py", root) == HIGHER,
        "the highest recorded bar governs — the ratchet only rises")
@@ -70,8 +71,7 @@ def check(root: str) -> None:
        "after renewal at the new length, the higher bar clears what the old one did not")
 
     # ── 3. a BARE acceptance names no bound — it does not clear the gate ───────────────────
-    decide("0105-bare.md",
-           "# ADR 0105\n\naccepted: engine/bare.py — we are fine with its size.\n")
+    decide("accepted: engine/bare.py — we are fine with its size.\n")
     ok(conditions.accepted_at("engine/bare.py", root) is None,
        "an acceptance with no `@<N>` names no length — accepted_at finds no bar")
     ok(conditions.accepted("engine/bare.py", conditions.SIGNAL + 10, root) is False,
@@ -92,8 +92,7 @@ def check(root: str) -> None:
         return ask
 
     GROWN_BAR = conditions.SIGNAL + 10
-    decide("0106-grown.md",
-           f"# ADR 0106\n\naccepted: engine/grown.py @{GROWN_BAR} — accepted when it "
+    decide(f"accepted: engine/grown.py @{GROWN_BAR} — accepted when it "
            "was barely over; deep behind its interface.\n")
     ask = staged("a tree that grows a once-accepted file far past its bar", "the ratchet re-fires")
     fence = worker._tree_path(ask, root)
@@ -114,8 +113,7 @@ def check(root: str) -> None:
     ok(reply.card is not None and reply.card.kind == "decide" and not reply.done,
        "the architect raises the re-opened decision on the queue — the fold is held, not silenced")
     # renewing the acceptance at the new length clears the same material — the ratchet, completed.
-    decide("0107-grown-renewed.md",
-           f"# ADR 0107\n\naccepted: engine/grown.py @{grown_n} — renewed at the new "
+    decide(f"accepted: engine/grown.py @{grown_n} — renewed at the new "
            "length; re-judged deep at this size.\n")
     ok(conditions.unmet(result, root) is None,
        "renewing the acceptance at the grown length lets the same file fold — the bar ratcheted up")
@@ -127,12 +125,10 @@ def check(root: str) -> None:
     for name in ("over", "exceeded", "accepted"):
         tree.atomic_write(os.path.join(scan, "engine", f"{name}.py"), "x = 0\n" * N)
     LOW, HIGH = conditions.SIGNAL + 10, conditions.SIGNAL + 200   # below N+margin; above N
-    tree.atomic_write(os.path.join(scan, "spec", "decisions", "0001-exceeded.md"),
-                       f"# ADR\n\naccepted: engine/exceeded.py @{LOW} — accepted small, "
-                       "since outgrown.\n")
-    tree.atomic_write(os.path.join(scan, "spec", "decisions", "0002-accepted.md"),
-                       f"# ADR\n\naccepted: engine/accepted.py @{HIGH} — deep; within "
-                       "the accepted length.\n")
+    # both records live in the one accepted-lengths.md the gate and the review read
+    tree.atomic_write(os.path.join(scan, "accepted-lengths.md"),
+                       f"accepted: engine/exceeded.py @{LOW} — accepted small, since outgrown.\n"
+                       f"accepted: engine/accepted.py @{HIGH} — deep; within the accepted length.\n")
     rv = review.review(scan)
     by = {m.rel: m for m in rv.modules}
     ok(by["over.py"].status == "over" and by["over.py"].bar is None,

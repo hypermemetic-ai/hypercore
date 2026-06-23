@@ -1,6 +1,6 @@
-"""Slice 14 — item 2, build step 4b: the grilling + coherence skills (ADR 0013, role-assembly step 4b).
+"""Slice 14 — item 2, build step 4b: the grilling + coherence skills (role-assembly step 4b).
 
-Acceptance (ADR 0009 §1 + ADR 0013): the architect's remaining methodologies — `grilling` (pre-work intent
+Acceptance: the architect's remaining methodologies — `grilling` (pre-work intent
 extraction) and `coherence` (the archive-gate judgment) — are carved out of `communication` into their own
 capabilities, each a clean standalone `spec/<cap>.md`, and render as skills through the SAME methodology
 seam as `design-it-twice` / `architecture-review`: single-sourced from their slice and materialized by the fold.
@@ -29,7 +29,7 @@ def check(root: str) -> None:
     sp = spec.read_spec()                              # the real spec, seeded into the harness root
     names = {c.name for c in sp.capabilities}
     ok({"grilling", "coherence"} <= names,
-       "grilling and coherence are their own capabilities, carved from communication (ADR 0013)")
+       "grilling and coherence are their own capabilities, carved from communication")
     conv = sp.capability("communication")
     moved = ["a filed ask is grilled before it becomes work",
              "grilling asks one question at a time, each carrying a lean",

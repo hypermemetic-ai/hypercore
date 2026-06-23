@@ -1,4 +1,4 @@
-"""Design-it-twice — the judgment use of the worktree concurrency (ADR 0007).
+"""Design-it-twice — the judgment use of the worktree concurrency.
 
 The worktree fence is hypercore's concurrency model. Slice 4 used it for *throughput*: one
 worker per node, fenced from its siblings. This is the second use the model already affords —
@@ -22,16 +22,17 @@ Four things define it, and each is structural:
   locality, and seam are judgable from the design itself. The winner carries forward as the
   contract for one ordinary `apply`.
 
-- **The selection is machine-side — the architect's design judgment (operator-ratified, ADR
-  0007).** The architect compares on depth/locality/seam, picks or hybridizes, and records the
-  pick as a structured **design-decision** ADR — a load-bearing interface choice is hard to
-  reverse, so it is ADR-worthy. The operator's trust anchor is the contract, not the
-  machine-side design (ADR 0007), so the pick does not spend the operator's go.
+- **The selection is machine-side — the architect's design judgment (operator-ratified).**
+  The architect compares on depth/locality/seam, picks or hybridizes, and records the
+  pick as a structured **design-decision** — material on the contest node, archiving with the
+  work. The operator's trust anchor is the contract, not the
+  machine-side design, so the pick does not spend the operator's go.
 
 - **A stake-bearing difference still reaches the operator.** When the comparison reveals a
   difference the operator has a stake in — operator-visible behavior, hard to reverse, real
   cost — it re-enters grilling as a card (the standing-guard floor). Only that
-  architect-authored stake crosses; the candidate designs and the reasoning stay machine-side.
+  architect-authored stake crosses; the candidate designs and the reasoning stay machine-side,
+  as material on the contest node.
 
 The contest is driven by the same transport as the rest of the system — `claude -p` live, a
 scripted fake in the acceptance check — so it runs deterministically under the harness. The
@@ -42,10 +43,10 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 
-from . import tree, grill, spec, worker
+from . import tree, grill, worker
 from .transport import call, parse
 
-# The four briefs (ADR 0007): each pushes a candidate toward a radically different
+# The four briefs: each pushes a candidate toward a radically different
 # shape, so the contest spans real alternatives rather than minor variations of one instinct.
 BRIEFS = [
     ("minimal", "Minimize the interface — the smallest surface the callers can live with; "
@@ -76,8 +77,8 @@ SELECT = (
     "different brief. Compare them on DEPTH (the most behavior behind the smallest interface), "
     "LOCALITY (the change stays where it belongs), and SEAM PLACEMENT (the seam falls where "
     "something real varies). Pick one or hybridize, with a strong recommendation and your "
-    "reasoning. This is machine-side design judgment, recorded as an ADR — it reaches the "
-    "operator ONLY if the comparison reveals a difference the operator has a stake in "
+    "reasoning. This is machine-side design judgment, recorded as material on the node — it reaches "
+    "the operator ONLY if the comparison reveals a difference the operator has a stake in "
     "(operator-visible behavior, hard to reverse, or real cost). Reply with ONLY a JSON "
     "object:\n"
     '{"chosen": <the brief you pick, or "hybrid">, '
@@ -93,7 +94,7 @@ SELECT = (
 class Candidate:
     """One shape in the contest: the brief it was built to, the fence it designed in, and its
     machine-facing design. Nothing of this is operator-facing — it lives in the fence and the
-    ADR, never on a card."""
+    node's design-decision material, never on a card."""
     brief: str
     worktree: str
     design: dict                                   # {interface, hides, seam, depth}
@@ -101,8 +102,8 @@ class Candidate:
 
 @dataclass
 class Selection:
-    """The architect's machine-side pick. `reasoning` and `comparison` are the ADR's body;
-    `stake`, when set, is the one architect-authored line that crosses to the operator, and
+    """The architect's machine-side pick. `reasoning` and `comparison` are the design-decision's
+    body; `stake`, when set, is the one architect-authored line that crosses to the operator, and
     `card` is the decision it raised (the standing-guard floor)."""
     chosen: str                                    # the winning brief, or "hybrid"
     hybrid: bool = False
@@ -148,28 +149,22 @@ def select(node: tree.Node, candidates: list[Candidate], transport=None) -> Sele
 
 
 def record(node: tree.Node, selection: Selection, root: str | None = None) -> str:
-    """Record the pick as a structured design-decision ADR — the machine-side home of a
-    load-bearing interface choice (hard to reverse → ADR-worthy). The parseable line
+    """Record the pick as **material on the contest node** — the machine-side home of a
+    load-bearing interface choice, archiving with the work when the node folds. The parseable line
 
         design-decision: <subject> → <chosen> — <reason>
 
     names the decision the same way the accepted-length record names a file, so a future scan can read
-    the pick rather than re-derive it. Returns the ADR's path."""
-    d = os.path.join(spec.spec_dir(root), "decisions")
-    os.makedirs(d, exist_ok=True)
-    num = _next_adr(d)
+    the pick rather than re-derive it. Returns the node-file's path."""
     subject = tree._subject(node.text)
-    path = os.path.join(d, f"{num:04d}-design-{_slug(subject)}.md")
+    path = os.path.join(node.path, "design-decision.md")
     briefs = ", ".join(c.brief for c in selection.candidates)
     grounds = "\n".join(f"- **{b}**: {note}" for b, note in selection.comparison.items())
     tree.atomic_write(path,
-        f"# ADR {num:04d} — design-it-twice: {subject}\n\n"
-        "Status: machine-owned, awaiting ratification. [machine]\n\n"
-        "## Context\n\n"
-        f"A load-bearing interface for {subject!r} was designed twice — candidates "
-        f"{briefs}, each fenced, each built to a different brief — and compared on depth, "
-        "locality, and seam placement (ADR 0007).\n\n"
-        "## Decision\n\n"
+        f"# design-it-twice: {subject} [machine]\n\n"
+        f"A load-bearing interface for {subject!r} was designed twice — candidates {briefs}, each "
+        "fenced, each built to a different brief — and compared on depth, locality, and seam "
+        "placement.\n\n"
         f"design-decision: {subject} → {selection.chosen} — {selection.reasoning}\n\n"
         "## Grounds\n\n"
         f"{grounds or '- (the comparison is recorded above)'}\n")
@@ -180,15 +175,15 @@ def record(node: tree.Node, selection: Selection, root: str | None = None) -> st
 def escalate(node: tree.Node, selection: Selection) -> tree.Node:
     """A stake-bearing difference re-enters grilling: a decision card on the operator's queue,
     parented to the decision node (the standing-guard floor). Only the architect-authored
-    stake crosses — the candidate designs and the reasoning stay machine-side, in the ADR."""
+    stake crosses — the candidate designs and the reasoning stay machine-side, on the node."""
     return tree.raise_card(selection.stake, kind="decide", parent=node.id)
 
 
 def design_twice(node: tree.Node, briefs=None, transport=None,
                  root: str | None = None) -> Selection:
     """The whole contest behind one call: design the interface several ways in isolation, let
-    the architect pick or hybridize on depth/locality/seam, record the pick as an ADR, and —
-    only on a stake-bearing difference — raise it to the operator. The candidate fences are
+    the architect pick or hybridize on depth/locality/seam, record the pick as material on the
+    node, and — only on a stake-bearing difference — raise it to the operator. The candidate fences are
     scratch, torn down once the design is recorded; the winning design carries forward as the
     contract for one ordinary `apply`."""
     candidates = contest(node, briefs, transport, root)
@@ -229,12 +224,3 @@ def _record_design(fence: str, name: str, instruction: str, design: dict) -> Non
         f"## interface\n{design.get('interface', '')}\n\n## hides\n{design.get('hides', '')}\n\n"
         f"## seam\n{design.get('seam', '')}\n\n## depth\n{design.get('depth', '')}\n")
     worker.commit_tree(fence, f"candidate: {name} design")
-
-
-def _next_adr(d: str) -> int:
-    nums = [int(n[:4]) for n in os.listdir(d) if n[:4].isdigit() and n.endswith(".md")]
-    return (max(nums) + 1) if nums else 1
-
-
-def _slug(text: str) -> str:
-    return "-".join("".join(c if c.isalnum() else " " for c in text.lower()).split())[:40]

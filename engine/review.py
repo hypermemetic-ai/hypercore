@@ -1,6 +1,6 @@
 """The architecture review — the standing scan that keeps the system deep.
 
-A periodic scan for complexity debt (ADR 0005), run as a standing
+A periodic scan for complexity debt, run as a standing
 process, not a one-off: read live off the source tree every time, never a stored
 report. It has two roles, and this module serves both from one scan:
 
@@ -14,11 +14,11 @@ report. It has two roles, and this module serves both from one scan:
   operator view's as-built and gap (`view.operator_view`), kept honest between folds.
 
 What it measures is **length** — what a module costs a worker's window — which the
-re-grounding (ADR 0006) keeps as one **signal** of depth, not the criterion. Depth is
+depth re-grounding keeps as one **signal** of depth, not the criterion. Depth is
 the criterion: a deep module, a lot of behavior behind a small interface. The
 deeper, **model-driven red-flag scan** — the deletion test, the shallow-module and
 information-leakage flags, testable-through-the-interface — is the depth assessment
-this review is meant to grow, and it is **not yet built** (ADR 0006). That
+this review is meant to grow, and it is **not yet built**. That
 shallowness is recorded here and in the operator's gap, never fabricated into a
 judgment. Length is the lens this slice ships; the red flags are the lens it will grow.
 
@@ -49,7 +49,7 @@ class Module:
     accepted-length record (an item of complexity debt); `accepted` is past the signal but within an
     accepted-length record's accepted length; `exceeded` is past the signal *and* materially
     past the length an accepted-length record once accepted it at — a stale acceptance, the decision
-    re-opened (ADR 0008). `bar` is that accepted length for accepted/exceeded, else None."""
+    re-opened. `bar` is that accepted length for accepted/exceeded, else None."""
     rel: str
     lines: int
     status: str
@@ -69,7 +69,7 @@ class Finding:
 
 @dataclass
 class RedFlag:
-    """One mechanical structural red flag the standing scan reads without judgment (ADR 0020):
+    """One mechanical structural red flag the standing scan reads without judgment:
     a module-level symbol referenced nowhere in the package (dead code), or an import cycle
     among modules (the structural signature of information leakage — a circular dependency).
     `rule` is the smell, `subject` where it sits, `detail` the recommendation. These are the
@@ -87,12 +87,12 @@ class Review:
     flags: list[RedFlag] = field(default_factory=list)     # the mechanical structural red flags
 
 
-# The honest record of what the depth scan does and does not yet reach (ADR 0006/0020). The
+# The honest record of what the depth scan does and does not yet reach. The
 # mechanical structural subset — dead symbols, import cycles — now runs every scan; the
 # model-driven *judgment* (shallow module, information leakage, the deletion test) is judgment
 # and stays not-yet-built, surfaced in the operator's gap rather than hidden.
 DEPTH_NOT_YET = ("the model-driven red-flag judgment — shallow module, information leakage, the "
-                 "deletion test — is judgment, not yet built (ADR 0006); the mechanical red flags "
+                 "deletion test — is judgment, not yet built; the mechanical red flags "
                  "(dead symbols, circular imports) and the length signal are what the scan reads here")
 
 
@@ -101,8 +101,8 @@ def review(root: str | None = None) -> Review:
     the length signal, and gathers the ones over (no accepted-length record), past a stale accepted bar
     (exceeded), or nearing it into the complexity debt. A file within its accepted-length record's
     accepted length shows on the map, marked, but is not in the backlog — its size is a recorded
-    decision; a file that has outgrown that bar returns to the backlog (ADR 0008). The same scan
-    reads the mechanical structural red flags (dead symbols, import cycles; ADR 0020)."""
+    decision; a file that has outgrown that bar returns to the backlog. The same scan
+    reads the mechanical structural red flags (dead symbols, import cycles)."""
     src = os.path.join(root or tree._root(), "engine")
     modules = [_module(rel, n, root) for rel, n in _sources(src)]
     modules.sort(key=lambda m: -m.lines)
@@ -123,7 +123,7 @@ def backlog(rv: Review) -> list[str]:
     """The complexity debt as the operator reads it — the gap: the length findings, then the
     mechanical red flags, and **always** the honest record that the model-driven module depth judgment beyond
     them is not yet built. The unbuilt-judgment line is unconditional, not shown only on a clean tree:
-    depth is judgment, never a threshold the scan enforces (depth de-claim, ADR 0006), so the review
+    depth is judgment, never a threshold the scan enforces (the depth de-claim), so the review
     states the judgment is unbuilt whether or not a length finding happens to be present — a length
     finding is a context-cost signal, not the module depth judgment, and must never read as one."""
     out = [f"{f.subject}: {f.note} ({f.strength})" for f in rv.findings]
@@ -139,7 +139,7 @@ def backlog(rv: Review) -> list[str]:
 def _module(rel: str, n: int, root: str | None) -> Module:
     """Place one module against the signal and its accepted-length record. Past the signal it is
     `accepted` (within the recorded bar + margin), `exceeded` (a bar exists but the file outgrew
-    it — the ratchet re-opened the decision, ADR 0008), or `over` (no bar at all). The accepted
+    it — the ratchet re-opened the decision), or `over` (no bar at all). The accepted
     bar is consulted from `conditions` so the per-tree gate and this standing scan agree on one
     criterion. Within the signal it is `nearing` or `ok`."""
     canon = _canon(rel)
@@ -213,13 +213,13 @@ def _read(path: str) -> str:
         return f.read()
 
 
-# ── the mechanical structural red flags (ADR 0020) ─────────────────────────────
+# ── the mechanical structural red flags ─────────────────────────────
 
 def red_flags(root: str | None = None) -> list[RedFlag]:
     """The mechanical subset of the depth scan, read live off the engine package: the structural
     red flags a tool can read without judgment — dead module-level symbols and import cycles — so
     they bite every scan, while the model-driven judgment (shallow module, leakage) stays the
-    review's to grow (ADR 0006). One file walk feeds both rules."""
+    review's to grow. One file walk feeds both rules."""
     files = _py_paths(os.path.join(root or tree._root(), "engine"))
     return _dead_symbols(files) + _import_cycles(files)
 

@@ -9,7 +9,7 @@ is already determined files straight to work, ungrilled.
 A finished pass yields the **view entry** — the contract the result is later checked against — and
 the **spec delta** the change will realize. Work does not spawn until the entry is ratified.
 
-Design B (ADR 0011): the pass is durable **within its tree's folder**, in `grilling.md`, not as a
+Design B: the pass is durable **within its tree's folder**, in `grilling.md`, not as a
 scatter of question/entry node files. The held tree itself sits on the queue (state AWAITING) and
 *is* the card; these predicates read its `grilling.md` to tell what the card currently shows — a
 surfaced question, or the resolved contract awaiting ratification. So the queue stays a computed

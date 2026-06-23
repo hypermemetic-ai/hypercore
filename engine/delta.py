@@ -26,8 +26,8 @@ On disk a delta is `delta.md` in a tree's folder:
 
 A delta with no `## VERB — capability` sections is trivial and applies nothing. An
 ADDED requirement in a capability that does not yet exist *creates* that capability —
-how the self-model grows a new top-level unit as the work reveals one (ADR 0001
-forecast this; the worker capability is the first). MODIFIED or REMOVED in an absent
+how the self-model grows a new top-level unit as the work reveals one (the spec's
+own forecast; the worker capability is the first). MODIFIED or REMOVED in an absent
 capability is still a mismatch and cannot fold.
 """
 from __future__ import annotations
@@ -151,7 +151,7 @@ def fold(delta: Delta | None, root: str | None = None, node=None) -> None:
             base = open(path).read() if os.path.isfile(path) else _seed(name)
             tree.atomic_write(path, _apply(base, [o for o in delta.ops if o.capability == name]))
         # The render step: every fold re-derives the static channels (skills, the agents file) from
-        # the spec, so a committed artifact cannot drift from its source (ADR 0009 §3). Idempotent: an
+        # the spec, so a committed artifact cannot drift from its source. Idempotent: an
         # unchanged source re-renders identically and re-staging no-ops, so a retry is safe.
         rendered = channels.materialize(root)
         paths = [spec.cap_path(n, root) for n in touched] + rendered

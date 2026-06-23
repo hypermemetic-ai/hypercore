@@ -1,14 +1,14 @@
-"""Slice 13 — item 2, build step 3: the minimal shared AGENTS.md anchor (ADR 0009 §0/§4, role-assembly step 3).
+"""Slice 13 — item 2, build step 3: the minimal shared AGENTS.md anchor (role-assembly step 3).
 
-Acceptance (ADR 0009): the agents file is a single **minimal shared anchor, non-inferable content only** —
+Acceptance: the agents file is a single **minimal shared anchor, non-inferable content only** —
 the check command, the build/hand-back convention, and a pointer to the skills — materialized on fold like
 every derived channel. The anchor is authored once at `AGENTS.md`; the harness that loads it is reached by
 a **derived bridge**, because stock Claude Code reads `CLAUDE.md`, not a bare `AGENTS.md` (verified
 2026-06-22). So the fold also materializes a `CLAUDE.md` that imports the anchor (`@AGENTS.md`) — the
-symlink ADR 0009 §4 first dropped, reinstated as a derived import once the harness fact was confirmed. The
+symlink first dropped, reinstated as a derived import once the harness fact was confirmed. The
 skills index is *derived* from the registry, so it cannot drift; the operational lines are the authored
 non-inferable residue. (Whether the file helps a live model is the A/B the field warns to run before
-leaning on it — a measurement, not a check; ADR 0009 §6.)
+leaning on it — a measurement, not a check.)
 
 1. **minimal and non-inferable** — the anchor carries the check command and the hand-back convention, and
    nothing inferable: no per-capability requirements, no code, no identity prose;

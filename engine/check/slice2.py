@@ -80,7 +80,7 @@ def check(root: str) -> None:
     ok("the order is the machine's claim about attention" in queue_node.asbuilt,
        "the view's as-built is derived — the folded requirement appears, unedited")
 
-    # the per-capability vision is a DERIVED binding (ADR 0020), not a hand-typed map: a capability
+    # the per-capability vision is a DERIVED binding, not a hand-typed map: a capability
     # declares the intent it realizes in its own spec slice (`<!-- vision: ... -->`), so a newly
     # carved capability gets its vision with NO edit to view.py — and one that declares none (pure
     # machinery) correctly shows no vision, distinct from a bug.
@@ -99,7 +99,7 @@ def check(root: str) -> None:
        "a capability that declares no vision shows none — pure machinery, distinct from a bug")
 
     # every requirement carries at least one scenario — the mechanical floor of requirement↔scenario
-    # coverage (ADR 0020). The deeper overclaim (a requirement whose prose claims more than its
+    # coverage. The deeper overclaim (a requirement whose prose claims more than its
     # scenarios cover — the atomic-fold case) stays the model-driven judgment scan, not-yet-built.
     uncovered = [r.name for c in spec.read_spec().capabilities
                  for r in c.requirements if not r.scenarios]

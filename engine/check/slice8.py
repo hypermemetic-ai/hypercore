@@ -2,16 +2,16 @@
 
 Acceptance (spec §9.8): concurrent workers advance one tree in isolation and each folds its
 delta; and a load-bearing interface decision can be designed twice in parallel and compared.
-This check drives both over the real tree, real fences, and a real ADR write, deterministically
-with scripted transports — pinning the four properties that define the judgment use:
+This check drives both over the real tree, real fences, and a real node-record write,
+deterministically with scripted transports — pinning the four properties that define the judgment use:
 
 1. **concurrent isolation composes** — two workers hold two distinct fences at once, neither's
    material reaches the main line, and each folds its own delta into the one spec;
 2. **the decision is designed twice, isolated** — a candidate per brief, each in its own fence,
    each design fenced from its siblings and the main line;
 3. **the selection is machine-side** — the architect picks/hybridizes on depth/locality/seam and
-   records a structured design-decision ADR; with no stake it raises no operator card, and the
-   raw candidate designs reach no card, render, or node (only the machine-side ADR);
+   records a structured design-decision on the contest node; with no stake it raises no operator card,
+   and the raw candidate designs reach no card or render beyond that node record;
 4. **a stake-bearing difference re-enters grilling** — it raises a decision card parented to the
    node (the standing-guard floor, §5.1), carrying only the architect-authored stake.
 """
@@ -106,17 +106,17 @@ def check(root: str) -> None:
     for c in cands:
         worker.teardown(dec, root, tag=c.brief)
 
-    # the selection is machine-side: a pick, recorded as a structured design-decision ADR
+    # the selection is machine-side: a pick, recorded as a structured design-decision on the node
     sel = design.select(dec, cands, scripted(json.dumps({
         "chosen": "minimal", "hybrid": False,
         "reasoning": "minimal is deepest — the most behind the smallest interface; locality holds",
         "comparison": {"minimal": "deepest", "flexible": "wider surface for unproven variation"},
         "stake": None})))
     ok(sel.chosen == "minimal" and not sel.stake, "the architect picks machine-side, no stake")
-    adr = design.record(dec, sel, root)
-    text = open(adr).read()
+    rec = design.record(dec, sel, root)
+    text = open(rec).read()
     ok("design-decision:" in text and "→ minimal" in text and "[machine]" in text,
-       "the pick is recorded as a structured design-decision ADR — the machine-side home")
+       "the pick is recorded as a structured design-decision on the node — the machine-side home")
 
     # ── 3. machine-side end to end: no stake → no operator card; raw designs do not leak ──
     SENTINEL = "<<RAW CANDIDATE DESIGN — machine-side only>>"
@@ -143,7 +143,7 @@ def check(root: str) -> None:
                                  for fn in fs if fn in ("intent.md", "grilling.md"))
     cards_text = "".join(c.text for c in tree.read_tree())
     ok(SENTINEL not in frame and SENTINEL not in nodefiles and SENTINEL not in cards_text,
-       "the raw candidate designs reach no card, render, or node — only the machine-side ADR")
+       "the raw candidate designs reach no card, render, or node — only the machine-side record")
 
     # ── 4. a stake-bearing difference re-enters grilling (the standing-guard floor, §5.1) ──
     STAKE = "the two shapes differ in whether a re-opened contest is visible to you — your call"

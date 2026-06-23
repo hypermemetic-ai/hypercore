@@ -1,6 +1,6 @@
 """The derived static channels, materialized on fold — the render step the fold gained.
 
-Each role is grounded across three derived channels (ADR 0009): a minimal **agents file**, on-demand
+Each role is grounded across three derived channels: a minimal **agents file**, on-demand
 **skills**, and the per-episode **prompt**. The prompt is *live* — assembled fresh every episode by
 `worker.prompt`/`communication`, so it never goes stale and is never materialized. The other two are
 **static artifacts an external harness auto-loads**, so unlike the live-rendered operator view they
@@ -11,15 +11,15 @@ This module is that regeneration — the single registry of the static channels 
 artifacts follow the spec in the same act that lands the spec change: a committed channel can no more
 drift from the spec it derives from than the spec can drift from a folded delta — the by-construction
 guarantee `delta.fold` gives the spec and the operator view gives the self-model, pointed at one more
-target (ADR 0009 §3, the one new mechanism).
+target.
 
 The skills were the first targets — the architect's four methodologies and the worker's `depth`, each
 rendered by `methodology` from its capability slice into both the harness-neutral `skills/` and the
 `.claude/skills/` location stock Claude Code discovers (role-assembly step 4; depth normalized into a
-capability in ADR 0019); and the minimal shared **agents file** (`anchor`, step 3) is the always-on
+capability); and the minimal shared **agents file** (`anchor`, step 3) is the always-on
 anchor both roles load, reached through a derived `CLAUDE.md` bridge that imports it (`@AGENTS.md`),
-because Claude Code reads `CLAUDE.md`, not a bare `AGENTS.md` — the bridge ADR 0009 §4 first dropped as
-redundant, reinstated as a derived import once the harness fact was verified. The registry is the only
+because Claude Code reads `CLAUDE.md`, not a bare `AGENTS.md` — the bridge first dropped as redundant,
+reinstated as a derived import once the harness fact was verified. The registry is the only
 place that knows the set.
 """
 from __future__ import annotations

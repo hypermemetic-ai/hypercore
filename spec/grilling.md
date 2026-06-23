@@ -2,7 +2,7 @@
 <!-- vision: extraction, intent-setting -->
 
 Intent extraction by grilling — how the architect turns a filed ask into ratified work
-without authoring on the operator's behalf. *(ADR 0013, carved from `communication`.)* Before an
+without authoring on the operator's behalf — carved from `communication` as its own skill. Before an
 ask that opens real choices becomes work, the architect runs a grilling pass: it resolves every
 decision it can from the living spec and intent, and surfaces only the residue — the decisions
 the operator has a stake in — as questions on the queue, **one at a time**, in dependency order,
@@ -24,12 +24,11 @@ whenever a stake-bearing choice surfaces mid-work.
 
 #### Scenario: above the floor
 - WHEN a filed ask leaves a stake-bearing decision open after the machine resolves
-  what it can from intent, the spec, and the ADRs
+  what it can from intent and the spec
 - THEN the ask is held and grilled, and no standing work exists for it yet
 
 #### Scenario: below the floor
-- WHEN every decision a filed ask needs is already determined by intent, the spec, or
-  an ADR
+- WHEN every decision a filed ask needs is already determined by intent or the spec
 - THEN it files directly as standing work, with no grilling
 
 ### Requirement: grilling asks one question at a time, each carrying a lean

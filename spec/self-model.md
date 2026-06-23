@@ -71,7 +71,7 @@ between them, as a recursive tree to the depth the work reaches. The upper level
 of the architecture review (`architecture-review` capability), kept honest between folds.
 The map renders the system's **depth**, not merely its length: length is shown as a
 context-cost signal against the threshold, and the deeper model-driven red-flag depth
-assessment is recorded as not-yet-built (ADR 0006), never fabricated —
+assessment is recorded as not-yet-built, never fabricated —
 so the operator reads depth, not just a line count.
 
 #### Scenario: the view is read
@@ -82,7 +82,7 @@ so the operator reads depth, not just a line count.
 #### Scenario: a capability's vision is a declared binding
 - WHEN the view slices the vision per capability
 - THEN it reads the intent each capability declares it realizes, recorded in the capability's own
-  spec slice (ADR 0020), so a newly carved capability shows its vision with no change to the view,
+  spec slice, so a newly carved capability shows its vision with no change to the view,
   and a capability that declares none — pure machinery — shows no vision, distinct from a bug
 
 #### Scenario: the root's upper levels

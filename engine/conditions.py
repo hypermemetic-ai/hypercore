@@ -15,7 +15,7 @@ automatically, exactly as before, because there is nothing to judge:
   the skill; a correct narrative with no harness is the failure this kills.
 
 The third condition is a **judgment**, and so it is shaped differently (re-grounded in
-Ousterhout — `spec/depth.md`, ADR 0006):
+Ousterhout — `spec/depth.md`):
 
 - **depth** — the criterion is a *deep module*: a lot of behavior behind a small interface.
   Length is not the criterion; it is one **signal** of it, kept for a reason Ousterhout
@@ -26,15 +26,15 @@ Ousterhout — `spec/depth.md`, ADR 0006):
   `communication.integrate` puts on the operator's queue. The fold is held until that decision
   is settled; it is never silently refused and never silently passed.
 
-**There is no second, higher length ceiling that auto-refuses** (ADR 0006). A ceiling at
+**There is no second, higher length ceiling that auto-refuses.** A ceiling at
 any number would be the very thing this re-grounding removes — a number standing in for the
 judgment of depth — and would force back the escape hatch it deletes. Length raises a
 decision across its whole range; judgment and the operator carry it. The anti-dilution
 guarantee still holds: over-signal material is *un-foldable* until the operator settles the
-decision — stronger than the old coincidental-ADR escape, not weaker.
+decision — stronger than the old coincidental-acceptance escape, not weaker.
 
 The model-driven red-flag **module depth judgment** (is it actually shallow?) is the
-architecture review's standing job to grow and is not yet built (ADR 0006); this slice ships
+architecture review's standing job to grow and is not yet built; this slice ships
 the mechanical scaffold — length raises the decision, the operator judges depth — honestly.
 """
 from __future__ import annotations
@@ -51,14 +51,14 @@ from . import delta, spec
 # (the outer run still measures the real red→green transition). One name, system-wide.
 _LOOP_GUARD = "HYPERCORE_LOOP_RUNNING"
 
-# The length signal (ADR 0006). Past this many lines a touched source file raises a
+# The length signal. Past this many lines a touched source file raises a
 # decision — not a refusal. A starting value to tune, not a law: the prior epoch's
 # 6,348-line god-file (the `window.py` torn down 2026-06-20, not this repo's small one) was
 # ~16× this — the kind of file it exists to catch early. Keyed to length because length is what a
 # file costs the worker's window, whatever each line means — its context cost, not its depth.
 SIGNAL = 400
 
-# The materiality margin on an accepted length (ADR 0008). Accepting a length signal is bounded
+# The materiality margin on an accepted length. Accepting a length signal is bounded
 # to the length it was accepted at — not granted forever — and the signal re-fires only when the
 # file grows *materially* past that bar, so a one-line edit past it does not re-open a settled
 # decision. SLACK is that margin, proportional to the accepted length: renewed growth past
@@ -156,13 +156,13 @@ def _run_at(command: str, tree: str, ref: str) -> int | None:
 
 
 def _depth(result, root: str | None) -> str | None:
-    """Depth is the criterion; length is its signal (ADR 0006). A source file this tree created or
+    """Depth is the criterion; length is its signal. A source file this tree created or
     grew past the length signal, with no accepted-length record clearing it *at a length it is still
     within*, raises a decision — re-cut / deepen / accept-with-reason — never a silent
     refusal and never a silent pass. Scoped to what this tree touched — the .py files in its own
     commit — so a tree is judged on the depth of what *it* built, not a sibling's. Length never
     auto-refuses (F2): a long file is either judged deep (fine — length was only context-cost
-    signal) or raises this decision for the operator to settle. Acceptance is bounded (ADR 0008):
+    signal) or raises this decision for the operator to settle. Acceptance is bounded:
     a file that has grown materially past the length an accepted-length record accepted it at re-opens
     the decision, so an old acceptance cannot silence unbounded later growth."""
     tree = result.worktree
@@ -179,13 +179,13 @@ def _depth(result, root: str | None) -> str | None:
 def _depth_decision(rel: str, n: int, root: str | None) -> str:
     """The decision the gate raises on `rel` at `n` lines — phrased for the two cases the
     operator must tell apart: a file never accepted past the signal, and a file whose earlier
-    acceptance the new length has *outgrown* (the ratchet, ADR 0008). Both name re-cut / deepen /
+    acceptance the new length has *outgrown* (the ratchet). Both name re-cut / deepen /
     accept and the exact accepted-length record to write, so the architect can settle it in one step."""
     bar = accepted_at(rel, root)
     if bar is not None:
         return (f"decision — {rel} is {n} lines, materially past the {bar}-line bar an "
                 f"accepted-length record accepted it at — the acceptance is stale (it ratchets, it does "
-                f"not silence later growth; ADR 0008). Re-cut it, deepen it, "
+                f"not silence later growth). Re-cut it, deepen it, "
                 f"or renew the acceptance at the new length: `accepted: {rel} @{n} "
                 f"— <reason>`. Length is a context-cost signal, not a verdict on depth; the depth "
                 f"judgment is the operator's.")
@@ -206,7 +206,7 @@ def _touched_py(tree: str) -> list[str]:
 
 def accepted(rel: str, lines: int, root: str | None) -> bool:
     """True when an **accepted-length record** accepts this exact file at a length it is still
-    within (ADR 0006/0008). Acceptance is **bounded, not permanent**: an
+    within. Acceptance is **bounded, not permanent**: an
     accepted-length record records the file accepted *at a stated length* and clears the gate only while
     the file stays within that bar plus the materiality margin (`SLACK`). Renewed growth
     materially past the accepted length re-opens the decision; a stable or shrinking file
@@ -221,23 +221,26 @@ def accepted(rel: str, lines: int, root: str | None) -> bool:
 
 def accepted_at(rel: str, root: str | None) -> int | None:
     """The length an accepted-length record records this file accepted at — the **ratchet
-    bar** — or None when none accepts it. The record is a line in a decision file:
+    bar** — or None when none accepts it. The record is a line in the repo-root
+    `accepted-lengths.md` record:
 
         accepted: <repo-relative path> @<N> — <reason>
 
     `<N>` is the line count the operator accepted; the acceptance is bounded to it (`accepted`).
     The gate matches the *path*, not a basename appearing anywhere in prose, so a coincidental
     mention grants no exception (the slice-7 closure) — and a record with no `@<N>`
-    is an *incomplete* acceptance that names no bound, so it does not clear the gate (ADR 0008):
+    is an *incomplete* acceptance that names no bound, so it does not clear the gate:
     the exception is the decision *at a stated size*, not the spelling. When several records name
     the same file — each re-acceptance as the file grows writes a new one — the **highest** bar
     governs: the ratchet only rises, so the most permissive recorded acceptance is the live one."""
-    d = os.path.join(spec.spec_dir(root), "decisions")
-    if not os.path.isdir(d):
+    # PROVISIONAL: the accepted-length records are live gate-state that must outlive the work that
+    # grew the file, so they cannot archive on a node. They live in a repo-root `accepted-lengths.md`
+    # the gate reads here; the proper home + write path are debt (`work/accepted-length-home/`).
+    f = os.path.join(os.path.dirname(spec.spec_dir(root)), "accepted-lengths.md")
+    if not os.path.isfile(f):
         return None
     want = rel.replace(os.sep, "/")
-    bars = [rec[1] for name in os.listdir(d) if name.endswith(".md")
-            for line in open(os.path.join(d, name), encoding="utf-8", errors="ignore")
+    bars = [rec[1] for line in open(f, encoding="utf-8", errors="ignore")
             if (rec := _depth_record(line)) and rec[0] == want]
     return max(bars) if bars else None
 
@@ -246,7 +249,7 @@ def _depth_record(line: str) -> tuple[str, int] | None:
     """Parse one `accepted: <path> @<N> — …` line to `(path, accepted-length)`, or
     None. A line is an accepted-length record only with the exact `accepted:` prefix and an `@<N>`
     token naming an integer length; a record with no `@<N>`, or prose, is not a
-    pass — the acceptance must name the length it is bounded to (ADR 0008)."""
+    pass — the acceptance must name the length it is bounded to."""
     text = line.strip()
     if not text.lower().startswith("accepted:"):
         return None

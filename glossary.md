@@ -171,8 +171,8 @@ against drift each time new words join the live corpus.
   (made deeper). Surfaced live by the architecture review; distinct from the **gap**
   (not-yet-built) and from statement debt (unendorsed statements, §100).
 
-- **derived channel** — a grounding channel **rendered from one source**, never hand-copied
-  (ADR 0009): the worker's depth grounding and the `depth` **skill** both render from
+- **derived channel** — a grounding channel **rendered from one source**, never hand-copied:
+  the worker's depth grounding and the `depth` **skill** both render from
   `spec/depth.md`. Like the **as-built**, a derived channel changes when its source changes,
   so a frozen second copy (the retired `worker.DEPTH` constant) cannot drift. Materialized on
   disk when an external harness must auto-load it (a skill, an agents file); read live otherwise.
@@ -220,7 +220,7 @@ against drift each time new words join the live corpus.
   hard length ceiling above it.
 
 - **accepted length / the ratchet** — the length `<N>` an **accepted-length record** grants
-  a file (ADR 0008), written as a parseable `accepted: <path> @<N> — …` line that names the
+  a file, written as a parseable `accepted: <path> @<N> — …` line that names the
   exact file and the length it is accepted at, so a coincidental mention grants no exception
   (the spelling is not the decision). Acceptance is **bounded** to it, not granted forever: it
   clears the gate only while the file stays within `<N>` plus a small **materiality margin**, so
@@ -229,7 +229,7 @@ against drift each time new words join the live corpus.
   the record (a shrink never lowers it), and the highest recorded length governs.
 
 - **module depth judgment** — the *watched* standard: the model's call on whether a module
-  is genuinely deep, not merely short. Not yet built (ADR 0006); length raises a decision,
+  is genuinely deep, not merely short. Not yet built; length raises a decision,
   never a verdict.
 
 - **exceeded acceptance** — a file past the length signal that *was* accepted at a lower length
@@ -251,7 +251,7 @@ against drift each time new words join the live corpus.
 
 - **design-it-twice** — the judgment use of the worktree concurrency: for a load-bearing
   interface, designing the decision several ways in parallel before committing one, then picking
-  the deepest (Ousterhout, ADR 0007). The fence that isolates a worker for throughput
+  the deepest (Ousterhout). The fence that isolates a worker for throughput
   isolates several candidates for design quality.
 
 - **design contest** — the run of design-it-twice on one decision: a set of candidates, the
@@ -263,14 +263,15 @@ against drift each time new words join the live corpus.
   implementation — the interface, what it hides, the seam, and the depth argument.
 
 - **design brief** — the instruction that pushes a candidate toward a radically different shape:
-  minimize the interface / maximize flexibility / optimize the common caller / ports-and-adapters
-  (ADR 0007). Different briefs make the contest span real alternatives.
+  minimize the interface / maximize flexibility / optimize the common caller / ports-and-adapters.
+  Different briefs make the contest span real alternatives.
 
 - **design-decision** — the architect's machine-side pick among candidates, recorded as a
-  structured `design-decision: <subject> → <chosen> — <reason>` line in an ADR — the same
-  structured-record idiom the **accepted-length record** uses. A load-bearing interface choice is
-  hard to reverse, so it is ADR-worthy; the operator sees it only when the comparison reveals a
-  stake-bearing difference (the standing-guard floor).
+  structured `design-decision: <subject> → <chosen> — <reason>` line in the contest node's
+  material — the same structured-record idiom the **accepted-length record** uses. A load-bearing
+  interface choice is hard to reverse, so it is recorded on the node and archives with the work; the
+  operator sees it only when the comparison reveals a stake-bearing difference (the standing-guard
+  floor).
 
 - **seam** — the boundary a clean cut falls on, judged on where it lets checks and abstractions
   stand. Two scales: in work, where an ask splits into child nodes (a subtree); in code, where
@@ -317,8 +318,5 @@ against drift each time new words join the live corpus.
 - **registry** — a collection the system keeps (the methodologies, the linked project folders).
 
 - **OMP** — the multi-model harness the worker runs under, so it can run a different model from
-  the architect (the operator's ratified spend decision, ADR 0009). The worker model is OpenAI
+  the architect (the operator's ratified spend decision). The worker model is OpenAI
   GPT-5.5 (xhigh); `omp` is the binary, OMP the concept.
-
-- **ADR** — a recorded decision, kept sparingly: only when it is hard to reverse,
-  surprising without context, and the result of a real trade-off.

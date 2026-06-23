@@ -1,10 +1,10 @@
-"""Slice 15 — the mechanical red-flag scan: dead symbols and import cycles (ADR 0020).
+"""Slice 15 — the mechanical red-flag scan: dead symbols and import cycles.
 
 Acceptance: the architecture review's standing scan now reads the mechanical structural red
 flags a tool can read without judgment — module-level symbols referenced nowhere (dead code)
 and import cycles (the circular-dependency signature of information leakage) — and surfaces them
 in the operator-view gap, derived, never hand-authored. The model-driven *verdict* (shallow
-module, leakage, the deletion test) stays judgment, still not built (ADR 0006), recorded not faked.
+module, leakage, the deletion test) stays judgment, still not built, recorded not faked.
 
 This slice is the first dogfood of hypercore's red→green discipline (no RESULT.md/delta.md had
 ever existed): the scan went **red** on the live findings the coherence audit named — dead

@@ -5,7 +5,7 @@ prompt and get its text back (`call` for the architect, `worker_transport` for t
 and read the first JSON object out of a reply (`parse`). It carries the two role identities too —
 the model each role runs against and the label the window shows.
 
-It was named out of `communication` (ADR 0021). The architect's voice and the worker's, the
+It was named out of `communication`. The architect's voice and the worker's, the
 grilling pass and the design contest all need the same model invocation and the same lenient JSON
 read, and they had been reaching into `communication`'s privates for them
 (`communication._claude`, `communication._parse`) — five modules past one module's interface (the
@@ -16,8 +16,8 @@ the shared knowledge; giving it its own module lets `communication`, `grill`, `d
 The two live transports share one summon (`_summon`) and differ only where they must: the
 **architect** runs at the repo root, the **worker** runs at its fence (`worker_transport`, cwd =
 its worktree) so the harness auto-loads the fence's anchor and discovers its skills and the worker
-reads the reference tail from its own checkout (role-assembly step 5). The worker runs a *different*
-model from the architect by ratified design (ADR 0009) — GPT via `omp` — named in one place
+greps `work/archive/` for past grounds in its own checkout (role-assembly step 5). The worker runs a
+*different* model from the architect by ratified design — GPT via `omp` — named in one place
 (`WORKER_CMD`/`WORKER_MODEL`, role-assembly step 6), the operator's settled spend decision.
 
 The transport is **injectable** — the live invocation here, a scripted fake in the acceptance
@@ -32,7 +32,7 @@ MODEL = "claude-opus-4-8"
 MODEL_LABEL = "opus 4.8"
 
 # The worker's model identity — its own line, the role-assembly step-6 flip point. The worker runs a
-# *different* model from the architect (Opus) by ratified design (ADR 0009): GPT via the `omp`
+# *different* model from the architect (Opus) by ratified design: GPT via the `omp`
 # multi-model harness, which auto-loads the fence's anchor and discovers its skills at the worktree.
 # The flip to a new vendor was the operator's spend decision (2026-06-22); nothing else names them.
 WORKER_CMD = "omp"
@@ -78,7 +78,7 @@ def worker_argv(prompt: str) -> list[str]:
 def worker_transport(cwd: str):
     """Bind the worker's live transport to its fence (role-assembly step 5): every worker call runs
     with its working directory set to `cwd` = its worktree, so the harness auto-loads the fence's
-    anchor and discovers its skills and the worker reads the ADR/reference tail from its own checkout.
+    anchor and discovers its skills and the worker greps `work/archive/` for past grounds in its checkout.
     The injection boundary stays `(prompt) -> str` — the fence is closed over, not threaded through it,
     so the scripted fakes are untouched — and the binding carries `.cwd` so the scaffold check can
     assert the worker runs at its fence without a live model."""

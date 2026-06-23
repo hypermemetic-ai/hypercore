@@ -5,9 +5,9 @@ The thread and the architect. A thread is one throwaway session; the architect i
 voice between the operator and the system, reading the operator's words and landing one concrete
 consequence on the tree. The role is named **architect** because it holds the operator-aligned
 **design judgment** across the work's life — but that judgment is decomposed into capabilities of
-its own, so each can be carried as its own skill (ADR 0013): the pre-work intent extraction is
+its own, so each can be carried as its own skill: the pre-work intent extraction is
 **`grilling`**, the archive-gate judgment over a worker's hand-off (coherence and depth) is
-**`coherence`**, and the load-bearing-interface contest is **`design-it-twice`** (ADR 0007).
+**`coherence`**, and the load-bearing-interface contest is **`design-it-twice`**.
 What `communication` itself owns is the **thread** and the **single operator-facing voice**: every
 word that crosses to the operator comes from the architect, the thread holds no durable state, and
 the architect selects among design-it-twice candidates and renders the result back. The capability is
@@ -56,13 +56,13 @@ operator at all, so this is a path that does not exist rather than a rule to kee
 ### Requirement: the architect selects among design-it-twice candidates
 For a load-bearing interface designed twice (`design-it-twice`), the architect MUST compare the
 candidates on depth, locality, and seam placement and pick or hybridize — machine-side design
-judgment recorded as an ADR, not an operator decision (ADR 0007). It
+judgment recorded as a structured design decision, not an operator decision. It
 surfaces a card only when the comparison reveals a stake-bearing difference, which re-enters
 grilling. The candidate designs and the reasoning stay machine-side; only the
 architect-authored stake crosses to the operator, the same routing as a raw worker output.
 
 #### Scenario: the architect picks the interface
 - WHEN candidate interfaces for a load-bearing decision are handed to the architect
-- THEN it records the pick as a structured design-decision ADR and raises no card unless a
+- THEN it records the pick as a structured design decision and raises no card unless a
   stake-bearing difference surfaces, in which case the authored stake — not the raw designs —
   reaches the operator

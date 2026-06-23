@@ -1,6 +1,6 @@
 """The capability skills, single-sourced as `SKILL.md` artifacts from their spec slices.
 
-An agent carries its specialization in **skills** (ADR 0009): the disciplines it routes to when the
+An agent carries its specialization in **skills**: the disciplines it routes to when the
 work calls for them — the architect's `design-it-twice`, `architecture-review`, `grilling`, and
 `coherence`, and the worker's `depth` — each a clean standalone capability with its own
 `spec/<cap>.md`. This module renders each slice into a progressive-disclosure `SKILL.md`: the
@@ -12,10 +12,10 @@ One render of one source into the skill channel, no hand-copy, so a sharpened sl
 agent with no second copy to drift. `channels` drives it on fold (role-assembly step 4) — the
 registry the fold re-renders so a committed artifact can never disagree with its spec slice.
 
-`depth` renders here exactly like the others (ADR 0019): an imported design discipline is a capability
-like `design-it-twice` (ADR 0007), not a special type, so it dropped its bespoke `depth.py` render and
+`depth` renders here exactly like the others: an imported design discipline is a capability
+like `design-it-twice`, not a special type, so it dropped its bespoke `depth.py` render and
 joined this one seam. `grilling` and `coherence` were likewise carved out of `communication` into their
-own slices (ADR 0013) rather than a requirement-subset render, which would have added a second copy of
+own slices rather than a requirement-subset render, which would have added a second copy of
 the requirement set to drift. Each is one clean `spec/<cap>.md`; a new skill adds one line.
 """
 from __future__ import annotations

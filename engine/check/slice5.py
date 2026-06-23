@@ -56,7 +56,7 @@ def check(root: str) -> None:
 
     # 2. a tree that grows a source file past the length signal raises a decision — the
     # work stays live (re-cut/deepen/accept), never silently folds (loop + delta both fine, so
-    # the depth condition is what bites). Length raises a decision, not an auto-refusal (ADR 0006).
+    # the depth condition is what bites). Length raises a decision, not an auto-refusal.
     ask = staged("a change that grows a god-file", "a god-file is gated")
     godfile(worker._tree_path(ask, root))
     result = worker.apply(ask, scripted(json.dumps({
@@ -88,8 +88,8 @@ def check(root: str) -> None:
 
     # 4. a file past the signal folds when an accepted-length record accepts it — the
     # decision's accept-with-reason outcome, recorded as a parseable record (not a substring).
-    tree.atomic_write(os.path.join(spec.spec_dir(root), "decisions", "0099-giant-depth.md"),
-                       f"# ADR 0099\n\naccepted: engine/giant.py @{conditions.SIGNAL + 61} "
+    tree.atomic_write(os.path.join(root, "accepted-lengths.md"),
+                       f"accepted: engine/giant.py @{conditions.SIGNAL + 61} "
                        "— deep behind a small interface; its length is context-cost, not shallowness.\n")
     ask = staged("an accepted-length large module", "an accepted-length module folds")
     godfile(worker._tree_path(ask, root))
