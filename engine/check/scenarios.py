@@ -1,14 +1,16 @@
 """Acceptance — the self-model is self-verifying: a capability's scenarios are its executable checks.
 
-This is the acceptance path that replaces the dissolved by-slice harness for a migrated capability.
-It is the home of `folding-conditions`' checks now that slices 5/7/9/20/21's folding-conditions
-content has dissolved into the capability's own scenarios (`spec/folding-conditions.md`). It asserts
-three things:
+This is the acceptance path that replaces the dissolved by-slice harness for every migrated
+capability. As each capability's checks home in its own spec (`spec/<capability>.md`), it runs here
+with no edit: the green-and-derive loop iterates **every capability whose spec carries a check block**
+— the set is read off the specs, never hand-listed — so a newly migrated capability appears the moment
+its first block lands. It asserts three things:
 
-1. **the scenarios are green** — every `#### Scenario:` check block in `spec/folding-conditions.md`
-   runs against the live engine and passes, so the system meets its own spec right now;
-2. **the classification is derived, not hand-tended** — the gated/watched register is read off the
-   presence of check blocks (`scenario.classification`), so it cannot drift from what is gated;
+1. **the scenarios are green** — every `#### Scenario:` check block in every migrated capability runs
+   against the live engine and passes, so the system meets its own spec right now;
+2. **the classification is derived, not hand-tended** — a requirement is gated exactly when one of its
+   scenarios carries a check block and watched otherwise (`scenario.classification`), checked here to
+   read off the blocks themselves, so the register cannot drift from what is gated;
 3. **the scenario gate is a real red→green** — over a fence whose tip changes a folding-conditions
    behavior (the length signal) and whose base does not, the gate runs the capability's scenarios at
    the fork base (red) and the tip (green), trusting exit codes — and refuses a tip that is not green.
@@ -24,7 +26,7 @@ import subprocess
 import tempfile
 
 from .harness import ok
-from .. import scenario, tree, worker
+from .. import scenario, spec, tree, worker
 
 REAL = tree._DEFAULT_ROOT                                  # hypercore's own source tree — the spec under test
 
@@ -35,27 +37,24 @@ _DELTA = ("# delta — signal change\n## MODIFIED — folding-conditions\n"
 
 
 def check(root: str) -> None:
-    print("\nscenarios — acceptance check  (the self-model is self-verifying: folding-conditions)\n")
+    print("\nscenarios — acceptance check  (the self-model is self-verifying: capability scenarios)\n")
 
-    # 1. every folding-conditions scenario is green against the live engine ───────────────────────────
-    outcomes = scenario.run("folding-conditions", REAL)
-    ok(len(outcomes) >= 7, f"folding-conditions carries its executable scenarios ({len(outcomes)} blocks)")
-    for o in outcomes:
-        ok(o.passed, f"scenario green: {o.scenario}" + ("" if o.passed else f" — {o.detail}"))
+    # 1. every capability that carries check blocks is green, and its gated/watched classification is
+    #    READ OFF the blocks — derived, never hand-tended. The set of migrated capabilities is the set
+    #    whose spec carries a block, read live, so a newly migrated capability appears here with no edit.
+    migrated = [c.name for c in spec.read_spec(REAL).capabilities if scenario.checks(c.name, REAL)]
+    ok({"folding-conditions", "coherence"} <= set(migrated),
+       f"the migrated capabilities carry their executable scenarios ({', '.join(migrated)})")
+    for cap in migrated:
+        for o in scenario.run(cap, REAL):
+            ok(o.passed, f"{cap} — scenario green: {o.scenario}" + ("" if o.passed else f": {o.detail}"))
+        blocked = {c.requirement for c in scenario.checks(cap, REAL)}
+        cls = dict(scenario.classification(cap, REAL))
+        ok(all((k == "gated") == (r in blocked) for r, k in cls.items()),
+           f"{cap} — gated/watched is read off the check blocks "
+           f"({sum(k == 'gated' for k in cls.values())} gated, {sum(k == 'watched' for k in cls.values())} watched)")
 
-    # 2. the gated/watched classification is DERIVED from the presence of a check block ───────────────
-    cls = dict(scenario.classification("folding-conditions", REAL))
-    gated = [n for n, k in cls.items() if k == "gated"]
-    ok(all(cls.get(r) == "gated" for r in (
-        "length past the signal raises a decision, never a silent refusal",
-        "an accepted length is bounded to the length it names, and ratchets",
-        "the accepted-length record is durable authored state, written through one seam")),
-       f"the standards proven by a check block are gated, read off the blocks ({len(gated)} gated)")
-    ok(cls.get("a behavior change folds only when its capability's scenario goes red→green") == "watched"
-       and cls.get("a standard is gated by carrying a scenario, watched without one") == "watched",
-       "the gate mechanism and the deriving rule carry no in-spec block — watched, exercised here, never faked")
-
-    # 3. the scenario gate is a REAL red→green — and refuses a tip that is not green ───────────────────
+    # 2. the scenario gate is a REAL red→green — and refuses a tip that is not green ───────────────────
     # The fence's tip lowers the length signal 500→400 (a real folding-conditions behavior change); its
     # scenarios are calibrated to 400, so they FAIL at the base (signal 500) and PASS at the tip. The
     # gate runs them in the fence, trusting only the exit codes.

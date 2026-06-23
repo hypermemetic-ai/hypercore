@@ -23,10 +23,32 @@ architect then coherence-checks what no scenario can capture — does the result
 operator's altitude, not a code review — and on a pass folds the refined delta into the spec, the work
 leaving the work view in the same act. The raw report is input to that judgment, never output.
 
-#### Scenario: coherence decides the fold
+#### Scenario: a result that honors the contract folds
 - WHEN a worker hands a result back whose folding conditions are met (its scenarios went red→green)
-- THEN a result that honors the contract folds its delta and integrates, and a result that
-  does not raises a decision (re-cut, abandon, or change the ask) rather than folding
+  and the architect judges it coherent with the contract
+- THEN the refined delta folds into the spec and the work leaves the work view in the same act
+
+  ```check
+  hand coherent
+  fold lands
+  spec folds
+  card none
+  ```
+
+#### Scenario: a result that does not honor the contract is held as a decision
+- WHEN a worker hands a result back whose folding conditions are met but the architect judges it
+  incoherent with the contract
+- THEN the fold is refused, the spec is left untouched, the node stays live, and a decision
+  (re-cut / abandon / change the ask) is raised on the queue — never a silent fold and never a
+  silent drop
+
+  ```check
+  hand incoherent
+  fold held
+  spec untouched
+  card decide
+  node live
+  ```
 
 ### Requirement: the architect judges depth at the archive gate
 The architect MUST hold the design judgment the worker cannot hold over its own product: at

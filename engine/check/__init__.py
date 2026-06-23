@@ -17,17 +17,18 @@ import os
 import subprocess
 import tempfile
 
-# Capability scenarios + the remaining by-slice checks. folding-conditions' acceptance has migrated
-# from slices 5/7/9/20/21 to its own executable scenarios (`scenarios`), so slices 5 and 20 — wholly
-# folding-conditions — are gone, and 7/9/21 keep only their other-capability checks. The gaps mark the
-# migration; each remaining capability dissolves its slice content the same way as it migrates.
+# Capability scenarios + the remaining by-slice checks. Migrated capabilities run off their own
+# executable scenarios (`scenarios`), not a slice: folding-conditions left slices 5/7/9/20/21 (5 and
+# 20 wholly its own, now gone) and coherence left slice 21 (wholly its own, now gone). 7/9 keep only
+# their other-capability checks. The gaps mark the migration; each remaining capability dissolves its
+# slice content the same way as it migrates, until no slice file is left.
 from . import (harness, scenarios, slice1, slice2, slice3, slice4, slice6, slice7, slice8,
                slice9, slice10, slice11, slice12, slice13, slice14, slice15, slice16, slice17,
-               slice18, slice19, slice21, slice22, slice23)
+               slice18, slice19, slice22, slice23)
 
 SLICES = (slice1, slice2, slice3, slice4, slice6, slice7, slice8, slice9, slice10,
           slice11, slice12, slice13, slice14, slice15, slice16, slice17, slice18, slice19,
-          slice21, slice22, slice23, scenarios)
+          slice22, slice23, scenarios)
 
 
 def run() -> int:
