@@ -39,7 +39,7 @@ def _branch_exists(root: str, branch: str) -> bool:
 
 
 def check(_shared_root: str) -> None:
-    from .. import graph, worker
+    from .. import tree, worker
 
     print("\nslice 18 — acceptance check  (failure paths recover the node, the fence never leaks)\n")
 
@@ -48,10 +48,10 @@ def check(_shared_root: str) -> None:
     # worker crossing returns not-done; the fence must be gone and the node must have left IN_FLIGHT.
     root = _init("engine-check-s18a-")
     os.environ["ENGINE_ROOT"] = root
-    graph.commit([os.path.join(root, "spec")], "seed: empty spec") if os.path.isdir(
+    tree.commit([os.path.join(root, "spec")], "seed: empty spec") if os.path.isdir(
         os.path.join(root, "spec")) else None
 
-    node = graph.file_intent("a worker whose result cannot fold")
+    node = tree.file_intent("a worker whose result cannot fold")
     no_loop = (
         '{"report": "built it", '
         '"delta": "## ADDED — newcap\\n### Requirement: it holds\\nThe newcap MUST hold.\\n'
@@ -59,15 +59,15 @@ def check(_shared_root: str) -> None:
         '"loop": {"command": "", "red": "", "green": ""}}')          # behavior change, no loop → refuse
     reply = worker.run(node, transport=lambda _p: no_loop, root=root)
     ok(not reply.done, "a behavior-changing result with no loop is refused — the crossing returns not-done")
-    tree = worker._tree_path(node, root)
-    ok(not os.path.isdir(tree),
+    fence = worker._tree_path(node, root)
+    ok(not os.path.isdir(fence),
        "the fence is torn down on a refusal — no leaked worktree (C2)")
     ok(not _branch_exists(root, worker._branch(node)),
        "the worker branch is deleted on a refusal — no leaked branch (C2)")
-    after = graph.find(node.id)
-    ok(after is not None and after.state != graph.IN_FLIGHT,
+    after = tree.find(node.id)
+    ok(after is not None and after.state != tree.IN_FLIGHT,
        "the node leaves IN_FLIGHT on a refusal — not stranded in flight with no live worker (C2)")
-    cards = [c for c in graph.cards() if c.parent == node.id]
+    cards = [c for c in tree.cards() if c.parent == node.id]
     ok(bool(cards),
        "a decision card is raised on the node — the refusal is recoverable, not a silent drop")
 
@@ -80,7 +80,7 @@ def check(_shared_root: str) -> None:
     from ..transport import MalformedReply
     root = _init("engine-check-s18b-")
     os.environ["ENGINE_ROOT"] = root
-    garbage = graph.file_intent("a worker whose model returns garbage")
+    garbage = tree.file_intent("a worker whose model returns garbage")
     apply_raised = False
     try:
         worker.context(garbage, root)                                # grounding ok
@@ -92,7 +92,7 @@ def check(_shared_root: str) -> None:
 
     # and end to end through the crossing: the malformed reply recovers the node and tears the fence
     # down (the C2 path), never folding a silent success.
-    garbage2 = graph.file_intent("another worker whose model returns nothing structured")
+    garbage2 = tree.file_intent("another worker whose model returns nothing structured")
     raised = False
     try:
         reply2 = worker.run(garbage2, transport=lambda _p: "still no object here", root=root)
@@ -101,8 +101,8 @@ def check(_shared_root: str) -> None:
         raised, done = True, False
     ok(raised and not done,
        "a malformed model reply takes the failure path through the crossing — never a clean fold (H3)")
-    g2 = graph.find(garbage2.id)
-    ok(g2 is not None and g2.state != graph.IN_FLIGHT,
+    g2 = tree.find(garbage2.id)
+    ok(g2 is not None and g2.state != tree.IN_FLIGHT,
        "a worker whose model fails recovers off IN_FLIGHT — the fence's failure is not a silent success")
     ok(not os.path.isdir(worker._tree_path(garbage2, root)),
        "the fence is torn down when the model reply is malformed — no leak on the error path (H3+C2)")
@@ -111,7 +111,7 @@ def check(_shared_root: str) -> None:
     from .. import schedule
     root = _init("engine-check-s18c-")
     os.environ["ENGINE_ROOT"] = root
-    n = graph.file_intent("a scheduled worker whose result cannot fold")
+    n = tree.file_intent("a scheduled worker whose result cannot fold")
     sched = schedule.Scheduler(transport=lambda _p: no_loop, root=root, limit=1)
     sched.step()
     for _ in range(400):
@@ -123,8 +123,8 @@ def check(_shared_root: str) -> None:
     ok(sched.running == [], "the scheduler is idle after the refusal — the loop survived and kept serving")
     ok(not os.path.isdir(worker._tree_path(n, root)),
        "no fence leaks through the scheduler on a refusal — steady-state failure leaves no debris (C2)")
-    nn = graph.find(n.id)
-    ok(nn is not None and nn.state != graph.IN_FLIGHT,
+    nn = tree.find(n.id)
+    ok(nn is not None and nn.state != tree.IN_FLIGHT,
        "the scheduled node recovers off IN_FLIGHT — never stranded across the scheduler's life")
 
     # ── 5. a crash-stranded IN_FLIGHT node (no live worker) is recovered on the next step (C2) ───────
@@ -132,11 +132,11 @@ def check(_shared_root: str) -> None:
     # scheduler's step must return it to standing, never leave it a lie or drop it silently on restart.
     root = _init("engine-check-s18d-")
     os.environ["ENGINE_ROOT"] = root
-    stranded = graph.file_intent("a node a crash left in flight")
-    graph.delegate(stranded)                                         # IN_FLIGHT on disk, no live worker
-    ok(graph.find(stranded.id).state == graph.IN_FLIGHT, "the node is in flight on disk before recovery")
+    stranded = tree.file_intent("a node a crash left in flight")
+    tree.dispatch(stranded)                                         # IN_FLIGHT on disk, no live worker
+    ok(tree.find(stranded.id).state == tree.IN_FLIGHT, "the node is in flight on disk before recovery")
     fresh = schedule.Scheduler(transport=lambda _p: no_loop, root=root, limit=0)  # limit 0: only recover
     fresh.step()
-    rs = graph.find(stranded.id)
-    ok(rs is not None and rs.state != graph.IN_FLIGHT,
+    rs = tree.find(stranded.id)
+    ok(rs is not None and rs.state != tree.IN_FLIGHT,
        "a crash-stranded IN_FLIGHT node with no live worker is recovered to standing on the next step (C2)")

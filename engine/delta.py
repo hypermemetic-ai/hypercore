@@ -1,14 +1,14 @@
 """The delta and the fold — how behavior change reaches the living spec.
 
-A behavior-changing graph carries a delta (ADDED / MODIFIED / REMOVED
-requirements); a trivial graph carries one with no ops and so says so. Folding a
-graph applies its delta to `spec/` and commits, in one act: the spec never merges
-unless the graph folds, and the graph never folds unless the delta merges. The
+A behavior-changing tree carries a delta (ADDED / MODIFIED / REMOVED
+requirements); a trivial tree carries one with no ops and so says so. Folding a
+tree applies its delta to `spec/` and commits, in one act: the spec never merges
+unless the tree folds, and the tree never folds unless the delta merges. The
 folding condition lives here — a missing delta or one that does not apply cleanly
 to the current spec cannot fold — so drift is structurally impossible, not a thing
 discipline must prevent.
 
-On disk a delta is `delta.md` in a graph's folder:
+On disk a delta is `delta.md` in a tree's folder:
 
     # delta — <subject>
 
@@ -35,7 +35,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 
-from . import channels, graph, spec
+from . import channels, tree, spec
 
 VERBS = ("ADDED", "MODIFIED", "REMOVED")
 
@@ -98,7 +98,7 @@ def check(delta: Delta | None, sp: spec.Spec) -> str | None:
     retry after a crash that landed the spec change but not the archive completes rather than wedging
     (H1). An ADDED whose requirement exists with *different* content is a genuine conflict and refuses."""
     if delta is None:
-        return "missing delta: a graph must carry a delta to fold"
+        return "missing delta: a tree must carry a delta to fold"
     for op in delta.ops:
         if op.verb not in VERBS:
             return f"unknown verb {op.verb!r}"
@@ -123,7 +123,7 @@ def _same(a: spec.Requirement, b: spec.Requirement) -> bool:
 
 # ── the fold (applies the delta; atomic with the commit, both directions) ─────
 
-@graph.serialized
+@tree.serialized
 def fold(delta: Delta | None, root: str | None = None, node=None) -> None:
     """Apply the delta to the living spec, archive the node, and commit — **one act, atomic in both
     directions** (spec.self-model). Raises CannotFold if the folding condition is not met; on refusal
@@ -137,7 +137,7 @@ def fold(delta: Delta | None, root: str | None = None, node=None) -> None:
     now reads as already-present (not a conflict), so the retry re-renders identically, moves the node,
     and commits once. Serialized on the one record: concurrent folds land one at a time, never
     interleaving their spec writes, while their builds ran in parallel. A trivial delta with a node
-    still archives it (the fold of a no-op-delta graph)."""
+    still archives it (the fold of a no-op-delta tree)."""
     sp = spec.read_spec(root)
     reason = check(delta, sp)
     if reason:
@@ -149,21 +149,21 @@ def fold(delta: Delta | None, root: str | None = None, node=None) -> None:
         for name in touched:
             path = spec.cap_path(name, root)
             base = open(path).read() if os.path.isfile(path) else _seed(name)
-            graph.atomic_write(path, _apply(base, [o for o in delta.ops if o.capability == name]))
+            tree.atomic_write(path, _apply(base, [o for o in delta.ops if o.capability == name]))
         # The render step: every fold re-derives the static channels (skills, the agents file) from
         # the spec, so a committed artifact cannot drift from its source (ADR 0009 §3). Idempotent: an
         # unchanged source re-renders identically and re-staging no-ops, so a retry is safe.
         rendered = channels.materialize(root)
         paths = [spec.cap_path(n, root) for n in touched] + rendered
         if node is not None:
-            paths += graph.archive_in_place(node)      # the node's DONE write + folder move, same act
+            paths += tree.archive_in_place(node)      # the node's DONE write + folder move, same act
         return paths
 
     touched = ", ".join(sorted({op.capability for op in delta.ops})) or "channels"
-    subject = delta.subject or (graph._subject(node.text) if node is not None else "delta")
+    subject = delta.subject or (tree._subject(node.text) if node is not None else "delta")
     # `land` returns the exact paths it wrote (spec files, rendered channels, the node's move
     # endpoints); `transact` stages precisely those in the one held commit — atomic, both directions.
-    graph.transact(land, None, f"fold: {subject} → {touched}")
+    tree.transact(land, None, f"fold: {subject} → {touched}")
 
 
 def _seed(name: str) -> str:

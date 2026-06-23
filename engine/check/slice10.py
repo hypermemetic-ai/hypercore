@@ -25,7 +25,7 @@ from .harness import ok
 
 
 def check(root: str) -> None:
-    from .. import graph, methodology, spec, worker
+    from .. import tree, methodology, spec, worker
 
     print("\nslice 10 — acceptance check  (depth is a capability, foregrounded for the worker)\n")
 
@@ -45,20 +45,20 @@ def check(root: str) -> None:
         "- WHEN a worker builds a module\n- THEN the planted discipline applies\n"
     )
     src = spec.cap_path("depth", root)
-    graph.atomic_write(src, planted)
+    tree.atomic_write(src, planted)
 
     # ── 2. depth is a capability in the model, like the others (ADR 0019) ──────────────────
     ok(spec.read_spec(root).capability("depth") is not None,
        "depth is a capability segment — read from spec/depth.md by content, no longer a special type")
 
-    # ── 3. the worker's prompt foregrounds the depth disciplines every episode ─────────────
-    ask = graph.file_intent("any worker episode")
+    # ── 3. the worker's prompt foregrounds the depth standards every episode ─────────────
+    ask = tree.file_intent("any worker episode")
     text = worker.prompt(ask, worker.context(ask, root))
     ok(NONCE in text and NONCE + "-stmt" in text,
        "the worker's prompt foregrounds the depth capability by construction — the slice-7 defense, derived")
 
     # editing the one source changes the worker's grounding at once — there is no second copy
-    graph.atomic_write(src, planted.replace(NONCE, "EDITED-" + NONCE))
+    tree.atomic_write(src, planted.replace(NONCE, "EDITED-" + NONCE))
     text2 = worker.prompt(ask, worker.context(ask, root))
     ok("EDITED-" + NONCE in text2,
        "editing the depth slice changes the worker's grounding at once — drift between source and copy is impossible")

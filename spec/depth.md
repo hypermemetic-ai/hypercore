@@ -34,7 +34,7 @@ a simple interface is worth more than a simple implementation.
   surfaced as the primary red flag, never excused by being short
 
 ### Requirement: information is hidden, not leaked
-A module MUST encapsulate a design decision — a format, a structure, an algorithm — that nothing
+A module MUST encapsulate a decision — a format, a structure, an algorithm — that nothing
 outside needs to know. The same knowledge living in two places that must change together
 (**information leakage**, the gravest red flag after shallowness) is designed out, and its commonest
 cause, **temporal decomposition** (structuring code by the order operations happen rather than the
@@ -42,7 +42,7 @@ knowledge each needs), is avoided: decompose by knowledge, not by time. General-
 deeper than special-purpose ones, and adjacent layers carry different abstractions — a layer that
 restates its neighbour is a pass-through doing nothing.
 
-#### Scenario: a design decision is encapsulated
+#### Scenario: a decision is encapsulated
 - WHEN a piece of knowledge — a format, an order, a structure — is needed in the system
 - THEN it lives in exactly one module, and a structure that splits it across stages or leaks it to
   callers is reworked toward decomposition-by-knowledge
@@ -75,7 +75,7 @@ The red flags MUST be carried as **judgment**, not numbers — shallow module, i
 temporal decomposition, overexposure, pass-through method, repetition, special-general mixture,
 conjoined methods, comment-repeats-code, vague or hard-to-pick name, nonobvious code — each a symptom
 a judge weighs, none a threshold a tool checks. The system keeps at most a **length** tripwire (a
-context-cost signal that raises a depth decision, never an auto-refusal); the model-driven red-flag
+context-cost signal that raises a decision, never an auto-refusal); the model-driven red-flag
 scan lives in `architecture-review`, recorded as not-yet-built, never fabricated.
 
 #### Scenario: depth is assessed

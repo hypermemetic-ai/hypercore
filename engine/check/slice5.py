@@ -1,10 +1,10 @@
 """Slice 5 — the folding conditions: the gate, the loop, the length signal.
 
-Acceptance (spec §9.5): a graph that hands back a behavior change with no recorded
+Acceptance (spec §9.5): a tree that hands back a behavior change with no recorded
 red→green loop cannot fold (a non-negotiable fact); one that grows a source file past the
-length signal raises a depth decision and holds the fold (re-grounded in slice 7 — length
+length signal raises a decision and holds the fold (re-grounded in slice 7 — length
 is a signal, not an auto-refusal), leaving the spec untouched; a result that meets every
-condition folds, and a file past the signal folds when a structured depth-decision accepts
+condition folds, and a file past the signal folds when an accepted-length record accepts
 it. Drives the conditions through the real integrate path and real worktrees.
 """
 from __future__ import annotations
@@ -16,7 +16,7 @@ from .harness import LOOP, ok, scripted
 
 
 def check(root: str) -> None:
-    from .. import conditions, conversation, graph, spec, worker
+    from .. import conditions, communication, tree, spec, worker
 
     print("\nslice 5 — acceptance check  (the folding conditions)\n")
 
@@ -30,15 +30,15 @@ def check(root: str) -> None:
                 f"#### Scenario: s\n- WHEN a fold is attempted\n- THEN the gate runs\n")
 
     def staged(text: str, name: str):
-        ask = graph.file_intent(text)
-        graph.approve(graph.raise_card("contract.\n\ndelta:\n" + delta_for(name),
+        ask = tree.file_intent(text)
+        tree.approve(tree.raise_card("contract.\n\ndelta:\n" + delta_for(name),
                                        kind="decide", parent=ask.id))
         worker.worktree(ask, root)
-        graph.delegate(ask)
+        tree.dispatch(ask)
         return ask
 
-    def godfile(tree: str) -> None:
-        graph.atomic_write(os.path.join(tree, "engine", "giant.py"),
+    def godfile(fence: str) -> None:
+        tree.atomic_write(os.path.join(fence, "engine", "giant.py"),
                            "# a shallow god-file\n" + "x = 0\n" * (conditions.SIGNAL + 60))
 
     # 1. a behavior change handed back with no recorded loop cannot fold
@@ -47,14 +47,14 @@ def check(root: str) -> None:
         "report": "did the work, no harness",
         "delta": delta_for("a loopless change is gated"),
         "loop": {"command": "", "red": "", "green": ""}})), root)         # no recorded loop
-    reply = conversation.integrate(ask, result, coherent(), root)
+    reply = communication.integrate(ask, result, coherent(), root)
     ok(reply.card is not None and not reply.done,
        "a behavior change with no recorded red→green loop cannot fold")
     ok(req("a loopless change is gated") is None, "the refused fold leaves the spec untouched")
-    ok(graph.find(ask.id).is_live, "the work stays live with a decision raised, not folded")
+    ok(tree.find(ask.id).is_live, "the work stays live with a decision raised, not folded")
     worker.teardown(ask, root)
 
-    # 2. a graph that grows a source file past the length signal raises a depth decision — the
+    # 2. a tree that grows a source file past the length signal raises a decision — the
     # work stays live (re-cut/deepen/accept), never silently folds (loop + delta both fine, so
     # the depth condition is what bites). Length raises a decision, not an auto-refusal (ADR 0006).
     ask = staged("a change that grows a god-file", "a god-file is gated")
@@ -66,10 +66,10 @@ def check(root: str) -> None:
     blocked = conditions.unmet(result, root)
     ok(blocked is not None and "depth" in blocked and "length signal" in blocked
        and "giant.py" in blocked,
-       f"length past the {conditions.SIGNAL}-line signal raises a depth decision on the file")
-    reply = conversation.integrate(ask, result, coherent(), root)
+       f"length past the {conditions.SIGNAL}-line signal raises a decision on the file")
+    reply = communication.integrate(ask, result, coherent(), root)
     ok(reply.card is not None and not reply.done,
-       "the depth decision is raised and the fold is held — not a silent pass")
+       "the decision is raised and the fold is held — not a silent pass")
     ok(req("a god-file is gated") is None, "the held fold leaves the spec untouched")
     worker.teardown(ask, root)
 
@@ -81,27 +81,27 @@ def check(root: str) -> None:
         "loop": LOOP})), root)
     ok(conditions.unmet(result, root) is None,
        "a recorded loop and an in-signal module meet every folding condition")
-    reply = conversation.integrate(ask, result, coherent(), root)
+    reply = communication.integrate(ask, result, coherent(), root)
     ok(reply.done and req("a clean change folds") is not None,
        "the met conditions let the delta fold into the spec")
     worker.teardown(ask, root)
 
-    # 4. a file past the signal folds when a structured depth-decision accepts it — the
+    # 4. a file past the signal folds when an accepted-length record accepts it — the
     # decision's accept-with-reason outcome, recorded as a parseable record (not a substring).
-    graph.atomic_write(os.path.join(spec.spec_dir(root), "decisions", "0099-giant-depth.md"),
-                       f"# ADR 0099\n\ndepth-decision: engine/giant.py accepted@{conditions.SIGNAL + 61} "
+    tree.atomic_write(os.path.join(spec.spec_dir(root), "decisions", "0099-giant-depth.md"),
+                       f"# ADR 0099\n\naccepted: engine/giant.py @{conditions.SIGNAL + 61} "
                        "— deep behind a small interface; its length is context-cost, not shallowness.\n")
-    ask = staged("a depth-accepted large module", "a depth-accepted module folds")
+    ask = staged("an accepted-length large module", "an accepted-length module folds")
     godfile(worker._tree_path(ask, root))
     result = worker.apply(ask, scripted(json.dumps({
-        "report": "grew a depth-accepted module",
-        "delta": delta_for("a depth-accepted module folds"),
+        "report": "grew an accepted-length module",
+        "delta": delta_for("an accepted-length module folds"),
         "loop": LOOP})), root)
     ok(conditions.unmet(result, root) is None,
-       "a file past the signal with a structured depth-decision accepting it clears the gate")
-    reply = conversation.integrate(ask, result, coherent(), root)
-    ok(reply.done and req("a depth-accepted module folds") is not None,
-       "the depth-accepted exception folds")
+       "a file past the signal with an accepted-length record accepting it clears the gate")
+    reply = communication.integrate(ask, result, coherent(), root)
+    ok(reply.done and req("an accepted-length module folds") is not None,
+       "the accepted-length exception folds")
     worker.teardown(ask, root)
 
     # 5. the delta condition is part of the same gate: a delta that will not apply is caught
@@ -111,7 +111,7 @@ def check(root: str) -> None:
         "report": "built it",
         "delta": "## MODIFIED — folding-conditions\n### Requirement: nonexistent\nx\n",
         "loop": LOOP})), root)
-    reply = conversation.integrate(ask, result, coherent(), root)
+    reply = communication.integrate(ask, result, coherent(), root)
     ok(reply.card is not None and not reply.done,
        "a delta that will not apply is caught by the gate as a decision, not a crash")
     worker.teardown(ask, root)

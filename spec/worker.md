@@ -43,8 +43,8 @@ or missed.
 - THEN the worker's context still holds the whole spec, so its rescan can catch the
   mis-mapping rather than trust the delta's list — which a slice-confined worker could not
 
-### Requirement: a worker is grounded in the depth disciplines, every episode
-A worker MUST be handed the **depth disciplines** as standing grounding in every episode — the
+### Requirement: a worker is grounded in the depth standards, every episode
+A worker MUST be handed the **depth standards** as standing grounding in every episode — the
 deep-module framework (a lot of behavior behind a small interface; a simple interface matters
 more than a simple implementation; pull complexity downward), strategic over tactical
 programming, and the **red flags** of shallowness — so it builds **deep up front** rather than
@@ -61,7 +61,7 @@ same slice renders the `depth` **skill** through the methodology seam, materiali
 harness that loads skills natively — one source, the channels derived from it, the way the as-built
 is derived from the model and only the vision is authored.
 
-#### Scenario: the depth disciplines are in the grounding
+#### Scenario: the depth standards are in the grounding
 - WHEN a worker is assembled to run
 - THEN its prompt carries the deep-module framework and the red flags, foregrounded as
   disciplines it is held to, so it builds deep up front
@@ -81,7 +81,7 @@ worktree**, so the checkout is the worker's working directory: its source, the r
 checkout, and the harness auto-loads the fence's anchor and discovers its skills.
 
 #### Scenario: the fence holds
-- WHEN a worker is delegated a node
+- WHEN a worker is dispatched a node
 - THEN it gets a worktree distinct from the main tree, commits its result there on its own
   branch, and that commit is reachable in the record but absent from the main line
 
@@ -90,7 +90,7 @@ checkout, and the harness auto-loads the fence's anchor and discovers its skills
 - THEN its transport runs with the worktree as its working directory, so it reads the reference
   tail and its channel files from its own checkout rather than from an inlined prompt
 
-### Requirement: concurrent workers advance the graph in isolation, each folding its own delta
+### Requirement: concurrent workers advance the tree in isolation, each folding its own delta
 The fence MUST compose: several workers MAY hold distinct worktrees at once, each building and
 committing on its own branch, none touching a sibling's tree or the main line, and each folding
 its own delta into the one spec independently. Isolation is the concurrency model — throughput is

@@ -28,7 +28,7 @@ from .harness import ok
 
 
 def check(root: str) -> None:
-    from .. import channels, delta, graph, methodology, spec
+    from .. import channels, delta, tree, methodology, spec
 
     print("\nslice 11 — acceptance check  (materialize-on-fold: derived channels follow the spec)\n")
 
@@ -44,7 +44,7 @@ def check(root: str) -> None:
         "- WHEN a worker builds a module\n- THEN the planted discipline applies\n"
     )
     src = spec.cap_path("depth", root)               # spec/depth.md — the capability slice
-    graph.atomic_write(src, planted)
+    tree.atomic_write(src, planted)
 
     # Remove any prior artifact so the proof is that the FOLD created it, not that it lingered.
     art = os.path.join(root, methodology.skill_path("depth"))
@@ -62,7 +62,7 @@ def check(root: str) -> None:
        "the materialized artifact is exactly the render of its source — pure derived output, nothing edited")
 
     # ── 2. drift is impossible: edit the source, fold again, the artifact follows ──────────
-    graph.atomic_write(src, planted.replace(NONCE, "EDITED-" + NONCE))
+    tree.atomic_write(src, planted.replace(NONCE, "EDITED-" + NONCE))
     delta.fold(delta.parse("# delta — trivial (no behavior change)"), root)
     ok("EDITED-" + NONCE in open(art, encoding="utf-8").read(),
        "a later fold re-renders the artifact from the changed source — a committed channel cannot drift")
@@ -76,7 +76,7 @@ def check(root: str) -> None:
        "bridge — one flat fold-driven set")
 
     # ── 4. a real behavior fold carries the render step too (not only trivial deltas) ──────
-    graph.atomic_write(src, planted.replace(NONCE, "REALFOLD-" + NONCE))
+    tree.atomic_write(src, planted.replace(NONCE, "REALFOLD-" + NONCE))
     delta.fold(delta.parse(
         "# delta — a real behavior change\n\n"
         "## ADDED — demo\n"

@@ -1,8 +1,8 @@
 """The one record — how an act lands durably and reaches git, single-writer.
 
-The graph is hypercore's source of truth, but *writing* it is a concern of its own: an act lands on
+The tree is hypercore's source of truth, but *writing* it is a concern of its own: an act lands on
 disk atomically the instant it is made, and the durable git commit follows behind, never gating the
-act (intent §work). This module is that write layer, the floor the graph's mutations and the fold rest
+act (intent §work). This module is that write layer, the floor the tree's mutations and the fold rest
 on. It hides three things behind a small interface:
 
 - **`atomic_write`** — replace a file in one step (write a temp beside it, `os.replace`), so a reader
@@ -23,7 +23,7 @@ on. It hides three things behind a small interface:
   to a concurrent `git add`.
 
 `_root` lives here too — where the record is rooted (the repo, or `ENGINE_ROOT` under the harness) —
-because it is what `commit` writes against; the graph re-exports it so its callers read one façade.
+because it is what `commit` writes against; the tree re-exports it so its callers read one façade.
 """
 from __future__ import annotations
 

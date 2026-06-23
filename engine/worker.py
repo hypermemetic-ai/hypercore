@@ -29,10 +29,10 @@ not a discipline to remember:
 - **Its output cannot reach the operator.** `apply` returns a `WorkerResult`, written
   for the machine. It has no operator-facing field and is never rendered. The only
   thing that crosses to the operator is what the architect *authors* from it
-  (`conversation.integrate`) — so the old raw-worker-prose-on-a-card failure is not a
+  (`communication.integrate`) — so the old raw-worker-prose-on-a-card failure is not a
   bug to avoid but a path that does not exist.
 
-- **It is grounded in the depth disciplines, every episode.** The prompt foregrounds the `depth`
+- **It is grounded in the depth standards, every episode.** The prompt foregrounds the `depth`
   capability — the deep-module framework and the red flags — ahead of the ask, so the worker builds
   **deep up front**, strategic, not tactical. This is the *proactive* primary defense against
   complexity (ADR 0006): a worker that shares the long-term-health concern produces deep
@@ -66,7 +66,7 @@ import os
 import subprocess
 from dataclasses import dataclass, field
 
-from . import conversation, delta, graph, grill, methodology, spec
+from . import communication, delta, tree, grill, methodology, spec
 from .transport import parse_object, worker_transport
 
 # The salutation — who the worker is, in one line; the disciplines that follow are single-sourced from
@@ -112,7 +112,7 @@ ENVELOPE = (
 def _worker_disciplines(root: str | None = None) -> str:
     """The worker's standing disciplines, rendered from `spec/worker.md`'s requirement statements through
     the same `methodology` seam the skills use — single-sourced, so a sharpened slice reaches the next
-    worker with no second copy to drift (the retired `WORKER`-constant restatement). The depth disciplines
+    worker with no second copy to drift (the retired `WORKER`-constant restatement). The depth standards
     are foregrounded separately by `prompt`; these are the worker's own."""
     text = methodology._read_slice("worker", root)
     return methodology._bullets(methodology._disciplines(text))
@@ -149,7 +149,7 @@ class WorkerResult:
 
 # ── the spec slice (assembled by construction; no worker runs without it) ─────
 
-def context(node: graph.Node, root: str | None = None) -> WorkerContext:
+def context(node: tree.Node, root: str | None = None) -> WorkerContext:
     """Assemble the grounding for a node: the *whole* spec — every capability's text and the
     glossary — with the capabilities the handed delta names marked as the worker's grounding
     (`touched`); the `depth` capability is among them and the prompt foregrounds it every episode
@@ -164,10 +164,10 @@ def context(node: graph.Node, root: str | None = None) -> WorkerContext:
     return WorkerContext(caps, sp.glossary, handed, touched)
 
 
-def prompt(node: graph.Node, ctx: WorkerContext, root: str | None = None) -> str:
+def prompt(node: tree.Node, ctx: WorkerContext, root: str | None = None) -> str:
     """The worker's grounding, rendered to one prompt — the salutation, then the worker's own
     disciplines single-sourced from `spec/worker.md`, the non-inferable record grounding, and the JSON
-    envelope; then the depth disciplines (the proactive defense), the touched capabilities foregrounded
+    envelope; then the depth standards (the proactive defense), the touched capabilities foregrounded
     as the grounding, the rest of the spec carried for the rescan, the glossary, the handed delta, and
     the ask. The ADR/reference tail is *not* inlined: the prompt points the worker at `spec/decisions/`
     in its fence checkout to pull just-in-time (step 5). This is the whole of what the worker is given."""
@@ -182,7 +182,7 @@ def prompt(node: graph.Node, ctx: WorkerContext, root: str | None = None) -> str
         f"{_worker_disciplines(root)}\n\n"
         f"{GROUNDING}\n\n"
         f"{ENVELOPE}\n\n"
-        f"The depth disciplines — you are held to these every episode; build deep up front:\n"
+        f"The depth standards — you are held to these every episode; build deep up front:\n"
         f"{depth_text}\n\n"
         f"The ask:\n{grill.contract_of(node) or node.text}\n\n"
         f"The handed delta (verify and refine it against the WHOLE spec):\n"
@@ -202,13 +202,13 @@ def prompt(node: graph.Node, ctx: WorkerContext, root: str | None = None) -> str
 
 # ── the fence (a real, separate git worktree on its own branch) ──────────────
 
-def worktree(node: graph.Node, root: str | None = None, tag: str = "") -> str:
+def worktree(node: tree.Node, root: str | None = None, tag: str = "") -> str:
     """Cut the worker a fenced tree: a separate checkout on branch worker/<id>. It builds
     here in isolation; its commits land in the shared object store without touching the
     main line or a sibling's tree. `tag` distinguishes sibling fences on one node — the
     design-it-twice contest cuts one per candidate (branch worker/<id>-<tag>), so several
     candidates advance the same decision in isolation from each other."""
-    base = root or graph._root()
+    base = root or tree._root()
     path = _tree_path(node, base, tag)
     if os.path.isdir(path):
         return path
@@ -217,14 +217,14 @@ def worktree(node: graph.Node, root: str | None = None, tag: str = "") -> str:
     return path
 
 
-def teardown(node: graph.Node, root: str | None = None, tag: str = "") -> None:
+def teardown(node: tree.Node, root: str | None = None, tag: str = "") -> None:
     """Tear the fence down — remove the worktree and its branch — on *every* path out of a worker
     crossing, not only the integrating one (C2). The work reaches the one record through the fold, not
     through this branch, so the fence is always disposable once the crossing ends. Best-effort and
     idempotent: a fence never cut, already torn down, or half-removed leaves no part standing and
     raises nothing, so `run`'s `finally` can call it unconditionally without a refusal or an error
     leaking a worktree or branch."""
-    base = root or graph._root()
+    base = root or tree._root()
     path = _tree_path(node, base, tag)
     _git_quiet(base, "worktree", "remove", "--force", path)
     _git_quiet(base, "worktree", "prune")               # clear any stale administrative entry
@@ -242,24 +242,24 @@ def commit_tree(tree: str, message: str) -> None:
 
 # ── apply: the worker builds, fenced and grounded, and hands back ────────────
 
-def apply(node: graph.Node, transport=None, root: str | None = None) -> WorkerResult:
+def apply(node: tree.Node, transport=None, root: str | None = None) -> WorkerResult:
     """Run the worker on a node: assemble its spec slice (the grounding, by construction),
     summon it at its fence, and take its machine-facing result. With no injected transport the live
     worker runs via `worker_transport(tree)` — cwd = its worktree (step 5), so it reads the reference
     tail and its skills from its own checkout; the harness injects a scripted fake instead. The result
     is committed inside the worker's own tree — its commit reaching the record in isolation."""
     ctx = context(node, root)                          # no apply without the grounding
-    tree = _tree_path(node, root or graph._root())
-    transport = transport or worker_transport(tree)    # the live worker runs at its fence (step 5)
+    fence = _tree_path(node, root or tree._root())
+    transport = transport or worker_transport(fence)   # the live worker runs at its fence (step 5)
     obj = parse_object(transport(prompt(node, ctx, root)))  # strict: a malformed reply is a failure, not a no-op (H3)
     report = (obj.get("report") or "").strip()
     refined = (obj.get("delta") or ctx.delta).strip()
     loop = obj.get("loop") if isinstance(obj.get("loop"), dict) else {}
-    _record(tree, report, refined, loop)               # the worker's own commit, fenced
-    return WorkerResult(report, refined, loop, tree)
+    _record(fence, report, refined, loop)              # the worker's own commit, fenced
+    return WorkerResult(report, refined, loop, fence)
 
 
-def run(node: graph.Node, transport=None, root: str | None = None):
+def run(node: tree.Node, transport=None, root: str | None = None):
     """The whole crossing for one node: take it (it goes live), build it fenced, hand to the architect
     to coherence-check and archive, then tear the fence down — on *every* exit, not only the
     integrating one. The worker speaks only to the architect; what reaches the operator is its reply.
@@ -270,16 +270,16 @@ def run(node: graph.Node, transport=None, root: str | None = None):
     So the fence is torn down in a `finally`, and a non-integrating crossing recovers the node to
     standing (its decision card, parented to it, blocks re-dispatch until the operator settles it). The
     error path recovers the node too, then re-raises so the scheduler raises its own decision card."""
-    graph.delegate(node)
+    tree.dispatch(node)
     try:
         worktree(node, root)
         result = apply(node, transport, root)
-        reply = conversation.integrate(node, result, transport, root=root)  # one transport, build → archive
+        reply = communication.integrate(node, result, transport, root=root)  # one transport, build → archive
         if not reply.done:                             # refused or judged incoherent — recover, don't strand
-            graph.recover(node)
+            tree.recover(node)
         return reply
     except Exception:
-        graph.recover(node)                            # an error mid-build must not leave the node in flight
+        tree.recover(node)                            # an error mid-build must not leave the node in flight
         raise                                          # the scheduler turns it into a decision card
     finally:
         teardown(node, root)                           # the fence never leaks, on any path out of the crossing
@@ -287,7 +287,7 @@ def run(node: graph.Node, transport=None, root: str | None = None):
 
 # ── internals ────────────────────────────────────────────────────────────────
 
-def _handed_delta(node: graph.Node) -> str:
+def _handed_delta(node: tree.Node) -> str:
     entry = grill.entry_of(node)
     return grill.delta_of(entry) if entry else ""
 
@@ -306,38 +306,38 @@ def _cap_text(name: str, root: str | None) -> str:
     return open(path).read() if os.path.isfile(path) else ""
 
 
-def _tree_path(node: graph.Node, base: str, tag: str = "") -> str:
+def _tree_path(node: tree.Node, base: str, tag: str = "") -> str:
     name = node.id + (f"-{tag}" if tag else "")
     return os.path.join(base, "work", "worktrees", name)
 
 
-def _branch(node: graph.Node, tag: str = "") -> str:
+def _branch(node: tree.Node, tag: str = "") -> str:
     return f"worker/{node.id}" + (f"-{tag}" if tag else "")
 
 
-def _record(tree: str, report: str, refined: str, loop: dict) -> None:
-    """The worker commits everything it built inside its own tree — RESULT.md beside any
+def _record(fence: str, report: str, refined: str, loop: dict) -> None:
+    """The worker commits everything it built inside its own fence — RESULT.md beside any
     source it produced — proof its commits reach the one record, fenced from the main line
-    until the architect integrates the delta. The whole tree is committed (not just
+    until the architect integrates the delta. The whole fence is committed (not just
     RESULT.md) so the material the folding conditions read — the source it grew, the loop it
     ran — is in the record."""
     loop_md = "\n".join(f"- {k}: {loop.get(k, '')}" for k in ("command", "red", "green"))
     body = f"# worker result\n\n## report\n{report}\n\n## delta\n{refined}\n\n## loop\n{loop_md}\n"
-    graph.atomic_write(os.path.join(tree, "RESULT.md"), body)
-    commit_tree(tree, "worker: result")
+    tree.atomic_write(os.path.join(fence, "RESULT.md"), body)
+    commit_tree(fence, "worker: result")
 
 
-@graph.serialized
+@tree.serialized
 def _git(cwd: str, *args: str) -> None:
     """Every git invocation the worker makes — cutting and tearing down a fence, committing inside
-    it — under the one record lock (`graph.serialized`), so concurrent workers never collide on the
+    it — under the one record lock (`tree.serialized`), so concurrent workers never collide on the
     shared `.git`. The slow build between these calls (the model transport) runs unlocked, so the
     fences are cut and committed serially but the work in them proceeds in parallel."""
     subprocess.run(["git", *args], cwd=cwd, check=True,
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
-@graph.serialized
+@tree.serialized
 def _git_quiet(cwd: str, *args: str) -> None:
     """A best-effort git invocation under the one record lock — like `_git` but tolerant of failure,
     for teardown, where the fence to remove may already be gone (C2 `finally`). The act it would undo

@@ -5,19 +5,19 @@ for reading — each a flat `spec/<capability>.md` listing requirements with sce
 them, a capability like the rest — ADR 0019). The ubiquitous-language `glossary.md` is root-level
 (ADR 0018). A capability bears no material of its
 own (a section of a document, not a node), so its on-disk form is a flat file, never a folder — the
-folder shape is reserved for what genuinely bears material, the graph node (ADR 0014). A capability is
+folder shape is reserved for what genuinely bears material, the tree node (ADR 0014). A capability is
 told from a cross-cutting segment by content: it declares `### Requirement:`.
 
 This module is the one place that knows the on-disk shape; everything else (the delta, the operator
 view) works against the structure it returns, so the markdown form can change without touching them.
-Read live every time, like the graph — never cached.
+Read live every time, like the tree — never cached.
 """
 from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
 
-from . import graph  # for _root only — the spec lives beside the graph
+from . import tree  # for _root only — the spec lives beside the tree
 
 REQ = "### Requirement:"
 
@@ -53,7 +53,7 @@ class Spec:
 
 
 def spec_dir(root: str | None = None) -> str:
-    return os.path.join(root or graph._root(), "spec")
+    return os.path.join(root or tree._root(), "spec")
 
 
 def cap_path(name: str, root: str | None = None) -> str:
@@ -71,7 +71,7 @@ def read_spec(root: str | None = None) -> Spec:
         reqs = _requirements(open(os.path.join(d, fname)).read())
         if reqs:                                  # a capability declares requirements; glossary/depth do not
             caps.append(Capability(fname[:-3], reqs))
-    gloss = os.path.join(root or graph._root(), "glossary.md")   # root-level ubiquitous language (ADR 0018)
+    gloss = os.path.join(root or tree._root(), "glossary.md")   # root-level ubiquitous language (ADR 0018)
     glossary = open(gloss).read() if os.path.isfile(gloss) else ""
     return Spec(caps, glossary)
 

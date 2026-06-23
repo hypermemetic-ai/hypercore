@@ -40,7 +40,7 @@ def _init(prefix: str) -> str:
 
 
 def check(_shared_root: str) -> None:
-    from .. import graph, record, spec
+    from .. import tree, record, spec
 
     print("\nslice 17 — acceptance check  (the single-writer line is real)\n")
 
@@ -50,10 +50,10 @@ def check(_shared_root: str) -> None:
     # the shared parent (`work/`) with `git add -A`, sweeping B's file; exact-path staging keeps it out.
     root = _init("engine-check-s17a-")
     os.environ["ENGINE_ROOT"] = root
-    a = graph.file_intent("worker A landing its own node")               # A's act, committed
+    a = tree.file_intent("worker A landing its own node")               # A's act, committed
     sibling = os.path.join(root, "work", "sibling-in-flight.tmp")
-    graph.atomic_write(sibling, "worker B's uncommitted in-flight change")
-    graph.cut(a)                                                          # A commits an act over work/
+    tree.atomic_write(sibling, "worker B's uncommitted in-flight change")
+    tree.cut(a)                                                          # A commits an act over work/
     tracked = subprocess.run(["git", "ls-files", "work"], cwd=root,
                              capture_output=True, text=True).stdout
     ok("sibling-in-flight.tmp" not in tracked,
@@ -94,9 +94,9 @@ def check(_shared_root: str) -> None:
     # the spec file is whole; remove the line and the two spec writes interleave and one is lost.
     root = _init("engine-check-s17b-")
     os.environ["ENGINE_ROOT"] = root
-    graph.atomic_write(os.path.join(root, "spec", "shared.md"),
+    tree.atomic_write(os.path.join(root, "spec", "shared.md"),
                        "# shared\n\nA capability two workers grow at once.\n")
-    graph.commit([os.path.join(root, "spec", "shared.md")], "seed: the shared capability")
+    tree.commit([os.path.join(root, "spec", "shared.md")], "seed: the shared capability")
 
     def fold_req(tag: str, gate: threading.Event):
         from .. import delta
@@ -134,7 +134,7 @@ def check(_shared_root: str) -> None:
 
     def create():
         start.wait(timeout=5)
-        graph.raise_card("the worker could not complete the same ask", kind="decide")
+        tree.raise_card("the worker could not complete the same ask", kind="decide")
 
     creators = [threading.Thread(target=create, daemon=True) for _ in range(N)]
     for t in creators:
@@ -143,6 +143,6 @@ def check(_shared_root: str) -> None:
     for t in creators:
         t.join(timeout=10)
 
-    cards = graph.cards()
+    cards = tree.cards()
     ok(len(cards) == N and len({c.id for c in cards}) == N,
        f"{N} concurrent identical-text creations get {N} distinct folders — no slug collision lost a card (C3)")

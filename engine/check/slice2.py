@@ -1,6 +1,6 @@
 """Slice 2 — the self-model: the living spec, the delta, the fold, the operator view.
 
-Acceptance (spec §9.2): a behavior-changing graph carries a delta, folds, and the delta
+Acceptance (spec §9.2): a behavior-changing tree carries a delta, folds, and the delta
 is present in spec/; a missing/mismatched delta fails to fold; the operator view renders
 the vision (from intent.md) beside the as-built and gap from the spec. Run against
 hypercore's own self-model, copied in.
@@ -15,13 +15,13 @@ from .harness import ok
 
 
 def check(root: str) -> None:
-    from .. import delta, graph, spec, view
+    from .. import delta, tree, spec, view
 
-    src = graph._DEFAULT_ROOT
+    src = tree._DEFAULT_ROOT
     shutil.copytree(os.path.join(src, "spec"), os.path.join(root, "spec"))
     shutil.copyfile(os.path.join(src, "intent.md"), os.path.join(root, "intent.md"))
     shutil.copyfile(os.path.join(src, "glossary.md"), os.path.join(root, "glossary.md"))
-    graph.commit([os.path.join(root, "spec"), os.path.join(root, "intent.md"),
+    tree.commit([os.path.join(root, "spec"), os.path.join(root, "intent.md"),
                   os.path.join(root, "glossary.md")],
                  "seed: hypercore's own spec and vision")
 
@@ -30,14 +30,14 @@ def check(root: str) -> None:
     # the seed spec self-hosts: distilled from intent.md, capability-segmented
     sp = spec.read_spec()
     names = [c.name for c in sp.capabilities]
-    ok({"interface", "graph", "queue", "conversation", "self-model"} <= set(names),
+    ok({"interface", "tree", "queue", "communication", "self-model"} <= set(names),
        f"the seed spec carries hypercore's capabilities ({', '.join(names)})")
-    ok("throwaway operator-facing vessel" in sp.glossary,
-       "the glossary defines thread as the throwaway operator-facing vessel")
+    ok("throwaway conversation" in sp.glossary,
+       "the glossary defines thread as the operator's throwaway conversation")
     ok("Open question: the name" in sp.glossary,
        "the glossary flags the open 'operator view' naming question")
 
-    # a behavior-changing graph carries a delta, folds, and the delta lands in spec/
+    # a behavior-changing tree carries a delta, folds, and the delta lands in spec/
     d = delta.parse(
         "# delta — the queue order is the machine's claim\n\n"
         "## ADDED — queue\n"
@@ -84,10 +84,10 @@ def check(root: str) -> None:
     # declares the intent it realizes in its own spec slice (`<!-- vision: ... -->`), so a newly
     # carved capability gets its vision with NO edit to view.py — and one that declares none (pure
     # machinery) correctly shows no vision, distinct from a bug.
-    graph.atomic_write(os.path.join(root, "spec", "lighthouse.md"),
+    tree.atomic_write(os.path.join(root, "spec", "lighthouse.md"),
         "# lighthouse\n<!-- vision: legibility -->\n\nA planted capability.\n\n"
         "### Requirement: it shines\n#### Scenario: night\n- WHEN dark\n- THEN light\n")
-    graph.atomic_write(os.path.join(root, "spec", "boiler.md"),
+    tree.atomic_write(os.path.join(root, "spec", "boiler.md"),
         "# boiler\n\nA planted machinery capability, declaring no vision.\n\n"
         "### Requirement: it heats\n#### Scenario: cold\n- WHEN cold\n- THEN warm\n")
     v2 = view.operator_view()

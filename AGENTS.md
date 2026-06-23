@@ -12,7 +12,7 @@
 Load the one the task in front of you routes to (`skills/<name>/SKILL.md`):
 
 - `design-it-twice` — hypercore's design-it-twice methodology — design a load-bearing interface as a contest of isolated candidates, then pick or hybridize on depth, locality, and seam placement.
-- `architecture-review` — hypercore's architecture-review methodology — the standing scan that keeps the system deep, surfacing god-files-in-the-making by the length signal against the depth-decision record.
+- `architecture-review` — hypercore's architecture-review methodology — the standing scan that keeps the system deep, surfacing god-files-in-the-making by the length signal against the accepted-length record.
 - `grilling` — hypercore's grilling methodology — turn a filed ask into a ratified contract and spec delta by resolving what the spec and intent already settle and surfacing only the stake-bearing residue, one question at a time, each with a lean and a flip.
 - `coherence` — hypercore's coherence methodology — the archive-gate judgment over a worker's hand-off: check it against the contract at the operator's altitude (not a code review) and against the depth bar, folding on a pass and raising a decision otherwise.
-- `depth` — hypercore's depth disciplines — build deep modules (a lot of behavior behind a small interface) and avoid the red flags of shallowness.
+- `depth` — hypercore's depth standards — build deep modules (a lot of behavior behind a small interface) and avoid the red flags of shallowness.

@@ -1,15 +1,15 @@
-"""The durable graph: execution graphs as folders on disk, read live, written atomically, committed.
+"""The durable tree: execution trees as folders on disk, read live, written atomically, committed.
 
-The graph is hypercore's one source of truth. A graph is a **folder** — intent.md §work L112: "the
-unit on disk is the graph, not the single node." Its `intent.md` carries the ask or statement and
-its state; material and child graphs sit alongside; while a grilling pass runs, the pass lives in
-`grilling.md` within the folder (resumable across episodes — `grill.py` owns it). Open graphs live
+The tree is hypercore's one source of truth. A tree is a **folder** — intent.md §work L112: "the
+unit on disk is the tree, not the single node." Its `intent.md` carries the ask or statement and
+its state; material and child trees sit alongside; while a grilling pass runs, the pass lives in
+`grilling.md` within the folder (resumable across episodes — `grill.py` owns it). Open trees live
 under `work/`; folding **moves** the folder into that work/'s own `archive/`, one level down so the
 live work sits at the front of the tree (intent §work; ADR 0017) — location is itself state and
 cannot disagree with the record.
 
 The queue (cards) and the standing work are **views** computed by scanning the tree (L110),
-never lists kept in sync. A "card" is a graph awaiting the operator — never a stored card file
+never lists kept in sync. A "card" is a tree awaiting the operator — never a stored card file
 (ADR 0011, Design B): a machine-owned decision the operator must settle, or a held ask whose grilling
 has surfaced a question. Every mutation writes one `intent.md` atomically and commits it; a fold or a
 cut moves or removes the folder. The act lands on disk at once; the commit follows behind.
@@ -22,15 +22,15 @@ import shutil
 import time
 from dataclasses import dataclass
 
-# The durable-write floor the graph rests on — atomic write, exact-path commit, the write→commit
+# The durable-write floor the tree rests on — atomic write, exact-path commit, the write→commit
 # transaction, and the single-writer line that lets concurrent workers fold without colliding on the
-# record (intent §62). Re-exported so the graph's callers read one façade: `graph.atomic_write`,
-# `graph.commit`, `graph.transact`, `graph.serialized`, `graph._root`.
+# record (intent §62). Re-exported so the tree's callers read one façade: `tree.atomic_write`,
+# `tree.commit`, `tree.transact`, `tree.serialized`, `tree._root`.
 from .record import _DEFAULT_ROOT, _root, atomic_write, commit, serialized, transact
 
-# States. A graph under archive/ is folded whatever its field says — location is authoritative.
+# States. A tree under archive/ is folded whatever its field says — location is authoritative.
 AWAITING = "awaiting you"    # a card on the queue: a decision to settle, or a surfaced question
-STANDING = "standing"        # ready work, no worker yet — the ready frontier
+STANDING = "standing"        # ready work: standing, no worker yet
 IN_FLIGHT = "in flight"      # a worker is on it: still work, now live
 DONE = "done"               # folded: integrated and moved to work/archive/
 GRILLING = "grilling"        # an ask held while its grilling pass runs: not work, not a card
@@ -46,12 +46,12 @@ class Node:
     text: str          # the ask or statement, plain prose (the intent.md body, marker stripped)
     machine: bool      # carries the [machine] marker
     created: float
-    parent: str = ""   # the enclosing graph's id, derived from folder location ("" if top-level)
-    path: str = ""     # the graph's folder on disk
+    parent: str = ""   # the enclosing tree's id, derived from folder location ("" if top-level)
+    path: str = ""     # the tree's folder on disk
 
     @property
     def folded(self) -> bool:
-        # Location is authoritative: a graph is folded once its folder sits under an archive/.
+        # Location is authoritative: a tree is folded once its folder sits under an archive/.
         return f"{os.sep}archive{os.sep}" in self.path + os.sep
 
     @property
@@ -67,16 +67,16 @@ class Node:
         return self.state == IN_FLIGHT and not self.folded
 
 
-# ── reading: scan work/ (its archive/ nested) recursively for graph folders ──
+# ── reading: scan work/ (its archive/ nested) recursively for tree folders ──
 
-def read_graph() -> list[Node]:
+def read_tree() -> list[Node]:
     out: list[Node] = []
     _scan(os.path.join(_root(), "work"), "", out)
     return sorted(out, key=lambda n: n.created)
 
 
 def _scan(base: str, parent: str, out: list[Node]) -> None:
-    """Scan a work/ directory: each child folder with an intent.md is a graph (recurse into
+    """Scan a work/ directory: each child folder with an intent.md is a tree (recurse into
     its own work/); the lone `archive/` holds the folded siblings (same parent), tucked one
     level down so the live work sits at the front of the tree (ADR 0017)."""
     if not os.path.isdir(base):
@@ -93,19 +93,19 @@ def _scan(base: str, parent: str, out: list[Node]) -> None:
 
 
 def cards(nodes: list[Node] | None = None) -> list[Node]:
-    return [n for n in (read_graph() if nodes is None else nodes) if n.is_card]
+    return [n for n in (read_tree() if nodes is None else nodes) if n.is_card]
 
 
 def standing(nodes: list[Node] | None = None) -> list[Node]:
-    """The standing work the operator sees; `ready` narrows it to the schedulable frontier."""
-    return [n for n in (read_graph() if nodes is None else nodes) if n.is_standing]
+    """The standing work the operator sees; `ready` narrows it to the ready work."""
+    return [n for n in (read_tree() if nodes is None else nodes) if n.is_standing]
 
 
 def ready(nodes: list[Node] | None = None) -> list[Node]:
-    """The schedulable frontier (intent §110): standing work with nothing open beneath it — the same
+    """The ready work (intent §110): standing work with nothing open beneath it — the same
     readiness that gates spawning gates scheduling, read live, so a node blocked on an open child is
     not taken and nothing in the schedule can go stale."""
-    pool = read_graph() if nodes is None else nodes
+    pool = read_tree() if nodes is None else nodes
     open_states = (STANDING, IN_FLIGHT, GRILLING, AWAITING)
     blocked = {n.parent for n in pool if n.parent and not n.folded and n.state in open_states}
     return [n for n in pool if n.is_standing and n.id not in blocked]
@@ -113,37 +113,37 @@ def ready(nodes: list[Node] | None = None) -> list[Node]:
 
 def work(nodes: list[Node] | None = None) -> list[Node]:
     """The work view: every unit of work, standing or in flight; folded has left it."""
-    pool = read_graph() if nodes is None else nodes
+    pool = read_tree() if nodes is None else nodes
     return [n for n in pool if n.state in (STANDING, IN_FLIGHT) and not n.folded]
 
 
 def find(node_id: str) -> Node | None:
-    return next((n for n in read_graph() if n.id == node_id), None)
+    return next((n for n in read_tree() if n.id == node_id), None)
 
 
 def children(parent_id: str, nodes: list[Node] | None = None) -> list[Node]:
-    """The child graphs nested in a parent's work/ (its archive/ included once folded)."""
-    pool = read_graph() if nodes is None else nodes
+    """The child trees nested in a parent's work/ (its archive/ included once folded)."""
+    pool = read_tree() if nodes is None else nodes
     return [n for n in pool if n.parent == parent_id]
 
 
 # ── mutations (each lands one intent.md and commits; a fold/cut moves the folder) ──
 
 def file_intent(ask: str) -> Node:
-    """Record the operator's captured intent as standing work — a new top-level graph."""
+    """Record the operator's captured intent as standing work — a new top-level tree."""
     return _create(ask, "ask", STANDING, "operator", machine=False,
                    message=f"file intent: {_subject(ask)}")
 
 
 def raise_card(statement: str, kind: str = "decide", parent: str = "") -> Node:
-    """Put a machine-owned statement or decision on the queue — a graph awaiting the operator,
+    """Put a machine-owned statement or decision on the queue — a tree awaiting the operator,
     nested in `parent`'s work/ when one is given (the decision lives where it arose), else top-level."""
     return _create(statement, kind, AWAITING, "machine", machine=True, parent=parent,
                    message=f"raise {kind}: {_subject(statement)}")
 
 
 def hold(ask: str) -> Node:
-    """Hold the operator's ask while its grilling pass runs — the graph exists, not yet work."""
+    """Hold the operator's ask while its grilling pass runs — the tree exists, not yet work."""
     return _create(ask, "ask", GRILLING, "operator", machine=False,
                    message=f"hold ask: {_subject(ask)}")
 
@@ -165,7 +165,7 @@ def approve(node: Node) -> Node:
 
 
 def cut(node: Node) -> None:
-    """Remove the words: the graph's folder leaves (recoverable from git). Held as one act and staged
+    """Remove the words: the tree's folder leaves (recoverable from git). Held as one act and staged
     at exactly the removed folder — `git add -A -- <folder>` stages that subtree's deletions and
     nothing else, so a cut never sweeps a sibling's uncommitted work (C1)."""
     path = node.path
@@ -173,10 +173,10 @@ def cut(node: Node) -> None:
              [path], f"cut: {_subject(node.text)}")
 
 
-def delegate(node: Node) -> Node:
+def dispatch(node: Node) -> Node:
     """A worker takes a standing ask: it goes live (in flight) while the worker runs."""
     node.state = IN_FLIGHT
-    _persist(node, f"delegate: {_subject(node.text)}")
+    _persist(node, f"dispatch: {_subject(node.text)}")
     return node
 
 
@@ -209,11 +209,11 @@ def recover(node: Node) -> Node:
     return node
 
 
-# ── on-disk form: one folder per graph, its intent.md the legible record ─────
+# ── on-disk form: one folder per tree, its intent.md the legible record ─────
 
 @serialized
 def _create(text, kind, state, owner, machine, parent="", message="") -> Node:
-    """Reserve a slug and land the new graph's intent.md as **one** act on the held line (C3). The
+    """Reserve a slug and land the new tree's intent.md as **one** act on the held line (C3). The
     slug is read off the live tree (`_slug`) and the folder written under the same line, so the
     read-the-taken-set → write-the-folder window is closed: two concurrent creations — two failing
     workers both raising a recovery card, say — can never compute the same slug and overwrite each
@@ -231,7 +231,7 @@ def _new(text, kind, state, owner, machine, parent="") -> Node:
 
 
 def _child_base(parent_id: str) -> str:
-    """The work/ of the parent graph — where a child graph is born."""
+    """The work/ of the parent tree — where a child tree is born."""
     p = find(parent_id)
     if p:
         return os.path.join(p.path, "work")
@@ -241,7 +241,7 @@ def _child_base(parent_id: str) -> str:
 def _slug(text: str) -> str:
     words = re.findall(r"[a-z0-9]+", text.lower())
     base = "-".join(words[:5]) or "node"
-    taken = {n.id for n in read_graph()}
+    taken = {n.id for n in read_tree()}
     slug, i = base, 2
     while slug in taken:
         slug, i = f"{base}-{i}", i + 1
@@ -306,7 +306,7 @@ def _persist(node: Node, message: str) -> None:
 
 
 def _fold(node: Node, message: str) -> Node:
-    """Move a graph's folder into archive/ as one held, exact-path act (intent §work, ADR 0017) — the
+    """Move a tree's folder into archive/ as one held, exact-path act (intent §work, ADR 0017) — the
     standalone fold (`approve`'s settle). The transactional delta-fold archives the node *inside* its
     own act via `archive_in_place`; this is the fold with no delta beside it."""
     if node.folded:
@@ -316,7 +316,7 @@ def _fold(node: Node, message: str) -> Node:
 
 
 def _ts(s: str) -> float:
-    """Lenient timestamp read: an epoch float, an ISO date, or 0 — so hand-authored graphs
+    """Lenient timestamp read: an epoch float, an ISO date, or 0 — so hand-authored trees
     (which carry a legible `created: YYYY-MM-DD`) and engine-written ones both read."""
     s = s.strip()
     try:

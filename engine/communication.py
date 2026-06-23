@@ -2,7 +2,7 @@
 
 A thread is one throwaway conversational session — opened when the operator
 types in, closed when they have what they came for. It holds no durable state;
-durability lands on the graph. The architect reads the operator's words
+durability lands on the tree. The architect reads the operator's words
 and lands one concrete consequence: a filed intent (standing work), a card
 returned to the queue, or an answer (with the thread closed when satisfied).
 
@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from . import conditions, delta, graph, grill
+from . import conditions, delta, tree, grill
 from .transport import call, parse
 
 SYSTEM = (
@@ -47,16 +47,16 @@ class Thread:
 @dataclass
 class Reply:
     say: str
-    filed: graph.Node | None = None
-    card: graph.Node | None = None
+    filed: tree.Node | None = None
+    card: tree.Node | None = None
     done: bool = False
-    grilling: graph.Node | None = None          # an ask held for a grilling pass
-    questions: list[graph.Node] = field(default_factory=list)
+    grilling: tree.Node | None = None          # an ask held for a grilling pass
+    questions: list[tree.Node] = field(default_factory=list)
 
 
 def speak(thread: Thread, text: str, transport=None) -> Reply:
     """One turn: feed the operator's words to the architect and land
-    whatever consequence it returns on the graph. A filed ask does not become
+    whatever consequence it returns on the tree. A filed ask does not become
     work directly — it enters grilling, and only files straight through when
     it is below the floor."""
     transport = transport or call
@@ -64,11 +64,11 @@ def speak(thread: Thread, text: str, transport=None) -> Reply:
     intent = parse(transport(_prompt(thread)))
 
     filed = grilling = None
-    questions: list[graph.Node] = []
+    questions: list[tree.Node] = []
     if intent.get("file"):
         held, questions = grill.consider(intent["file"], transport)
         grilling, filed = (held, None) if questions else (None, held)
-    card = graph.raise_card(intent["card"]) if intent.get("card") else None
+    card = tree.raise_card(intent["card"]) if intent.get("card") else None
     say = (intent.get("say") or "").strip()
     thread.add("machine", say)
     done = bool(intent.get("done"))
@@ -90,7 +90,7 @@ COHERENCE = (
 )
 
 
-def integrate(node: graph.Node, result, transport=None, root: str | None = None) -> Reply:
+def integrate(node: tree.Node, result, transport=None, root: str | None = None) -> Reply:
     """The archive stage, where the architect holds design judgment: take a worker's hand-off,
     hold it against the folding conditions and the contract, and on a pass fold its refined
     delta into the spec — the work integrates and leaves the threads view in the same act. The
@@ -98,13 +98,13 @@ def integrate(node: graph.Node, result, transport=None, root: str | None = None)
     operator-facing word here is authored fresh, so the report crosses to the operator through
     no path. A result that fails a non-negotiable condition (no recorded loop, a delta that will
     not apply), trips the **depth** condition (a module past the length signal with no
-    depth-decision — re-cut / deepen / accept-with-reason), or that the architect judges
+    accepted-length record — re-cut / deepen / accept-with-reason), or that the architect judges
     incoherent raises a decision rather than folding. Depth surfaces to the operator as a
     decision, never a silent veto and never a silent pass (ADR 0006)."""
     transport = transport or call
     blocked = conditions.unmet(result, root)           # the folding conditions, before the merge
     if blocked:
-        card = graph.raise_card(blocked, kind="decide", parent=node.id)
+        card = tree.raise_card(blocked, kind="decide", parent=node.id)
         return Reply(say="The result can't fold yet — a folding condition isn't met; "
                          "the reason is on your queue.", card=card)
     verdict = parse(transport(
@@ -113,7 +113,7 @@ def integrate(node: graph.Node, result, transport=None, root: str | None = None)
         "Reply with the JSON object now."))
     say = (verdict.get("say") or "").strip()
     if not verdict.get("coherent"):
-        card = graph.raise_card(verdict.get("card") or say or
+        card = tree.raise_card(verdict.get("card") or say or
                                 "the result did not honor the contract",
                                 kind="decide", parent=node.id)
         return Reply(say=say, card=card)
@@ -121,7 +121,7 @@ def integrate(node: graph.Node, result, transport=None, root: str | None = None)
     return Reply(say=say, done=True)
 
 
-def explain(node: graph.Node, transport=None) -> str:
+def explain(node: tree.Node, transport=None) -> str:
     """Tell the story toward a decision; the card stays on the queue."""
     transport = transport or call
     prompt = (

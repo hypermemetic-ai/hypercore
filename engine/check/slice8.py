@@ -1,8 +1,8 @@
 """Slice 8 — parallelism re-grounded: design-it-twice, the judgment use of the fence.
 
-Acceptance (spec §9.8): concurrent workers advance one graph in isolation and each folds its
+Acceptance (spec §9.8): concurrent workers advance one tree in isolation and each folds its
 delta; and a load-bearing interface decision can be designed twice in parallel and compared.
-This check drives both over the real graph, real fences, and a real ADR write, deterministically
+This check drives both over the real tree, real fences, and a real ADR write, deterministically
 with scripted transports — pinning the four properties that define the judgment use:
 
 1. **concurrent isolation composes** — two workers hold two distinct fences at once, neither's
@@ -25,7 +25,7 @@ from .harness import LOOP, ok, scripted
 
 
 def check(root: str) -> None:
-    from .. import conversation, design, graph, render, spec, worker
+    from .. import communication, design, tree, render, spec, worker
 
     print("\nslice 8 — acceptance check  (parallelism re-grounded: design-it-twice)\n")
 
@@ -39,21 +39,21 @@ def check(root: str) -> None:
                                     f"- WHEN x\n- THEN y\n",
                            "loop": loop})
 
-    def staged(text: str, cap: str, root: str) -> graph.Node:
-        ask = graph.file_intent(text)
-        graph.approve(graph.raise_card(
+    def staged(text: str, cap: str, root: str) -> tree.Node:
+        ask = tree.file_intent(text)
+        tree.approve(tree.raise_card(
             f"contract.\n\ndelta:\n## ADDED — {cap}\n### Requirement: {cap} holds\n"
             f"The {cap} capability MUST hold.\n#### Scenario: s\n- WHEN x\n- THEN y\n",
             kind="decide", parent=ask.id))
         worker.worktree(ask, root)
-        graph.delegate(ask)
+        tree.dispatch(ask)
         return ask
 
     def log(branch: str) -> str:
         return subprocess.run(["git", "log", "--oneline", branch], cwd=root,
                               capture_output=True, text=True).stdout
 
-    # ── 1. concurrent workers advance one graph in isolation, each folding its delta ──
+    # ── 1. concurrent workers advance one tree in isolation, each folding its delta ──
     a = staged("concurrent work A", "alpha", root)
     b = staged("concurrent work B", "beta", root)
     ta, tb = worker._tree_path(a, root), worker._tree_path(b, root)
@@ -68,8 +68,8 @@ def check(root: str) -> None:
                               capture_output=True, text=True).returncode
     ok(off_main != 0, "neither fence's material reaches the main line — the fence holds for both")
 
-    conversation.integrate(a, ra, coherent(), root)
-    conversation.integrate(b, rb, coherent(), root)
+    communication.integrate(a, ra, coherent(), root)
+    communication.integrate(b, rb, coherent(), root)
     sp = spec.read_spec(root)
     ok(sp.capability("alpha") is not None and sp.capability("beta") is not None,
        "each worker folds its own delta into the one spec — concurrent advance, no interference")
@@ -85,7 +85,7 @@ def check(root: str) -> None:
                            "hides": hides, "seam": f"the {brief} seam, where the model varies",
                            "depth": "deleting it scatters the work across callers — it earns its keep"})
 
-    dec = graph.file_intent("the shape of the candidate-comparison interface")
+    dec = tree.file_intent("the shape of the candidate-comparison interface")
     cands = design.contest(dec, briefs, scripted(
         design_json("minimal", "the parallel fences"),
         design_json("flexible", "a pluggable comparison")), root)
@@ -120,34 +120,34 @@ def check(root: str) -> None:
 
     # ── 3. machine-side end to end: no stake → no operator card; raw designs do not leak ──
     SENTINEL = "<<RAW CANDIDATE DESIGN — machine-side only>>"
-    dec2 = graph.file_intent("another load-bearing interface")
-    before = len(graph.cards())
+    dec2 = tree.file_intent("another load-bearing interface")
+    before = len(tree.cards())
     sel2 = design.design_twice(dec2, briefs, scripted(
         design_json("minimal", SENTINEL),
         design_json("flexible", "the other shape"),
         json.dumps({"chosen": "hybrid", "hybrid": True,
                     "reasoning": "a hybrid is deepest across depth, locality, and seam",
                     "comparison": {"minimal": "deep", "flexible": "flexible"}, "stake": None})), root)
-    ok(sel2.card is None and len(graph.cards()) == before,
+    ok(sel2.card is None and len(tree.cards()) == before,
        "no stake-bearing difference → no operator card; the pick stays machine-side")
     ok(not any(os.path.isdir(worker._tree_path(dec2, root, tag=b)) for b, _ in briefs),
        "the candidate fences are scratch — torn down once the pick is recorded")
 
-    frame = "".join(t for row in render.main_body(graph.read_graph(), -1) for t, _s in row)
+    frame = "".join(t for row in render.main_body(tree.read_tree(), -1) for t, _s in row)
     nodefiles = ""
-    for top in ("work",):                                    # graph nodes only — not the scratch fence
+    for top in ("work",):                                    # tree nodes only — not the scratch fence
         for dp, dirs, fs in os.walk(os.path.join(root, top)):
             if "worktrees" in dirs:
                 dirs.remove("worktrees")
             nodefiles += "".join(open(os.path.join(dp, fn)).read()
                                  for fn in fs if fn in ("intent.md", "grilling.md"))
-    cards_text = "".join(c.text for c in graph.read_graph())
+    cards_text = "".join(c.text for c in tree.read_tree())
     ok(SENTINEL not in frame and SENTINEL not in nodefiles and SENTINEL not in cards_text,
        "the raw candidate designs reach no card, render, or node — only the machine-side ADR")
 
     # ── 4. a stake-bearing difference re-enters grilling (the standing-guard floor, §5.1) ──
     STAKE = "the two shapes differ in whether a re-opened contest is visible to you — your call"
-    dec3 = graph.file_intent("an interface whose shapes differ behaviorally")
+    dec3 = tree.file_intent("an interface whose shapes differ behaviorally")
     sel3 = design.design_twice(dec3, briefs, scripted(
         design_json("minimal", SENTINEL),
         design_json("flexible", "the other shape"),

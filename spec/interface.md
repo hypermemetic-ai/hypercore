@@ -2,7 +2,7 @@
 <!-- vision: interface, window, screen, keyboard -->
 
 The window: the operator's whole world. Keyboard-only, fullscreen, high-contrast
-— a thin paint-and-input layer over the graph and the architect that holds
+— a thin paint-and-input layer over the tree and the architect that holds
 nothing that isn't about the screen or the keyboard.
 
 ### Requirement: the interface is the only place the operator operates
@@ -37,7 +37,7 @@ every frame is testable without a TTY; only the window maps spans to terminal
 attributes.
 
 #### Scenario: rendering off a TTY
-- WHEN a frame is built for a given graph and selection
+- WHEN a frame is built for a given tree and selection
 - THEN the render returns a list of rows of (text, style) spans, computed without
   any terminal call
 

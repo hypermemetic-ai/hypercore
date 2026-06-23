@@ -3,16 +3,20 @@
 The ubiquitous language — terms only, devoid of implementation detail. One name
 means one concept, system-wide; a use that conflicts with an entry is surfaced,
 not silently absorbed. This is the seed, distilled from `intent.md`; thereafter
-it sharpens inside grilling as work folds.
+it sharpens inside grilling as work folds, and the **vocabulary check** guards it
+against drift each time new words join the live corpus.
 
-- **graph** — the one model: nodes, the relations between them, and the material
-  attached to them. Everything the operator sees is a view of this one graph.
+- **tree** — the one model: nodes, the parent→child relations between them, and the
+  material attached to them. A **tree** by construction — each node has exactly one
+  parent, its enclosing folder, so multiple parents, cross-edges, and cycles are
+  impossible. Everything the operator sees is a view of this one tree.
 
-- **node** — a point on the graph carrying one operation and, for a statement, its
-  endorsement state. The unit on disk is the graph (a folder), not the node.
+- **node** — a point on the tree carrying one operation and, for a statement, its
+  endorsement state. The unit on disk is the folder — a node with its subtree —
+  not the bare node.
 
 - **operation** — one move on the problem state, of four kinds: **ask** (an
-  intent to carry out), **check** (an observation that lets a graph fold),
+  intent to carry out), **check** (an observation that lets a node fold),
   **decide** (a fork the operator settles), **do** (a move that makes material).
 
 - **material** — what the work makes, as opposed to the intent that started it.
@@ -30,65 +34,122 @@ it sharpens inside grilling as work folds.
   removes the words, **explain** has the machine help the operator toward a decision
   and returns the statement.
 
-- **card** — a node awaiting the operator, surfaced on the queue. Its weight
-  matches the call: a real judgment is a decision; a step needing only the
-  operator's go is a lighter request for approval.
+- **card** — a node awaiting the operator, surfaced on the queue. Its **kind** matches
+  the call — a **grilling question** (answered during intent extraction), a
+  **ratification** (blessing drafted intent into work), a **request for approval** (a go
+  on a step), a **decision** (settling a fork), or an **acceptance** (signing off that
+  done work meets its bar) — recorded on the node, not guessed at render time. Ratification
+  and acceptance are bookends: bless the intent, accept the result.
 
 - **queue** — the operator's decision surface, and a *view*, not a place: it is
   every awaiting node read fresh, never a list kept in sync.
 
-- **thread** — the throwaway operator-facing vessel for one conversational
-  session, opened when the operator types in and closed when they have what they
-  came for. It holds **no durable state** and is **not bound to a piece of work**;
-  durability lives on the graph. "One session per thread" means the thread simply
-  *is* that one session, then closes.
+- **episode** — a bounded run with its own context: it opens fresh, the work
+  happens, it clears at the end, carrying nothing forward; the machine keeps no
+  memory between episodes, so durability lives on the **tree**. Its two kinds are
+  the **thread** and the **run**.
+
+- **thread** — an **operator episode**: the throwaway conversation the operator
+  opens by speaking and closes when they have what they came for. It holds **no
+  durable state** and is **not bound to a piece of work**; durability lives on the tree.
+
+- **run** — an **autonomous episode**: work carried end to end by a worker
+  advancing the tree, no operator in the loop.
 
 - **architect** — the operator-facing half of the split, and the holder of design
   judgment (renamed from *conversationalist* in slice 7). It owns every word that
   crosses to the operator, reads the operator's words and lands one concrete
-  consequence, **authors the spec delta** (the design of the change), and **judges
-  depth at the archive gate** — raising a decision on shallowness rather than a silent
+  consequence, **authors the spec delta** (the design of the change), and runs the
+  **contract check** at the archive gate — raising a decision rather than a silent
   veto. Communicating a design is part of designing it. Structurally opposed to the
   worker's investment in its own product, which is the defense against self-judging.
 
 - **worker** — the system-facing half of the split: it carries out a spawned ask,
   fenced in its own worktree, grounded in its capability's spec slice **and in the
-  depth disciplines** so it builds deep up front, and hands the architect a technical
+  depth standards** so it builds deep up front, and hands the architect a technical
   result. It has **no channel to the operator**; its audience is the architect and the spec.
 
-- **worktree** — the fence a worker runs in: its own git checkout on its own branch,
-  isolated from sibling workers and the main line. The worker builds here and its
-  commits reach the one record without touching another tree until the result integrates.
+- **communication** — the capability that owns the operator-facing channel end to
+  end: the **thread** it happens in, the single operator-facing **voice** (every word
+  comes from the architect), and the quality of what crosses it — **clear** (a
+  *watched* standard; the readability literature lives in the `communication` skill)
+  and **consistent** (the **vocabulary check**). Renamed from *conversation*.
 
-- **fold** — the act that completes a graph: its result becomes its parent's
-  material and its steps become history. The same act applies the graph's delta to
+- **fence** — the isolated place a worker runs: its own writable git **worktree**,
+  the rest of the host read-only, the shared history writable so its commits reach
+  the one **record**. The fence is the system's, not a convention a worker could break.
+
+- **worktree** — the git mechanism behind the **fence**: a worker's own checkout on
+  its own branch, isolated from sibling workers and the main line. The worker builds
+  here and its commits reach the one record without touching another tree until the
+  result integrates.
+
+- **isolation** — the concurrency model: each worker fenced in its own worktree,
+  unable to reach a sibling's tree or the main line until its result integrates
+  (intent §62). Distinct from the **fence** (the place); isolation is the property.
+
+- **single-writer** — the invariant that the shared git history admits one
+  git-touching act at a time (a repo-level lock spanning write→commit), so concurrent
+  fences serialize onto the one history.
+
+- **record** — the single-writer durable floor: an atomic write then a scoped commit,
+  one writer at a time (`engine/record.py`), so concurrent fences fold without
+  colliding on the one history.
+
+- **fold** — the act that completes a node: its result becomes its parent's
+  material and its steps become history. The same act applies the node's delta to
   the spec and re-renders the operator view.
 
-- **delta** — a graph's record of what it changes about the spec: **ADDED**,
-  **MODIFIED**, and **REMOVED** requirements. A behavior-changing graph carries
-  one; a trivial graph carries an empty delta and says so.
+- **delta** — a node's record of what it changes about the spec: **ADDED**,
+  **MODIFIED**, and **REMOVED** requirements. A behavior-changing node carries
+  one; a trivial node carries an empty delta and says so.
 
-- **folding condition** — a structural gate a graph must clear to fold. Two are
-  **non-negotiable facts** that auto-refuse: its delta applies, and a behavior-changing
-  graph carries a recorded **red→green feedback loop**. The third is a **judgment**:
-  **depth** — a source file past the **length signal** raises a **depth decision**
-  (re-cut / deepen / accept-with-reason), never an auto-refusal on length. An engineering
-  discipline made into a check — advice can be ignored, a folding condition cannot. An
-  unmet fact returns its reason; the depth condition returns a decision; never a silent pass.
+- **folding condition** — what conditions the fold: the complete set of **deterministic
+  checks** plus **traces** that each appropriate judgment procedure was applied. The fold
+  rests on evidence, never on unverified trust — anything that is not a hard check must
+  leave a trace. A source file past the **length signal** is not one — it raises **a
+  decision** (re-cut / deepen / accept-with-reason), never an auto-refusal.
+
+- **standard** — a quality practice the work is held to: deep modules, the contract
+  honored, vocabulary consistency. A standard is **not** itself a folding condition —
+  what conditions the fold is the **evidence of its application**: a passing deterministic
+  check if it is **gated**, a **trace** if it is **watched**.
+
+- **gated** — of a standard or structural fact: its application is verified by a
+  deterministic check — the fold fails unless the check passes (the delta applies; the
+  red→green loop is recorded).
+
+- **watched** — of a standard: its application takes judgment, so the procedure must
+  leave a **trace** — evidence it was applied, which conditions the fold — while its
+  *quality* is overseen by the operator; a trace needing sign-off raises an **acceptance** card.
+
+- **trace** — the evidence a **watched** judgment procedure leaves that it was applied
+  (a recorded design-decision, a contract-check note, an accepted-length record). Its
+  presence is a folding condition; its quality is overseen, not gated.
+
+- **vocabulary check** — a delegated, fold-time standard and **communication's
+  consistency** standard: a dedicated run reads the whole live corpus for new or
+  conflicting terms and, on a finding, raises a *define / waive / dismiss* decision
+  and holds the fold. Mechanical floor **gated**, semantic judgment **watched**.
 
 - **capability** — a coherent slice of system behavior, named in the domain's own
   words, owning a spec file and any local decisions.
 
 - **requirement** — a behavior the system exhibits, stated strongly enough to be
   wrong, carrying one or more scenarios. A requirement is a check that survives its
-  graph.
+  node.
 
 - **scenario** — a requirement's worked behavior in WHEN / THEN form: machine-
   checkable and human-legible at once.
 
 - **living spec** — the maintained, version-controlled model of *what the system
   is* (as-built reality), organized by capability, read flat by the agent. Not
-  `intent.md`, which is *what is wanted*; the gap between them is the backlog.
+  `intent.md`, which is *what is wanted*; the gap between them is what is wanted but
+  not yet built.
+
+- **self-model** — the system's maintained model of itself, rendered two ways: the
+  **living spec** (for the agent) and the **operator view** (for the operator); kept
+  current as a byproduct of folding.
 
 - **operator view** — the operator's render of the self-model: a recursive tree
   setting the **vision** (authored, from `intent.md`) beside the **as-built**
@@ -103,7 +164,12 @@ it sharpens inside grilling as work folds.
 
 - **as-built** — what the system actually does, derived from the living spec.
 
-- **gap** — the difference between vision and as-built; the backlog, read live.
+- **gap** — what is wanted but not yet built: the difference between vision and
+  as-built, read live. Distinct from **complexity debt** (built but structurally weak).
+
+- **complexity debt** — built code grown long or tangled enough to want restructuring
+  (made deeper). Surfaced live by the architecture review; distinct from the **gap**
+  (not-yet-built) and from statement debt (unendorsed statements, §100).
 
 - **derived channel** — a grounding channel **rendered from one source**, never hand-copied
   (ADR 0009): the worker's depth grounding and the `depth` **skill** both render from
@@ -111,18 +177,22 @@ it sharpens inside grilling as work folds.
   so a frozen second copy (the retired `worker.DEPTH` constant) cannot drift. Materialized on
   disk when an external harness must auto-load it (a skill, an agents file); read live otherwise.
 
-- **architecture review** — the standing scan of the source tree for deepening
-  opportunities, read live. It surfaces god-files-in-the-making before they set and
+- **anchor** — the minimal always-on shared agents file both roles auto-load,
+  carrying only non-inferable operational content; a **derived channel** re-rendered
+  on fold, reached by Claude Code through a derived `CLAUDE.md` bridge.
+
+- **hand-off** — the worker's complete machine-facing result handed to the architect
+  (its report, refined delta, executed loop, and fence); never operator-facing — the
+  architect authors every operator-facing word from it.
+
+- **architecture review** — the standing scan of the source tree for **complexity
+  debt**, read live. It surfaces god-files-in-the-making before they set and
   renders the operator view's upper levels — the structural map of as-built reality,
   debt marked — so the operator reads the system's shape without reading code. It
   measures **length** (the built signal) and is meant to grow the model-driven
   **red-flag depth scan**, recorded as not-yet-built.
 
-- **deepening backlog** — the architecture review's findings, read as the gap: the
-  modules grown long or shallow enough to want a depth look, each carrying a
-  recommendation strength.
-
-- **recommendation strength** — the weight a deepening finding carries: **strong**
+- **recommendation strength** — the weight a **complexity-debt** finding carries: **strong**
   (assess/deepen now) for a module past the length signal, **consider** for one nearing it.
 
 - **deep module** — a module that hides a lot of behavior behind a small interface;
@@ -144,28 +214,27 @@ it sharpens inside grilling as work folds.
   context the worker must hold. hypercore's own concern, distinct from depth, for which
   **length** is a fair mechanical proxy. The honest job length is kept for.
 
-- **length signal** — the line count past which a touched source file raises a **depth
+- **length signal** — the line count past which a touched source file raises **a
   decision** (a starting value to tune). It is a *signal* of depth and a measure of
-  context cost, **never an auto-refusal** and never a depth verdict — there is no hard
-  length ceiling above it.
+  context cost, **never an auto-refusal** and never a verdict on depth — there is no
+  hard length ceiling above it.
 
-- **depth decision** — what the gate raises when a file is past the length signal with
-  no depth-decision accepting it *at a length it is still within*: re-cut / deepen /
-  accept-with-reason, surfaced to the operator. Recorded, when accepted, as a **structured
-  depth-decision** — a parseable `depth-decision: <path> accepted@<N> — …` line that names the
-  exact file and the length it is accepted at, so a coincidental mention can grant no exception
-  (the spelling is not the decision) and the acceptance is bounded (the ratchet, below).
+- **accepted length / the ratchet** — the length `<N>` an **accepted-length record** grants
+  a file (ADR 0008), written as a parseable `accepted: <path> @<N> — …` line that names the
+  exact file and the length it is accepted at, so a coincidental mention grants no exception
+  (the spelling is not the decision). Acceptance is **bounded** to it, not granted forever: it
+  clears the gate only while the file stays within `<N>` plus a small **materiality margin**, so
+  a stable or shrinking file stays quiet but renewed growth materially past the bar re-opens the
+  decision. Renewing the acceptance at the new length **ratchets** the bar up; the bar lives in
+  the record (a shrink never lowers it), and the highest recorded length governs.
 
-- **accepted length / the ratchet** — the length `<N>` a structured depth-decision accepts a file
-  at (ADR 0008). Acceptance is **bounded** to it, not granted forever: it clears the gate only
-  while the file stays within `<N>` plus a small **materiality margin**, so a stable or shrinking
-  file stays quiet but renewed growth materially past the bar re-opens the depth decision.
-  Renewing the acceptance at the new length **ratchets** the bar up; the bar lives in the record
-  (a shrink never lowers it), and the highest recorded length governs (the ratchet only rises).
+- **module depth judgment** — the *watched* standard: the model's call on whether a module
+  is genuinely deep, not merely short. Not yet built (ADR 0006); length raises a decision,
+  never a verdict.
 
 - **exceeded acceptance** — a file past the length signal that *was* accepted at a lower length
   and has since outgrown it (the architecture review's `exceeded` status). The acceptance is
-  **stale**: the file returns to the deepening backlog, marked as having outgrown its bar — read
+  **stale**: the file returns to the **complexity debt**, marked as having outgrown its bar — read
   differently from a never-decided over-signal file (`over`), so a settled-then-grown decision is
   visibly distinct from one never made.
 
@@ -199,9 +268,57 @@ it sharpens inside grilling as work folds.
 
 - **design-decision** — the architect's machine-side pick among candidates, recorded as a
   structured `design-decision: <subject> → <chosen> — <reason>` line in an ADR — the same
-  structured-record idiom the depth-decision uses. A load-bearing interface choice is hard to
-  reverse, so it is ADR-worthy; the operator sees it only when the comparison reveals a
+  structured-record idiom the **accepted-length record** uses. A load-bearing interface choice is
+  hard to reverse, so it is ADR-worthy; the operator sees it only when the comparison reveals a
   stake-bearing difference (the standing-guard floor).
+
+- **seam** — the boundary a clean cut falls on, judged on where it lets checks and abstractions
+  stand. Two scales: in work, where an ask splits into child nodes (a subtree); in code, where
+  an interface boundary falls.
+
+- **coherence** — the principle that the operator's and the machine's decisions hold together;
+  when they stop making sense as a whole, the machine says so rather than silently applying the
+  newest word (§84).
+
+- **contract check** — the architect's judgment, at the archive gate, that a run's result
+  honored its **contract** before it folds. A check at the operator's altitude, not a code review.
+
+- **scheduler** — the loop that reads **ready work** and runs it off the operator's input loop:
+  continuous and concurrent, idling only on a decision.
+
+- **ready work** — the standing work a run can take now: open, its folding condition named,
+  nothing open beneath it; read live off the tree (`tree.ready()`), never a stored list. The
+  takeable subset of **standing work**.
+
+- **execution tree** — a dynamically composed workflow: a node's ask, carried out, grows a
+  **subtree** of further nodes (steps, candidates, checks, result). "The tree" for short —
+  never "work tree" (reserved for the git **worktree**).
+
+- **decomposition** — splitting an ask into **child nodes** as-needed, where a check can stand;
+  a **seam** cut when work reaches it, never drawn ahead in full.
+
+- **dispatch** — the act that hands a ready node to a run, taking it *in flight*. (Renamed
+  from *delegate*.)
+
+- **integrate** — the architect's archive-gate act: run the **contract check** on a hand-off
+  and, on a pass, fold the delta in the same act.
+
+- **ratify** — the operator's blessing of extracted/drafted intent: turns a drafted contract
+  into standing work. A sibling of approve / cut / explain.
+
+- **node states** — the live states a node wears: **standing** (open work), **in flight** (a run
+  is on it), **awaiting you** (a card), **grilling** (under intent extraction), **done** (folded).
+  `dispatch` is the act that takes a node to *in flight*, not a state.
+
+- **transport** — the one call to a model and the one read of its reply; the architect's runs at
+  the repo root, the worker's at its fence. Injectable, so the system runs deterministically
+  under the harness.
+
+- **registry** — a collection the system keeps (the methodologies, the linked project folders).
+
+- **OMP** — the multi-model harness the worker runs under, so it can run a different model from
+  the architect (the operator's ratified spend decision, ADR 0009). The worker model is OpenAI
+  GPT-5.5 (xhigh); `omp` is the binary, OMP the concept.
 
 - **ADR** — a recorded decision, kept sparingly: only when it is hard to reverse,
   surprising without context, and the result of a real trade-off.

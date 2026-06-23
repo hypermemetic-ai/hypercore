@@ -8,7 +8,7 @@ current by construction.
 
 The vision is whole, not stored per capability; a capability's vision is a live
 slice of `intent.md` — the statements that name it. The upper levels' "what the
-system is" and the deepening backlog are the standing output of the architecture
+system is" and the complexity debt are the standing output of the architecture
 review (`review`, §7.4): the root's structural map of the modules by length against the
 length signal is its as-built, and the review's findings are the gap the operator reads. Per
 capability the gap still surfaces the debt the spec marks on itself; the review
@@ -20,7 +20,7 @@ import os
 import re
 from dataclasses import dataclass, field
 
-from . import graph, review, spec
+from . import tree, review, spec
 
 DEBT = ("NOTE:", "unbuilt", "shallow")
 
@@ -48,7 +48,7 @@ def operator_view(root: str | None = None) -> ViewNode:
         asbuilt=[f"{c.name} — {len(c.requirements)} requirements"
                  for c in sp.capabilities],
         structure=review.bars(rv),                       # what the system is, as a picture
-        gap=review.backlog(rv) + cap_debt,               # the deepening backlog, then per-cap debt
+        gap=review.backlog(rv) + cap_debt,               # the complexity debt, then per-cap debt
         children=caps,
     )
 
@@ -106,7 +106,7 @@ def _vision_terms(cap: str, root: str | None) -> list[str]:
 
 def _read_intent(root: str | None) -> list[tuple[str, list[str]]]:
     """Each `## ` section of intent.md as (title, [statements])."""
-    path = os.path.join(root or graph._root(), "intent.md")
+    path = os.path.join(root or tree._root(), "intent.md")
     if not os.path.isfile(path):
         return []
     sections: list[tuple[str, list[str]]] = []

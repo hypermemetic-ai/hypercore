@@ -1,38 +1,38 @@
 # schedule
-<!-- vision: scheduler, continuous, concurrent, frontier, idle -->
+<!-- vision: scheduler, continuous, concurrent, ready work, idle -->
 
-The autonomous loop — how work keeps moving. The graph computes the ready frontier; the scheduler
+The autonomous loop — how work keeps moving. The tree computes the ready work; the scheduler
 consumes it, running a worker on each ready node and keeping work in flight while any remains, so a
 ratified ask is *built* rather than left standing while the system idles (intent §60). Work runs
-concurrently as well as continuously: several workers advance the one graph at once, each fenced, the
+concurrently as well as continuously: several workers advance the one tree at once, each fenced, the
 shared record single-writer so their builds overlap while their integrations serialize. The loop runs
 off the operator's path — its own threads — so it never blocks the window, and a worker that cannot
 complete returns as a decision rather than stalling the loop.
 
 ### Requirement: standing work is consumed continuously — the system never idles with unblocked work
-The scheduler MUST take the ready frontier and run a worker on each node, so a ratified ask is built
+The scheduler MUST take the ready work and run a worker on each node, so a ratified ask is built
 without the operator re-prompting; while any unblocked work remains a worker is on it. The system goes
 quiet only when all that remains is a decision the operator owns — an idle system with unblocked work
 left is a defect, not rest (intent §60).
 
 #### Scenario: a ratified ask is built without re-prompting
 - WHEN standing work exists and no decision blocks it
-- THEN the scheduler delegates it to a worker, which builds it fenced, the architect integrates the
+- THEN the scheduler dispatches it to a worker, which builds it fenced, the architect integrates the
   result, and the delta folds — the work moves and leaves the work view without the operator acting
 
 #### Scenario: the system rests only on a decision
 - WHEN nothing is ready and only awaiting decisions remain
 - THEN the scheduler dispatches no worker and rests; while ready work is present it never rests
 
-### Requirement: the schedulable frontier is read live, and readiness gates scheduling
-The frontier the scheduler consumes MUST be read off the one graph each time — standing work with its
+### Requirement: the ready work is read live, and readiness gates scheduling
+The ready work the scheduler consumes MUST be read off the one tree each time — standing work with its
 folding condition named and nothing open beneath it — never a stored work-list. The same readiness
 that gates spawning gates scheduling, so a node blocked on an open child is not taken and nothing in
 the schedule can go stale (intent §110).
 
 #### Scenario: a blocked node is not scheduled
-- WHEN a standing node has an unresolved child graph beneath it
-- THEN it is absent from the ready frontier and the scheduler runs no worker on it, while its sibling
+- WHEN a standing node has an unresolved child tree beneath it
+- THEN it is absent from the ready work and the scheduler runs no worker on it, while its sibling
   leaves that are clear are taken
 
 ### Requirement: work runs concurrently on one record

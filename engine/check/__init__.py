@@ -4,7 +4,7 @@
 
 Each slice's acceptance check is its own module, driven with a
 *scripted* transport (no LLM, so the loop is deterministic and fast) over the *real*
-graph, spec, conditions, and worktrees — it asserts the system, not a story. The live
+tree, spec, conditions, and worktrees — it asserts the system, not a story. The live
 architect and the window are the evidence you watch by running `python3 -m engine`
 and `--frame`; this is the evidence that gates.
 

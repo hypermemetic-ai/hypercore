@@ -14,9 +14,9 @@ Start here (a fresh session reads these, in order — all in this repo):
    like `design-it-twice` (ADR 0019). Small by design, meant to be scanned whole — the high-signal core.
 4. `spec/decisions/` — the ADRs: every decision and its grounds, in order. The reference tail.
 
-The live work *is* the graph: `work/` holds the open execution graphs and `work/archive/` the folded
+The live work *is* the tree: `work/` holds the open execution trees and `work/archive/` the folded
 ones — each a folder with its own `intent.md` (its ask and folding condition), the archive tucked one
-level down so the front of the tree stays legible (ADR 0011, ADR 0017). The graph on disk is the
+level down so the front of the tree stays legible (ADR 0011, ADR 0017). The tree on disk is the
 folder, not the node — hypercore dogfooding its own §structure. Run the acceptance harness with
 `python3 -m engine --check`; open the live system with `python3 -m engine`.
 
@@ -25,7 +25,7 @@ folder, not the node — hypercore dogfooding its own §structure. Run the accep
 Build proceeds in slices, slice 1 first. **Slices 1–16 are built.** (The check count is not
 restated here — it drifts; `python3 -m engine --check` is its single source.)
 
-- **1–6 — the spine.** The graph and the fold; intent extraction by grilling; the worker and
+- **1–6 — the spine.** The tree and the fold; intent extraction by grilling; the worker and
   its git-worktree fence; the folding conditions; the architecture review. Slice 6 split the
   acceptance harness per-slice into `engine/check/` — the first deepening work the review surfaced.
 - **7 — depth is the criterion (ADR 0006).** Re-grounded against Ousterhout's *A Philosophy of
@@ -42,9 +42,9 @@ restated here — it drifts; `python3 -m engine --check` is its single source.)
   capability rendered like the others — ADR 0019 — retiring its bespoke module.)
 
 Since the slices, the repo was made to obey its own §structure (ADR 0010–0012): the live work **is**
-the graph — `work/` (open) + `archive/` (folded), each graph a folder with its `intent.md`.
-`engine/graph.py` is now folder-native (fold = move the folder, `work/`→`work/archive/`) and grilling lives
-in each graph's `grilling.md`; `next-work.md` is retired and `research/` dissolved into material on
+the tree — `work/` (open) + `archive/` (folded), each tree a folder with its `intent.md`.
+`engine/tree.py` is now folder-native (fold = move the folder, `work/`→`work/archive/`) and grilling lives
+in each tree's `grilling.md`; `next-work.md` is retired and `research/` dissolved into material on
 its node. The acceptance harness is green.
 
 **Item 2 (role assembly, ADR 0009) — the pre-seam build is complete (slices 11–14).** Two roles, each
@@ -66,7 +66,7 @@ the ADR/reference tail is pulled just-in-time while the spec stays preloaded who
 flipped to GPT via `omp` — a *different* model from the architect (ADR 0009), the operator's settled
 spend decision. The live loading (`omp` auto-loading the fence's anchor and discovering its skills) is
 watched evidence the first autonomous run verifies, never faked into the harness (the honest limit). The
-arc folded to `work/archive/role-assembly/`. The engine conformance is done (`work/archive/graph-on-disk/`).
+arc folded to `work/archive/role-assembly/`. The engine conformance is done (`work/archive/tree-on-disk/`).
 
 **15 — the mechanical red-flag scan (ADR 0020).** A coherence pass over the repo (`work/archive/coherence-audit/`)
 found that the one anti-drift mechanism wired to the fold — derive-on-render — never rotted, while every
@@ -75,17 +75,17 @@ architecture review grew the *mechanical* subset of its red-flag scan — dead m
 circular imports, read live off the tree, surfaced in the operator-view gap (the model-driven shallow/leakage
 *verdict* stays judgment, still not built); and the operator view's per-capability vision became a binding each
 capability declares in its own spec slice, replacing a hand-typed keyword map. The same arc named the model
-**transport** (`engine/transport.py`), dissolving a `conversation↔grill` cycle, and cut the dead code the new
+**transport** (`engine/transport.py`), dissolving a `communication↔grill` cycle, and cut the dead code the new
 scan caught. It is the repo's first red→green dogfood of its own feedback-loop discipline.
 
 **16 — the autonomy seam (ADR 0022; `engine/schedule.py`).** The system's most distinctive promise —
-continuous, concurrent autonomous work (intent §60/§62) — was unreachable from the interface: `graph`
-computed the ready frontier but nothing consumed it, so a ratified ask landed as standing work and the
+continuous, concurrent autonomous work (intent §60/§62) — was unreachable from the interface: `tree`
+computed the ready work but nothing consumed it, so a ratified ask landed as standing work and the
 system idled, the exact §60 defect. The **scheduler** is the loop that consumes it — it reads the
-frontier (`graph.ready`, the §110 readiness predicate) and runs `worker.run` (delegate → build fenced →
+ready work (`tree.ready`, the §110 readiness predicate) and runs `worker.run` (dispatch → build fenced →
 integrate → fold) off the operator's input loop, continuous and concurrent, idling only on a decision;
 a worker that cannot complete returns as a decision rather than stalling. Concurrency made the shared
-git line single-writer, which deepened `graph` by lifting its durable-write floor into `engine/record.py`
+git line single-writer, which deepened `tree` by lifting its durable-write floor into `engine/record.py`
 (atomic write, scoped commit, the one lock). Wiring `worker.run` end-to-end also surfaced a latent bug
 the harness had never exercised: it dropped the scripted transport on the integrate step, falling back
 to a live model call — fixed. The worker has since been flipped to GPT via `omp`, fenced at its
@@ -94,7 +94,7 @@ worktree (role-assembly steps 5–6, slice 23).
 ## On documents
 
 Research and design notes are **provenance** — they informed decisions but nothing standing depends
-on them. They are *material*, so they live with the work graph whose ask produced them (the item-2
+on them. They are *material*, so they live with the execution tree whose ask produced them (the item-2
 design in `work/role-assembly/`, the slice-7 design in `work/archive/depth-regrounding/`), folding to
 `work/archive/` with it — not in a root directory of their own (ADR 0012 dissolved the old `research/`).
 The decisions (`spec/decisions/`), the spec, and the code stand alone, so a clone is

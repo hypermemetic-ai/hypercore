@@ -8,7 +8,7 @@ module, leakage, the deletion test) stays judgment, still not built (ADR 0006), 
 
 This slice is the first dogfood of hypercore's red→green discipline (no RESULT.md/delta.md had
 ever existed): the scan went **red** on the live findings the coherence audit named — dead
-`graph.PENDING` and the `conversation↔grill` cycle — and **green** once they were cleared (the
+`tree.PENDING` and the `communication↔grill` cycle — and **green** once they were cleared (the
 symbol cut, the transport named so the cycle dissolves). Drives the real scan over the real tree
 (the green half of the loop) and over a planted tree carrying one of each rule (proof the rules
 detect, not just that the tree is clean).
@@ -22,9 +22,9 @@ from .harness import ok
 
 
 def check(root: str) -> None:
-    from .. import graph, review, view
+    from .. import tree, review, view
 
-    REAL = graph._DEFAULT_ROOT                              # hypercore's own source tree
+    REAL = tree._DEFAULT_ROOT                              # hypercore's own source tree
 
     print("\nslice 15 — acceptance check  (the mechanical red-flag scan)\n")
 
@@ -32,12 +32,12 @@ def check(root: str) -> None:
     # positive on a symbol that is actually used across the seam.
     scan = tempfile.mkdtemp(prefix="engine-redflag-")
     eng = os.path.join(scan, "engine")
-    graph.atomic_write(os.path.join(eng, "api.py"), "def value():\n    return 1\n")
-    graph.atomic_write(os.path.join(eng, "consumer.py"),
+    tree.atomic_write(os.path.join(eng, "api.py"), "def value():\n    return 1\n")
+    tree.atomic_write(os.path.join(eng, "consumer.py"),
                        "from . import api\n\nORPHAN = 99            # bound, read by nobody\n\n\n"
                        "def use():\n    return api.value()\n")
-    graph.atomic_write(os.path.join(eng, "ring_a.py"), "from . import ring_b\n\nA = 1\n")
-    graph.atomic_write(os.path.join(eng, "ring_b.py"), "from . import ring_a\n\nB = 1\n")
+    tree.atomic_write(os.path.join(eng, "ring_a.py"), "from . import ring_b\n\nA = 1\n")
+    tree.atomic_write(os.path.join(eng, "ring_b.py"), "from . import ring_a\n\nB = 1\n")
     flags = review.red_flags(scan)
     dead = [f.subject for f in flags if f.rule == "dead symbol"]
     cycles = [f for f in flags if f.rule == "import cycle"]
@@ -49,7 +49,7 @@ def check(root: str) -> None:
        "the scan flags two modules that import each other as an import cycle")
 
     # 2. the green half of the audit's red→green loop: the real engine tree carries no mechanical
-    # red flags — dead graph.PENDING cut, the conversation↔grill cycle dissolved by naming the
+    # red flags — dead tree.PENDING cut, the communication↔grill cycle dissolved by naming the
     # transport. (This assertion was the recorded RED before those fixes landed.)
     real = review.red_flags(REAL)
     ok(not real, "the real engine tree carries no mechanical red flags "

@@ -26,7 +26,7 @@ from .harness import LOOP, ok, scripted
 
 
 def check(root: str) -> None:
-    from .. import conditions, graph, worker
+    from .. import conditions, tree, worker
 
     print("\nslice 20 — acceptance check  (the red→green loop is executed, not narrated)\n")
 
@@ -37,11 +37,11 @@ def check(root: str) -> None:
                 f"#### Scenario: s\n- WHEN a fold is attempted\n- THEN the gate runs\n")
 
     def staged(text: str, name: str):
-        ask = graph.file_intent(text)
-        graph.approve(graph.raise_card("contract.\n\ndelta:\n" + delta_for(name),
+        ask = tree.file_intent(text)
+        tree.approve(tree.raise_card("contract.\n\ndelta:\n" + delta_for(name),
                                        kind="decide", parent=ask.id))
         worker.worktree(ask, root)
-        graph.delegate(ask)
+        tree.dispatch(ask)
         return ask
 
     def result_with(name: str, loop: dict):

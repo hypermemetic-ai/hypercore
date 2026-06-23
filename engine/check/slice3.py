@@ -13,11 +13,11 @@ from .harness import ok, scripted
 
 
 def check(root: str) -> None:
-    from .. import delta, graph, grill, spec
-    from ..conversation import Thread, speak
+    from .. import delta, tree, grill, spec
+    from ..communication import Thread, speak
 
     print("\nslice 3 — acceptance check  (intent extraction by grilling)\n")
-    base = len(graph.standing())
+    base = len(tree.standing())
 
     # an above-floor ask: the architect files, the floor finds two stakes
     t = Thread()
@@ -28,24 +28,24 @@ def check(root: str) -> None:
         'budget"},{"q":"keep seeding after?","lean":"yes, to ratio 2.0","flip":"a '
         'metered connection"}]}'))
     ok(r.filed is None and r.grilling is not None, "an above-floor ask is held, not filed")
-    ok(len(graph.standing()) == base, "the gate holds: no standing work while grilling")
-    qcards = [c for c in graph.cards() if grill.is_question(c)]
+    ok(len(tree.standing()) == base, "the gate holds: no standing work while grilling")
+    qcards = [c for c in tree.cards() if grill.is_question(c)]
     ok(len(qcards) == 1, "one grilling question is on the queue at a time")
     ok(grill.lean_of(qcards[0]) == "1080p" and bool(grill.flip_of(qcards[0])),
        "the question card carries the machine's lean and what would flip it")
 
     # accept the lean on the first; the second surfaces, still gated
     grill.advance(qcards[0], grill.lean_of(qcards[0]))
-    qcards = [c for c in graph.cards() if grill.is_question(c)]
+    qcards = [c for c in tree.cards() if grill.is_question(c)]
     ok(len(qcards) == 1 and grill.question_of(qcards[0]).startswith("keep seeding"),
        "answering one question surfaces the next")
-    ok(len(graph.standing()) == base, "the work stays gated through the interview")
+    ok(len(tree.standing()) == base, "the work stays gated through the interview")
 
     # answer the last in the operator's own words: the pass yields the entry + delta
     products = json.dumps({
         "entry": "A recurring pull of new Berserk episodes from nyaa at 1080p, "
                  "seeding to ratio 2.0.",
-        "delta": ("## ADDED — conversation\n"
+        "delta": ("## ADDED — communication\n"
                   "### Requirement: a download arc names its source\n"
                   "The arc MUST record where it pulls from.\n"
                   "#### Scenario: an arc is set up\n"
@@ -54,7 +54,7 @@ def check(root: str) -> None:
                           scripted(products))
     ok(grill.is_entry(entry) and "1080p" in grill.contract(entry),
        "the resolved pass raises the view entry — the contract to ratify")
-    ok(len(graph.standing()) == base, "the gate holds until the entry is ratified")
+    ok(len(tree.standing()) == base, "the gate holds until the entry is ratified")
 
     # the fourth product is a well-formed, foldable spec delta
     d = delta.parse("# delta — the pass's product\n\n" + grill.delta_of(entry))
@@ -63,8 +63,8 @@ def check(root: str) -> None:
 
     # ratifying the view entry is the gate: the held ask spawns, the queue clears
     grill.ratify(entry)
-    ok(len(graph.standing()) == base + 1, "ratifying the view entry spawns the work")
-    ok(not [c for c in graph.cards() if c.parent],
+    ok(len(tree.standing()) == base + 1, "ratifying the view entry spawns the work")
+    ok(not [c for c in tree.cards() if c.parent],
        "ratifying clears the grilling pass from the queue")
 
     # a below-floor ask: the floor finds no residual stake, so it files straight through
@@ -73,4 +73,4 @@ def check(root: str) -> None:
         '{"say":"Noted and filed.","file":"downloads land in /mnt/media","done":true}',
         '{"questions":[]}'))
     ok(r2.filed is not None and r2.grilling is None, "a below-floor ask files directly")
-    ok(len(graph.standing()) == base + 2, "the below-floor ask is standing work, ungrilled")
+    ok(len(tree.standing()) == base + 2, "the below-floor ask is standing work, ungrilled")

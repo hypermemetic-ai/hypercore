@@ -16,7 +16,7 @@ sentinel in its preamble and a sentinel requirement) so a derived skill must rep
 3. **drift is impossible** — editing the slice and folding again re-renders the skill to match;
 4. **every architect methodology is registered** — each one materializes through the channels registry.
 
-At this step `grilling`/coherence were still requirements inside `conversation`, with no standalone
+At this step `grilling`/coherence were still requirements inside `communication`, with no standalone
 slice to render — skilling them was left as a follow-up (since landed: carved into their own
 capabilities and skilled through this same seam in slice 14, ADR 0013).
 """
@@ -28,7 +28,7 @@ from .harness import ok
 
 
 def check(root: str) -> None:
-    from .. import channels, delta, graph, methodology, spec
+    from .. import channels, delta, tree, methodology, spec
 
     print("\nslice 12 — acceptance check  (the architect's methodology skills, single-sourced)\n")
 
@@ -44,7 +44,7 @@ def check(root: str) -> None:
         "- THEN the planted discipline is applied\n"
     )
     src = spec.cap_path(CAP, root)
-    graph.atomic_write(src, planted)
+    tree.atomic_write(src, planted)
 
     art = os.path.join(root, methodology.skill_path(CAP))
     if os.path.isfile(art):
@@ -67,7 +67,7 @@ def check(root: str) -> None:
        "the fold materializes the methodology skill — registered in the channels registry, a pure render")
 
     # ── 3. drift is impossible: edit the slice, fold again, the skill follows ──────────────
-    graph.atomic_write(src, planted.replace(NONCE, "EDITED-" + NONCE))
+    tree.atomic_write(src, planted.replace(NONCE, "EDITED-" + NONCE))
     delta.fold(delta.parse("# delta — trivial (no behavior change)"), root)
     ok("EDITED-" + NONCE in open(art, encoding="utf-8").read(),
        "a later fold re-renders the skill from the changed slice — a committed channel cannot drift")

@@ -14,7 +14,7 @@ Four things define it, and each is structural:
 - **The candidates are genuinely different, and isolated.** One per brief (minimize the
   interface / maximize flexibility / optimize the common caller / ports-and-adapters), each in
   its own fence (`worker.worktree`, tagged per candidate). They never see each other; several
-  shapes advance one decision at once, exactly as several workers advance the graph at once.
+  shapes advance one decision at once, exactly as several workers advance the tree at once.
 
 - **The candidates *design*, they do not implement.** Each produces an interface, what it
   hides, where the seam falls, and the deletion-test argument for its depth — the properties
@@ -42,7 +42,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 
-from . import graph, grill, spec, worker
+from . import tree, grill, spec, worker
 from .transport import call, parse
 
 # The four briefs (ADR 0007): each pushes a candidate toward a radically different
@@ -110,12 +110,12 @@ class Selection:
     comparison: dict = field(default_factory=dict)
     stake: str | None = None
     candidates: list[Candidate] = field(default_factory=list)
-    card: graph.Node | None = None
+    card: tree.Node | None = None
 
 
 # ── the contest: several candidates, each fenced, each designing the one decision ──
 
-def contest(node: graph.Node, briefs=None, transport=None,
+def contest(node: tree.Node, briefs=None, transport=None,
             root: str | None = None) -> list[Candidate]:
     """Design the decision several ways at once, each in its own fence: one candidate per
     brief, each producing a design (not an implementation) for the same interface, isolated
@@ -123,14 +123,14 @@ def contest(node: graph.Node, briefs=None, transport=None,
     transport = transport or call
     out: list[Candidate] = []
     for name, instruction in (briefs or BRIEFS):
-        tree = worker.worktree(node, root, tag=name)
+        fence = worker.worktree(node, root, tag=name)
         design = parse(transport(_candidate_prompt(node, instruction)))
-        _record_design(tree, name, instruction, design)
-        out.append(Candidate(name, tree, design))
+        _record_design(fence, name, instruction, design)
+        out.append(Candidate(name, fence, design))
     return out
 
 
-def select(node: graph.Node, candidates: list[Candidate], transport=None) -> Selection:
+def select(node: tree.Node, candidates: list[Candidate], transport=None) -> Selection:
     """The architect compares the candidates on depth/locality/seam and picks or hybridizes —
     machine-side design judgment. The pick, the reasoning, and any stake-bearing difference
     come back; the architect authors the stake for the operator, never the raw designs."""
@@ -147,22 +147,22 @@ def select(node: graph.Node, candidates: list[Candidate], transport=None) -> Sel
     )
 
 
-def record(node: graph.Node, selection: Selection, root: str | None = None) -> str:
+def record(node: tree.Node, selection: Selection, root: str | None = None) -> str:
     """Record the pick as a structured design-decision ADR — the machine-side home of a
     load-bearing interface choice (hard to reverse → ADR-worthy). The parseable line
 
         design-decision: <subject> → <chosen> — <reason>
 
-    names the decision the same way the depth-decision names a file, so a future scan can read
+    names the decision the same way the accepted-length record names a file, so a future scan can read
     the pick rather than re-derive it. Returns the ADR's path."""
     d = os.path.join(spec.spec_dir(root), "decisions")
     os.makedirs(d, exist_ok=True)
     num = _next_adr(d)
-    subject = graph._subject(node.text)
+    subject = tree._subject(node.text)
     path = os.path.join(d, f"{num:04d}-design-{_slug(subject)}.md")
     briefs = ", ".join(c.brief for c in selection.candidates)
     grounds = "\n".join(f"- **{b}**: {note}" for b, note in selection.comparison.items())
-    graph.atomic_write(path,
+    tree.atomic_write(path,
         f"# ADR {num:04d} — design-it-twice: {subject}\n\n"
         "Status: machine-owned, awaiting ratification. [machine]\n\n"
         "## Context\n\n"
@@ -173,18 +173,18 @@ def record(node: graph.Node, selection: Selection, root: str | None = None) -> s
         f"design-decision: {subject} → {selection.chosen} — {selection.reasoning}\n\n"
         "## Grounds\n\n"
         f"{grounds or '- (the comparison is recorded above)'}\n")
-    graph.commit([path], f"design-it-twice: {subject} → {selection.chosen}")
+    tree.commit([path], f"design-it-twice: {subject} → {selection.chosen}")
     return path
 
 
-def escalate(node: graph.Node, selection: Selection) -> graph.Node:
+def escalate(node: tree.Node, selection: Selection) -> tree.Node:
     """A stake-bearing difference re-enters grilling: a decision card on the operator's queue,
     parented to the decision node (the standing-guard floor). Only the architect-authored
     stake crosses — the candidate designs and the reasoning stay machine-side, in the ADR."""
-    return graph.raise_card(selection.stake, kind="decide", parent=node.id)
+    return tree.raise_card(selection.stake, kind="decide", parent=node.id)
 
 
-def design_twice(node: graph.Node, briefs=None, transport=None,
+def design_twice(node: tree.Node, briefs=None, transport=None,
                  root: str | None = None) -> Selection:
     """The whole contest behind one call: design the interface several ways in isolation, let
     the architect pick or hybridize on depth/locality/seam, record the pick as an ADR, and —
@@ -203,13 +203,13 @@ def design_twice(node: graph.Node, briefs=None, transport=None,
 
 # ── internals ────────────────────────────────────────────────────────────────
 
-def _candidate_prompt(node: graph.Node, instruction: str) -> str:
+def _candidate_prompt(node: tree.Node, instruction: str) -> str:
     return (f"{CANDIDATE}\n\nThe interface decision:\n{grill.contract_of(node) or node.text}\n\n"
             f"Your brief — design radically to it:\n{instruction}\n\n"
             "Reply with the JSON object now.")
 
 
-def _select_prompt(node: graph.Node, candidates: list[Candidate]) -> str:
+def _select_prompt(node: tree.Node, candidates: list[Candidate]) -> str:
     shown = "\n\n".join(
         f"### candidate: {c.brief}\n"
         f"- interface: {c.design.get('interface', '')}\n"
@@ -221,14 +221,14 @@ def _select_prompt(node: graph.Node, candidates: list[Candidate]) -> str:
             f"The candidate designs:\n{shown}\n\nReply with the JSON object now.")
 
 
-def _record_design(tree: str, name: str, instruction: str, design: dict) -> None:
+def _record_design(fence: str, name: str, instruction: str, design: dict) -> None:
     """The candidate commits its design inside its own fence — proof each candidate runs in
     isolation, its material reaching the record on its own branch, fenced from its siblings."""
-    graph.atomic_write(os.path.join(tree, "DESIGN.md"),
+    tree.atomic_write(os.path.join(fence, "DESIGN.md"),
         f"# candidate design — {name}\n\n## brief\n{instruction}\n\n"
         f"## interface\n{design.get('interface', '')}\n\n## hides\n{design.get('hides', '')}\n\n"
         f"## seam\n{design.get('seam', '')}\n\n## depth\n{design.get('depth', '')}\n")
-    worker.commit_tree(tree, f"candidate: {name} design")
+    worker.commit_tree(fence, f"candidate: {name} design")
 
 
 def _next_adr(d: str) -> int:

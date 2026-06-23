@@ -9,11 +9,11 @@ is already determined files straight to work, ungrilled.
 A finished pass yields the **view entry** — the contract the result is later checked against — and
 the **spec delta** the change will realize. Work does not spawn until the entry is ratified.
 
-Design B (ADR 0011): the pass is durable **within its graph's folder**, in `grilling.md`, not as a
-scatter of question/entry node files. The held graph itself sits on the queue (state AWAITING) and
+Design B (ADR 0011): the pass is durable **within its tree's folder**, in `grilling.md`, not as a
+scatter of question/entry node files. The held tree itself sits on the queue (state AWAITING) and
 *is* the card; these predicates read its `grilling.md` to tell what the card currently shows — a
 surfaced question, or the resolved contract awaiting ratification. So the queue stays a computed
-view (L110) and the graph stays the on-disk unit (L112), while a half-finished pass survives a
+view (L110) and the tree stays the on-disk unit (L112), while a half-finished pass survives a
 session boundary — the next episode reads it off the folder.
 """
 from __future__ import annotations
@@ -21,7 +21,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
-from . import graph, spec
+from . import tree, spec
 from .transport import call, parse
 
 FLOOR = (
@@ -57,7 +57,7 @@ class Question:
 
 @dataclass
 class _Pass:
-    """The grilling pass, the durable content of a held graph's grilling.md."""
+    """The grilling pass, the durable content of a held tree's grilling.md."""
     surfaced: int                 # index of the question currently on the queue
     questions: list[dict]         # each {q, lean, flip, answer}; answer "" until resolved
     contract: str                 # the view-entry, produced once every question is answered
@@ -66,22 +66,22 @@ class _Pass:
 
 # ── the pass ─────────────────────────────────────────────────────────────────
 
-def consider(ask: str, transport=None) -> tuple[graph.Node, list[Question]]:
+def consider(ask: str, transport=None) -> tuple[tree.Node, list[Question]]:
     """Run the floor on a filed ask. Below it: file standing work, no questions. Above it: hold the
-    ask as its own graph and surface its first question on the queue (the held graph goes AWAITING)."""
+    ask as its own tree and surface its first question on the queue (the held tree goes AWAITING)."""
     transport = transport or call
     questions = floor(ask, transport)
     if not questions:
-        return graph.file_intent(ask), []
-    held = graph.hold(ask)
+        return tree.file_intent(ask), []
+    held = tree.hold(ask)
     _save(held, _Pass(0, [{"q": q.text, "lean": q.lean, "flip": q.flip, "answer": ""}
                           for q in questions], "", ""))
-    return graph.find(held.id) or held, questions
+    return tree.find(held.id) or held, questions
 
 
-def advance(held: graph.Node, answer: str, transport=None) -> graph.Node:
+def advance(held: tree.Node, answer: str, transport=None) -> tree.Node:
     """Record the operator's answer to the surfaced question and surface the next, or — when the
-    last is answered — produce the contract + delta on the graph. Returns the held graph, re-read:
+    last is answered — produce the contract + delta on the tree. Returns the held tree, re-read:
     still on the queue (AWAITING), now showing the next question or the entry to ratify."""
     transport = transport or call
     p = _load(held)
@@ -92,17 +92,17 @@ def advance(held: graph.Node, answer: str, transport=None) -> graph.Node:
     if p.surfaced + 1 < len(p.questions):
         p.surfaced += 1
         _save(held, p)
-        return graph.find(held.id) or held
+        return tree.find(held.id) or held
     entry, delta_text = products(held.text, [(q["q"], q["answer"]) for q in p.questions], transport)
     p.contract, p.delta = entry, delta_text
     _save(held, p)
-    return graph.find(held.id) or held
+    return tree.find(held.id) or held
 
 
-def ratify(held: graph.Node) -> graph.Node:
+def ratify(held: tree.Node) -> tree.Node:
     """The view entry approved: the held ask spawns as standing work. The gate opens here and only
-    here; the contract and delta stay in the graph's grilling.md as the worker's handed input."""
-    return graph.spawn(graph.find(held.id) or held)
+    here; the contract and delta stay in the tree's grilling.md as the worker's handed input."""
+    return tree.spawn(tree.find(held.id) or held)
 
 
 def floor(ask: str, transport=None) -> list[Question]:
@@ -126,76 +126,76 @@ def products(ask: str, qa: list[tuple[str, str]], transport=None) -> tuple[str, 
     return obj.get("entry", "").strip(), obj.get("delta", "").strip()
 
 
-# ── reading a card's pass: what the held graph currently shows on the queue ──
+# ── reading a card's pass: what the held tree currently shows on the queue ──
 
-def is_question(node: graph.Node) -> bool:
-    """A held graph whose pass is still running — the card shows a surfaced question."""
+def is_question(node: tree.Node) -> bool:
+    """A held tree whose pass is still running — the card shows a surfaced question."""
     p = _load(node)
     return p is not None and not p.contract
 
 
-def is_entry(node: graph.Node) -> bool:
-    """A held graph whose pass is resolved — the card shows the contract awaiting ratification."""
+def is_entry(node: tree.Node) -> bool:
+    """A held tree whose pass is resolved — the card shows the contract awaiting ratification."""
     p = _load(node)
     return p is not None and bool(p.contract)
 
 
-def lean_of(node: graph.Node) -> str:
+def lean_of(node: tree.Node) -> str:
     q = _surfaced(node)
     return q["lean"] if q else ""
 
 
-def flip_of(node: graph.Node) -> str:
+def flip_of(node: tree.Node) -> str:
     q = _surfaced(node)
     return q["flip"] if q else ""
 
 
-def question_of(node: graph.Node) -> str:
+def question_of(node: tree.Node) -> str:
     q = _surfaced(node)
     return q["q"] if q else ""
 
 
-def contract(node: graph.Node) -> str:
+def contract(node: tree.Node) -> str:
     p = _load(node)
     return p.contract if p else ""
 
 
-def delta_of(node: graph.Node) -> str:
+def delta_of(node: tree.Node) -> str:
     p = _load(node)
     return p.delta if p else ""
 
 
-def entry_of(node: graph.Node) -> graph.Node | None:
-    """The graph itself once its pass is resolved — the propose-stage product a worker reads for
+def entry_of(node: tree.Node) -> tree.Node | None:
+    """The tree itself once its pass is resolved — the propose-stage product a worker reads for
     its handed delta, and the architect later checks the result against."""
     p = _load(node)
     return node if (p and p.contract) else None
 
 
-def contract_of(node: graph.Node) -> str:
+def contract_of(node: tree.Node) -> str:
     return contract(node)
 
 
-# ── internals: the grilling.md pass-state, durable in the graph's folder ─────
+# ── internals: the grilling.md pass-state, durable in the tree's folder ─────
 
-def _pass_path(node: graph.Node) -> str:
+def _pass_path(node: tree.Node) -> str:
     return os.path.join(node.path, "grilling.md")
 
 
-def _load(node: graph.Node) -> _Pass | None:
+def _load(node: tree.Node) -> _Pass | None:
     path = _pass_path(node)
     if not node.path or not os.path.isfile(path):
         return None
     return _parse(open(path).read())
 
 
-def _save(held: graph.Node, p: _Pass) -> None:
-    graph.atomic_write(_pass_path(held), _render(p))
-    held.state = graph.AWAITING                       # the held graph sits on the queue
-    graph._persist(held, f"grill: {graph._subject(held.text)}")   # commits the folder (intent + pass)
+def _save(held: tree.Node, p: _Pass) -> None:
+    tree.atomic_write(_pass_path(held), _render(p))
+    held.state = tree.AWAITING                       # the held tree sits on the queue
+    tree._persist(held, f"grill: {tree._subject(held.text)}")   # commits the folder (intent + pass)
 
 
-def _surfaced(node: graph.Node) -> dict | None:
+def _surfaced(node: tree.Node) -> dict | None:
     p = _load(node)
     if p and p.questions and 0 <= p.surfaced < len(p.questions):
         return p.questions[p.surfaced]

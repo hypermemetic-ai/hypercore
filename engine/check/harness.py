@@ -32,7 +32,7 @@ def failures() -> int:
 
 def scripted(*replies):
     """A deterministic stand-in for the model transport: hand back the queued replies in
-    order, so a check drives the real graph and the real conditions without an LLM."""
+    order, so a check drives the real tree and the real conditions without an LLM."""
     q = list(replies)
     return lambda _prompt: q.pop(0)
 

@@ -2,7 +2,7 @@
 
 Acceptance (spec/self-model §folding applies the delta atomically, both directions): the spec asserts
 the fold is atomic in both directions, but the implementation was two separate acts — apply the delta
-and commit (`delta.fold`), then archive the node (`graph.integrated`). A crash between them left the
+and commit (`delta.fold`), then archive the node (`tree.integrated`). A crash between them left the
 **delta merged into the spec but the node un-archived**, and the retry hit `delta.check`'s "ADDED
 requirement already exists" → a permanent `CannotFold`: operator work wedged with its change already in
 the spec (research H1). The ratified fix makes the fold one transactional act with idempotent retry.
@@ -40,21 +40,21 @@ def _delta_text(cap: str, req: str) -> str:
 
 
 def check(_shared_root: str) -> None:
-    from .. import delta, graph, spec
+    from .. import delta, tree, spec
 
     print("\nslice 19 — acceptance check  (the fold is transactional: atomic both directions, retryable)\n")
 
     # ── 1. spec-merge and node-archive land in ONE commit ───────────────────────────────────────────
     root = _init("engine-check-s19a-")
     os.environ["ENGINE_ROOT"] = root
-    node = graph.file_intent("grow the alpha capability")
+    node = tree.file_intent("grow the alpha capability")
     before = subprocess.run(["git", "rev-list", "--count", "HEAD"], cwd=root,
                             capture_output=True, text=True).stdout.strip()
     delta.fold(delta.parse(_delta_text("alpha", "the alpha property holds")), root, node=node)
     after = subprocess.run(["git", "rev-list", "--count", "HEAD"], cwd=root,
                            capture_output=True, text=True).stdout.strip()
     cap = spec.read_spec(root).capability("alpha")
-    folded = graph.find(node.id)
+    folded = tree.find(node.id)
     ok(cap is not None and cap.requirement("the alpha property holds") is not None,
        "folding a node lands its delta in the spec")
     ok(folded is not None and folded.folded,
@@ -69,18 +69,18 @@ def check(_shared_root: str) -> None:
     # CannotFold. The retry here must instead complete — archive the node, commit — idempotently.
     root = _init("engine-check-s19b-")
     os.environ["ENGINE_ROOT"] = root
-    node2 = graph.file_intent("grow the beta capability under a crash")
+    node2 = tree.file_intent("grow the beta capability under a crash")
     d = delta.parse(_delta_text("beta", "the beta property holds"))
 
-    real_archive = graph.archive_in_place
-    graph.archive_in_place = lambda n: (_ for _ in ()).throw(RuntimeError("crash mid-fold"))
+    real_archive = tree.archive_in_place
+    tree.archive_in_place = lambda n: (_ for _ in ()).throw(RuntimeError("crash mid-fold"))
     crashed = False
     try:
         delta.fold(d, root, node=node2)
     except RuntimeError:
         crashed = True
     finally:
-        graph.archive_in_place = real_archive
+        tree.archive_in_place = real_archive
     ok(crashed, "the injected crash mid-fold raises — the act did not complete")
 
     # the spec change is on disk now (the half-applied state the crash leaves). The retry must NOT
@@ -91,7 +91,7 @@ def check(_shared_root: str) -> None:
        "the crash left the delta applied to the spec on disk — the wedge precondition")
     retried_ok = True
     try:
-        delta.fold(d, root, node=graph.find(node2.id))
+        delta.fold(d, root, node=tree.find(node2.id))
     except delta.CannotFold:
         retried_ok = False
     ok(retried_ok, "the retry does NOT hit a permanent CannotFold on the already-applied delta (H1 wedge closed)")
@@ -100,5 +100,5 @@ def check(_shared_root: str) -> None:
     reqs = [r.name for r in final.requirements] if final else []
     ok(reqs.count("the beta property holds") == 1,
        "the retry is idempotent — the requirement is present exactly once, no duplicate")
-    ok(graph.find(node2.id).folded,
+    ok(tree.find(node2.id).folded,
        "the retry archives the node — the work is no longer wedged, the fold completed")

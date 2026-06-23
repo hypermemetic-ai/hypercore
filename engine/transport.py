@@ -5,12 +5,12 @@ prompt and get its text back (`call` for the architect, `worker_transport` for t
 and read the first JSON object out of a reply (`parse`). It carries the two role identities too —
 the model each role runs against and the label the window shows.
 
-It was named out of `conversation` (ADR 0021). The architect's voice and the worker's, the
+It was named out of `communication` (ADR 0021). The architect's voice and the worker's, the
 grilling pass and the design contest all need the same model invocation and the same lenient JSON
-read, and they had been reaching into `conversation`'s privates for them
-(`conversation._claude`, `conversation._parse`) — five modules past one module's interface (the
-information-leakage red flag) and a `conversation ↔ grill` import cycle besides. The transport is
-the shared knowledge; giving it its own module lets `conversation`, `grill`, `design`, and
+read, and they had been reaching into `communication`'s privates for them
+(`communication._claude`, `communication._parse`) — five modules past one module's interface (the
+information-leakage red flag) and a `communication ↔ grill` import cycle besides. The transport is
+the shared knowledge; giving it its own module lets `communication`, `grill`, `design`, and
 `worker` each depend on it downward, so the cycle and the reaching-through-privates both dissolve.
 
 The two live transports share one summon (`_summon`) and differ only where they must: the
@@ -36,7 +36,7 @@ MODEL_LABEL = "opus 4.8"
 # multi-model harness, which auto-loads the fence's anchor and discovers its skills at the worktree.
 # The flip to a new vendor was the operator's spend decision (2026-06-22); nothing else names them.
 WORKER_CMD = "omp"
-WORKER_MODEL = "gpt-5.2"
+WORKER_MODEL = "gpt-5.5"
 
 
 class MalformedReply(Exception):

@@ -1,26 +1,27 @@
-# conversation
-<!-- vision: thread, architect, conversation, speak -->
+# communication
+<!-- vision: thread, architect, communication, speak -->
 
 The thread and the architect. A thread is one throwaway session; the architect is the single
 voice between the operator and the system, reading the operator's words and landing one concrete
-consequence on the graph. The role is named **architect** because it holds the operator-aligned
+consequence on the tree. The role is named **architect** because it holds the operator-aligned
 **design judgment** across the work's life — but that judgment is decomposed into capabilities of
 its own, so each can be carried as its own skill (ADR 0013): the pre-work intent extraction is
 **`grilling`**, the archive-gate judgment over a worker's hand-off (coherence and depth) is
 **`coherence`**, and the load-bearing-interface contest is **`design-it-twice`** (ADR 0007).
-What `conversation` itself owns is the **thread** and the **single operator-facing voice**: every
+What `communication` itself owns is the **thread** and the **single operator-facing voice**: every
 word that crosses to the operator comes from the architect, the thread holds no durable state, and
-the architect selects among design-it-twice candidates and renders the result back. The capability
-stays `conversation`: the thread is a conversation and the operator-facing channel is what it owns.
+the architect selects among design-it-twice candidates and renders the result back. The capability is
+**`communication`**: it owns the operator-facing channel end to end — the thread is one conversation on
+it, and every word that reaches the operator is the architect's.
 
 ### Requirement: a thread is throwaway and holds no durable state
 A thread MUST be one conversational session, opened when the operator types in and
 closed when they have what they came for. It MUST hold no durable state and not be
-bound to a piece of work; durability lands on the graph.
+bound to a piece of work; durability lands on the tree.
 
 #### Scenario: filing intent then reopening
 - WHEN the operator files intent in a thread and the thread closes on satisfaction
-- THEN the work is on the graph, and reopening the system shows that work and no
+- THEN the work is on the tree, and reopening the system shows that work and no
   resumed thread; no thread is persisted anywhere
 
 ### Requirement: the architect is the single operator-facing voice

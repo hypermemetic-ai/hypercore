@@ -108,14 +108,14 @@ def _discovery_ok(root: str) -> bool:
 
 
 def check(_shared_root: str) -> None:
-    from .. import channels, graph, methodology
+    from .. import channels, tree, methodology
 
     print("\nslice 22 — acceptance check  (the external-conformance gate: the channels conform and resolve)\n")
 
     root = tempfile.mkdtemp(prefix="engine-check-slice22-")
     # Seed the throwaway root with the real spec + glossary, so the render reads the live slices and
     # every rendered `spec/<cap>.md` pointer resolves within one self-consistent tree — a faithful fold.
-    repo = graph._DEFAULT_ROOT
+    repo = tree._DEFAULT_ROOT
     shutil.copytree(os.path.join(repo, "spec"), os.path.join(root, "spec"))
     shutil.copy(os.path.join(repo, "glossary.md"), os.path.join(root, "glossary.md"))
 
@@ -150,4 +150,4 @@ def check(_shared_root: str) -> None:
        + (f" (broken: {broken})" if broken else ""))
 
     # The slice must render against a populated spec — guard the check itself isn't vacuously green.
-    ok(graph and methodology.METHODOLOGIES, "the gate ran over the real skill set (not an empty roster)")
+    ok(tree and methodology.METHODOLOGIES, "the gate ran over the real skill set (not an empty roster)")

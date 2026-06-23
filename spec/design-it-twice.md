@@ -9,7 +9,7 @@ architect picks or hybridizes on **depth, locality, and seam placement**. The fi
 committed is rarely the deepest, so design-it-twice applies hypercore's existing isolation where
 first-draft commitment hurts most: the shape of a deep module. *(ADR 0007.)* It rests on the worker's fence composing —
 several candidates advancing one decision at once, isolated, exactly as concurrent workers
-advance the graph at once.
+advance the tree at once.
 
 ### Requirement: a load-bearing interface decision is designed twice, in isolation
 A load-bearing interface decision MUST be designable as a contest of several candidates, one per
@@ -40,7 +40,7 @@ worker apply.
 The architect MUST compare the candidates on **depth, locality, and seam placement**, pick one
 or hybridize, and record the pick as a **structured design-decision ADR** — a parseable
 `design-decision: <subject> → <chosen> — <reason>` line, the same structured-record idiom the
-depth-decision uses. The selection is machine-side design judgment: the operator's trust anchor
+accepted-length record uses. The selection is machine-side design judgment: the operator's trust anchor
 is the contract, not the machine-side design, so the pick does not
 spend the operator's go. The candidate designs and the reasoning stay machine-side — in the
 fences and the ADR — never on a card. *(Trust anchor is the contract: ADR 0007.)*

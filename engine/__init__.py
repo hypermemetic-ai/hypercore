@@ -2,5 +2,5 @@
 
 Slice 1: the main window. The operator opens throwaway threads with the
 architect and evaluates cards in the decision queue. Durable state
-lives on the graph; threads hold none.
+lives on the tree; threads hold none.
 """

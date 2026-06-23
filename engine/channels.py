@@ -2,7 +2,7 @@
 
 Each role is grounded across three derived channels (ADR 0009): a minimal **agents file**, on-demand
 **skills**, and the per-episode **prompt**. The prompt is *live* — assembled fresh every episode by
-`worker.prompt`/`conversation`, so it never goes stale and is never materialized. The other two are
+`worker.prompt`/`communication`, so it never goes stale and is never materialized. The other two are
 **static artifacts an external harness auto-loads**, so unlike the live-rendered operator view they
 cannot be read live: they must be written to disk, and regenerated whenever their source changes.
 

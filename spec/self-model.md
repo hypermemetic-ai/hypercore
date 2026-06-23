@@ -15,21 +15,21 @@ gap between them is the backlog.
 - THEN it yields the glossary and, per capability, that capability's requirements
   and their scenarios — concise enough to scan across all of them at once
 
-### Requirement: every behavior-changing graph carries a delta
-A graph that changes behavior MUST carry a delta of ADDED / MODIFIED / REMOVED
-requirements matching what it built. A graph that makes no behavior change carries
+### Requirement: every behavior-changing tree carries a delta
+A tree that changes behavior MUST carry a delta of ADDED / MODIFIED / REMOVED
+requirements matching what it built. A tree that makes no behavior change carries
 an empty delta and says so.
 
-#### Scenario: a trivial graph
-- WHEN a graph changes no behavior
+#### Scenario: a trivial tree
+- WHEN a tree changes no behavior
 - THEN it carries a delta that declares itself trivial, and folding it applies nothing
 
 ### Requirement: a missing or mismatched delta cannot fold
-Folding MUST refuse a behavior-changing graph that carries no delta, and refuse a
+Folding MUST refuse a behavior-changing tree that carries no delta, and refuse a
 delta that does not apply cleanly to the current spec.
 
 #### Scenario: missing delta
-- WHEN a behavior-changing graph carries no delta file
+- WHEN a behavior-changing tree carries no delta file
 - THEN the fold is refused
 
 #### Scenario: mismatched delta
@@ -38,17 +38,17 @@ delta that does not apply cleanly to the current spec.
 - THEN the fold is refused and the spec is left untouched
 
 ### Requirement: folding applies the delta to the spec, atomically, both directions
-The act that folds a graph MUST apply its delta to the living spec, re-render the derived
+The act that folds a tree MUST apply its delta to the living spec, re-render the derived
 artifacts, and archive the node — **in one commit**. The spec change and the node's archive
 land together or not at all: a crash can never leave the spec merged while the node is
-un-archived, nor the reverse. The spec is never merged unless the graph folds, and the graph
+un-archived, nor the reverse. The spec is never merged unless the tree folds, and the tree
 never folds unless the delta merges; the living spec is therefore never separately edited.
 The act is **idempotently retryable**: a retry after a crash that landed the spec change on
 disk but did not commit completes the fold — it does not refuse the already-applied delta as
 a conflict.
 
 #### Scenario: an added requirement lands
-- WHEN a graph with an ADDED requirement folds
+- WHEN a tree with an ADDED requirement folds
 - THEN that requirement is present in the capability's spec file and the node is archived,
   both committed in the same single act
 
@@ -67,7 +67,7 @@ a conflict.
 The operator view MUST render, at every altitude, the **vision** (authored, from
 `intent.md`) beside the **as-built** (derived from the living spec) and the **gap**
 between them, as a recursive tree to the depth the work reaches. The upper levels'
-"what the system is" structural map and the deepening backlog are the standing output
+"what the system is" structural map and the complexity debt are the standing output
 of the architecture review (`architecture-review` capability), kept honest between folds.
 The map renders the system's **depth**, not merely its length: length is shown as a
 context-cost signal against the threshold, and the deeper model-driven red-flag depth
@@ -87,7 +87,7 @@ so the operator reads depth, not just a line count.
 
 #### Scenario: the root's upper levels
 - WHEN the operator opens the root of the view
-- THEN its structural map of as-built reality and its deepening backlog are the
+- THEN its structural map of as-built reality and its complexity debt are the
   architecture review's standing output, derived from the scan, not hand-authored
 
 ### Requirement: the as-built and gap are derived; only the vision is authored

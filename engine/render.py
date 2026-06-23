@@ -1,4 +1,4 @@
-"""Pure render: the graph and the open thread become a frame of styled spans.
+"""Pure render: the tree and the open thread become a frame of styled spans.
 
 No terminal calls live here — the window paints what these functions return, so
 every frame is testable without a TTY. A Span is (text, style); a Row is a list
@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import textwrap
 
-from . import grill, graph
-from .conversation import Thread
+from . import grill, tree
+from .communication import Thread
 
 # styles (the window owns their colors)
 TITLE, HEAD, CARD, SEL, TAG, DIM, LIVE, HINT, MODEL, YOU, SAY = (
@@ -20,12 +20,12 @@ TITLE, HEAD, CARD, SEL, TAG, DIM, LIVE, HINT, MODEL, YOU, SAY = (
 Row = list
 
 
-def main_body(nodes: list[graph.Node], sel: int, width: int = 76) -> list[Row]:
+def main_body(nodes: list[tree.Node], sel: int, width: int = 76) -> list[Row]:
     """The resting face of the system: the queue over the work."""
     rows: list[Row] = [[("hypercore", TITLE)], []]
 
     rows.append([("queue", HEAD)])
-    cards = graph.cards(nodes)
+    cards = tree.cards(nodes)
     if not cards:
         rows.append([("  — nothing awaiting you —", DIM)])
     for i, c in enumerate(cards):
@@ -39,7 +39,7 @@ def main_body(nodes: list[graph.Node], sel: int, width: int = 76) -> list[Row]:
 
     rows.append([])
     rows.append([("work", HEAD)])
-    items = graph.work(nodes)
+    items = tree.work(nodes)
     if not items:
         rows.append([("  — no standing work —", DIM)])
     for n in items:
@@ -52,7 +52,7 @@ def main_body(nodes: list[graph.Node], sel: int, width: int = 76) -> list[Row]:
     return rows
 
 
-def _card_label(c: graph.Node) -> str:
+def _card_label(c: tree.Node) -> str:
     """A card's weight, named: a grilling question, a ratification, or a decision."""
     if grill.is_question(c):
         return "question"
@@ -61,7 +61,7 @@ def _card_label(c: graph.Node) -> str:
     return c.kind
 
 
-def _card_detail(c: graph.Node, width: int) -> list[Row]:
+def _card_detail(c: tree.Node, width: int) -> list[Row]:
     """The selected card, opened: a question shows its lean and what would flip it;
     a view entry shows the contract the ratify endorses; a plain card, its commands."""
     if grill.is_question(c):

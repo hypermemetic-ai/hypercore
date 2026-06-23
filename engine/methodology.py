@@ -14,7 +14,7 @@ registry the fold re-renders so a committed artifact can never disagree with its
 
 `depth` renders here exactly like the others (ADR 0019): an imported design discipline is a capability
 like `design-it-twice` (ADR 0007), not a special type, so it dropped its bespoke `depth.py` render and
-joined this one seam. `grilling` and `coherence` were likewise carved out of `conversation` into their
+joined this one seam. `grilling` and `coherence` were likewise carved out of `communication` into their
 own slices (ADR 0013) rather than a requirement-subset render, which would have added a second copy of
 the requirement set to drift. Each is one clean `spec/<cap>.md`; a new skill adds one line.
 """
@@ -23,7 +23,7 @@ from __future__ import annotations
 import functools
 import os
 
-from . import graph, spec
+from . import tree, spec
 
 # Where a methodology skill artifact lands. Two derived locations, one source: the harness-neutral
 # `skills/<cap>/SKILL.md` (the open convention, what a custom harness or a reader expects), and
@@ -43,8 +43,8 @@ METHODOLOGIES = {
         "when designing or judging a load-bearing interface decision.",
     "architecture-review":
         "hypercore's architecture-review methodology — the standing scan that keeps the system deep, "
-        "surfacing god-files-in-the-making by the length signal against the depth-decision record. "
-        "Load when assessing structural depth or reading the deepening backlog.",
+        "surfacing god-files-in-the-making by the length signal against the accepted-length record. "
+        "Load when assessing structural depth or reading the complexity debt.",
     "grilling":
         "hypercore's grilling methodology — turn a filed ask into a ratified contract and spec delta "
         "by resolving what the spec and intent already settle and surfacing only the stake-bearing "
@@ -56,7 +56,7 @@ METHODOLOGIES = {
         "bar, folding on a pass and raising a decision otherwise. Load when integrating or archiving "
         "a worker's result.",
     "depth":
-        "hypercore's depth disciplines — build deep modules (a lot of behavior behind a small "
+        "hypercore's depth standards — build deep modules (a lot of behavior behind a small "
         "interface) and avoid the red flags of shallowness. Load when designing, building, or "
         "refining a module's interface or implementation.",
 }
@@ -88,8 +88,8 @@ def materialize(cap: str, root: str | None = None, skill_dir: str = SKILL_DIR) -
     """Write the `cap` methodology skill to disk and return its path — the render `channels` runs on
     fold so the artifact follows its slice. One skill per call, to one of the mirrored skill
     directories (`skill_dir`); the registry splices a render per (cap, dir) so both stay derived."""
-    path = os.path.join(root or graph._root(), skill_dir, cap, "SKILL.md")
-    graph.atomic_write(path, skill(cap, root))
+    path = os.path.join(root or tree._root(), skill_dir, cap, "SKILL.md")
+    tree.atomic_write(path, skill(cap, root))
     return path
 
 

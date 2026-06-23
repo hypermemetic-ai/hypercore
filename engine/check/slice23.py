@@ -23,7 +23,7 @@ from .harness import LOOP, ok
 
 
 def check(root: str) -> None:
-    from .. import graph, grill, schedule, spec, transport, worker
+    from .. import tree, grill, schedule, spec, transport, worker
 
     print("\nslice 23 — acceptance check  (the OMP worker seam: the worker runs at its fence, "
           "the reference tail pulled JIT)\n")
@@ -32,13 +32,13 @@ def check(root: str) -> None:
 
     # a real ADR in the checkout, carrying a sentinel — the reference tail the worker must NOT inline
     TAIL = "<<ADR-TAIL — long reference, pulled JIT from the checkout, never preloaded into the prompt>>"
-    graph.atomic_write(os.path.join(spec.spec_dir(root), "decisions", "0099-tail.md"),
+    tree.atomic_write(os.path.join(spec.spec_dir(root), "decisions", "0099-tail.md"),
                        f"# 0099 — a long reference ADR\n\n{TAIL}\n")
 
     handed = ("## ADDED — worker\n### Requirement: the worker fences its working directory\n"
               "The worker MUST run at its fence.\n#### Scenario: s\n- WHEN it builds\n- THEN it is fenced\n")
-    ask = graph.file_intent("a change the worker builds at its fence")
-    graph.atomic_write(os.path.join(ask.path, "grilling.md"),
+    ask = tree.file_intent("a change the worker builds at its fence")
+    tree.atomic_write(os.path.join(ask.path, "grilling.md"),
                        grill._render(grill._Pass(0, [], "Build it at the fence.", handed)))
 
     ctx = worker.context(ask, root)
@@ -46,12 +46,12 @@ def check(root: str) -> None:
 
     # GREEN: the whole-picture keystone is intact — the spec is preloaded whole
     allcaps = {c.name for c in spec.read_spec(root).capabilities}
-    ok(set(ctx.names) == allcaps and {"depth", "graph"} <= set(ctx.names),
+    ok(set(ctx.names) == allcaps and {"depth", "tree"} <= set(ctx.names),
        "the worker still holds the whole spec — every capability preloaded (the whole-picture keystone)")
-    ok("### Requirement:" in prompt and "throwaway operator-facing vessel" in prompt,
+    ok("### Requirement:" in prompt and "throwaway conversation" in prompt,
        "the spec capabilities and the glossary stay preloaded whole in the prompt")
-    ok("depth disciplines" in prompt,
-       "the depth disciplines stay foregrounded in the prompt — held every episode")
+    ok("depth standards" in prompt,
+       "the depth standards stay foregrounded in the prompt — held every episode")
 
     # GREEN: the ADR/reference tail is NOT inlined — it is pulled just-in-time from the checkout
     ok(TAIL not in prompt,
@@ -66,9 +66,9 @@ def check(root: str) -> None:
        "RED→GREEN: the pre-fix prompt inlined the ADR tail; the live prompt pulls it JIT instead")
 
     # the worker's live transport binds cwd = the fence — the scaffold §6 asserts without a live model
-    tree = worker.worktree(ask, root)
-    bound = transport.worker_transport(tree)
-    ok(getattr(bound, "cwd", None) == tree,
+    fence = worker.worktree(ask, root)
+    bound = transport.worker_transport(fence)
+    ok(getattr(bound, "cwd", None) == fence,
        "the worker transport binds its working directory to the fence — it runs at its own checkout")
     argv = transport.worker_argv("PROMPT")
     ok(transport.WORKER_CMD in argv and transport.WORKER_MODEL in argv,
@@ -86,7 +86,7 @@ def check(root: str) -> None:
         worker.apply(ask, None, root)                 # transport=None → the live fence-binding path, spied
     finally:
         worker.worker_transport = saved
-    ok(seen.get("cwd") == tree,
+    ok(seen.get("cwd") == fence,
        "apply with no injected transport runs the worker at cwd = its fence (step 5, not faked)")
 
     # the scheduler forwards the live injection point untouched (None) so the worker binds its fence

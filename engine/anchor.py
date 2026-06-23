@@ -34,7 +34,7 @@ from __future__ import annotations
 
 import os
 
-from . import graph
+from . import tree
 
 PATH = "AGENTS.md"
 BRIDGE_PATH = "CLAUDE.md"  # the harness-specific bridge: Claude Code reads this, not AGENTS.md
@@ -76,8 +76,8 @@ def agents_file(root: str | None = None) -> str:
 def materialize(root: str | None = None) -> str:
     """Write the anchor — the fold's render step for this channel (`channels`). Returns the `AGENTS.md`
     path. Idempotent, like every materializer, so even a trivial fold safely keeps it current."""
-    path = os.path.join(root or graph._root(), PATH)
-    graph.atomic_write(path, agents_file(root))
+    path = os.path.join(root or tree._root(), PATH)
+    tree.atomic_write(path, agents_file(root))
     return path
 
 
@@ -98,8 +98,8 @@ def bridge_materialize(root: str | None = None) -> str:
     """Write the `CLAUDE.md` bridge — the channel that lands the anchor where Claude Code actually reads
     it. One more derived render the fold runs, idempotent like the rest, so the import can no more drift
     from the anchor than the anchor can from the spec."""
-    path = os.path.join(root or graph._root(), BRIDGE_PATH)
-    graph.atomic_write(path, bridge(root))
+    path = os.path.join(root or tree._root(), BRIDGE_PATH)
+    tree.atomic_write(path, bridge(root))
     return path
 
 

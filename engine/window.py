@@ -1,5 +1,5 @@
 """The window: the operator's whole world. Keyboard-only, fullscreen,
-high-contrast. A thin paint-and-input layer over the graph and the
+high-contrast. A thin paint-and-input layer over the tree and the
 architect — it holds nothing that isn't about the screen or the
 keyboard. Heavy work (summoning the architect) runs off the input loop
 so keystrokes never block, the rule the old window broke first.
@@ -10,8 +10,8 @@ import curses
 import threading
 from dataclasses import dataclass, field
 
-from . import conversation, graph, grill, render, schedule, transport, view
-from .conversation import Thread
+from . import communication, tree, grill, render, schedule, transport, view
+from .communication import Thread
 
 ESC, ENTER, BACKSPACES = 27, (10, 13, curses.KEY_ENTER), (8, 127, curses.KEY_BACKSPACE)
 SPIN = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
@@ -65,7 +65,7 @@ def _main(scr) -> None:
     sched.start()
     try:
         while True:
-            nodes = graph.read_graph()
+            nodes = tree.read_tree()
             _paint(scr, st, nodes)
             ch = scr.getch()
             if st.pending is not None:
@@ -119,7 +119,7 @@ def _view_keys(st: State, ch: int) -> bool:
 
 
 def _browse(st: State, ch: int, nodes) -> bool:
-    cards = graph.cards(nodes)
+    cards = tree.cards(nodes)
     if ch in (ord("q"),):
         return False
     if ch in (curses.KEY_UP, ord("k")):
@@ -139,17 +139,17 @@ def _browse(st: State, ch: int, nodes) -> bool:
         elif grill.is_question(card):                 # accept the machine's lean
             st.pending = Async(lambda c=card: grill.advance(c, grill.lean_of(c)))
         else:
-            graph.approve(card)
+            tree.approve(card)
         st.sel = 0
     elif cards and ch == ord("c"):
-        graph.cut(cards[st.sel])
+        tree.cut(cards[st.sel])
         st.sel = 0
     elif cards and ch == ord("e"):
         card = cards[st.sel]
         st.mode = "converse"
         st.thread = Thread()
         st.explain_text = None
-        st.pending = Async(lambda: conversation.explain(card))
+        st.pending = Async(lambda: communication.explain(card))
     elif cards and grill.is_question(cards[st.sel]) and 32 <= ch < 127:
         st.mode = "answer"                            # answer the question in its own words
         st.answer_id = cards[st.sel].id
@@ -169,7 +169,7 @@ def _answering(st: State, ch: int) -> bool:
     elif ch in ENTER:
         answer, qid = st.buffer.strip(), st.answer_id
         st.buffer, st.answer_id, st.mode = "", "", "browse"
-        node = graph.find(qid)
+        node = tree.find(qid)
         if answer and node is not None:
             st.pending = Async(lambda: grill.advance(node, answer))
     elif 32 <= ch < 127:
@@ -194,7 +194,7 @@ def _typing(st: State, ch: int) -> bool:
                 st.thread = Thread()
             st.mode = "converse"
             thread = st.thread
-            st.pending = Async(lambda: conversation.speak(thread, text))
+            st.pending = Async(lambda: communication.speak(thread, text))
     elif 32 <= ch < 127:
         st.buffer += chr(ch)
     return True
@@ -202,7 +202,7 @@ def _typing(st: State, ch: int) -> bool:
 
 def _land(st: State, result) -> None:
     """Integrate a finished off-loop call back into the screen."""
-    if isinstance(result, conversation.Reply):
+    if isinstance(result, communication.Reply):
         if result.done:                       # satisfied: the thread closes
             st.mode = "input"
             st.thread = None
@@ -210,7 +210,7 @@ def _land(st: State, result) -> None:
             st.mode = "converse"
     elif isinstance(result, str):             # an explain story
         st.explain_text = result
-    elif isinstance(result, graph.Node):      # a grilling step; the re-read shows it
+    elif isinstance(result, tree.Node):      # a grilling step; the re-read shows it
         pass
     elif isinstance(result, Exception):       # an error becomes a visible reply
         if st.thread:
