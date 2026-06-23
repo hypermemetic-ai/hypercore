@@ -8,11 +8,13 @@ god-module the binding-contest's watched trigger named: the verb vocabulary is s
 capability seam *before* it forms, never after.
 
 `for_capability` is the one seam the core reaches the worlds through: it lazily imports
-`engine.worlds.<capability>` (hyphens→underscores) and returns its `World`. The import is lazy so a
-new world never risks an import cycle at load and the core depends on no world by name. A capability
-with no world module yet resolves to the bare `World`, whose every verb is unknown — a check block
-cannot run without the world that gives its verbs meaning, so an unmigrated capability fails honestly
-rather than passing on an empty fixture.
+`engine.worlds.<capability>_world` (hyphens→underscores) and returns its `World`. The import is lazy
+so a new world never risks an import cycle at load and the core depends on no world by name. The
+`_world` suffix keeps a world's basename distinct from the engine module it fronts (the worker world
+is `worker_world`, not `worker`), so the standing review's structural scan never conflates the two. A
+capability with no world module yet resolves to the bare `World`, whose every verb is unknown — a
+check block cannot run without the world that gives its verbs meaning, so an unmigrated capability
+fails honestly rather than passing on an empty fixture.
 """
 from __future__ import annotations
 
@@ -26,18 +28,25 @@ class World:
     its fixture in `__init__` and provides the `_v_*` methods its scenarios name."""
 
     def do(self, verb: str, args: list[str]) -> tuple[bool, str]:
-        m = getattr(self, f"_v_{verb}", None)
+        m = getattr(self, f"_v_{verb.replace('-', '_')}", None)  # a hyphenated domain verb reads as one word
         return m(args) if m else (False, f"unknown scenario verb {verb!r}")
 
     def teardown(self) -> None:
         pass
 
 
+def scripted(reply: str):
+    """A single-shot model stand-in: return this reply whatever the prompt — so a world drives the
+    real worker and architect over the real engine seams without an LLM, the way the harness's
+    `scripted` does. The fixture's determinism, not the model's, is what makes the assertion sharp."""
+    return lambda _prompt: reply
+
+
 def for_capability(capability: str) -> World:
     """The World for a capability — its fixture module lazily imported and instantiated, or the bare
     base when none is registered yet. `find_spec` distinguishes "no world module" (return the base)
     from a real import error inside a world (let it raise, surfacing as a red, not a silent pass)."""
-    name = capability.replace("-", "_")
+    name = capability.replace("-", "_") + "_world"
     if importlib.util.find_spec(f".{name}", __package__) is None:
         return World()
     return importlib.import_module(f".{name}", __package__).World()

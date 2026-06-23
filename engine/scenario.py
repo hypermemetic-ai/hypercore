@@ -11,7 +11,7 @@ from the behavior, because the description is the test. *(design-decision: `bind
 
 The verbs name domain nouns, never engine symbols or paths-into-the-code, so a worker rewriting the
 engine has nothing in the scenario to tamper with to pass. The per-capability vocabularies and the
-fixtures they drive live in `engine/worlds/` — **one module per capability** (`folding_conditions`'s
+fixtures they drive live in `engine/worlds/` — **one module per capability** (folding-conditions'
 `grow` / `accept` / `gate` / `spec` drive the real `conditions` gate over a planted fixture) — so no
 single file carries every capability's verbs, and the vocabulary extends one verb at a time as each
 migrating capability first needs it (`spec/depth.md`'s locality discipline), never pre-built. This

@@ -16,6 +16,11 @@ its first block lands. It asserts three things:
    the fork base (red) and the tip (green), trusting exit codes — and refuses a tip that is not green.
    This is the gate the worker's self-authored loop is replaced by; it cannot certify itself from
    inside a fold, so the harness exercises it here, from outside.
+
+A migrated capability may also carry **watched** invariants the closed scenario vocabulary cannot
+honestly express — a retired constant, a scaffold the live model would otherwise verify, a structural
+fact. Those are exercised here from outside (never a faked in-spec block), grouped by capability: the
+gate red→green above is folding-conditions'; the worker section below is the worker's.
 """
 from __future__ import annotations
 
@@ -26,7 +31,7 @@ import subprocess
 import tempfile
 
 from .harness import ok
-from .. import scenario, spec, tree, worker
+from .. import scenario, schedule, spec, transport, tree, worker
 
 REAL = tree._DEFAULT_ROOT                                  # hypercore's own source tree — the spec under test
 
@@ -71,6 +76,17 @@ def check(root: str) -> None:
            "a tip whose scenarios are not green is refused — narration is never the gate, the exit code is")
     finally:
         _drop(held)
+
+    # 3. worker — structural/scaffold invariants the closed scenario vocabulary cannot honestly express
+    #    (a retired constant, the model the worker targets, the scheduler's injection point): watched,
+    #    exercised here from outside, never faked. The worker's behavior is gated in spec/worker.md.
+    ok(not hasattr(worker, "DEPTH"),
+       "worker — the frozen DEPTH constant is retired; the depth standards are single-sourced from spec/depth.md")
+    argv = transport.worker_argv("PROMPT")
+    ok(transport.WORKER_CMD in argv and transport.WORKER_MODEL in argv,
+       "worker — the harness binary and model are named in one place, bound at the fence (the OMP/GPT flip point)")
+    ok(schedule.Scheduler().transport is None,
+       "worker — the scheduler forwards the live worker injection point untouched, so the worker binds its own fence")
 
 
 # ── a fence with a real engine at two commits: the base and tip differ only in the length signal ──

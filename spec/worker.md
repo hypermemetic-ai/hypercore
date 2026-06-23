@@ -17,6 +17,11 @@ operator-facing word from the result.
 - THEN none of that prose appears on any card, render, or node; only what the
   architect authors from it crosses to the operator
 
+  ```check
+  build
+  leak none
+  ```
+
 ### Requirement: a worker is grounded in its capability's spec slice, by construction
 A worker MUST be handed the living spec with the capabilities its change touches marked as
 its grounding — their requirements and scenarios foregrounded — AND the rest of the spec
@@ -40,10 +45,27 @@ or missed.
   just-in-time grep, and its prompt foregrounds the
   grounding while keeping the full scan
 
+  ```check
+  plant-grounds
+  spawn worker communication
+  grounding marks worker communication
+  grounding whole-spec
+  grounding carries-spec
+  grounding holds-no-code
+  grounding omits-grounds
+  grounding points-to-archive
+  ```
+
 #### Scenario: the rescan catches a mis-mapping
 - WHEN a handed delta names a capability the change does not touch, or omits one it does
 - THEN the worker's context still holds the whole spec, so its rescan can catch the
   mis-mapping rather than trust the delta's list — which a slice-confined worker could not
+
+  ```check
+  spawn tree
+  grounding marks tree
+  grounding whole-spec
+  ```
 
 ### Requirement: a worker is grounded in the depth standards, every episode
 A worker MUST be handed the **depth standards** as standing grounding in every episode — the
@@ -68,10 +90,21 @@ is derived from the model and only the vision is authored.
 - THEN its prompt carries the deep-module framework and the red flags, foregrounded as
   disciplines it is held to, so it builds deep up front
 
+  ```check
+  spawn worker
+  grounding carries-depth
+  ```
+
 #### Scenario: the disciplines are derived from their source
 - WHEN the depth capability (`spec/depth.md`) is sharpened
 - THEN the next worker's depth grounding renders the change with nothing hand-copied, and the
   retired frozen constant cannot drift from the source because it no longer exists
+
+  ```check
+  spawn worker
+  sharpen
+  grounding renders
+  ```
 
 ### Requirement: a worker runs fenced in its own git worktree
 A worker MUST run in its own git worktree — a separate checkout on its own branch, fenced
@@ -87,10 +120,18 @@ checkout, and the harness auto-loads the fence's anchor and discovers its skills
 - THEN it gets a worktree distinct from the main tree, commits its result there on its own
   branch, and that commit is reachable in the record but absent from the main line
 
+  ```check
+  fence off-main
+  ```
+
 #### Scenario: the worker runs at its fence
 - WHEN a worker's model is summoned to build
 - THEN its transport runs with the worktree as its working directory, so it reads the archived
   grounds and its channel files from its own checkout rather than from an inlined prompt
+
+  ```check
+  fence binds-cwd
+  ```
 
 ### Requirement: concurrent workers advance the tree in isolation, each folding its own delta
 The fence MUST compose: several workers MAY hold distinct worktrees at once, each building and
@@ -119,3 +160,8 @@ is propose (architect) → apply (worker) → archive (architect), one delta end
 - THEN the delta folds into the spec — only when the touched capability's scenarios went red→green —
   and the work leaves the work view in the same act; an incoherent result, or a scenario that did not
   transition, raises a decision instead of folding
+
+  ```check
+  build
+  integrates
+  ```

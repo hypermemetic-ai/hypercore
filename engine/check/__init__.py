@@ -18,17 +18,18 @@ import subprocess
 import tempfile
 
 # Capability scenarios + the remaining by-slice checks. Migrated capabilities run off their own
-# executable scenarios (`scenarios`), not a slice: folding-conditions left slices 5/7/9/20/21 (5 and
-# 20 wholly its own, now gone) and coherence left slice 21 (wholly its own, now gone). 7/9 keep only
-# their other-capability checks. The gaps mark the migration; each remaining capability dissolves its
-# slice content the same way as it migrates, until no slice file is left.
-from . import (harness, scenarios, slice1, slice2, slice3, slice4, slice6, slice7, slice8,
-               slice9, slice10, slice11, slice12, slice13, slice14, slice15, slice16, slice17,
-               slice18, slice19, slice22, slice23)
+# executable scenarios (`scenarios`), not a slice: folding-conditions left slices 5/7/9/20/21,
+# coherence left slice 21, and worker left slices 4/7/10/23 — so 4/5/10/20/21/23 (wholly migrated) are
+# gone and slice 7 has shrunk to its architecture-review half. 9 keeps only its other-capability
+# checks. The gaps mark the migration; each remaining capability dissolves its slice content the same
+# way as it migrates, until no slice file is left.
+from . import (harness, scenarios, slice1, slice2, slice3, slice6, slice7, slice8,
+               slice9, slice11, slice12, slice13, slice14, slice15, slice16, slice17,
+               slice18, slice19, slice22)
 
-SLICES = (slice1, slice2, slice3, slice4, slice6, slice7, slice8, slice9, slice10,
+SLICES = (slice1, slice2, slice3, slice6, slice7, slice8, slice9,
           slice11, slice12, slice13, slice14, slice15, slice16, slice17, slice18, slice19,
-          slice22, slice23, scenarios)
+          slice22, scenarios)
 
 
 def run() -> int:

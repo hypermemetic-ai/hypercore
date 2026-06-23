@@ -1,15 +1,14 @@
-"""Slice 7 — the architecture re-grounded in depth (Ousterhout): the worker grounding and the review.
+"""Slice 7 — the architecture re-grounded in depth (Ousterhout): the standing review's depth lens.
 
-The gate, the length signal, and the accepted-length record this slice once also drove have migrated
-to `folding-conditions`' own executable scenarios (`engine/check/scenarios.py`,
-`spec/folding-conditions.md`). What stays here is the re-grounding's other-capability surface, untouched
-by that migration:
+This slice's worker-grounding half — the deep-module framework and the red flags in the worker's
+prompt by construction — has migrated to `worker`'s own executable scenarios (`spec/worker.md`,
+`engine/worlds/worker.py`); the gate / length-signal / accepted-length content migrated earlier to
+`folding-conditions`. What stays here is the `architecture-review` surface, until that capability
+migrates:
 
-1. **the worker is grounded in the depth standards every episode** — the deep-module framework and the
-   red flags are in its prompt by construction (the proactive defense, a `worker` concern);
-2. **the operator reads depth, not merely length** — the standing review renders length as a labeled
-   context-cost signal and records the deeper model-driven red-flag scan as not-yet-built, honestly (an
-   `architecture-review` concern).
+- **the operator reads DEPTH, not merely length** — the standing review renders length as a labeled
+  context-cost signal and records the deeper model-driven red-flag scan as not-yet-built, honestly (an
+  `architecture-review` concern; the F1 honest self-record, never a fabricated verdict).
 """
 from __future__ import annotations
 
@@ -17,27 +16,11 @@ from .harness import ok
 
 
 def check(root: str) -> None:
-    from .. import tree, review, worker
+    from .. import review, tree
 
-    print("\nslice 7 — acceptance check  (the depth re-grounding: worker grounding + the review)\n")
+    print("\nslice 7 — acceptance check  (the depth re-grounding: the standing review's depth lens)\n")
 
-    def staged(text: str) -> tree.Node:
-        ask = tree.file_intent(text)
-        tree.approve(tree.raise_card("contract.", kind="decide", parent=ask.id))
-        worker.worktree(ask, root)
-        tree.dispatch(ask)
-        return ask
-
-    # 1. the worker is grounded in the depth standards EVERY episode — the proactive defense: the
-    # deep-module framework and the red flags are in its prompt by construction, so it builds deep up
-    # front and the gate stays a rarely-tripped backstop.
-    ask = staged("any worker episode")
-    text = worker.prompt(ask, worker.context(ask, root))
-    ok(all(s in text for s in ("deep modules", "downward", "strategic", "red flags", "shallow module")),
-       "the worker's prompt carries the deep-module framework and the red flags by construction")
-    worker.teardown(ask, root)
-
-    # 2. the operator reads DEPTH, not merely length: the review renders length as a labeled
+    # the operator reads DEPTH, not merely length: the review renders length as a labeled
     # context-cost signal and records the deeper model-driven red-flag scan as not-yet-built —
     # the honest self-record (F1), not a fabricated verdict.
     rv = review.review(tree._DEFAULT_ROOT)

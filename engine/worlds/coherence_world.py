@@ -18,17 +18,11 @@ import tempfile
 
 from .. import communication, spec, tree, worker
 from ..scenario import _git                                 # the worlds share the core's git helper
-from . import World as _Base
+from . import World as _Base, scripted
 
 _REAL = tree._DEFAULT_ROOT                                  # the real spec, seeded so the worker assembles as in production
 _CAP = "demo-coherence"                                     # a throwaway capability, absent from the real spec, carrying no scenarios
 _REQ = "the archived result is judged at the operator's altitude"
-
-
-def _scripted(reply: str):
-    """A single-shot model stand-in: hand back this reply whatever the prompt — so the world drives
-    the real worker and architect without an LLM, the way the harness's `scripted` does."""
-    return lambda _prompt: reply
 
 
 class World(_Base):
@@ -60,9 +54,9 @@ class World(_Base):
         self.node = tree.file_intent("a worker hands a result back")
         worker.worktree(self.node, self.root)
         tree.dispatch(self.node)
-        result = worker.apply(self.node, _scripted(json.dumps(
+        result = worker.apply(self.node, scripted(json.dumps(
             {"report": "did the work — machine-facing", "delta": self._delta()})), self.root)
-        self.reply = communication.integrate(self.node, result, _scripted(json.dumps(
+        self.reply = communication.integrate(self.node, result, scripted(json.dumps(
             {"coherent": coherent,
              "say": "it landed." if coherent else "this doesn't honor the contract.",
              "card": None if coherent else
