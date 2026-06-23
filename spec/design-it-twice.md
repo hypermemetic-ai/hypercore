@@ -24,6 +24,13 @@ place" is the second entry.
 - THEN N candidates are produced, each in its own fence, each committing its design on its own
   branch, none touching a sibling's tree or the main line
 
+  ```check
+  contest 2
+  candidates 2
+  branch each
+  off-main DESIGN.md
+  ```
+
 ### Requirement: candidates design, they do not implement
 A candidate MUST produce an interface **design** — the interface, what it hides, where the seam
 falls, and the deletion-test argument for its depth — not a built-out implementation. Depth,
@@ -35,6 +42,11 @@ worker apply.
 - WHEN a candidate runs under its brief
 - THEN it produces the interface, what it hides, the seam, and the depth argument, and no
   implementation is required for the comparison
+
+  ```check
+  contest 2
+  design complete
+  ```
 
 ### Requirement: the architect selects machine-side and records the design decision
 The architect MUST compare the candidates on **depth, locality, and seam placement**, pick one
@@ -50,6 +62,14 @@ fences and the recorded design decision — never on a card.
 - THEN the pick is recorded as a structured design decision, no card reaches the operator,
   and no raw candidate design reaches a card, render, or node
 
+  ```check
+  twice nostake
+  recorded
+  card none
+  no-leak
+  scratch torn-down
+  ```
+
 ### Requirement: a stake-bearing difference re-enters grilling
 WHEN the comparison reveals a difference the operator has a stake in — operator-visible
 behavior, hard to reverse, or real cost — the architect MUST raise it as a decision card
@@ -61,3 +81,10 @@ behavioral difference crosses to the operator.
 - WHEN the architect's comparison finds a stake-bearing difference between candidates
 - THEN a decision card carrying the authored stake is raised on the queue, parented to the node,
   and the raw candidate designs do not cross to the operator
+
+  ```check
+  twice stake
+  card decide
+  stake-crosses
+  no-leak
+  ```

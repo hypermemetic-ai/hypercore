@@ -1,19 +1,18 @@
-"""Slice 8 — parallelism re-grounded: design-it-twice, the judgment use of the fence.
+"""Slice 8 — residue: the concurrent-isolation half, awaiting the concurrency seam's one home.
 
-Acceptance (spec §9.8): concurrent workers advance one tree in isolation and each folds its
-delta; and a load-bearing interface decision can be designed twice in parallel and compared.
-This check drives both over the real tree, real fences, and a real node-record write,
-deterministically with scripted transports — pinning the four properties that define the judgment use:
+The design-it-twice half of this slice — the contest, candidates-design-not-implement, the
+machine-side selection and recorded pick, and a stake-bearing difference re-entering grilling — has
+migrated to `design-it-twice`'s own executable scenarios (`spec/design-it-twice.md`,
+`engine/worlds/design_it_twice_world.py`). The selection-prompt-names-the-three-axes invariant is a
+watched check in `engine/check/scenarios.py`.
 
-1. **concurrent isolation composes** — two workers hold two distinct fences at once, neither's
-   material reaches the main line, and each folds its own delta into the one spec;
-2. **the decision is designed twice, isolated** — a candidate per brief, each in its own fence,
-   each design fenced from its siblings and the main line;
-3. **the selection is machine-side** — the architect picks/hybridizes on depth/locality/seam and
-   records a structured design-decision on the contest node; with no stake it raises no operator card,
-   and the raw candidate designs reach no card or render beyond that node record;
-4. **a stake-bearing difference re-enters grilling** — it raises a decision card parented to the
-   node (the standing-guard floor, §5.1), carrying only the architect-authored stake.
+What stays is assertion #1: **concurrent workers advance one tree in isolation, each folding its own
+delta**. This is not design-it-twice's own behavior — it is the cross-cutting single-writer-line proof,
+the same promise described in `spec/worker.md` ("concurrent workers advance the tree in isolation") and
+`spec/schedule.md` ("work runs concurrently on one record") and proved again in slice 17. It stays
+by-slice until that concurrency proof is given one executable home (the open seam decision), at which
+point this file dissolves like the others. Driven over the real tree, real fences, and a real
+node-record write, deterministically with scripted transports.
 """
 from __future__ import annotations
 
@@ -25,9 +24,9 @@ from .harness import ok, scripted
 
 
 def check(root: str) -> None:
-    from .. import communication, design, tree, render, spec, worker
+    from .. import communication, tree, spec, worker
 
-    print("\nslice 8 — acceptance check  (parallelism re-grounded: design-it-twice)\n")
+    print("\nslice 8 — acceptance check  (residue: concurrent isolation, each worker folds its delta)\n")
 
     coherent = lambda: scripted(json.dumps({"coherent": True, "say": "it landed.", "card": None}))
 
@@ -51,7 +50,7 @@ def check(root: str) -> None:
         return subprocess.run(["git", "log", "--oneline", branch], cwd=root,
                               capture_output=True, text=True).stdout
 
-    # ── 1. concurrent workers advance one tree in isolation, each folding its delta ──
+    # ── concurrent workers advance one tree in isolation, each folding its delta ──
     a = staged("concurrent work A", "alpha", root)
     b = staged("concurrent work B", "beta", root)
     ta, tb = worker._tree_path(a, root), worker._tree_path(b, root)
@@ -73,87 +72,3 @@ def check(root: str) -> None:
        "each worker folds its own delta into the one spec — concurrent advance, no interference")
     worker.teardown(a, root)
     worker.teardown(b, root)
-
-    # ── 2. a load-bearing interface decision is designed twice, in isolation ──
-    briefs = [("minimal", "Minimize the interface; pull complexity down inside."),
-              ("flexible", "Maximize flexibility; make future variation cheap.")]
-
-    def design_json(brief: str, hides: str) -> str:
-        return json.dumps({"interface": f"{brief}: one entry over the hidden work",
-                           "hides": hides, "seam": f"the {brief} seam, where the model varies",
-                           "depth": "deleting it scatters the work across callers — it earns its keep"})
-
-    dec = tree.file_intent("the shape of the candidate-comparison interface")
-    cands = design.contest(dec, briefs, scripted(
-        design_json("minimal", "the parallel fences"),
-        design_json("flexible", "a pluggable comparison")), root)
-    ok(len(cands) == 2 and cands[0].brief == "minimal" and cands[1].brief == "flexible",
-       "the decision is designed twice — one candidate per brief")
-    ok(cands[0].worktree != cands[1].worktree and all(os.path.isdir(c.worktree) for c in cands),
-       "each candidate designs in its own fence — distinct, isolated worktrees coexisting")
-    for c in cands:
-        ok(f"candidate: {c.brief}" in log(f"worker/{dec.id}-{c.brief}"),
-           f"the {c.brief} candidate's design commit is on its own branch")
-    off_main = subprocess.run(["git", "cat-file", "-e", "HEAD:DESIGN.md"], cwd=root,
-                              capture_output=True, text=True).returncode
-    ok(off_main != 0, "the candidate designs are fenced from the main line")
-
-    # the architect compares on depth/locality/seam — by construction in its selection prompt
-    ok(all(ax in design._select_prompt(dec, cands) for ax in ("DEPTH", "LOCALITY", "SEAM PLACEMENT")),
-       "the architect compares candidates on depth, locality, and seam placement by construction")
-    for c in cands:
-        worker.teardown(dec, root, tag=c.brief)
-
-    # the selection is machine-side: a pick, recorded as a structured design-decision on the node
-    sel = design.select(dec, cands, scripted(json.dumps({
-        "chosen": "minimal", "hybrid": False,
-        "reasoning": "minimal is deepest — the most behind the smallest interface; locality holds",
-        "comparison": {"minimal": "deepest", "flexible": "wider surface for unproven variation"},
-        "stake": None})))
-    ok(sel.chosen == "minimal" and not sel.stake, "the architect picks machine-side, no stake")
-    rec = design.record(dec, sel, root)
-    text = open(rec).read()
-    ok("design-decision:" in text and "→ minimal" in text and "[machine]" in text,
-       "the pick is recorded as a structured design-decision on the node — the machine-side home")
-
-    # ── 3. machine-side end to end: no stake → no operator card; raw designs do not leak ──
-    SENTINEL = "<<RAW CANDIDATE DESIGN — machine-side only>>"
-    dec2 = tree.file_intent("another load-bearing interface")
-    before = len(tree.cards())
-    sel2 = design.design_twice(dec2, briefs, scripted(
-        design_json("minimal", SENTINEL),
-        design_json("flexible", "the other shape"),
-        json.dumps({"chosen": "hybrid", "hybrid": True,
-                    "reasoning": "a hybrid is deepest across depth, locality, and seam",
-                    "comparison": {"minimal": "deep", "flexible": "flexible"}, "stake": None})), root)
-    ok(sel2.card is None and len(tree.cards()) == before,
-       "no stake-bearing difference → no operator card; the pick stays machine-side")
-    ok(not any(os.path.isdir(worker._tree_path(dec2, root, tag=b)) for b, _ in briefs),
-       "the candidate fences are scratch — torn down once the pick is recorded")
-
-    frame = "".join(t for row in render.main_body(tree.read_tree(), -1) for t, _s in row)
-    nodefiles = ""
-    for top in ("work",):                                    # tree nodes only — not the scratch fence
-        for dp, dirs, fs in os.walk(os.path.join(root, top)):
-            if "worktrees" in dirs:
-                dirs.remove("worktrees")
-            nodefiles += "".join(open(os.path.join(dp, fn)).read()
-                                 for fn in fs if fn in ("intent.md", "grilling.md"))
-    cards_text = "".join(c.text for c in tree.read_tree())
-    ok(SENTINEL not in frame and SENTINEL not in nodefiles and SENTINEL not in cards_text,
-       "the raw candidate designs reach no card, render, or node — only the machine-side record")
-
-    # ── 4. a stake-bearing difference re-enters grilling (the standing-guard floor, §5.1) ──
-    STAKE = "the two shapes differ in whether a re-opened contest is visible to you — your call"
-    dec3 = tree.file_intent("an interface whose shapes differ behaviorally")
-    sel3 = design.design_twice(dec3, briefs, scripted(
-        design_json("minimal", SENTINEL),
-        design_json("flexible", "the other shape"),
-        json.dumps({"chosen": "flexible", "hybrid": False,
-                    "reasoning": "flexible wins, but the shapes differ where you have a stake",
-                    "comparison": {"minimal": "deep", "flexible": "deeper here"},
-                    "stake": STAKE})), root)
-    ok(sel3.card is not None and sel3.card.kind == "decide" and sel3.card.parent == dec3.id,
-       "a stake-bearing difference re-enters grilling — a decision card parented to the node")
-    ok(STAKE in sel3.card.text and SENTINEL not in sel3.card.text,
-       "only the architect-authored stake crosses to the operator — never the raw candidate designs")

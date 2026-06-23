@@ -31,7 +31,7 @@ import subprocess
 import tempfile
 
 from .harness import ok
-from .. import review, scenario, schedule, spec, transport, tree, worker
+from .. import design, review, scenario, schedule, spec, transport, tree, worker
 
 REAL = tree._DEFAULT_ROOT                                  # hypercore's own source tree — the spec under test
 
@@ -48,7 +48,7 @@ def check(root: str) -> None:
     #    READ OFF the blocks — derived, never hand-tended. The set of migrated capabilities is the set
     #    whose spec carries a block, read live, so a newly migrated capability appears here with no edit.
     migrated = [c.name for c in spec.read_spec(REAL).capabilities if scenario.checks(c.name, REAL)]
-    ok({"folding-conditions", "coherence", "worker", "architecture-review"} <= set(migrated),
+    ok({"folding-conditions", "coherence", "worker", "architecture-review", "design-it-twice"} <= set(migrated),
        f"the migrated capabilities carry their executable scenarios ({', '.join(migrated)})")
     for cap in migrated:
         for o in scenario.run(cap, REAL):
@@ -99,6 +99,13 @@ def check(root: str) -> None:
     flags = review.red_flags(REAL)
     ok(not flags, "architecture-review — the real engine tree carries no mechanical red flags"
        + (f" (found: {[f.subject for f in flags]})" if flags else " (dead symbols, circular imports)"))
+
+    # 5. design-it-twice — the architect's selection prompt names the three comparison axes by
+    #    construction (a prompt-construction fact no domain verb can honestly express without naming the
+    #    prompt; cf. the worker prompt invariants). The contest behavior is gated in
+    #    spec/design-it-twice.md.
+    ok(all(ax in design.SELECT for ax in ("DEPTH", "LOCALITY", "SEAM PLACEMENT")),
+       "design-it-twice — the selection prompt compares candidates on depth, locality, and seam placement")
 
 
 # ── a fence with a real engine at two commits: the base and tip differ only in the length signal ──
