@@ -24,6 +24,14 @@ bound to a piece of work; durability lands on the tree.
 - THEN the work is on the tree, and reopening the system shows that work and no
   resumed thread; no thread is persisted anywhere
 
+  ```check
+  speak file
+  closes
+  on-tree
+  reopens
+  no-resume
+  ```
+
 ### Requirement: the architect is the single operator-facing voice
 Every word that crosses to the operator MUST come from the architect. It
 reads the operator's words, decides what they are, and lands exactly one concrete
@@ -33,6 +41,15 @@ consequence: filed intent, a card returned to the queue, or an answer.
 - WHEN the operator speaks
 - THEN the architect either files intent as standing work, raises a card on
   the queue, or answers the question — one concrete, findable consequence per turn
+
+  ```check
+  speak file
+  filed
+  speak card
+  carded
+  speak answer
+  answered
+  ```
 
 ### Requirement: the operator's act never makes them wait
 A turn MUST be summoned off the input loop so the interface stays live while the
@@ -52,6 +69,12 @@ operator at all, so this is a path that does not exist rather than a rule to kee
 - WHEN a worker produces a technical result carrying raw, machine-facing prose
 - THEN the architect authors the operator-facing words from it, and none of the
   raw prose appears on any card, render, or node
+
+  ```check
+  hand-back
+  authored
+  no-raw-leak
+  ```
 
 ### Requirement: the architect selects among design-it-twice candidates
 For a load-bearing interface designed twice (`design-it-twice`), the architect MUST compare the

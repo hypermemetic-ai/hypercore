@@ -49,7 +49,7 @@ def check(root: str) -> None:
     #    READ OFF the blocks — derived, never hand-tended. The set of migrated capabilities is the set
     #    whose spec carries a block, read live, so a newly migrated capability appears here with no edit.
     migrated = [c.name for c in spec.read_spec(REAL).capabilities if scenario.checks(c.name, REAL)]
-    ok({"folding-conditions", "coherence", "worker", "architecture-review", "design-it-twice", "grilling", "schedule", "self-model"} <= set(migrated),
+    ok({"folding-conditions", "coherence", "worker", "architecture-review", "design-it-twice", "grilling", "schedule", "self-model", "communication"} <= set(migrated),
        f"the migrated capabilities carry their executable scenarios ({', '.join(migrated)})")
     for cap in migrated:
         for o in scenario.run(cap, REAL):
@@ -117,6 +117,18 @@ def check(root: str) -> None:
     #    record itself. (Homing the single-writer-line proof here was the recorded concurrency-home
     #    decision; it dissolved the by-slice residue that carried it.)
     _schedule_invariants()
+
+    # 7. communication — the glossary's shared vocabulary: a self-model content fact no scenario verb
+    #    can express. The operator-facing channel's central noun (`thread`) is defined as the throwaway
+    #    conversation, and the open `operator view` naming question is flagged honestly rather than
+    #    silently settled. communication's *behavior* — the thread, the single voice, the no-raw-leak
+    #    archive — is gated in spec/communication.md; the glossary's *content* is watched here. (Homing
+    #    it dissolved the slice-2 residue that carried it.)
+    glossary = spec.read_spec(REAL).glossary
+    ok("throwaway conversation" in glossary,
+       "communication — the glossary defines thread as the operator's throwaway conversation")
+    ok("Open question: the name" in glossary,
+       "communication — the glossary flags the open 'operator view' naming question, not silently settled")
 
 
 # ── the schedule single-writer-line and failure-recovery invariants, exercised from outside ──

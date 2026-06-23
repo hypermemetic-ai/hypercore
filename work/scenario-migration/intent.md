@@ -29,15 +29,20 @@ Each capability's migration, named:
 - **design-it-twice** — slice 8 → `spec/design-it-twice.md` scenarios (the contest, the recorded pick).
 - **schedule** — slices 16 / 18 → `spec/schedule.md` scenarios (the ready-work loop, failure recovery);
   took the cross-cutting single-writer-line proof (slice 8 residue, slice 17) home with it.
-- **communication / channels / interface** — slices 1 / 2 / 11 / 12 / 13 / 22 → their own scenarios
-  (the architect's one voice, the derived channels, the conformance gate).
+- **communication** — slice 1's window half + slice 2's glossary residue → `spec/communication.md`
+  scenarios (the thread, the architect's single voice, the three consequences, the no-raw-leak archive);
+  *the operator's act never makes them wait* stays watched (the window's off-input-loop threading), and
+  *the architect selects design-it-twice candidates* stays watched here because its gate already lives
+  in `design-it-twice`'s own scenarios — three gated, two watched.
+- **queue / interface / channels** — slices 1(residue) / 3(residue) / 11 / 12 / 13 / 14 / 22 → their own
+  scenarios (the settle path and card-kind, the pure-frame window, the derived channels, the gate).
 
 Each migration extends the `scenario` verb vocabulary **only as its first scenario needs it** (the
 locality discipline, `spec/depth.md`) — never pre-built — and dissolves that capability's by-slice
 content the same way folding-conditions did (the slice files shrink to their other-capability content,
 then disappear; the gaps in the slice numbering mark where the migration has reached — **done so far:
 folding-conditions, coherence, worker, architecture-review, design-it-twice, grilling, schedule,
-self-model**, leaving slices 1 / 2(residue) / 3(residue) / 11–14 / 22). Done when no
+self-model, communication**, leaving slices 1(residue) / 3(residue) / 11–14 / 22). Done when no
 `engine/check/sliceN.py` remains and `python3 -m engine --check` runs entirely off capability scenarios.
 
 The migration surfaced that the remaining slices are not clean per-capability — three cross-cutting
@@ -55,12 +60,22 @@ seams run through them, each needing one home before the capabilities they touch
 - **methodology / channels** (slice 14, the grilling+coherence skill render) — migrates with the
   communication/channels/interface group.
 
-The slice-2 split is done: self-model took its behaviors (the delta, the fold, the view); slice 2
-survives as a thin residue — the glossary's content (`thread`, the open *operator view* naming
-question), the communication group's concern, kept by-slice until that group migrates.
+The slice-2 split is complete: self-model took its behaviors (the delta, the fold, the view), and the
+communication migration took the rest — the glossary's content (`thread`, the open *operator view*
+naming question) now homes as communication's watched invariant in `engine/check/scenarios.py`, so
+slice 2 is gone. Slice 1 split the same way: communication took its window half (the thread, the single
+voice, the three consequences, the no-raw-leak archive); slice 1 survives as a thin residue — the
+queue's settle path (approve/cut/explain), the interface's pure-frame render, and the durable record —
+kept by-slice until queue and interface migrate. (Deleting slice 2 also retired a hidden fixture
+coupling: slice 14 had read its carve from the spec slice 2 seeded into the shared root; it now
+self-seeds the real spec the way slice 22 does.)
 
-What remains is the **communication / channels / interface** group — slices 1 / 2(residue) / 11 / 12 /
-13 / 22, plus the two parked cross-cutting residues (card-kind in slice 3, the methodology/skill render
-in slice 14). That group is the last of the by-slice harness.
+What remains is the **queue / interface / channels** group — slices 1(residue) / 3(residue) / 11 / 12 /
+13 / 14 / 22: the queue's settle path and card-kind, the interface's window, and the channels mechanism
+(the materialize-on-fold registry, the anchor, the methodology skill render, the conformance gate). One
+open decision that group must settle first: the channels mechanism has **no `spec/channels.md`** of its
+own — it is referenced as a mechanism across worker/self-model/folding-conditions but never given its
+own capability requirements — so where its slices (11–14, 22) home is the next stake-bearing call, the
+way the concurrency-home decision was for schedule. That group is the last of the by-slice harness.
 
 Provenance: `work/archive/scenario-gate/` (the binding contest and the contract this realizes).

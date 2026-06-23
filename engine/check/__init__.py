@@ -21,16 +21,17 @@ import tempfile
 # executable scenarios (`scenarios`), not a slice: folding-conditions left slices 5/7/9/20/21,
 # coherence left slice 21, worker left slices 4/7/10/23, architecture-review left slices 6/7/9/15,
 # schedule left slices 16/18 (and took the cross-cutting single-writer-line proof — slice 8's residue,
-# slice 17 — home with it), and self-model left slice 19 and the self-model half of slice 2 (the delta,
-# the transactional fold, the operator view), the behaviors gated in spec/self-model.md. So each
-# wholly-migrated slice file is gone (4/5/6/7/8/9/10/15/16/17/18/19/20/21/23); slice 2 survives as a
-# thin residue — the glossary's content, the communication group's. The gaps in the numbering mark the
-# migration; each remaining capability dissolves its slice content the same way as it migrates, until
-# no slice file is left and `--check` runs entirely off capability scenarios.
-from . import (harness, scenarios, slice1, slice2, slice3,
+# slice 17 — home with it), self-model left slice 19 and the self-model half of slice 2 (the delta, the
+# transactional fold, the operator view), and communication left slice 1's window half (the thread, the
+# single voice, the three consequences, the no-raw-leak archive) and slice 2's glossary residue. So each
+# wholly-migrated slice file is gone (2/4/5/6/7/8/9/10/15/16/17/18/19/20/21/23); slice 1 survives as a
+# thin residue — the queue's settle path and the interface's render, awaiting those migrations. The gaps
+# in the numbering mark the migration; each remaining capability dissolves its slice content the same
+# way as it migrates, until no slice file is left and `--check` runs entirely off capability scenarios.
+from . import (harness, scenarios, slice1, slice3,
                slice11, slice12, slice13, slice14, slice22)
 
-SLICES = (slice1, slice2, slice3,
+SLICES = (slice1, slice3,
           slice11, slice12, slice13, slice14,
           slice22, scenarios)
 
