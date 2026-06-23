@@ -45,9 +45,12 @@ or answering in their own words, so they ratify far more often than they author.
 ### Requirement: a grilling pass yields the contract and the spec delta
 A resolved grilling pass MUST produce the operator-view entry — the contract the
 result is later validated against — and the spec delta the change will realize,
-authored by the architect against the concise specs its scan reaches.
+authored by the architect against the concise specs its scan reaches. The delta's scenarios are the
+**executable checks** the change is gated by: the architect authors the WHEN/THEN and, where the
+behavior is mechanically checkable, the check block that turns it red→green — so the pass settles not
+only what to build but the oracle that will judge it, owned by the side that does not build it.
 
 #### Scenario: the pass resolves
 - WHEN the last grilling question is answered
-- THEN the architect produces the view entry and a well-formed spec delta, and
-  raises the entry on the queue for ratification
+- THEN the architect produces the view entry and a well-formed spec delta whose scenarios carry the
+  executable checks the behavior is gated by, and raises the entry on the queue for ratification

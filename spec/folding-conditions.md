@@ -6,44 +6,37 @@ capability owns the gates on the material a worker produced, run at the archive 
 before the merge. Advice can be ignored; a folding condition cannot, so the standards
 bite by construction rather than by a reviewer remembering them.
 
-Two of the conditions are **non-negotiable facts** — the delta applies, and a
-behavior-changing tree carries a recorded red→green loop — and they auto-refuse the fold.
-The third is a **judgment**: **depth** is the criterion (a deep module, a lot of behavior
-behind a small interface — re-grounded in Ousterhout), and
-**length** is one signal of it, never the criterion. So the depth condition does not
-auto-refuse on length; it raises a **decision** — re-cut, deepen, or accept-with-reason —
-held on the operator's queue. An unmet fact refuses the fold and returns its reason; the
-depth condition returns a decision; never a silent pass.
+The keystone condition is the **scenario gate**: a behavior change folds only when the
+**architect-authored scenario** of the capability it touches goes red→green — failing at the fork
+base (the behavior was not yet built) and passing at the tip. The oracle is the self-model's own
+account of the behavior (`spec/<capability>.md`), not a command the worker records about its own
+work; the builder can no longer author the check that judges it. The other conditions are the
+**delta applies** (a non-negotiable fact — the spec never merges a delta that does not land cleanly)
+and **depth**: a **judgment** where length is one signal of a deep module, never the criterion, so a
+file past the length signal raises a **decision** — re-cut, deepen, or accept-with-reason — held on
+the operator's queue, never an auto-refusal and never a silent pass.
 
-### Requirement: a behavior-changing tree cannot fold without a recorded red→green loop
-A tree that carries a non-trivial delta MUST hand back a feedback-loop record naming the
-invocation that drives the behavior. A missing or incomplete record refuses the fold. A
-trivial tree changes no behavior and needs none.
+### Requirement: a behavior change folds only when its capability's scenario goes red→green
+A behavior-changing tree MUST fold only when the **architect-authored scenarios** of the capabilities
+its delta touches go red→green: the scenarios, as they stand at the tip, are run in the fence at the
+**fork base** (they MUST fail — the behavior was not yet built) and at the **tip** (they MUST pass),
+and only the exit codes are trusted. A capability whose scenarios already pass at the base did not have
+its behavior driven by this change; one whose scenarios fail at the tip is not green. The worker records
+**no loop** — the check it must turn green is the self-model's own scenario, authored by the side that
+does not build it, so a fabricated or self-serving oracle cannot fold. A capability the change touches
+that carries **no** executable scenario is *watched*, not faked. The gate is itself engine machinery: it
+cannot certify itself from inside a fold, so the acceptance harness exercises its red→green directly.
 
-#### Scenario: a fix without a loop
-- WHEN a behavior-changing tree hands back a result whose loop record lacks the invocation
-  or the red or the green verdict
-- THEN the fold is refused, a decision is returned, and the spec is left untouched
+#### Scenario: a change whose scenario transitions red→green folds
+- WHEN a tree's delta touches a capability whose scenarios fail at the fork base (the behavior absent)
+  and pass at the tip (the behavior built)
+- THEN the scenario gate is met for that capability and the fold may proceed
 
-### Requirement: the recorded loop is executed, not trusted as narration
-The gate MUST **run** the recorded command in the fence and require a real red→green
-transition, never trust the loop's words. The command is executed against the fork base and
-the tip: it MUST fail at the base (red — the behavior was not yet built) and pass at the tip
-(green — the fix works), and identical or absent verdicts are no transition. The feedback
-loop is the skill; a correct narrative with no executed harness is the failure this kills —
-so a fabricated loop whose words say it passed, or that it never ran, cannot fold, because
-the exit codes are the gate, not the strings.
-
-#### Scenario: a loop that is executed and transitions
-- WHEN the result records a command that fails at the fork base and passes at the tip
-- THEN the gate runs it, observes the red→green transition, and the feedback-loop condition
-  is met
-
-#### Scenario: a fabricated loop that did not run
-- WHEN the result records a loop whose command does not make the red→green transition — it
-  passes at the base, fails at the tip, cannot run, or names identical red and green verdicts
-- THEN the gate runs the command, observes no transition, and refuses the fold — the loop's
-  narration is never the gate
+#### Scenario: a change whose scenario does not transition is held
+- WHEN a touched capability's scenarios already pass at the fork base, or do not pass at the tip, or
+  cannot run in the fence
+- THEN the fold is refused — a scenario that did not go red→green did not prove the change drove the
+  behavior, and narration is never the gate
 
 ### Requirement: length past the signal raises a decision, never a silent refusal
 A source file a tree created or grew past the **length signal** MUST raise a **decision** —
@@ -61,16 +54,34 @@ accepting the file lets it fold. The condition is scoped to the files the tree i
 - THEN a decision (re-cut / deepen / accept-with-reason) is raised, the fold is held, and
   the spec is left untouched — never a silent refusal and never a silent pass
 
+  ```check
+  grow engine/giant.py past-signal
+  gate held because depth names engine/giant.py
+  spec untouched
+  ```
+
 #### Scenario: an accepted-length record accepts the length
 - WHEN an accepted-length record names the file as accepted **at a stated length** and
   the file is still within that length
 - THEN the depth condition is met for that file and the fold may proceed
 
+  ```check
+  grow engine/wide.py past-signal
+  accept engine/wide.py @460
+  gate folds
+  ```
+
 #### Scenario: a coincidental mention is not an exception
-- WHEN a decision record merely mentions the file in prose, with no accepted-length record
-  accepting it
+- WHEN a record accepts a *different* file whose path merely contains the name as a substring,
+  with no accepted-length record accepting the file itself
 - THEN the file is not cleared and the decision still stands — the exception is the
-  decision, not the spelling, so a coincidental mention grants no free pass
+  decision matched on the path, not a spelling that coincidentally appears
+
+  ```check
+  grow engine/wide.py past-signal
+  accept engine/wide-helper.py @900
+  gate held because depth names engine/wide.py
+  ```
 
 ### Requirement: an accepted length is bounded to the length it names, and ratchets
 An accepted-length record MUST accept a file **at a stated length** (`@<N>`), and that
@@ -78,7 +89,7 @@ acceptance is bounded to it: it clears the gate only while the file stays within
 length plus a small **materiality margin**, so a one-line edit past the bar does not re-open a
 settled decision. A file that grows **materially past** the length it was accepted at MUST re-raise
 the decision — acceptance ratchets, it does not silence later growth — and renewing the
-acceptance at the new length raises the bar. A stable or shrinking file stays cleared; the bar
+acceptance at the new length raises the bar. A stable file stays cleared; the bar
 lives in the record, so a shrink never lowers it. A record with **no stated length** (no `@<N>`)
 names no bound and MUST NOT clear the gate — the exception is the decision *at a stated size*, not
 the spelling. When several records name one file, the highest accepted length governs (the ratchet
@@ -87,16 +98,37 @@ only rises).
 #### Scenario: an accepted file grows materially past its bar
 - WHEN a file an accepted-length record accepted at length N grows materially past N (beyond the margin)
 - THEN the decision is re-raised at the new length and the fold is held until it is renewed —
-  the old acceptance does not silence the growth
+  the old acceptance does not silence the growth, and renewing it at the new length clears it
 
-#### Scenario: an accepted file stays within its bar, or shrinks
-- WHEN a file an accepted-length record accepted at length N is touched but stays within N (plus the
-  margin), or shrinks
-- THEN it stays cleared and raises no new decision — no nagging on a stable file
+  ```check
+  grow engine/grown.py 800
+  accept engine/grown.py @460
+  gate held because stale
+  accept engine/grown.py @800
+  gate folds
+  ```
+
+#### Scenario: the ratchet only rises
+- WHEN a file accepted at length N is re-accepted at a *lower* length and then grown within N
+- THEN it stays cleared — a re-acceptance at the same or a lower length writes nothing, so the bar
+  only ever rises
+
+  ```check
+  grow engine/risen.py 850
+  accept engine/risen.py @800
+  accept engine/risen.py @400
+  gate folds
+  ```
 
 #### Scenario: a record with no stated length names no bound
 - WHEN an accepted-length record names the file with no `@<N>`
 - THEN it does not clear the gate — an acceptance must name the length it is bounded to
+
+  ```check
+  grow engine/bare.py past-signal
+  accept engine/bare.py none
+  gate held because depth
+  ```
 
 ### Requirement: the accepted-length record is durable authored state, written through one seam
 The accepted-length record is the gate's one piece of **live authored state**, and it MUST outlive
@@ -108,38 +140,28 @@ decision and the record can never be written two ways. The writer **ratchets**: 
 length and is a no-op at an already-cleared one.
 
 #### Scenario: the writer records an accepted length the reader then honors
-- WHEN the writer records a file accepted at length N
-- THEN the gate reads back N for that file from the one durable store — held apart from any node —
-  and re-recording at N or lower writes nothing, the bar only rising
+- WHEN the one writer records a file accepted at a length the file is within
+- THEN the gate reads that length back from the one durable store and clears the file — one seam over
+  one store, the writer the only producer of the record the reader honors
 
-### Requirement: the standards declare gated or watched, machine-readably
-The system MUST carry a **machine-readable classification** of every standard, each declared either
-**gated** — a check fails unless the standard actually happened — or **watched** — the operator
-watches it, no check gates it because the judgment lives on the model side. The classification exists
-so a regenerating author cannot mistake advice for a gate: a scripted transport is licensed only for
-behavior the engine computes deterministically; any model-side judgment a check cannot drive against
-an adversarial fixture is declared *watched, not gated*, never scripted-and-called-tested. Each entry
-is a parseable line — `standard: <standard> — <gated|watched> — <how>` — so a check reads the
-classification rather than trusting prose. A standard declared *gated* MUST have a real gate behind
-it; one declared *watched* is honestly recorded as not mechanically enforced.
+  ```check
+  grow engine/relocated.py past-signal
+  accept engine/relocated.py @460
+  gate folds
+  ```
 
-The standards, as they stand (the honest classification the research established):
+### Requirement: a standard is gated by carrying a scenario, watched without one
+The system MUST carry an honest, **machine-readable** account of which standards are mechanically
+gated and which are only watched — but it MUST NOT hand-maintain a separate register that can drift
+from the gates it names. The classification is **derived**: a requirement is **gated** exactly when one
+of its scenarios carries an executable `check` block (a scenario fails unless the behavior holds), and
+**watched** when none does — model-side judgment no adversarial fixture can certify (depth as a module
+judgment, coherence, the grilling floor's finding, the design-it-twice pick), honestly recorded as not
+mechanically enforced. Because the block's **presence is the classification**, a regenerating author
+cannot script a watched judgment and call it gated, and the register cannot disagree with reality —
+there is no register, only the scenarios.
 
-- standard: delta-applies — gated — `delta.check` parses the delta against the live spec; a mismatch refuses
-- standard: red-green-loop — gated — `conditions._feedback_loop` executes the command in the fence and requires a real red→green transition
-- standard: length-ratchet — gated — `conditions.accepted`/`accepted_at` read a bounded accepted length (and `accept` writes one) from the one durable store, re-raising on material growth
-- standard: mechanical-red-flags — gated — `review.red_flags` scans for dead module-level symbols and circular dependencies
-- standard: module-depth-judgment — watched — the model-driven shallow/leakage/deletion-test judgment is not yet built; length raises a decision, never a verdict
-- standard: coherence — watched — the architect's archive-gate judgment is the model's; the incoherent→decision *branch* is exercised, but whether a result truly honors the contract is watched, not gated
-- standard: grilling-floor — watched — whether the floor surfaced the right stakes is the model's judgment; the harness drives the routing, not the finding
-- standard: design-it-twice-selection — watched — whether the deepest candidate was picked is the model's judgment; the fences and the design-decision record are gated, the pick is watched
-
-#### Scenario: a standard is classified
-- WHEN the classification is read for a standard
-- THEN it declares the standard gated or watched on a parseable line, so a check can read the
-  classification and a regenerating author cannot script a watched judgment and call it gated
-
-#### Scenario: a gated standard has a real gate
-- WHEN the classification declares a standard gated
-- THEN a check fails unless the standard actually happened — the gate is real, not a presence-of-
-  strings check — and a watched standard is honestly recorded as not mechanically enforced
+#### Scenario: the classification is read off the scenarios
+- WHEN the gated/watched classification is read for a capability
+- THEN each requirement is gated if one of its scenarios carries a check block and watched otherwise —
+  derived from the scenarios themselves, never separately authored, so it cannot drift from what is gated

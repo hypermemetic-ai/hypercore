@@ -8,7 +8,7 @@ description: hypercore's depth standards — build deep modules (a lot of behavi
 hypercore's standing engineering discipline: build **deep modules** — a lot of behavior behind a
 small interface — and build away from the **red flags** of shallowness. Imported from Ousterhout's
 *A Philosophy of Software Design* and adopted as the criterion the system's structure is read in,
-exactly as `design-it-twice` imports the same source (ADR 0007). The full synthesis — the reasoning
+exactly as `design-it-twice` imports the same source. The full synthesis — the reasoning
 behind each discipline, the *Clean Code* contrast, the epistemic status — is provenance, cited not
 inlined (`work/archive/depth-regrounding/depth-synthesis.md`). The worker is held to these every
 episode so it builds deep up front, while the `folding-conditions` gate keeps a length tripwire and
@@ -20,7 +20,7 @@ forever while the implementation is paid once — so when something must be hard
 **Depth is a decision the gate raises, never a threshold it enforces.** Nothing in the system scores
 or certifies depth: the only mechanical facts are length (a context-cost signal that raises a
 decision) and the structural red flags a tool can read (dead symbols, circular dependencies). The
-model-driven verdict — is this module actually shallow? — is **not yet built** (ADR 0006). So "the
+model-driven verdict — is this module actually shallow? — is **not yet built**. So "the
 depth gate" is honest only as *length raises a decision the operator settles*; it is not a depth
 threshold a rebuild can pass by shipping short, shallow modules. The proactive defense is the worker
 building deep up front, not a backstop that measures depth — there is none to lean on. The spec says

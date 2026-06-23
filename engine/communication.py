@@ -96,8 +96,9 @@ def integrate(node: tree.Node, result, transport=None, root: str | None = None) 
     delta into the spec — the work integrates and leaves the threads view in the same act. The
     worker's raw report is *input* to the architect's judgment, never output: every
     operator-facing word here is authored fresh, so the report crosses to the operator through
-    no path. A result that fails a non-negotiable condition (no recorded loop, a delta that will
-    not apply), trips the **depth** condition (a module past the length signal with no
+    no path. A result that fails a non-negotiable condition (its capability's scenario did not go
+    red→green, a delta that will not apply), trips the **depth** condition (a module past the length
+    signal with no
     accepted-length record — re-cut / deepen / accept-with-reason), or that the architect judges
     incoherent raises a decision rather than folding. Depth surfaces to the operator as a
     decision, never a silent veto and never a silent pass."""

@@ -44,21 +44,21 @@ def check(_shared_root: str) -> None:
     print("\nslice 18 — acceptance check  (failure paths recover the node, the fence never leaks)\n")
 
     # ── 1 & 2. a folding-condition refusal recovers the node and tears the fence down ────────────────
-    # A behavior-changing delta with NO loop is refused by `conditions.unmet` — the common refusal. The
-    # worker crossing returns not-done; the fence must be gone and the node must have left IN_FLIGHT.
+    # A behavior-changing delta that will not apply (MODIFIED an absent capability) is refused by
+    # `conditions.unmet` — a common refusal. The worker crossing returns not-done; the fence must be
+    # gone and the node must have left IN_FLIGHT.
     root = _init("engine-check-s18a-")
     os.environ["ENGINE_ROOT"] = root
     tree.commit([os.path.join(root, "spec")], "seed: empty spec") if os.path.isdir(
         os.path.join(root, "spec")) else None
 
     node = tree.file_intent("a worker whose result cannot fold")
-    no_loop = (
+    wont_fold = (
         '{"report": "built it", '
-        '"delta": "## ADDED — newcap\\n### Requirement: it holds\\nThe newcap MUST hold.\\n'
-        '#### Scenario: s\\n- WHEN x\\n- THEN y\\n", '
-        '"loop": {"command": "", "red": "", "green": ""}}')          # behavior change, no loop → refuse
-    reply = worker.run(node, transport=lambda _p: no_loop, root=root)
-    ok(not reply.done, "a behavior-changing result with no loop is refused — the crossing returns not-done")
+        '"delta": "## MODIFIED — newcap\\n### Requirement: it holds\\nThe newcap MUST hold.\\n'
+        '#### Scenario: s\\n- WHEN x\\n- THEN y\\n"}')               # MODIFIED an absent capability → will not apply
+    reply = worker.run(node, transport=lambda _p: wont_fold, root=root)
+    ok(not reply.done, "a behavior-changing result whose delta will not apply is refused — the crossing returns not-done")
     fence = worker._tree_path(node, root)
     ok(not os.path.isdir(fence),
        "the fence is torn down on a refusal — no leaked worktree (C2)")
@@ -73,7 +73,7 @@ def check(_shared_root: str) -> None:
 
     # ── 3. a malformed model reply is a failure, not a silent no-op success (H3) ─────────────────────
     # A reply with no JSON object is the dangerous case: the old lenient parse degraded it to
-    # {"say": raw, "done": True} → empty report/delta/loop → a trivial delta that `unmet` passes → a
+    # {"say": raw, "done": True} → empty report/delta → a trivial delta that `unmet` passes → a
     # no-op folded as a clean success, indistinguishable from a real minimal result. The worker now
     # reads its hand-off STRICTLY (`parse_object`): a malformed reply raises at apply, BEFORE coherence
     # is ever consulted — so the guard is not incidental to the coherence parse happening to fail.
@@ -112,7 +112,7 @@ def check(_shared_root: str) -> None:
     root = _init("engine-check-s18c-")
     os.environ["ENGINE_ROOT"] = root
     n = tree.file_intent("a scheduled worker whose result cannot fold")
-    sched = schedule.Scheduler(transport=lambda _p: no_loop, root=root, limit=1)
+    sched = schedule.Scheduler(transport=lambda _p: wont_fold, root=root, limit=1)
     sched.step()
     for _ in range(400):
         sched.step()
@@ -135,7 +135,7 @@ def check(_shared_root: str) -> None:
     stranded = tree.file_intent("a node a crash left in flight")
     tree.dispatch(stranded)                                         # IN_FLIGHT on disk, no live worker
     ok(tree.find(stranded.id).state == tree.IN_FLIGHT, "the node is in flight on disk before recovery")
-    fresh = schedule.Scheduler(transport=lambda _p: no_loop, root=root, limit=0)  # limit 0: only recover
+    fresh = schedule.Scheduler(transport=lambda _p: wont_fold, root=root, limit=0)  # limit 0: only recover
     fresh.step()
     rs = tree.find(stranded.id)
     ok(rs is not None and rs.state != tree.IN_FLIGHT,

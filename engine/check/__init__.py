@@ -17,13 +17,17 @@ import os
 import subprocess
 import tempfile
 
-from . import (harness, slice1, slice2, slice3, slice4, slice5, slice6, slice7, slice8,
+# Capability scenarios + the remaining by-slice checks. folding-conditions' acceptance has migrated
+# from slices 5/7/9/20/21 to its own executable scenarios (`scenarios`), so slices 5 and 20 — wholly
+# folding-conditions — are gone, and 7/9/21 keep only their other-capability checks. The gaps mark the
+# migration; each remaining capability dissolves its slice content the same way as it migrates.
+from . import (harness, scenarios, slice1, slice2, slice3, slice4, slice6, slice7, slice8,
                slice9, slice10, slice11, slice12, slice13, slice14, slice15, slice16, slice17,
-               slice18, slice19, slice20, slice21, slice22, slice23)
+               slice18, slice19, slice21, slice22, slice23)
 
-SLICES = (slice1, slice2, slice3, slice4, slice5, slice6, slice7, slice8, slice9, slice10,
-          slice11, slice12, slice13, slice14, slice15, slice16, slice17, slice18, slice19, slice20,
-          slice21, slice22, slice23)
+SLICES = (slice1, slice2, slice3, slice4, slice6, slice7, slice8, slice9, slice10,
+          slice11, slice12, slice13, slice14, slice15, slice16, slice17, slice18, slice19,
+          slice21, slice22, slice23, scenarios)
 
 
 def run() -> int:
@@ -42,5 +46,5 @@ def run() -> int:
     if n:
         print(f"  {n} FAILED\n")
         return 1
-    print("  all checks pass — slices 1–23 meet their acceptance checks\n")
+    print("  all checks pass — the capability scenarios and the remaining slice checks are met\n")
     return 0

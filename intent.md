@@ -119,6 +119,8 @@ A folding condition is what makes a tree ready to fold: its ask is met, or it is
 
 A check names an observation about the work, not an act of trust in it. The episode that does the work is disposable; the checks at the fold's boundary are what survive it. A fold can be trusted only as far as its checks reach, and error compounds up the stack: the weaker a tree's checks, the shallower it must stay before folding, and the less may be built on top of it.
 
+A behavior's check is the self-model's own account of it. A capability's scenario — the living spec's WHEN/THEN description of a behavior — is the executable gate that behavior passes: authored by the side that does not build it, so the builder never writes the check that clears its own work, and turned red→green by the worker that builds to it. The description of the system and the test of the system are one artifact, so neither can drift from the other, and what conditions a behavior's fold is the self-model describing itself truthfully. [machine]
+
 However deep the tree grows, the operator's queue grows only with decisions that narrow intent. The day operator load tracks work volume, decomposition has failed.
 
 A view of a tree never lags it: every view is read live from the tree, or updated in the same act that folds it.

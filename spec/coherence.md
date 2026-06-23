@@ -15,13 +15,16 @@ structural opposition to the worker's investment in its own product is the defen
 self-judging.
 
 ### Requirement: the architect integrates the worker's hand-off
-The architect MUST archive a worker's result: coherence-check it against the
-contract at the operator's altitude — not a code review — and on a pass fold the refined
-delta into the spec, the work leaving the work view in the same act. The raw report is
-input to that judgment, never output.
+The architect MUST archive a worker's result: the **folding conditions** run first — the delta
+applies, and the touched capability's architect-authored scenarios go red→green (the scenario gate) —
+so **check-relevance is gated by construction**: a worker cannot hand back a result that passes a check
+of the wrong behavior, because the check is the architect's own scenario, not one the worker wrote. The
+architect then coherence-checks what no scenario can capture — does the result honor the contract at the
+operator's altitude, not a code review — and on a pass folds the refined delta into the spec, the work
+leaving the work view in the same act. The raw report is input to that judgment, never output.
 
 #### Scenario: coherence decides the fold
-- WHEN a worker hands a result back
+- WHEN a worker hands a result back whose folding conditions are met (its scenarios went red→green)
 - THEN a result that honors the contract folds its delta and integrates, and a result that
   does not raises a decision (re-cut, abandon, or change the ask) rather than folding
 

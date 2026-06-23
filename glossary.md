@@ -116,8 +116,10 @@ against drift each time new words join the live corpus.
   check if it is **gated**, a **trace** if it is **watched**.
 
 - **gated** — of a standard or structural fact: its application is verified by a
-  deterministic check — the fold fails unless the check passes (the delta applies; the
-  red→green loop is recorded).
+  deterministic check — the fold fails unless the check passes (the delta applies; the touched
+  capability's architect-authored **scenario** goes red→green). A requirement is gated exactly when one
+  of its scenarios carries a **check block**; that presence *is* the classification, not a separate
+  register.
 
 - **watched** — of a standard: its application takes judgment, so the procedure must
   leave a **trace** — evidence it was applied, which conditions the fold — while its
@@ -140,7 +142,10 @@ against drift each time new words join the live corpus.
   node.
 
 - **scenario** — a requirement's worked behavior in WHEN / THEN form: machine-
-  checkable and human-legible at once.
+  checkable and human-legible at once. Where the behavior is mechanically checkable, the scenario
+  carries an executable **check block** — domain verbs a deep binding (`scenario`) compiles to a
+  runnable assertion — so the scenario *is* the requirement's gate, run red→green; the description and
+  the test are one thing, and cannot drift.
 
 - **living spec** — the maintained, version-controlled model of *what the system
   is* (as-built reality), organized by capability, read flat by the agent. Not
@@ -182,8 +187,9 @@ against drift each time new words join the live corpus.
   on fold, reached by Claude Code through a derived `CLAUDE.md` bridge.
 
 - **hand-off** — the worker's complete machine-facing result handed to the architect
-  (its report, refined delta, executed loop, and fence); never operator-facing — the
-  architect authors every operator-facing word from it.
+  (its report, refined delta, and fence); never operator-facing — the architect authors every
+  operator-facing word from it. It carries **no loop**: the check that judges it is the architect's
+  own scenario, run red→green by the gate over its fence.
 
 - **architecture review** — the standing scan of the source tree for **complexity
   debt**, read live. It surfaces god-files-in-the-making before they set and

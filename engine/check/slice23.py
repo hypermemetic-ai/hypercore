@@ -19,7 +19,7 @@ from __future__ import annotations
 import json
 import os
 
-from .harness import LOOP, ok
+from .harness import ok
 
 
 def check(root: str) -> None:
@@ -80,7 +80,7 @@ def check(root: str) -> None:
 
     def spy(cwd: str):
         seen["cwd"] = cwd
-        return lambda _p: json.dumps({"report": "built it", "delta": handed, "loop": LOOP})
+        return lambda _p: json.dumps({"report": "built it", "delta": handed})
 
     saved, worker.worker_transport = worker.worker_transport, spy
     try:

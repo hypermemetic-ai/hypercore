@@ -15,6 +15,26 @@ gap between them is the backlog.
 - THEN it yields the glossary and, per capability, that capability's requirements
   and their scenarios — concise enough to scan across all of them at once
 
+### Requirement: the living spec is self-verifying — a scenario is the executable check of its requirement
+A capability's `#### Scenario:` MUST be able to carry the **executable check** of its requirement, not
+only describe it: the architect authors the scenario in domain verbs, a deep binding (`scenario`)
+compiles it to a runnable assertion over the real engine seams, and the gate runs it red→green. Because
+the self-model's own account of a behavior *is* the check that behavior passes, the description cannot
+drift from the behavior — a requirement is a check that survives its node. The presence of the check
+block is itself the gated/watched classification, never a separately authored register: a requirement
+whose scenarios carry no check block is **watched**, recorded honestly as not mechanically enforced,
+never faked. The binding is a hidden deep layer; the scenario stays the high-signal WHEN/THEN interface.
+
+#### Scenario: a scenario is read as a check
+- WHEN a capability's scenario carries an executable check block
+- THEN it both reads as the requirement's WHEN/THEN and runs as its gate — green when the system meets
+  it now, and red→green across the fork base and tip when a change builds the behavior
+
+#### Scenario: a scenario with no check block is watched
+- WHEN a requirement's scenarios carry no check block
+- THEN the requirement is watched — model judgment no fixture certifies — recorded honestly as not
+  mechanically gated, never scripted-and-called-tested
+
 ### Requirement: every behavior-changing tree carries a delta
 A tree that changes behavior MUST carry a delta of ADDED / MODIFIED / REMOVED
 requirements matching what it built. A tree that makes no behavior change carries

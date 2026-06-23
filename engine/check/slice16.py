@@ -41,13 +41,11 @@ def check(_shared_root: str) -> None:
     for cfg in (["init", "-q"], ["config", "user.email", "c@h"], ["config", "user.name", "c"]):
         subprocess.run(["git", *cfg], cwd=root, check=True)
 
-    from .harness import LOOP as loop                # the executable red→green loop the gate runs (keystone)
-
     def built(cap: str) -> str:
         return json.dumps({"report": f"built {cap}",
                            "delta": f"## ADDED — {cap}\n### Requirement: {cap} holds\n"
                                     f"The {cap} capability MUST hold.\n#### Scenario: s\n"
-                                    f"- WHEN x\n- THEN y\n", "loop": loop})
+                                    f"- WHEN x\n- THEN y\n"})
 
     coherent = json.dumps({"coherent": True, "say": "it landed.", "card": None})
 

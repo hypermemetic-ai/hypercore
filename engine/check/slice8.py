@@ -21,7 +21,7 @@ import json
 import os
 import subprocess
 
-from .harness import LOOP, ok, scripted
+from .harness import ok, scripted
 
 
 def check(root: str) -> None:
@@ -30,14 +30,12 @@ def check(root: str) -> None:
     print("\nslice 8 — acceptance check  (parallelism re-grounded: design-it-twice)\n")
 
     coherent = lambda: scripted(json.dumps({"coherent": True, "say": "it landed.", "card": None}))
-    loop = LOOP                                      # the executable red→green loop the gate runs (keystone)
 
     def built(cap: str, report: str) -> str:
         return json.dumps({"report": report,
                            "delta": f"## ADDED — {cap}\n### Requirement: {cap} holds\n"
                                     f"The {cap} capability MUST hold.\n#### Scenario: s\n"
-                                    f"- WHEN x\n- THEN y\n",
-                           "loop": loop})
+                                    f"- WHEN x\n- THEN y\n"})
 
     def staged(text: str, cap: str, root: str) -> tree.Node:
         ask = tree.file_intent(text)

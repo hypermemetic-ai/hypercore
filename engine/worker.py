@@ -54,11 +54,10 @@ own requirement statements through the same `methodology` seam the skills use, s
 `spec/worker.md` reaches the next worker with no second copy to drift. Only the genuinely
 non-inferable envelope stays authored in this module: the JSON reply shape, and two grounding facts
 the slice does not carry — the **corrected single-writer invariant** (stage the exact files a change
-touches, never `-A` over a shared parent; a repo-level lock spans write→commit) and the
-machine-readable **gated-vs-watched register** (which disciplines a check *gates* versus which the
-operator merely *watches*, so a scripted judgment is never mistaken for a tested one). These land here
-with `engine-hardening`'s engine fix; the grounding the worker is taught and the lock the engine
-enforces fold together.
+touches, never `-A` over a shared parent; a repo-level lock spans write→commit) and the **scenario
+gate** (you author no loop; build to turn the architect's scenario red→green, and a requirement is
+gated exactly when one of its scenarios carries an executable check block, watched otherwise). The
+worker is taught the gate it builds toward; the lock the engine enforces folds alongside it.
 """
 from __future__ import annotations
 
@@ -86,15 +85,15 @@ GROUNDING = (
     "sibling worker's uncommitted material into your commit. A repo-level lock spans write→commit, so "
     "your write and your commit are one indivisible act on the record; do nothing that reaches outside "
     "your own worktree between them.\n"
-    "- **Gated versus watched.** A discipline is *gated* only when a check in `python3 -m engine "
-    "--check` actually exercises it; otherwise the operator merely *watches* it, and a scripted or "
-    "narrated judgment is not a tested one. Gated by a real check: the **delta applies**, the **length "
-    "ratchet**, the **mechanical red-flag scan** (it reads dead module-level symbols and "
-    "circular-dependency cycles), and the **red→green loop must execute** — a recorded loop whose "
-    "command did not run, or whose red equals its green, is not a pass. "
-    "Watched, not gated: **depth**, **coherence**, the **grilling floor**, and "
-    "**design-it-twice** selection are model judgment the harness cannot certify — hold them yourself, "
-    "because no gate will. Do not record a loop you did not run."
+    "- **The scenario gate, and gated versus watched.** You do not author the check that judges you. A "
+    "behavior change folds only when the **architect-authored scenarios** of the capabilities it "
+    "touches go red→green — failing at the fork base (the behavior absent), passing at your tip. Build "
+    "to turn those scenarios green; you record **no loop**. A capability requirement is *gated* exactly "
+    "when one of its scenarios carries an executable `check` block (the **delta applies**, the **length "
+    "ratchet**, and the **mechanical red-flag scan** are gated this way); it is *watched* — model "
+    "judgment no adversarial fixture can certify (**depth** as a module judgment, **coherence**, the "
+    "**grilling floor**, the **design-it-twice** pick) — when none does. Do not mistake a watched "
+    "discipline for a gated one; hold it yourself, because no gate will."
 )
 
 # The one authored residue that is neither discipline nor grounding: the reply shape the transport parses.
@@ -102,10 +101,8 @@ ENVELOPE = (
     "Reply with ONLY a JSON object:\n"
     '{"report": <the technical result and all relevant facts, for the architect>, '
     '"delta": <the refined spec delta — ADDED/MODIFIED/REMOVED markdown over the '
-    'capabilities the change touches>, '
-    '"loop": {"command": <how to run the feedback loop>, '
-    '"red": <its failing verdict on the behavior before the fix>, '
-    '"green": <its passing verdict after the fix>}}'
+    'capabilities the change touches, including any new or sharpened scenario (with its check '
+    'block) the behavior needs>}'
 )
 
 
@@ -143,8 +140,7 @@ class WorkerResult:
     it. The worker's words reach the operator through no path at all."""
     report: str                                       # the technical result, for the architect
     delta: str                                        # the refined spec delta the change realizes
-    loop: dict                                         # the recorded red→green loop (folding-conditions enforces it)
-    worktree: str                                     # the fenced tree the work ran in
+    worktree: str                                     # the fenced tree the work ran in (the gate runs its scenarios red→green here)
 
 
 # ── the spec slice (assembled by construction; no worker runs without it) ─────
@@ -256,9 +252,8 @@ def apply(node: tree.Node, transport=None, root: str | None = None) -> WorkerRes
     obj = parse_object(transport(prompt(node, ctx, root)))  # strict: a malformed reply is a failure, not a no-op (H3)
     report = (obj.get("report") or "").strip()
     refined = (obj.get("delta") or ctx.delta).strip()
-    loop = obj.get("loop") if isinstance(obj.get("loop"), dict) else {}
-    _record(fence, report, refined, loop)              # the worker's own commit, fenced
-    return WorkerResult(report, refined, loop, fence)
+    _record(fence, report, refined)                    # the worker's own commit, fenced
+    return WorkerResult(report, refined, fence)
 
 
 def run(node: tree.Node, transport=None, root: str | None = None):
@@ -317,14 +312,14 @@ def _branch(node: tree.Node, tag: str = "") -> str:
     return f"worker/{node.id}" + (f"-{tag}" if tag else "")
 
 
-def _record(fence: str, report: str, refined: str, loop: dict) -> None:
+def _record(fence: str, report: str, refined: str) -> None:
     """The worker commits everything it built inside its own fence — RESULT.md beside any
     source it produced — proof its commits reach the one record, fenced from the main line
     until the architect integrates the delta. The whole fence is committed (not just
-    RESULT.md) so the material the folding conditions read — the source it grew, the loop it
-    ran — is in the record."""
-    loop_md = "\n".join(f"- {k}: {loop.get(k, '')}" for k in ("command", "red", "green"))
-    body = f"# worker result\n\n## report\n{report}\n\n## delta\n{refined}\n\n## loop\n{loop_md}\n"
+    RESULT.md) so the material the folding conditions read — the source it grew, the scenario
+    its delta turned green — is in the record. The worker records no loop: the check that judges
+    it is the architect's scenario, run red→green by the gate over this fence."""
+    body = f"# worker result\n\n## report\n{report}\n\n## delta\n{refined}\n"
     tree.atomic_write(os.path.join(fence, "RESULT.md"), body)
     commit_tree(fence, "worker: result")
 

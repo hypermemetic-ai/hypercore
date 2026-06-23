@@ -106,13 +106,16 @@ candidates on.
 
 ### Requirement: the worker applies and refines the delta the architect proposed
 A worker MUST rescan the current spec to verify the handed delta against present reality,
-build behind a feedback loop, and refine the delta to match what it built; the
-architect then coherence-checks the result against the contract and archives the
-delta. The crossing is propose (architect) → apply (worker) → archive
-(architect), one delta end to end.
+build to turn the capability's architect-authored scenarios **red→green**, and refine the delta —
+including any new or sharpened scenario the behavior needs — to match what it built. It authors **no
+loop** and no check that judges its own work: the oracle is the self-model's own scenario, run
+red→green by the gate over its fence, so the builder can never write the check that clears it. The
+architect then coherence-checks the result against the contract and archives the delta. The crossing
+is propose (architect) → apply (worker) → archive (architect), one delta end to end.
 
 #### Scenario: the result integrates
 - WHEN a worker hands back a refined delta and the architect judges the result
   coherent with the contract
-- THEN the delta folds into the spec and the work leaves the work view in the same act;
-  an incoherent result raises a decision instead of folding
+- THEN the delta folds into the spec — only when the touched capability's scenarios went red→green —
+  and the work leaves the work view in the same act; an incoherent result, or a scenario that did not
+  transition, raises a decision instead of folding
