@@ -172,3 +172,17 @@ def check(root: str) -> None:
     ok(conditions.accept(REL, BAR6 + 80, "renewed deeper", root) is True
        and conditions.accepted_at(REL, root) == BAR6 + 80,
        "re-accepting at a higher length ratchets the bar up")
+
+    # ── 7. the length-acceptance producer (card-kind): settling the decision writes the record ──
+    # The depth gate raises a length decision carrying the `accepted: <rel> @<N>` template; the queue's
+    # accept-the-length act reads it back and writes the record through the one writer (conditions.accept).
+    LREL, LN = "engine/flagged.py", conditions.SIGNAL + 300
+    decision = conditions._depth_decision(LREL, LN, root)        # the exact card text the gate raises
+    ok(conditions.length_decision(decision) == (LREL, LN),
+       "length_decision reads the gate's `accepted: <rel> @<N>` template back to (rel, length)")
+    ok(conditions.accepted_at(LREL, root) is None, "the flagged file has no accepted length yet")
+    ok(conditions.accept_length(decision, root) is True
+       and conditions.accepted_at(LREL, root) == LN,
+       "approving the length decision records the accepted length — the gate then clears the file")
+    ok(conditions.accept_length("a plain decision with no length template", root) is False,
+       "accept_length is a no-op on a card that is not a length acceptance")

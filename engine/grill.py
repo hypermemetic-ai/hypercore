@@ -140,6 +140,25 @@ def is_entry(node: tree.Node) -> bool:
     return p is not None and bool(p.contract)
 
 
+# the recorded `kind` field carries a short code; the queue speaks the glossary's five card kinds.
+_KIND = {"decide": "decision", "approval": "request for approval",
+         "statement": "request for approval", "acceptance": "acceptance"}
+
+
+def card_kind(node: tree.Node) -> str:
+    """The card's **kind**, the one authority the render and the window read instead of inferring it
+    (glossary `card`: the kind is recorded on the node, not guessed at render time). One of the five
+    kinds along the work's life. The two pass-stage kinds are read off the held tree's pass — a
+    grilling question while it is still surfacing, a ratification once it has resolved into a contract
+    — because a card whose identity *is* the pass progress cannot be a static field without going
+    stale; the other three are read from the recorded `kind`, normalized to the glossary word."""
+    if is_question(node):
+        return "grilling question"
+    if is_entry(node):
+        return "ratification"
+    return _KIND.get(node.kind, node.kind)
+
+
 def lean_of(node: tree.Node) -> str:
     q = _surfaced(node)
     return q["lean"] if q else ""

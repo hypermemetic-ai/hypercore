@@ -53,24 +53,22 @@ def main_body(nodes: list[tree.Node], sel: int, width: int = 76) -> list[Row]:
 
 
 def _card_label(c: tree.Node) -> str:
-    """A card's weight, named: a grilling question, a ratification, or a decision."""
-    if grill.is_question(c):
-        return "question"
-    if grill.is_entry(c):
-        return "ratify"
-    return c.kind
+    """A card's kind, named — read from the one authority (`grill.card_kind`), not guessed here."""
+    return grill.card_kind(c)
 
 
 def _card_detail(c: tree.Node, width: int) -> list[Row]:
     """The selected card, opened: a question shows its lean and what would flip it;
-    a view entry shows the contract the ratify endorses; a plain card, its commands."""
-    if grill.is_question(c):
+    a ratification shows the contract it endorses; any other card, its commands. The kind is read
+    from `grill.card_kind`, the same authority the label reads — the render no longer infers it."""
+    kind = grill.card_kind(c)
+    if kind == "grilling question":
         rows = [[("      lean  ", DIM), (grill.lean_of(c), SAY)]]
         if grill.flip_of(c):
             rows.append([("      flips ", DIM), (grill.flip_of(c), TAG)])
         rows.append([("      [a] accept the lean   ·   type to answer", DIM)])
         return rows
-    if grill.is_entry(c):
+    if kind == "ratification":
         rows: list[Row] = []
         for w in _wrap(grill.contract(c), width - 8):
             rows.append([("      ", SAY), (w, SAY)])

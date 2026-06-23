@@ -13,7 +13,7 @@ from .harness import ok, scripted
 
 
 def check(root: str) -> None:
-    from .. import delta, tree, grill, spec
+    from .. import delta, tree, grill, render, spec
     from ..communication import Thread, speak
 
     print("\nslice 3 — acceptance check  (intent extraction by grilling)\n")
@@ -33,6 +33,9 @@ def check(root: str) -> None:
     ok(len(qcards) == 1, "one grilling question is on the queue at a time")
     ok(grill.lean_of(qcards[0]) == "1080p" and bool(grill.flip_of(qcards[0])),
        "the question card carries the machine's lean and what would flip it")
+    ok(grill.card_kind(qcards[0]) == "grilling question"
+       and render._card_label(qcards[0]) == "grilling question",
+       "the render reads the card's kind from the one authority — a grilling question")
 
     # accept the lean on the first; the second surfaces, still gated
     grill.advance(qcards[0], grill.lean_of(qcards[0]))
@@ -54,6 +57,8 @@ def check(root: str) -> None:
                           scripted(products))
     ok(grill.is_entry(entry) and "1080p" in grill.contract(entry),
        "the resolved pass raises the view entry — the contract to ratify")
+    ok(grill.card_kind(entry) == "ratification",
+       "a resolved grilling tree reads as a ratification — off the pass, not guessed")
     ok(len(tree.standing()) == base, "the gate holds until the entry is ratified")
 
     # the fourth product is a well-formed, foldable spec delta
@@ -74,3 +79,16 @@ def check(root: str) -> None:
         '{"questions":[]}'))
     ok(r2.filed is not None and r2.grilling is None, "a below-floor ask files directly")
     ok(len(tree.standing()) == base + 2, "the below-floor ask is standing work, ungrilled")
+
+    # ── card kind: recorded on the node, read not guessed (card-kind) ──────────────────────
+    # A decision card's kind is recorded; the render reads it through the one authority and speaks the
+    # glossary word — "decision", not the raw stored "decide" the pre-fix render returned verbatim.
+    dcard = tree.raise_card("a real fork the operator must reason through", kind="decide")
+    ok(grill.card_kind(dcard) == "decision" and render._card_label(dcard) == "decision",
+       "a decision card reads as 'decision' — the render reads the recorded kind, not the raw code")
+    # all five kinds are representable: the three recorded kinds map to their glossary words, the two
+    # pass-stage kinds (question, ratification) were read off the held tree above.
+    acc = tree.raise_card("sign off the result meets its bar", kind="acceptance")
+    rfa = tree.raise_card("a go on a planned step", kind="approval")
+    ok(grill.card_kind(acc) == "acceptance" and grill.card_kind(rfa) == "request for approval",
+       "the acceptance and request-for-approval kinds are representable, recorded on the node")

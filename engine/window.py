@@ -10,7 +10,7 @@ import curses
 import threading
 from dataclasses import dataclass, field
 
-from . import communication, tree, grill, render, schedule, transport, view
+from . import communication, conditions, tree, grill, render, schedule, transport, view
 from .communication import Thread
 
 ESC, ENTER, BACKSPACES = 27, (10, 13, curses.KEY_ENTER), (8, 127, curses.KEY_BACKSPACE)
@@ -134,11 +134,13 @@ def _browse(st: State, ch: int, nodes) -> bool:
         st.view_sel = 0
     elif cards and ch == ord("a"):
         card = cards[st.sel]
-        if grill.is_entry(card):                      # the gate: ratify spawns work
+        kind = grill.card_kind(card)                  # the one authority, not inferred here
+        if kind == "ratification":                    # the gate: ratify spawns work
             grill.ratify(card)
-        elif grill.is_question(card):                 # accept the machine's lean
+        elif kind == "grilling question":             # accept the machine's lean
             st.pending = Async(lambda c=card: grill.advance(c, grill.lean_of(c)))
         else:
+            conditions.accept_length(card.text)        # a length decision records its length; else a no-op
             tree.approve(card)
         st.sel = 0
     elif cards and ch == ord("c"):

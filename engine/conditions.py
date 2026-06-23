@@ -40,6 +40,7 @@ the mechanical scaffold — length raises the decision, the operator judges dept
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -263,6 +264,25 @@ def accept(rel: str, n: int, reason: str, root: str | None = None) -> bool:
         return [f]
     transact(write, [f], f"accept length: {rel} @{n}")
     return True
+
+
+def length_decision(text: str) -> tuple[str, int] | None:
+    """Read a length decision's `accepted: <rel> @<N>` template back to `(rel, length)`, or None when
+    the card is not a length acceptance. The depth gate emits that exact template in the decision it
+    raises (`_depth_decision`), so settling that decision with approve can write the record the
+    template names — the queue's accept-the-length action over `accept`, the producer that gives the
+    writer seam its caller."""
+    m = re.search(r"accepted:\s*([^\s`]+)\s+@(\d+)", text)
+    return (m.group(1).replace(os.sep, "/"), int(m.group(2))) if m else None
+
+
+def accept_length(text: str, root: str | None = None) -> bool:
+    """Settle a length decision by recording its accepted length — the queue's accept-the-length act.
+    A no-op (returns False) on a card that is not a length acceptance, so the settle path can call it
+    unconditionally before clearing any card. Returns whether a record was written (True only when the
+    card named a length and the bar rose)."""
+    rn = length_decision(text)
+    return bool(rn) and accept(rn[0], rn[1], "accepted by the operator from the queue", root)
 
 
 def _ledger(root: str | None) -> str:

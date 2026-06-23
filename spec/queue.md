@@ -2,8 +2,8 @@
 <!-- vision: queue, card, decision, approve, endorse -->
 
 The decision surface. The queue is a view of every node awaiting the operator,
-read fresh each time. A card carries the weight of its call, and the operator
-settles it with one of three endorsements.
+read fresh each time. A card carries its **kind** — the call it makes on the
+operator — and the operator settles it with one of three endorsements.
 
 ### Requirement: the queue is a view of awaiting nodes
 The queue MUST be the set of nodes in the awaiting state, read live; settling a
@@ -32,20 +32,22 @@ returns the story toward the decision and leaves the card standing.
 - THEN the architect returns the story toward the decision and the card
   stays on the queue
 
-### Requirement: a card's weight matches its call
-A real judgment the operator must reason through MUST be presented as a decision;
-a step needing only the operator's go MUST be presented as a lighter request for
-approval, not dressed as a decision.
+### Requirement: a card's kind is recorded and matches its call
+A card's **kind** MUST be recorded on the node and read at render time, never guessed from the
+card's shape. The kind is one of five along the work's life — a **grilling question**, a
+**ratification**, a **request for approval**, a **decision**, or an **acceptance** — and it MUST
+match the call: a real judgment the operator must reason through is a **decision**; a step needing
+only the operator's go is a lighter **request for approval**, not dressed as a decision.
 
 #### Scenario: a genuine fork versus a go-ahead
 - WHEN the machine raises a card
-- THEN its kind records whether it is a decision or a lighter approval, so the
-  weight of the card matches the weight of the call
+- THEN its recorded kind says whether it is a decision or a lighter request for approval, and the
+  render reads that kind rather than inferring it from the card's shape
 
 ### Requirement: a grilling question is a card carrying its lean and flip
-A grilling question MUST appear on the queue as a card showing the decision, the
-machine's lean, and the one thing that would flip it — a lighter request for approval,
-not a decision dressed in full weight; approving it accepts the lean.
+A grilling question MUST appear on the queue as a card showing the question, the
+machine's lean, and the one thing that would flip it — a lighter card, not a decision
+dressed full; approving it accepts the lean.
 
 #### Scenario: a question is shown
 - WHEN a grilling question reaches the queue
@@ -61,3 +63,14 @@ nor work in flight.
 #### Scenario: the gate holds
 - WHEN a grilling pass has produced its view entry but the operator has not ratified it
 - THEN no standing work exists for the ask, and ratifying the entry spawns it
+
+### Requirement: approving a length decision records the accepted length
+The acceptance of a flagged file length is the producer of the accepted-length record: when the
+operator approves a length decision — the depth gate's accept-the-length outcome — the system MUST
+record the accepted length through the writer seam, so the gate then clears for that file. The
+operator's go is the act; the durable record is its consequence.
+
+#### Scenario: approving a length decision
+- WHEN the operator approves a decision the depth gate raised over a file's length
+- THEN the accepted length named in the decision is recorded, the card leaves the queue, and the
+  gate clears for that file at the recorded length
