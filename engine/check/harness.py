@@ -1,11 +1,11 @@
 """The acceptance harness's shared kit — the bare assert-and-tally and the scripted
 transport every slice check is written against.
 
-The harness is itself under the deep-module discipline it exercises: the slice checks
-are one module each (`slice1` … `slice15`), so no single file grows past the length signal
-the architecture review scans for — a split along the per-slice seam (locality), not
-classitis. This module holds
-only what they all share.
+The harness is itself under the deep-module discipline it exercises: the surviving by-slice
+checks are one module each (`slice1`, `slice2`, … — the gaps are the capabilities already
+migrated to their own scenarios), so no single file grows past the length signal the
+architecture review scans for — a split along the per-slice seam (locality), not classitis.
+This module holds only what they all share.
 """
 from __future__ import annotations
 

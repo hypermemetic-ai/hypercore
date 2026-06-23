@@ -31,7 +31,9 @@ Each capability's migration, named:
 Each migration extends the `scenario` verb vocabulary **only as its first scenario needs it** (the
 locality discipline, `spec/depth.md`) — never pre-built — and dissolves that capability's by-slice
 content the same way folding-conditions did (the slice files shrink to their other-capability content,
-then disappear; the gaps at slices 5 and 20 mark where the migration has already reached). Done when no
-`engine/check/sliceN.py` remains and `python3 -m engine --check` runs entirely off capability scenarios.
+then disappear; the gaps in the slice numbering mark where the migration has reached — **done so far:
+folding-conditions, coherence, worker, architecture-review**, leaving slices 1/2/3/8/11–14/16–19/22).
+Done when no `engine/check/sliceN.py` remains and `python3 -m engine --check` runs entirely off
+capability scenarios.
 
 Provenance: `work/archive/scenario-gate/` (the binding contest and the contract this realizes).

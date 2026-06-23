@@ -31,7 +31,7 @@ import subprocess
 import tempfile
 
 from .harness import ok
-from .. import scenario, schedule, spec, transport, tree, worker
+from .. import review, scenario, schedule, spec, transport, tree, worker
 
 REAL = tree._DEFAULT_ROOT                                  # hypercore's own source tree — the spec under test
 
@@ -48,7 +48,7 @@ def check(root: str) -> None:
     #    READ OFF the blocks — derived, never hand-tended. The set of migrated capabilities is the set
     #    whose spec carries a block, read live, so a newly migrated capability appears here with no edit.
     migrated = [c.name for c in spec.read_spec(REAL).capabilities if scenario.checks(c.name, REAL)]
-    ok({"folding-conditions", "coherence"} <= set(migrated),
+    ok({"folding-conditions", "coherence", "worker", "architecture-review"} <= set(migrated),
        f"the migrated capabilities carry their executable scenarios ({', '.join(migrated)})")
     for cap in migrated:
         for o in scenario.run(cap, REAL):
@@ -87,6 +87,18 @@ def check(root: str) -> None:
        "worker — the harness binary and model are named in one place, bound at the fence (the OMP/GPT flip point)")
     ok(schedule.Scheduler().transport is None,
        "worker — the scheduler forwards the live worker injection point untouched, so the worker binds its own fence")
+
+    # 4. architecture-review — facts about hypercore's OWN source the standing scan reads, exercised
+    #    from outside. The review's *behavior* (flag a god-file, tell a stale acceptance from an over
+    #    file, read the mechanical red flags, render the derived operator view) is gated in
+    #    spec/architecture-review.md; what no fixture can assert is the artifact itself — that the live
+    #    engine tree is honestly clean, so a regression that grows a god-file or a cycle goes red here.
+    rv = review.review(REAL)
+    ok(not any(m.status in ("over", "exceeded", "accepted") for m in rv.modules),
+       "architecture-review — the real engine tree is honestly clean: no module past the length signal")
+    flags = review.red_flags(REAL)
+    ok(not flags, "architecture-review — the real engine tree carries no mechanical red flags"
+       + (f" (found: {[f.subject for f in flags]})" if flags else " (dead symbols, circular imports)"))
 
 
 # ── a fence with a real engine at two commits: the base and tip differ only in the length signal ──

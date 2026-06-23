@@ -29,6 +29,14 @@ process, not a one-off, so the picture is current by construction like every oth
 - THEN it measures every source module fresh and yields, for each past or nearing the
   length signal, a finding with its line count and a recommendation strength, computed live
 
+  ```check
+  module helper.py within-signal
+  module facade.py past-signal
+  scan measures helper.py
+  scan measures facade.py
+  debt facade.py strong
+  ```
+
 ### Requirement: the review surfaces a god-file-in-the-making before it sets
 A module past the length signal with no accepted-length record accepting it MUST surface as strong
 complexity debt, marked *assess its depth*. A module merely nearing the signal MUST surface as
@@ -52,15 +60,40 @@ fabricates a module depth judgment from length or from the mechanical subset.
 - THEN the review flags it as a strong complexity-debt finding (assess its depth), and a file
   merely nearing the signal as a lighter one
 
+  ```check
+  module giant.py past-signal
+  module rising.py near-signal
+  module small.py within-signal
+  debt giant.py strong
+  debt rising.py consider
+  debt small.py none
+  ```
+
 #### Scenario: an accepted-length module
 - WHEN a source file past the signal is named in an accepted-length record accepting it, and is
   still within that accepted length
 - THEN it is not in the complexity debt, though the structural map still shows it, marked
 
+  ```check
+  module deep.py past-signal
+  accept deep.py @460
+  debt deep.py none
+  map deep.py accepted
+  mark deep.py accepted
+  ```
+
 #### Scenario: a module that has outgrown its accepted bar
 - WHEN a source file has grown materially past the length an accepted-length record accepted it at
 - THEN it returns to the complexity debt as a strong opportunity, the map marks it as having
   outgrown its bar (the decision re-opened), distinct from a never-decided over-signal file
+
+  ```check
+  module sprawl.py 800
+  accept sprawl.py @460
+  debt sprawl.py strong stale 460
+  map sprawl.py exceeded
+  mark sprawl.py grew re-opened
+  ```
 
 ### Requirement: the review reads the mechanical structural red flags
 The architecture review MUST scan the source tree for the structural red flags a tool can read
@@ -76,10 +109,23 @@ red, so the standard bites by construction rather than by a reviewer remembering
 - WHEN a module-level name is defined but used nowhere in the package
 - THEN the scan surfaces it as a dead-symbol red flag in the complexity debt
 
+  ```check
+  dead-symbol consumer ORPHAN
+  used api value
+  flag dead consumer.ORPHAN
+  no-flag dead api.value
+  ```
+
 #### Scenario: a circular dependency
 - WHEN two modules depend on each other
 - THEN the scan surfaces the pair as a circular-dependency red flag; a tree with no dead symbols
   and no cycles reports a clean structural scan, not a fabricated judgment
+
+  ```check
+  cycle ring_a ring_b
+  flag cycle ring_a ring_b
+  clean
+  ```
 
 ### Requirement: the review's output is the operator view's upper levels and the backlog
 The review's output MUST be the operator view's "what the system is" upper levels — the
@@ -92,3 +138,9 @@ honest shape of the system at a glance without reading code.
 - WHEN the operator opens the operator view
 - THEN the root renders the visual structural map of as-built reality (debt marked) and the
   complexity debt, both derived from the review, with no source code read
+
+  ```check
+  view renders-map
+  view gap-derived
+  view no-source
+  ```

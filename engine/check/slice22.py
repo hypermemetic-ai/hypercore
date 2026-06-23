@@ -21,7 +21,7 @@ The red→green this slice records is the targeting defect itself. The discovery
 and **GREEN** against one materialized by the current channels (the `.claude/skills/` mirror and the
 bridge present). The check drives both halves so the loop is real, not narrated: it reconstructs the
 old render in a throwaway tree, asserts the gate fails it, then asserts the gate passes the live render —
-the same dogfood discipline slice 15 ran on the red-flag scan.
+the same dogfood discipline the architecture review's red-flag scenarios run (`spec/architecture-review.md`).
 
 The honest limit, recorded not faked (the same one `anchor.py` keeps): this gate asserts the channels
 land *where* the harness reads and conform to its *documented schema*. Whether a live `claude -p` session
