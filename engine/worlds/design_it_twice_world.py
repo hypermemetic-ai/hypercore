@@ -12,9 +12,9 @@ card, render, or node. Both the root and `ENGINE_ROOT` are restored and dropped 
 
 The selection-prompt-names-the-three-axes guarantee is a prompt-construction fact no domain verb can
 honestly express without naming the prompt; it is a watched invariant exercised from outside
-(`engine/check/scenarios.py`), not faked here. The concurrent-isolation property slice 8 also carried
-is the cross-cutting single-writer-line proof — not design-it-twice's own — and lives with the
-concurrency seam, not here.
+(`engine/check/scenarios.py`), not faked here. The concurrent-isolation property the contest once
+shared a slice with is the cross-cutting single-writer-line proof — not design-it-twice's own — and
+homes with `schedule` (the behavior gated in `spec/schedule.md`, the record mechanism watched), not here.
 """
 from __future__ import annotations
 

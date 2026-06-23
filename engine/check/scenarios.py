@@ -29,6 +29,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import threading
 
 from .harness import ok
 from .. import design, review, scenario, schedule, spec, transport, tree, worker
@@ -48,7 +49,7 @@ def check(root: str) -> None:
     #    READ OFF the blocks — derived, never hand-tended. The set of migrated capabilities is the set
     #    whose spec carries a block, read live, so a newly migrated capability appears here with no edit.
     migrated = [c.name for c in spec.read_spec(REAL).capabilities if scenario.checks(c.name, REAL)]
-    ok({"folding-conditions", "coherence", "worker", "architecture-review", "design-it-twice", "grilling"} <= set(migrated),
+    ok({"folding-conditions", "coherence", "worker", "architecture-review", "design-it-twice", "grilling", "schedule"} <= set(migrated),
        f"the migrated capabilities carry their executable scenarios ({', '.join(migrated)})")
     for cap in migrated:
         for o in scenario.run(cap, REAL):
@@ -106,6 +107,126 @@ def check(root: str) -> None:
     #    spec/design-it-twice.md.
     ok(all(ax in design.SELECT for ax in ("DEPTH", "LOCALITY", "SEAM PLACEMENT")),
        "design-it-twice — the selection prompt compares candidates on depth, locality, and seam placement")
+
+    # 6. schedule — the single-writer line the concurrency scenario rests on, proven at the
+    #    record-mechanism level: facts the closed scenario vocabulary cannot honestly express — an
+    #    exact pathspec, a cross-process flock, slug atomicity, a strict hand-off parse, a crash-
+    #    stranded node. The *behavior* (two workers advance, each folds its own delta) is gated in
+    #    spec/schedule.md; what no in-process fixture proves is that the line is load-bearing by
+    #    construction — remove it, widen the pathspec, or loosen the parse and these go red on the
+    #    record itself. (Homing the single-writer-line proof here was the recorded concurrency-home
+    #    decision; it dissolved the by-slice residue that carried it.)
+    _schedule_invariants()
+
+
+# ── the schedule single-writer-line and failure-recovery invariants, exercised from outside ──
+
+def _inv_root() -> str:
+    r = tempfile.mkdtemp(prefix="scenario-schedule-inv-")
+    for c in (("init", "-q"), ("config", "user.email", "inv@hypercore"), ("config", "user.name", "inv")):
+        subprocess.run(["git", *c], cwd=r, check=True, stdout=subprocess.DEVNULL)
+    os.environ["ENGINE_ROOT"] = r
+    return r
+
+
+def _schedule_invariants() -> None:
+    from .. import delta, record
+    from ..transport import MalformedReply
+    prev = os.environ.get("ENGINE_ROOT")
+    try:
+        # exact-path commits don't sweep a sibling's uncommitted work (the C1 lost-update sweep)
+        root = _inv_root()
+        a = tree.file_intent("worker A landing its own node")
+        tree.atomic_write(os.path.join(root, "work", "sibling-in-flight.tmp"), "worker B's uncommitted change")
+        tree.cut(a)                                            # A commits its own act over work/
+        tracked = subprocess.run(["git", "ls-files", "work"], cwd=root, capture_output=True, text=True).stdout
+        ok("sibling-in-flight.tmp" not in tracked,
+           "schedule — a commit stages exactly its own act's files: a sibling's uncommitted file is not swept in (single-writer, C1)")
+
+        # the line is a real cross-holder lock spanning the act, not a thread-only nicety
+        entered, release, second_in = threading.Event(), threading.Event(), threading.Event()
+
+        @record.serialized
+        def hold_line():
+            entered.set(); release.wait(timeout=5)
+
+        @record.serialized
+        def second():
+            second_in.set()
+
+        t1 = threading.Thread(target=hold_line, daemon=True); t1.start(); entered.wait(timeout=5)
+        t2 = threading.Thread(target=second, daemon=True); t2.start()
+        blocked_while_held = not second_in.wait(timeout=0.5)
+        release.set(); entered_after = second_in.wait(timeout=5); t1.join(timeout=5); t2.join(timeout=5)
+        ok(blocked_while_held and entered_after,
+           "schedule — the line serializes a second holder: it cannot enter the record until the first releases (the flock is load-bearing)")
+
+        # two workers fold the SAME spec file under overlap — both land, neither sweeps the other
+        root = _inv_root()
+        tree.atomic_write(os.path.join(root, "spec", "shared.md"), "# shared\n\nA capability two workers grow at once.\n")
+        tree.commit([os.path.join(root, "spec", "shared.md")], "seed: the shared capability")
+        gate = threading.Event()
+
+        def fold_req(tag: str):
+            gate.wait(timeout=5)
+            delta.fold(delta.parse(
+                f"# delta — grow shared with {tag}\n\n## ADDED — shared\n"
+                f"### Requirement: the {tag} property holds\nThe {tag} property MUST hold.\n"
+                f"#### Scenario: s\n- WHEN x\n- THEN y\n"))
+
+        ths = [threading.Thread(target=fold_req, args=(t,), daemon=True) for t in ("first", "second")]
+        for t in ths:
+            t.start()
+        gate.set()
+        for t in ths:
+            t.join(timeout=10)
+        cap = spec.read_spec(root).capability("shared")
+        names = {r.name for r in cap.requirements} if cap else set()
+        ok({"the first property holds", "the second property holds"} <= names,
+           "schedule — two workers folding the SAME spec file both land their requirement — neither fold overwrites the other")
+
+        # slug reservation is atomic — N identical-text creations get N distinct folders (the C3 TOCTOU)
+        root = _inv_root()
+        N, start = 8, threading.Event()
+
+        def create():
+            start.wait(timeout=5); tree.raise_card("the worker could not complete the same ask", kind="decide")
+
+        creators = [threading.Thread(target=create, daemon=True) for _ in range(N)]
+        for t in creators:
+            t.start()
+        start.set()
+        for t in creators:
+            t.join(timeout=10)
+        cards = tree.cards()
+        ok(len(cards) == N and len({c.id for c in cards}) == N,
+           f"schedule — {N} concurrent identical-text creations get {N} distinct folders — no slug collision lost a card (C3)")
+
+        # a malformed model reply is a failure at apply, before coherence — not a silent no-op success (H3)
+        root = _inv_root()
+        g = tree.file_intent("a worker whose model returns garbage")
+        raised = False
+        try:
+            worker.context(g, root)
+            worker.apply(g, transport=lambda _p: "prose, not a JSON object at all", root=root)
+        except MalformedReply:
+            raised = True
+        ok(raised,
+           "schedule — a reply with no JSON object raises at apply, before coherence — never a foldable no-op (H3)")
+
+        # a crash-stranded IN_FLIGHT node with no live worker is recovered on the next step (C2)
+        root = _inv_root()
+        stranded = tree.file_intent("a node a crash left in flight")
+        tree.dispatch(stranded)                               # IN_FLIGHT on disk, no live worker thread
+        schedule.Scheduler(transport=lambda _p: "", root=root, limit=0).step()
+        rs = tree.find(stranded.id)
+        ok(rs is not None and rs.state != tree.IN_FLIGHT,
+           "schedule — a crash-stranded in-flight node with no live worker is recovered on the next step (C2)")
+    finally:
+        if prev is None:
+            os.environ.pop("ENGINE_ROOT", None)
+        else:
+            os.environ["ENGINE_ROOT"] = prev
 
 
 # ── a fence with a real engine at two commits: the base and tip differ only in the length signal ──

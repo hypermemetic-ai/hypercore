@@ -19,16 +19,17 @@ import tempfile
 
 # Capability scenarios + the remaining by-slice checks. Migrated capabilities run off their own
 # executable scenarios (`scenarios`), not a slice: folding-conditions left slices 5/7/9/20/21,
-# coherence left slice 21, worker left slices 4/7/10/23, and architecture-review left slices 6/7/9/15 —
-# so each wholly-migrated slice file is gone (4/5/6/7/9/10/15/20/21/23). The gaps in the numbering mark
-# the migration; each remaining capability dissolves its slice content the same way as it migrates,
-# until no slice file is left and `--check` runs entirely off capability scenarios.
-from . import (harness, scenarios, slice1, slice2, slice3, slice8,
-               slice11, slice12, slice13, slice14, slice16, slice17,
-               slice18, slice19, slice22)
+# coherence left slice 21, worker left slices 4/7/10/23, architecture-review left slices 6/7/9/15, and
+# schedule left slices 16/18 — and took the cross-cutting single-writer-line proof (slice 8's residue,
+# slice 17) home with it, the behavior gated in spec/schedule.md and the record-mechanism facts watched
+# in `scenarios`. So each wholly-migrated slice file is gone (4/5/6/7/8/9/10/15/16/17/18/20/21/23). The
+# gaps in the numbering mark the migration; each remaining capability dissolves its slice content the
+# same way as it migrates, until no slice file is left and `--check` runs entirely off capability scenarios.
+from . import (harness, scenarios, slice1, slice2, slice3,
+               slice11, slice12, slice13, slice14, slice19, slice22)
 
-SLICES = (slice1, slice2, slice3, slice8,
-          slice11, slice12, slice13, slice14, slice16, slice17, slice18, slice19,
+SLICES = (slice1, slice2, slice3,
+          slice11, slice12, slice13, slice14, slice19,
           slice22, scenarios)
 
 
