@@ -21,8 +21,10 @@ Each capability's migration, named:
 - **coherence** — slice 21 → `spec/coherence.md` scenarios (the incoherent branch, the fold decision).
 - **architecture-review** — slices 6 / 7(#2) / 9 / 15 → `spec/architecture-review.md` scenarios (the
   review render, the exceeded/over/accepted distinction, the mechanical red-flag scan).
-- **self-model / delta** — slice 19 → scenarios (the transactional fold). *(The single-writer line —
-  slice 17 — homed in `schedule`, not here: the concurrency-home decision below, now enacted.)*
+- **self-model / delta** — slice 19 + the self-model half of slice 2 → `spec/self-model.md` scenarios
+  (the spec read, the delta, the transactional fold incl. crash/retry, the operator view). *(The
+  single-writer line — slice 17 — homed in `schedule`, not here: the concurrency-home decision below.
+  The self-verifying requirement stays watched — it is the harness's own structure.)*
 - **grilling** — slices 3 / 14 → `spec/grilling.md` scenarios (the floor, one-question-at-a-time).
 - **design-it-twice** — slice 8 → `spec/design-it-twice.md` scenarios (the contest, the recorded pick).
 - **schedule** — slices 16 / 18 → `spec/schedule.md` scenarios (the ready-work loop, failure recovery);
@@ -34,9 +36,9 @@ Each migration extends the `scenario` verb vocabulary **only as its first scenar
 locality discipline, `spec/depth.md`) — never pre-built — and dissolves that capability's by-slice
 content the same way folding-conditions did (the slice files shrink to their other-capability content,
 then disappear; the gaps in the slice numbering mark where the migration has reached — **done so far:
-folding-conditions, coherence, worker, architecture-review, design-it-twice, grilling, schedule**,
-leaving slices 1 / 2 / 3(residue) / 11–14 / 19 / 22). Done when no `engine/check/sliceN.py` remains
-and `python3 -m engine --check` runs entirely off capability scenarios.
+folding-conditions, coherence, worker, architecture-review, design-it-twice, grilling, schedule,
+self-model**, leaving slices 1 / 2(residue) / 3(residue) / 11–14 / 22). Done when no
+`engine/check/sliceN.py` remains and `python3 -m engine --check` runs entirely off capability scenarios.
 
 The migration surfaced that the remaining slices are not clean per-capability — three cross-cutting
 seams run through them, each needing one home before the capabilities they touch can finish:
@@ -53,7 +55,12 @@ seams run through them, each needing one home before the capabilities they touch
 - **methodology / channels** (slice 14, the grilling+coherence skill render) — migrates with the
   communication/channels/interface group.
 
-self-model is now slices 2 + 19 (slice 17, its single-writer half, homed in schedule above); it is
-gated only on the slice-2 split, and is the natural next piece.
+The slice-2 split is done: self-model took its behaviors (the delta, the fold, the view); slice 2
+survives as a thin residue — the glossary's content (`thread`, the open *operator view* naming
+question), the communication group's concern, kept by-slice until that group migrates.
+
+What remains is the **communication / channels / interface** group — slices 1 / 2(residue) / 11 / 12 /
+13 / 22, plus the two parked cross-cutting residues (card-kind in slice 3, the methodology/skill render
+in slice 14). That group is the last of the by-slice harness.
 
 Provenance: `work/archive/scenario-gate/` (the binding contest and the contract this realizes).

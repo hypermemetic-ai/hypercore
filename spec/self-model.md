@@ -15,6 +15,12 @@ gap between them is the backlog.
 - THEN it yields the glossary and, per capability, that capability's requirements
   and their scenarios — concise enough to scan across all of them at once
 
+  ```check
+  read spec
+  self-hosts
+  covered
+  ```
+
 ### Requirement: the living spec is self-verifying — a scenario is the executable check of its requirement
 A capability's `#### Scenario:` MUST be able to carry the **executable check** of its requirement, not
 only describe it: the architect authors the scenario in domain verbs, a deep binding (`scenario`)
@@ -44,6 +50,11 @@ an empty delta and says so.
 - WHEN a tree changes no behavior
 - THEN it carries a delta that declares itself trivial, and folding it applies nothing
 
+  ```check
+  fold trivial
+  unchanged
+  ```
+
 ### Requirement: a missing or mismatched delta cannot fold
 Folding MUST refuse a behavior-changing tree that carries no delta, and refuse a
 delta that does not apply cleanly to the current spec.
@@ -52,10 +63,21 @@ delta that does not apply cleanly to the current spec.
 - WHEN a behavior-changing tree carries no delta file
 - THEN the fold is refused
 
+  ```check
+  fold missing
+  refused
+  ```
+
 #### Scenario: mismatched delta
 - WHEN a delta MODIFIES or REMOVES a requirement that is absent, or ADDS one that
   already exists
 - THEN the fold is refused and the spec is left untouched
+
+  ```check
+  fold mismatched
+  refused
+  untouched
+  ```
 
 ### Requirement: folding applies the delta to the spec, atomically, both directions
 The act that folds a tree MUST apply its delta to the living spec, re-render the derived
@@ -72,16 +94,40 @@ a conflict.
 - THEN that requirement is present in the capability's spec file and the node is archived,
   both committed in the same single act
 
+  ```check
+  fold added
+  landed
+  archived
+  atomic
+  ```
+
 #### Scenario: a crash mid-fold is retried
 - WHEN a fold is interrupted after the spec change lands on disk but before it commits, and
   the fold is retried
 - THEN the retry completes — the requirement is present exactly once and the node is
   archived — rather than wedging on a permanent "already exists" refusal
 
+  ```check
+  fold crash
+  half-applied
+  fold retry
+  landed once
+  archived
+  ```
+
 #### Scenario: a fold grows a new capability
 - WHEN a delta ADDS a requirement in a capability that does not yet exist
 - THEN the fold creates that capability and the operator view gains it as a top-level
   unit; a MODIFIED or REMOVED requirement in an absent capability still cannot fold
+
+  ```check
+  fold newcap
+  grew
+  read view
+  gained
+  fold mismatched
+  refused
+  ```
 
 ### Requirement: the operator view renders vision beside as-built and gap
 The operator view MUST render, at every altitude, the **vision** (authored, from
@@ -99,16 +145,36 @@ so the operator reads depth, not just a line count.
 - THEN it shows the vision, the as-built capabilities and their requirements, and the
   gap; drilling into a capability zooms the same three to that grain
 
+  ```check
+  read view
+  vision present
+  asbuilt
+  gap
+  ```
+
 #### Scenario: a capability's vision is a declared binding
 - WHEN the view slices the vision per capability
 - THEN it reads the intent each capability declares it realizes, recorded in the capability's own
   spec slice, so a newly carved capability shows its vision with no change to the view,
   and a capability that declares none — pure machinery — shows no vision, distinct from a bug
 
+  ```check
+  plant machinery
+  read view
+  vision derived
+  vision blank
+  ```
+
 #### Scenario: the root's upper levels
 - WHEN the operator opens the root of the view
 - THEN its structural map of as-built reality and its complexity debt are the
   architecture review's standing output, derived from the scan, not hand-authored
+
+  ```check
+  read view-real
+  structure
+  debt
+  ```
 
 ### Requirement: the as-built and gap are derived; only the vision is authored
 No statement in the as-built or gap renders MUST be hand-authored or hand-maintained
@@ -118,3 +184,9 @@ vision they sit beside is the one writable region.
 #### Scenario: the model changes
 - WHEN a delta folds into the spec
 - THEN the as-built and gap renders change in the same act, with nothing hand-edited
+
+  ```check
+  fold added
+  read view
+  asbuilt
+  ```

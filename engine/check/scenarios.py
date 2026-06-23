@@ -49,7 +49,7 @@ def check(root: str) -> None:
     #    READ OFF the blocks — derived, never hand-tended. The set of migrated capabilities is the set
     #    whose spec carries a block, read live, so a newly migrated capability appears here with no edit.
     migrated = [c.name for c in spec.read_spec(REAL).capabilities if scenario.checks(c.name, REAL)]
-    ok({"folding-conditions", "coherence", "worker", "architecture-review", "design-it-twice", "grilling", "schedule"} <= set(migrated),
+    ok({"folding-conditions", "coherence", "worker", "architecture-review", "design-it-twice", "grilling", "schedule", "self-model"} <= set(migrated),
        f"the migrated capabilities carry their executable scenarios ({', '.join(migrated)})")
     for cap in migrated:
         for o in scenario.run(cap, REAL):
