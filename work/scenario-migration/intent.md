@@ -32,8 +32,24 @@ Each migration extends the `scenario` verb vocabulary **only as its first scenar
 locality discipline, `spec/depth.md`) — never pre-built — and dissolves that capability's by-slice
 content the same way folding-conditions did (the slice files shrink to their other-capability content,
 then disappear; the gaps in the slice numbering mark where the migration has reached — **done so far:
-folding-conditions, coherence, worker, architecture-review**, leaving slices 1/2/3/8/11–14/16–19/22).
-Done when no `engine/check/sliceN.py` remains and `python3 -m engine --check` runs entirely off
-capability scenarios.
+folding-conditions, coherence, worker, architecture-review, design-it-twice, grilling**, leaving slices
+1 / 2 / 3(residue) / 8(residue) / 11–14 / 16–19 / 22). Done when no `engine/check/sliceN.py` remains
+and `python3 -m engine --check` runs entirely off capability scenarios.
+
+The migration surfaced that the remaining slices are not clean per-capability — three cross-cutting
+seams run through them, each needing one home before the capabilities they touch can finish:
+
+- **the concurrency / single-writer-line proof** (slice 8 residue #1, slice 17) — described in both
+  `worker.md` and `schedule.md`. **Decision: it homes in `schedule.md`'s "work runs concurrently on
+  one record"** (the only spec that names *single-writer*), gated when schedule migrates; the
+  record-mechanism facts (exact-path commits, the flock line, slug reservation) become watched
+  invariants; `worker.md`'s concurrency line stays watched, proven by schedule's executable gate. This
+  unblocks self-model and fully dissolves slice 8. [machine]
+- **card-kind** (slice 3 residue) — the queue's card-kind seam; migrates with the queue/card-kind work.
+- **methodology / channels** (slice 14, the grilling+coherence skill render) — migrates with the
+  communication/channels/interface group.
+
+self-model is the most entangled (slices 2 + 17 + 19) and is gated on the concurrency decision above
+plus the slice-2 split; it is the natural piece after schedule.
 
 Provenance: `work/archive/scenario-gate/` (the binding contest and the contract this realizes).
