@@ -1,8 +1,8 @@
 ---
 kind: ask
-state: standing
+state: done
 owner: operator
-created: 2026-06-24
+created: 1782277200
 ---
 # worker-grounding-economy — the worker's grounding is the smallest high-signal set, not the whole spec inlined
 

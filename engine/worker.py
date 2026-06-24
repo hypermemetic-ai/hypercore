@@ -6,16 +6,17 @@ result, written for the machine. Three properties define it, and each is structu
 not a discipline to remember:
 
 - **It is grounded in its capability's spec slice, with full scan of the whole spec.**
-  Before a worker runs, `context` assembles the living spec for it — the capabilities its
-  change touches marked as its *grounding*, the rest of the spec carried beside them for
-  scan, plus the glossary — so there is no path that runs a worker without it. The spec is
-  **preloaded whole** (the small, scannable high-signal core); the long history and grounds of
-  past decisions are *not* inlined — they carry no whole-picture stake, so the worker runs at its
-  fence and greps `work/archive/` in its own checkout **just-in-time** as the change needs
-  (role-assembly step 5). A worker is *not* slice-confined: a delta
-  cannot be authored or verified from one capability in isolation, so the worker rescans
-  the whole spec and its rescan catches a capability the handed delta mis-named or missed.
-  It holds the spec, never raw code, and never the operator view.
+  Before a worker runs, `context` assembles the living spec — the capabilities its change touches
+  foregrounded in full as its *grounding*, **every other capability carried as a high-signal index**
+  (vision + requirement titles), plus the glossary — so no path runs a worker without it. The index
+  spans the whole spec, the small scannable map; an untouched *body*, like the long grounds of past
+  decisions, is *not* inlined — both live in the checkout, so the worker reads a body just-in-time from
+  `spec/<name>.md` and greps `work/archive/` for grounds as the change needs (role-assembly step 5).
+  Inlining every untouched body spent the attention budget on tokens the change does not touch; the
+  index is the whole-picture defense at a fraction of that cost. A worker is *not* slice-confined: a
+  delta cannot be authored or verified from one capability in isolation, so its rescan covers the whole
+  map and catches one the handed delta mis-named or missed — pulling the implicated body. It holds the
+  spec, never raw code, and never the operator view.
 
 - **It runs fenced in its own git worktree, isolated by the OS.** Its tree is a separate checkout
   on its own branch; it builds in isolation and its commits reach the one record without ever
@@ -64,6 +65,7 @@ worker is taught the gate it builds toward; the lock the engine enforces folds a
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 from dataclasses import dataclass, field
 
@@ -122,13 +124,13 @@ def _worker_disciplines(root: str | None = None) -> str:
 
 @dataclass
 class WorkerContext:
-    """The grounding a worker runs on — assembled from the model, never free-form. It carries
-    the *whole* spec (the worker is not slice-confined): `capabilities` is every capability, and
-    `touched` marks the ones the change names as its grounding/focus; the rest is carried for the
-    rescan that catches a mis-named or missed capability. The `depth` capability is among them, and
-    the prompt foregrounds it every episode. The long history and grounds of past decisions are *not*
-    here — the worker greps `work/archive/` in its fence checkout just-in-time (step 5). Nothing of
-    the operator view and nothing of the code is in here."""
+    """The grounding a worker runs on — assembled from the model, never free-form. It carries the
+    *whole* spec (the worker is not slice-confined): `capabilities` is every capability, `touched` marks
+    the ones the change names. `prompt` foregrounds the touched ones in full and renders every other as a
+    high-signal index (vision + requirement titles), so the rescan sees the whole map while the untouched
+    bodies stay a `spec/<name>.md` read away. `depth` is among them, foregrounded every episode. The long
+    grounds of past decisions are *not* here — greped from `work/archive/` just-in-time (step 5). Nothing
+    of the operator view and nothing of the code is in here."""
     capabilities: list[tuple[str, str]] = field(default_factory=list)  # (name, spec text) — all
     glossary: str = ""
     delta: str = ""                                   # the handed delta, to verify + refine
@@ -165,13 +167,12 @@ class WorkerResult:
 # ── the spec slice (assembled by construction; no worker runs without it) ─────
 
 def context(node: tree.Node, root: str | None = None) -> WorkerContext:
-    """Assemble the grounding for a node: the *whole* spec — every capability's text and the
-    glossary — with the capabilities the handed delta names marked as the worker's grounding
-    (`touched`); the `depth` capability is among them and the prompt foregrounds it every episode.
-    The long history and grounds of past decisions are left out by design: the worker greps
-    `work/archive/` in its fence checkout just-in-time (step 5), so the preloaded grounding stays the
-    small, scannable spec. The worker is not slice-confined: it holds full scan access so its rescan
-    can verify the handed delta against the whole spec, not trust its list."""
+    """Assemble the grounding for a node: the *whole* spec — every capability's text and the glossary —
+    with the ones the handed delta names marked as `touched` (the `depth` capability among them,
+    foregrounded every episode). `context` holds every full body; the economy falls in `prompt` — touched
+    inlined whole, the rest an index, bodies read just-in-time from the checkout. Past-decision grounds are
+    left out (greped from `work/archive/`, step 5). Not slice-confined: the index spans the whole map, so
+    the rescan verifies the handed delta against it, not its list."""
     sp = spec.read_spec(root)
     handed = _handed_delta(node)
     touched = _touched(handed, sp)
@@ -180,19 +181,17 @@ def context(node: tree.Node, root: str | None = None) -> WorkerContext:
 
 
 def prompt(node: tree.Node, ctx: WorkerContext, root: str | None = None) -> str:
-    """The worker's grounding, rendered to one prompt — the salutation, then the worker's own
-    disciplines single-sourced from `spec/worker.md`, the non-inferable record grounding, the depth
-    standards (the proactive defense), the ask, the handed delta, the touched capabilities foregrounded
-    as the grounding, the rest of the spec carried for the rescan, and the glossary; the reply envelope
-    (the tag shape and the closing imperative) comes **last**, so the exact format the worker emits is
-    the freshest thing in view when it answers. The long history and grounds of past decisions are
-    *not* inlined: the prompt points the worker at `work/archive/` in its fence checkout to grep
-    just-in-time (step 5). This is the whole of what the worker is given."""
+    """The worker's grounding rendered to one prompt — salutation, disciplines single-sourced from
+    `spec/worker.md`, the record grounding, the depth standards, the ask, the handed delta, the
+    **touched** capabilities in full, **every other as a high-signal index** (vision + requirement
+    titles), and the glossary; the reply envelope comes **last**. Untouched bodies and past-decision
+    grounds are read just-in-time from the checkout (`spec/<name>.md`, `work/archive/`); the index spans
+    the whole spec, so every capability stays in view at a fraction of the bodies' budget."""
     def _caps(items):
         return "\n\n".join(f"### capability: {n}\n{t.strip()}" for n, t in items)
     depth_text = next((t.strip() for n, t in ctx.capabilities if n == "depth"), "")
     grounding = _caps([(n, t) for n, t in ctx.capabilities if n in ctx.touched and n != "depth"])
-    scan = _caps([(n, t) for n, t in ctx.capabilities if n not in ctx.touched and n != "depth"])
+    index = _index([(n, t) for n, t in ctx.capabilities if n not in ctx.touched and n != "depth"])
     return (
         f"{SALUTATION}\n\n"
         f"Your standing disciplines (single-sourced from spec/worker.md — what good looks like):\n"
@@ -203,18 +202,33 @@ def prompt(node: tree.Node, ctx: WorkerContext, root: str | None = None) -> str:
         f"The ask:\n{grill.contract_of(node) or node.text}\n\n"
         f"The handed delta (verify and refine it against the WHOLE spec):\n"
         f"{ctx.delta or '(none — author it from the full scan)'}\n\n"
-        f"Your grounding — the capabilities the delta names:\n"
+        f"Your grounding — the capabilities the delta names, in full:\n"
         f"{grounding or '(none named — author the delta from the full scan)'}\n\n"
-        f"The rest of the spec, for your rescan (catch any capability the delta mis-named or "
-        f"missed):\n{scan or '(none — this is the whole spec)'}\n\n"
+        f"The rest of the spec, indexed for your rescan — every other capability by its vision and "
+        f"requirement titles, so you see the whole map and can catch one the delta mis-named or "
+        f"missed. When your rescan implicates a capability, read its full body just-in-time from "
+        f"`spec/<name>.md` in your checkout:\n{index or '(none — this is the whole spec)'}\n\n"
         f"The glossary:\n{ctx.glossary}\n\n"
         f"The long history and grounds of past decisions are not inlined here — they carry no "
         f"whole-picture stake, so you pull them just-in-time from your own checkout: the archived "
         f"nodes are in `work/archive/` at your worktree root; grep them for a past decision's grounds "
-        f"as the change needs. The spec capabilities above are preloaded whole — your scannable "
-        f"high-signal core.\n\n"
+        f"as the change needs.\n\n"
         f"{ENVELOPE}"
     )
+
+
+def _index(items: list[tuple[str, str]]) -> str:
+    """A high-signal index of the capabilities not foregrounded — each one's name, vision line, and
+    requirement titles: the whole-spec **map** the rescan reads to decide which full body to pull
+    just-in-time from `spec/<name>.md` (where it already lives). The index, not the inlined bodies, is
+    what the anti-myopia defense needs — every capability in view at ~5–10% of the bodies' cost."""
+    out = []
+    for n, t in items:
+        m = re.search(r"<!--\s*vision:\s*(.*?)\s*-->", t)
+        head = f"### capability: {n}" + (f" — {m.group(1).strip()}" if m else "")
+        titles = [ln.split(":", 1)[1].strip() for ln in t.splitlines() if ln.startswith(spec.REQ)]
+        out.append(head + "".join(f"\n  - {x}" for x in titles))
+    return "\n\n".join(out)
 
 
 # ── the fence (a real, separate git worktree on its own branch) ──────────────

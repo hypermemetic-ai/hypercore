@@ -23,34 +23,38 @@ operator-facing word from the result.
   ```
 
 ### Requirement: a worker is grounded in its capability's spec slice, by construction
-A worker MUST be handed the living spec with the capabilities its change touches marked as
-its grounding — their requirements and scenarios foregrounded — AND the rest of the spec
-carried beside them for scan, with the glossary, assembled before it runs, so there is no path
-that runs a worker without its grounding. The spec capabilities and the glossary are
-**preloaded whole** — the small, scannable, high-signal core, the defense against the architect's
-mis-scoping and against worker myopia. The **long history and grounds of past decisions** are NOT
-preloaded into the prompt: they are the long reference with no whole-picture stake, so the worker
-runs at its fence and greps **just-in-time** for them in its own checkout (`work/archive/`, where a
-node archives with its work) as the change needs. It holds the spec, never raw code, and never the
-operator view. A worker is **not slice-confined**: a delta cannot be authored or verified from one
-capability in
-isolation, so its rescan covers the whole spec and catches a capability the handed delta mis-named
-or missed.
+A worker MUST be handed the living spec with the capabilities its change touches **foregrounded in
+full** as its grounding — their requirements and scenarios inlined — AND **every other capability
+carried as a high-signal index** (its vision line and requirement titles, not its body), with the
+glossary, assembled before it runs, so there is no path that runs a worker without its grounding. The
+index spans the whole spec — the small, scannable, high-signal **map**, the defense against the
+architect's mis-scoping and against worker myopia: the worker sees every capability even when its body
+is a read away. An untouched capability's full **body** is NOT inlined — carrying every body whole
+spends the worker's attention budget on tokens the change does not touch, the cost our
+context-engineering standard names; the body already lives in the worker's checkout, so it reads it
+**just-in-time** from `spec/<name>.md` when its rescan implicates it. The glossary is preloaded whole.
+The **long history and grounds of past decisions** are likewise NOT inlined: they are the long
+reference with no whole-picture stake, so the worker greps **just-in-time** for them in its own
+checkout (`work/archive/`, where a node archives with its work) as the change needs. It holds the
+spec, never raw code, and never the operator view. A worker is **not slice-confined**: a delta cannot
+be authored or verified from one capability in isolation, so its rescan covers the whole map — and
+pulls the body it implicates — catching a capability the handed delta mis-named or missed.
 
 #### Scenario: assembling the context
 - WHEN a worker is run on a node whose handed delta names a set of capabilities
-- THEN its context contains the whole spec — the named capabilities marked as grounding and
-  the rest carried for scan — plus the glossary, all preloaded whole; the long history and grounds
-  of past decisions are not inlined but reachable in its checkout (`work/archive/`) for a
-  just-in-time grep, and its prompt foregrounds the
-  grounding while keeping the full scan
+- THEN its prompt maps the whole spec — the named capabilities foregrounded in full as its grounding,
+  every other capability carried as a vision+requirement-titles index — plus the glossary; an untouched
+  capability's full body, like the long grounds of past decisions, is not inlined but a checkout read
+  away (`spec/<name>.md`, and `work/archive/` for the grounds) for a just-in-time pull, and the index
+  keeps the whole map in view while the grounding is foregrounded
 
   ```check
   plant-grounds
   spawn worker communication
   grounding marks worker communication
   grounding whole-spec
-  grounding carries-spec
+  grounding foregrounds communication
+  grounding indexes tree
   grounding holds-no-code
   grounding omits-grounds
   grounding points-to-archive
@@ -58,13 +62,15 @@ or missed.
 
 #### Scenario: the rescan catches a mis-mapping
 - WHEN a handed delta names a capability the change does not touch, or omits one it does
-- THEN the worker's context still holds the whole spec, so its rescan can catch the
-  mis-mapping rather than trust the delta's list — which a slice-confined worker could not
+- THEN the worker's prompt still maps the whole spec — every capability in view, the untouched ones as
+  an index — so its rescan can catch the mis-mapping rather than trust the delta's list, pulling the
+  implicated body just-in-time, which a slice-confined worker could not
 
   ```check
   spawn tree
   grounding marks tree
   grounding whole-spec
+  grounding indexes communication
   ```
 
 ### Requirement: a worker is grounded in the depth standards, every episode
@@ -79,8 +85,8 @@ backstop, not an operator-load generator. The grounding is assembled into the wo
 by construction, like its spec slice — there is no path that runs a worker without it.
 
 The disciplines MUST be **single-sourced**, not a frozen copy: depth is a capability like any other
-(`spec/depth.md`), carried in the worker's whole-spec grounding and foregrounded in its
-prompt, so a sharpened slice reaches the next worker with no second copy to drift. The
+(`spec/depth.md`), carried in the worker's whole-spec grounding and foregrounded **in full** in its
+prompt every episode, so a sharpened slice reaches the next worker with no second copy to drift. The
 same slice renders the `depth` **skill** through the methodology seam, materialized on disk for the
 harness that loads skills natively — one source, the channels derived from it, the way the as-built
 is derived from the model and only the vision is authored.

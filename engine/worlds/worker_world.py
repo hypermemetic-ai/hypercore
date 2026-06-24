@@ -3,8 +3,9 @@
 
 The verbs name what the worker *is*, never the engine symbols beneath: `spawn <cap>…` files an ask
 whose handed delta names those capabilities and assembles the grounding; `grounding <property>` reads
-that grounding (the whole spec preloaded, the named capabilities marked, the depth standards
-foregrounded, the long past-decision grounds *not* inlined but pointed at in `work/archive/`);
+that grounding (the whole spec mapped — the touched capabilities foregrounded in full, every other
+carried as a high-signal index whose body is a checkout read away — the depth standards foregrounded,
+the long past-decision grounds *not* inlined but pointed at in `work/archive/`);
 `sharpen` rewrites the depth slice so `grounding renders` can prove the standards are single-sourced,
 not a frozen copy; `fence off-main`/`fence binds-cwd` prove the worktree isolation and
 the at-fence transport; `build` runs the whole crossing so `leak none` proves the raw report reaches
@@ -33,7 +34,6 @@ _DEMO_REQ = "the worker's refined delta integrates"
 # The framework tokens the depth grounding must foreground every episode, and the code tokens it must
 # never carry — the worker holds the spec, not raw code (slice-4/7 properties, named as domain checks).
 _DEPTH_FRAMEWORK = ("deep modules", "downward", "strategic", "red flags", "shallow module", "depth standards")
-_SPEC_MARKERS = ("### Requirement:", "throwaway conversation")
 _CODE_TOKENS = ("import ", "curses")
 
 
@@ -103,22 +103,41 @@ class World(_Base):
 
     # ── assertion verbs ──────────────────────────────────────────────────────
     def _v_grounding(self, args: list[str]) -> tuple[bool, str]:
-        """grounding <property> — read the worker's assembled grounding. Properties: `whole-spec`,
-        `marks <cap>…`, `carries-spec`, `carries-depth`, `holds-no-code`, `omits-grounds`,
-        `points-to-archive`, `renders` (the last two read the world's planted sentinels)."""
+        """grounding <property> — read the worker's assembled grounding. Properties: `whole-spec` (the
+        prompt maps every capability — touched in full, the rest indexed — so the worker sees the whole
+        spec), `marks <cap>…`, `foregrounds <cap>` (the prompt inlines that capability's full body),
+        `indexes <cap>` (the prompt carries it as an index — its requirement titles, body NOT inlined),
+        `carries-depth`, `holds-no-code`, `omits-grounds`, `points-to-archive`, `renders` (the last two
+        read the world's planted sentinels)."""
         if self.ctx is None:
             return False, "grounding read before spawn/sharpen"
         prop = args[0]
         if prop == "whole-spec":
+            # The myopia-defense, read off the PROMPT (what the worker actually sees), not the context
+            # object: every capability surfaces — touched in full, the rest as an index head — so the
+            # rescan maps the whole spec even though the untouched bodies are a checkout read away.
             allcaps = {c.name for c in spec.read_spec(self.root).capabilities}
-            return ((True, "") if allcaps and set(self.ctx.names) == allcaps
-                    else (False, f"context is not the whole spec; missing {sorted(allcaps - set(self.ctx.names))}"))
+            missing = [c for c in allcaps if c != "depth" and f"### capability: {c}" not in self.prompt]
+            return ((True, "") if allcaps and not missing
+                    else (False, f"the prompt does not map the whole spec; missing {sorted(missing)}"))
         if prop == "marks":
             want = set(args[1:])
             return ((True, "") if self.ctx.touched == want
                     else (False, f"grounding marks {sorted(self.ctx.touched)}, expected {sorted(want)}"))
-        if prop == "carries-spec":
-            return self._needs(_SPEC_MARKERS)
+        if prop == "foregrounds":
+            body = worker._cap_text(args[1], self.root).strip()
+            return ((True, "") if body and body in self.prompt
+                    else (False, f"{args[1]} is not foregrounded in full in the prompt"))
+        if prop == "indexes":
+            cap = args[1]
+            body = worker._cap_text(cap, self.root).strip()
+            c = spec.read_spec(self.root).capability(cap)
+            titles = [r.name for r in c.requirements] if c else []
+            titled = bool(titles) and all(t in self.prompt for t in titles)
+            header = f"### capability: {cap}" in self.prompt
+            return ((True, "") if header and titled and body not in self.prompt
+                    else (False, f"{cap} is not carried as an index "
+                                 f"(header={header}, titled={titled}, body-inlined={body in self.prompt})"))
         if prop == "carries-depth":
             return self._needs(_DEPTH_FRAMEWORK)
         if prop == "holds-no-code":
