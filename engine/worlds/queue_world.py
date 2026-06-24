@@ -16,13 +16,12 @@ window paints, so a scenario proves the surface speaks the recorded kind rather 
 """
 from __future__ import annotations
 
-import json
 import os
 import shutil
 import subprocess
 import tempfile
 
-from .. import communication, conditions, grill, render, tree
+from .. import communication, conditions, grill, render, transport, tree
 from ..scenario import _git                                  # the worlds share the core's git helper
 from . import World as _Base, scripted
 
@@ -34,10 +33,12 @@ _ASK = "download the new berserk episodes"
 _REL, _LEN = "engine/grew.py", 460
 _LENGTH_DECISION = (f"the depth gate flagged a long file — accept it or re-cut.\n\n"
                     f"To accept, record `accepted: {_REL} @{_LEN} — long but cohesive`.")
-_STORY = json.dumps({"say": "it changes the intake source; I lean nyaa; what flips it is licensing."})
-_FLOOR_ONE = json.dumps({"questions": [
+_STORY = transport.emit(communication.EXPLAIN_SCHEMA,
+                        {"say": "it changes the intake source; I lean nyaa; what flips it is licensing."})
+_FLOOR_ONE = transport.emit(grill.FLOOR_SCHEMA, {"questions": [
     {"q": "which tracker?", "lean": "nyaa", "flip": "a licensed source appears"}]})
-_PRODUCTS = json.dumps({"entry": "pull the berserk releases from nyaa", "delta": "# delta — trivial"})
+_PRODUCTS = transport.emit(grill.PRODUCTS_SCHEMA,
+                           {"entry": "pull the berserk releases from nyaa", "delta": "# delta — trivial"})
 
 
 class World(_Base):

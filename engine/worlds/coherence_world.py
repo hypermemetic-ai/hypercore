@@ -11,12 +11,11 @@ red→green in the acceptance harness (`engine/check/scenarios.py`).
 """
 from __future__ import annotations
 
-import json
 import os
 import shutil
 import tempfile
 
-from .. import communication, spec, tree, worker
+from .. import communication, spec, transport, tree, worker
 from ..scenario import _git                                 # the worlds share the core's git helper
 from . import World as _Base, scripted
 
@@ -54,9 +53,10 @@ class World(_Base):
         self.node = tree.file_intent("a worker hands a result back")
         worker.worktree(self.node, self.root)
         tree.dispatch(self.node)
-        result = worker.apply(self.node, scripted(json.dumps(
+        result = worker.apply(self.node, scripted(transport.emit(worker.WORKER_SCHEMA,
             {"report": "did the work — machine-facing", "delta": self._delta()})), self.root)
-        self.reply = communication.integrate(self.node, result, scripted(json.dumps(
+        self.reply = communication.integrate(self.node, result, scripted(transport.emit(
+            communication.COHERENCE_SCHEMA,
             {"coherent": coherent,
              "say": "it landed." if coherent else "this doesn't honor the contract.",
              "card": None if coherent else

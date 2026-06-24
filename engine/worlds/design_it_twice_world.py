@@ -18,13 +18,12 @@ homes with `schedule` (the behavior gated in `spec/schedule.md`, the record mech
 """
 from __future__ import annotations
 
-import json
 import os
 import shutil
 import subprocess
 import tempfile
 
-from .. import design, render, tree, worker
+from .. import design, render, transport, tree, worker
 from ..scenario import _git                                  # the worlds share the core's git helper
 from . import World as _Base
 
@@ -54,14 +53,18 @@ class World(_Base):
     # ── the prompt-routing transport ────────────────────────────────────────────
     @staticmethod
     def _design_reply() -> str:
-        return json.dumps({"interface": "one entry over the hidden work", "hides": _SENTINEL,
-                           "seam": "where the model varies", "depth": "deleting it scatters the work — it earns its keep"})
+        return transport.emit(design.CANDIDATE_SCHEMA,
+                              {"interface": "one entry over the hidden work", "hides": _SENTINEL,
+                               "seam": "where the model varies",
+                               "depth": "deleting it scatters the work — it earns its keep"})
 
     def _transport(self, stake: str | None):
-        select = json.dumps({"chosen": "minimal", "hybrid": False,
-                             "reasoning": "minimal is deepest across depth, locality, and seam",
-                             "comparison": {"minimal": "deepest", "flexible": "wider surface for unproven variation"},
-                             "stake": stake})
+        select = transport.emit(design.SELECT_SCHEMA, {
+            "chosen": "minimal", "hybrid": False,
+            "reasoning": "minimal is deepest across depth, locality, and seam",
+            "comparison": [{"brief": "minimal", "note": "deepest"},
+                           {"brief": "flexible", "note": "wider surface for unproven variation"}],
+            "stake": stake})
         design_reply = self._design_reply()
         return lambda prompt: select if "design-it-twice contest" in prompt else design_reply
 

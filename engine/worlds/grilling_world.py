@@ -12,21 +12,20 @@ foldable delta. The root and `ENGINE_ROOT` are restored and dropped on teardown.
 """
 from __future__ import annotations
 
-import json
 import os
 import shutil
 import tempfile
 
-from .. import delta, grill, render, spec, tree
+from .. import delta, grill, render, spec, transport, tree
 from ..scenario import _git                                  # the worlds share the core's git helper
 from . import World as _Base
 
 _REAL = tree._DEFAULT_ROOT                                  # the real spec, seeded so the floor/products assemble as in production
 _ASK = "download new Berserk episodes"
-_FLOOR = json.dumps({"questions": [
+_FLOOR = transport.emit(grill.FLOOR_SCHEMA, {"questions": [
     {"q": "which quality tier?", "lean": "1080p", "flip": "a tight disk budget"},
     {"q": "keep seeding after?", "lean": "yes, to ratio 2.0", "flip": "a metered connection"}]})
-_PRODUCTS = json.dumps({
+_PRODUCTS = transport.emit(grill.PRODUCTS_SCHEMA, {
     "entry": "A recurring pull of new Berserk episodes from nyaa at 1080p, seeding to ratio 2.0.",
     "delta": ("## ADDED — communication\n### Requirement: a download arc names its source\n"
               "The arc MUST record where it pulls from.\n#### Scenario: an arc is set up\n"
@@ -62,7 +61,7 @@ class World(_Base):
         """ask <above-floor|below-floor> — file an ask whose floor leaves a stake open (held and
         grilled) or leaves none (filed straight to standing work)."""
         self.base_standing = len(tree.standing())
-        floor = _FLOOR if args[0] == "above-floor" else json.dumps({"questions": []})
+        floor = _FLOOR if args[0] == "above-floor" else transport.emit(grill.FLOOR_SCHEMA, {"questions": []})
         self.node, _ = grill.consider(_ASK, self._transport(floor))
         return True, ""
 

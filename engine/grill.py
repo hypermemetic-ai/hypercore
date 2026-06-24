@@ -22,7 +22,15 @@ import os
 from dataclasses import dataclass
 
 from . import tree, spec
-from .transport import call, parse
+from .transport import Envelope, Records, Tag, call, instruction, read
+
+FLOOR_SCHEMA = Envelope(
+    Records("questions", "question",
+            Tag("q", "the question"),
+            Tag("lean", "your recommended answer"),
+            Tag("flip", "the one thing that would change it")),
+    lenient=True,                  # a tagless / empty reply is "no questions" (below the floor), not malformed
+)
 
 FLOOR = (
     "You are hypercore's architect running a grilling pass on an ask before "
@@ -32,9 +40,13 @@ FLOOR = (
     "asking when unsure: a wrongly-asked question is cheap, a wrongly-skipped one bites "
     "later. Ask in dependency order. Each question carries your recommended answer "
     "(lean) and the one thing that would flip it (flip). If every decision the work "
-    "needs is already determined, return no questions. Reply with ONLY a JSON object:\n"
-    '{"questions": [{"q": <the question>, "lean": <your recommended answer>, '
-    '"flip": <the one thing that would change it>}, ...]}'
+    "needs is already determined, return no questions (an empty <questions>).\n\n"
+    + instruction(FLOOR_SCHEMA)
+)
+
+PRODUCTS_SCHEMA = Envelope(
+    Tag("entry", "the operator-view contract: one plain paragraph stating what this ask will become"),
+    Tag("delta", "the spec-delta markdown the change realizes"),
 )
 
 PRODUCTS = (
@@ -44,8 +56,7 @@ PRODUCTS = (
     "the spec delta the change realizes, markdown with `## ADDED|MODIFIED|REMOVED|RENAMED — "
     "<capability>` sections over `### Requirement: <name>` blocks; a RENAMED block carries "
     "`→ <new name>`, and non-rename requirement blocks carry at least one `#### Scenario:` line. "
-    "Write against the existing capabilities. Reply with ONLY a "
-    'JSON object {"entry": <the contract>, "delta": <the spec-delta markdown>}.'
+    "Write against the existing capabilities.\n\n" + instruction(PRODUCTS_SCHEMA)
 )
 
 
@@ -110,8 +121,8 @@ def floor(ask: str, transport=None) -> list[Question]:
     """The residual stake-bearing decisions — empty means the ask is below the floor."""
     transport = transport or call
     raw = transport(f"{FLOOR}\n\nThe living spec:\n{_digest()}\n\nThe ask: {ask}\n\n"
-                    "Reply with the JSON object now.")
-    obj = parse(raw)
+                    "Reply now.")
+    obj = read(raw, FLOOR_SCHEMA)
     return [Question(q.get("q", ""), q.get("lean", ""), q.get("flip", ""))
             for q in (obj.get("questions") or []) if q.get("q")]
 
@@ -122,8 +133,8 @@ def products(ask: str, qa: list[tuple[str, str]], transport=None) -> tuple[str, 
     transport = transport or call
     answers = "\n".join(f"- {q}: {a}" for q, a in qa) or "- (none)"
     raw = transport(f"{PRODUCTS}\n\nThe ask: {ask}\n\nResolved:\n{answers}\n\n"
-                    "Reply with the JSON object now.")
-    obj = parse(raw)
+                    "Reply now.")
+    obj = read(raw, PRODUCTS_SCHEMA)
     return obj.get("entry", "").strip(), obj.get("delta", "").strip()
 
 

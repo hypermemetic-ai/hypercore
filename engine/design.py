@@ -44,7 +44,7 @@ import os
 from dataclasses import dataclass, field
 
 from . import tree, grill, worker
-from .transport import call, parse
+from .transport import Envelope, Flag, Records, Tag, call, instruction, read
 
 # The four briefs: each pushes a candidate toward a radically different
 # shape, so the contest spans real alternatives rather than minor variations of one instinct.
@@ -59,16 +59,32 @@ BRIEFS = [
               "core never names it."),
 ]
 
+CANDIDATE_SCHEMA = Envelope(
+    Tag("interface", "the proposed interface — signatures, one line each"),
+    Tag("hides", "the complexity it pulls down out of sight"),
+    Tag("seam", "where the seam falls and what varies across it"),
+    Tag("depth", "the deletion-test / depth argument for this shape"),
+)
+
 CANDIDATE = (
     "You are a hypercore worker designing ONE interface for a load-bearing decision — not "
     "implementing it. Commit radically to the brief below. Produce the interface (the small "
     "surface its callers see), what it hides behind that surface, where the seam falls and "
     "what varies across it, and the deletion-test argument for its depth. Write for the "
-    "machine. Reply with ONLY a JSON object:\n"
-    '{"interface": <the proposed interface — signatures, one line each>, '
-    '"hides": <the complexity it pulls down out of sight>, '
-    '"seam": <where the seam falls and what varies across it>, '
-    '"depth": <the deletion-test / depth argument for this shape>}'
+    "machine.\n\n" + instruction(CANDIDATE_SCHEMA)
+)
+
+# reason-first: the reasoning fills before the pick (the *Let Me Speak Freely?* mitigation), and the
+# comparison nests one record per candidate — the multi-entity attribution a keyed shape earns.
+SELECT_SCHEMA = Envelope(
+    Tag("reasoning", "why this interface is deepest — the comparison on depth/locality/seam"),
+    Tag("chosen", 'the brief you pick, or "hybrid"'),
+    Flag("hybrid", "true if you synthesized across candidates"),
+    Records("comparison", "candidate",
+            Tag("brief", "the candidate's brief"),
+            Tag("note", "its note on depth/locality/seam")),
+    Tag("stake", "the stake-bearing difference to take to the operator, authored for them, "
+                 "or leave empty"),
 )
 
 SELECT = (
@@ -79,14 +95,7 @@ SELECT = (
     "something real varies). Pick one or hybridize, with a strong recommendation and your "
     "reasoning. This is machine-side design judgment, recorded as material on the node — it reaches "
     "the operator ONLY if the comparison reveals a difference the operator has a stake in "
-    "(operator-visible behavior, hard to reverse, or real cost). Reply with ONLY a JSON "
-    "object:\n"
-    '{"chosen": <the brief you pick, or "hybrid">, '
-    '"hybrid": <true if you synthesized across candidates>, '
-    '"reasoning": <why this interface is deepest — the comparison on depth/locality/seam>, '
-    '"comparison": {<brief>: <its note on depth/locality/seam>, ...}, '
-    '"stake": <the stake-bearing difference to take to the operator, authored for them, '
-    'or null>}'
+    "(operator-visible behavior, hard to reverse, or real cost).\n\n" + instruction(SELECT_SCHEMA)
 )
 
 
@@ -125,7 +134,7 @@ def contest(node: tree.Node, briefs=None, transport=None,
     out: list[Candidate] = []
     for name, instruction in (briefs or BRIEFS):
         fence = worker.worktree(node, root, tag=name)
-        design = parse(transport(_candidate_prompt(node, instruction)))
+        design = read(transport(_candidate_prompt(node, instruction)), CANDIDATE_SCHEMA)
         _record_design(fence, name, instruction, design)
         out.append(Candidate(name, fence, design))
     return out
@@ -136,13 +145,13 @@ def select(node: tree.Node, candidates: list[Candidate], transport=None) -> Sele
     machine-side design judgment. The pick, the reasoning, and any stake-bearing difference
     come back; the architect authors the stake for the operator, never the raw designs."""
     transport = transport or call
-    v = parse(transport(_select_prompt(node, candidates)))
+    v = read(transport(_select_prompt(node, candidates)), SELECT_SCHEMA)
     chosen = (v.get("chosen") or "").strip() or (candidates[0].brief if candidates else "")
     return Selection(
         chosen=chosen,
         hybrid=bool(v.get("hybrid")),
         reasoning=(v.get("reasoning") or "").strip(),
-        comparison=v.get("comparison") if isinstance(v.get("comparison"), dict) else {},
+        comparison={r["brief"]: r["note"] for r in v.get("comparison", []) if r.get("brief")},
         stake=(str(v["stake"]).strip() if v.get("stake") else None),
         candidates=candidates,
     )
@@ -201,7 +210,7 @@ def design_twice(node: tree.Node, briefs=None, transport=None,
 def _candidate_prompt(node: tree.Node, instruction: str) -> str:
     return (f"{CANDIDATE}\n\nThe interface decision:\n{grill.contract_of(node) or node.text}\n\n"
             f"Your brief — design radically to it:\n{instruction}\n\n"
-            "Reply with the JSON object now.")
+            "Reply now.")
 
 
 def _select_prompt(node: tree.Node, candidates: list[Candidate]) -> str:
@@ -213,7 +222,7 @@ def _select_prompt(node: tree.Node, candidates: list[Candidate]) -> str:
         f"- depth: {c.design.get('depth', '')}"
         for c in candidates)
     return (f"{SELECT}\n\nThe interface decision:\n{grill.contract_of(node) or node.text}\n\n"
-            f"The candidate designs:\n{shown}\n\nReply with the JSON object now.")
+            f"The candidate designs:\n{shown}\n\nReply now.")
 
 
 def _record_design(fence: str, name: str, instruction: str, design: dict) -> None:

@@ -21,12 +21,11 @@ in-spec block here would only restate it. The glossary's content (the `thread` d
 """
 from __future__ import annotations
 
-import json
 import os
 import shutil
 import tempfile
 
-from .. import communication, render, tree, worker
+from .. import communication, grill, render, transport, tree, worker
 from ..scenario import _git                                  # the worlds share the core's git helper
 from . import World as _Base, scripted
 
@@ -41,11 +40,14 @@ _REQ = "the operator-facing words are the architect's own"
 # The architect's reply for each turn shape — one concrete consequence per turn (the three-consequences
 # requirement): a filed ask, a card raised, or a plain answer with nothing filed or carded.
 _TURN = {
-    "file": json.dumps({"say": "Filing that as standing work.", "file": _FILE_ASK, "card": None, "done": True}),
-    "card": json.dumps({"say": "Put that to your queue.", "file": None, "card": _CARD, "done": True}),
-    "answer": json.dumps({"say": "I am hypercore's architect.", "file": None, "card": None, "done": True}),
+    "file": transport.emit(communication.SYSTEM_SCHEMA,
+                           {"say": "Filing that as standing work.", "file": _FILE_ASK, "card": None, "done": True}),
+    "card": transport.emit(communication.SYSTEM_SCHEMA,
+                           {"say": "Put that to your queue.", "file": None, "card": _CARD, "done": True}),
+    "answer": transport.emit(communication.SYSTEM_SCHEMA,
+                             {"say": "I am hypercore's architect.", "file": None, "card": None, "done": True}),
 }
-_FLOOR_CLEAR = json.dumps({"questions": []})                 # the filed ask is below the floor — it files straight through
+_FLOOR_CLEAR = transport.emit(grill.FLOOR_SCHEMA, {"questions": []})   # below the floor — it files straight through
 
 
 class World(_Base):
@@ -92,10 +94,10 @@ class World(_Base):
         self.node = tree.file_intent("a worker hands back a technical result")
         worker.worktree(self.node, self.root)
         tree.dispatch(self.node)
-        result = worker.apply(self.node, scripted(json.dumps(
+        result = worker.apply(self.node, scripted(transport.emit(worker.WORKER_SCHEMA,
             {"report": f"did the work — {_SENTINEL}", "delta": self._delta()})), self.root)
-        self.reply = communication.integrate(self.node, result, scripted(json.dumps(
-            {"coherent": True, "say": _AUTHORED, "card": None})), self.root)
+        self.reply = communication.integrate(self.node, result, scripted(transport.emit(
+            communication.COHERENCE_SCHEMA, {"coherent": True, "say": _AUTHORED, "card": None})), self.root)
         return True, ""
 
     # ── assertion verbs: the thread ─────────────────────────────────────────────

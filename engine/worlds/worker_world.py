@@ -16,7 +16,6 @@ stays inert — the worker capability's own red→green is the gate's concern, n
 """
 from __future__ import annotations
 
-import json
 import os
 import shutil
 import subprocess
@@ -95,10 +94,10 @@ class World(_Base):
         self.node = self._stage(self._demo_delta())
         worker.worktree(self.node, self.root)
         tree.dispatch(self.node)
-        result = worker.apply(self.node, scripted(json.dumps(
+        result = worker.apply(self.node, scripted(transport.emit(worker.WORKER_SCHEMA,
             {"report": "built it. " + self.raw, "delta": self._demo_delta()})), self.root)
-        self.reply = communication.integrate(self.node, result, scripted(json.dumps(
-            {"coherent": True, "say": "it landed.", "card": None})), self.root)
+        self.reply = communication.integrate(self.node, result, scripted(transport.emit(
+            communication.COHERENCE_SCHEMA, {"coherent": True, "say": "it landed.", "card": None})), self.root)
         return True, ""
 
     # ── assertion verbs ──────────────────────────────────────────────────────
@@ -146,6 +145,31 @@ class World(_Base):
         missing = [v for v in verbs if v not in worker.ENVELOPE]
         return (True, "") if not missing else (False, f"the worker envelope omits {missing}")
 
+    def _v_handoff(self, args: list[str]) -> tuple[bool, str]:
+        """handoff <round-trips|surfaces-malformed> — the worker hand-off rides the tag envelope. A
+        report and a markdown delta (with #### headers and a fenced ```check block) read back
+        byte-for-byte with no escaping — the report-as-object crash is gone by construction; a reply
+        carrying none of the envelope's tags surfaces as malformed rather than folding a no-op (H3)."""
+        if args[0] == "round-trips":
+            delta_md = ("## MODIFIED — demo-worker\n### Requirement: a retitle holds\n"
+                        "It holds.\n#### Scenario: s\n- WHEN it runs\n- THEN it holds\n\n"
+                        "```check\nbuild\nintegrates\n```")
+            report = "built it; the delta below carries #### headers and a ```check fence, verbatim."
+            reply = f"<report>\n{report}\n</report>\n<delta>\n{delta_md}\n</delta>\n"
+            obj = transport.read(reply, worker.WORKER_SCHEMA)
+            if obj["report"] != report:
+                return False, "the report did not round-trip verbatim"
+            if obj["delta"] != delta_md:
+                return False, "the markdown delta did not round-trip verbatim (escaping or fence collision?)"
+            return True, ""
+        if args[0] == "surfaces-malformed":
+            try:
+                transport.read("prose carrying none of the envelope's tags", worker.WORKER_SCHEMA)
+            except transport.MalformedReply:
+                return True, ""
+            return False, "a tagless hand-off did not surface as malformed"
+        return False, f"unknown handoff assertion {args[0]!r}"
+
     def _v_fence(self, args: list[str]) -> tuple[bool, str]:
         """fence <off-main|binds-cwd> — the worktree isolation, and that the worker's transport runs
         with its working directory bound to its own checkout."""
@@ -154,7 +178,8 @@ class World(_Base):
             node = self._stage(self._demo_delta())
             fence = worker.worktree(node, self.root)
             tree.dispatch(node)
-            worker.apply(node, scripted(json.dumps({"report": "built", "delta": self._demo_delta()})), self.root)
+            worker.apply(node, scripted(transport.emit(worker.WORKER_SCHEMA,
+                         {"report": "built", "delta": self._demo_delta()})), self.root)
             on_branch = subprocess.run(["git", "log", "--oneline", f"worker/{node.id}"], cwd=self.root,
                                        capture_output=True, text=True).stdout
             off_main = subprocess.run(["git", "cat-file", "-e", "HEAD:RESULT.md"], cwd=self.root,
@@ -174,7 +199,8 @@ class World(_Base):
 
             def spy(cwd: str):
                 seen["cwd"] = cwd
-                return scripted(json.dumps({"report": "built", "delta": self._demo_delta()}))
+                return scripted(transport.emit(worker.WORKER_SCHEMA,
+                                               {"report": "built", "delta": self._demo_delta()}))
 
             saved, worker.worker_transport = worker.worker_transport, spy
             try:

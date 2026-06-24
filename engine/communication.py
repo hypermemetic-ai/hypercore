@@ -18,20 +18,24 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from . import conditions, delta, tree, grill
-from .transport import call, parse
+from .transport import Envelope, Flag, Tag, call, instruction, read
+
+SYSTEM_SCHEMA = Envelope(
+    Tag("say", "your words to the operator, short and plain"),
+    Tag("file", "a one-line ask to record as standing work, or leave empty"),
+    Tag("card", "a crisp machine-owned statement or decision to put on the operator's queue, "
+                "or leave empty"),
+    Flag("done", "true if the operator now has what they came for"),
+    lenient=True, fallback="say",
+)
 
 SYSTEM = (
     "You are hypercore's architect — the single voice between the "
     "operator and the system. The operator just spoke. Decide what their words "
-    "are and land one concrete consequence. Reply with ONLY a JSON object:\n"
-    '{"say": <your words to the operator, short and plain>, '
-    '"file": <a one-line ask to record as standing work, or null>, '
-    '"card": <a crisp machine-owned statement or decision to put on the '
-    'operator\'s queue, or null>, '
-    '"done": <true if the operator now has what they came for>}\n'
-    "File intent when they want something built or done. Raise a card when a "
-    "real judgment is theirs to make. Answer (file and card null) when they "
-    "asked a question. Keep 'say' to a sentence or two, plain, no jargon."
+    "are and land one concrete consequence. File intent when they want something "
+    "built or done. Raise a card when a real judgment is theirs to make. Answer "
+    "(file and card empty) when they asked a question. Keep 'say' to a sentence or "
+    "two, plain, no jargon.\n\n" + instruction(SYSTEM_SCHEMA)
 )
 
 
@@ -61,7 +65,7 @@ def speak(thread: Thread, text: str, transport=None) -> Reply:
     it is below the floor."""
     transport = transport or call
     thread.add("operator", text)
-    intent = parse(transport(_prompt(thread)))
+    intent = read(transport(_prompt(thread)), SYSTEM_SCHEMA)
 
     filed = grilling = None
     questions: list[tree.Node] = []
@@ -78,15 +82,20 @@ def speak(thread: Thread, text: str, transport=None) -> Reply:
                  grilling=grilling, questions=questions)
 
 
+COHERENCE_SCHEMA = Envelope(
+    Tag("say", "your plain note to the operator about what landed, or what is in doubt"),
+    Flag("coherent", "true if the result honors the contract"),
+    Tag("card", "if not coherent, the decision to put on the queue — re-cut, abandon, or change "
+                "the ask — else leave empty"),
+    lenient=True, fallback="say",
+)
+
 COHERENCE = (
     "You are hypercore's architect, archiving a worker's hand-off. Judge "
     "coherence at the operator's altitude: does the result honor the contract? This is "
     "not a code review. The worker's report below is for you alone and MUST NOT reach "
-    "the operator — author any operator-facing words yourself, short and plain. Reply "
-    'with ONLY a JSON object:\n{"coherent": <true if the result honors the contract>, '
-    '"say": <your plain note to the operator about what landed, or what is in doubt>, '
-    '"card": <if not coherent, the decision to put on the queue — re-cut, abandon, or '
-    'change the ask — else null>}'
+    "the operator — author any operator-facing words yourself, short and plain.\n\n"
+    + instruction(COHERENCE_SCHEMA)
 )
 
 
@@ -108,10 +117,10 @@ def integrate(node: tree.Node, result, transport=None, root: str | None = None) 
         card = tree.raise_card(blocked, kind="decide", parent=node.id)
         return Reply(say="The result can't fold yet — a folding condition isn't met; "
                          "the reason is on your queue.", card=card)
-    verdict = parse(transport(
+    verdict = read(transport(
         f"{COHERENCE}\n\nThe contract:\n{grill.contract_of(node)}\n\n"
         f"The worker's report (machine-facing — do not forward):\n{result.report}\n\n"
-        "Reply with the JSON object now."))
+        "Reply now."), COHERENCE_SCHEMA)
     say = (verdict.get("say") or "").strip()
     if not verdict.get("coherent"):
         card = tree.raise_card(verdict.get("card") or say or
@@ -131,17 +140,20 @@ def integrate(node: tree.Node, result, transport=None, root: str | None = None) 
     return Reply(say=say, done=True)
 
 
+EXPLAIN_SCHEMA = Envelope(Tag("say", "your explanation toward the decision"),
+                          lenient=True, fallback="say")
+
+
 def explain(node: tree.Node, transport=None) -> str:
     """Tell the story toward a decision; the card stays on the queue."""
     transport = transport or call
     prompt = (
         "You are hypercore's architect. The operator pressed explain on "
         "this card and wants help toward the decision — tell the story plainly: "
-        "what it changes, where you lean, and the one thing that would flip it. "
-        "Reply with ONLY a JSON object {\"say\": <your explanation>}.\n\n"
-        f"Card: {node.text}"
+        "what it changes, where you lean, and the one thing that would flip it.\n\n"
+        + instruction(EXPLAIN_SCHEMA) + f"\n\nCard: {node.text}"
     )
-    return parse(transport(prompt)).get("say", "").strip()
+    return read(transport(prompt), EXPLAIN_SCHEMA).get("say", "").strip()
 
 
 def _prompt(thread: Thread) -> str:

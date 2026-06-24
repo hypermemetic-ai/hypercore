@@ -151,7 +151,11 @@ build to turn the capability's architect-authored scenarios **red→green**, and
 including any new or sharpened scenario the behavior needs — to match what it built. The worker-facing
 reply grammar MUST name every delta verb the fold accepts — ADDED / MODIFIED / REMOVED / RENAMED — so a
 worker writes a retitle as RENAMED instead of a MODIFIED keyed on a title that the current spec does not
-yet contain. It authors **no loop** and no check that judges its own work: the oracle is the self-model's
+yet contain. The hand-off rides a **tag-delimited envelope** the transport renders and reads — each
+field's content carried **verbatim** between its tags with no escaping, so the worker's markdown delta
+(its `##` headers and fenced `check` blocks) round-trips losslessly and a field can never arrive as a
+typed object to crash on; a reply carrying none of the envelope's tags surfaces as a malformed hand-off
+rather than folding a no-op. It authors **no loop** and no check that judges its own work: the oracle is the self-model's
 own scenario, run red→green by the gate over its fence, so the builder can never write the check that
 clears it. The architect then coherence-checks the result against the contract and archives the delta.
 The crossing is propose (architect) → apply (worker) → archive (architect), one delta end to end.
@@ -176,4 +180,16 @@ The crossing is propose (architect) → apply (worker) → archive (architect), 
   ```check
   spawn self-model
   envelope names-renamed
+  ```
+
+#### Scenario: the hand-off round-trips authored content verbatim
+- WHEN a worker hands back a report and a markdown delta carrying `####` headers and a fenced `check`
+  block, and when a reply carries none of the envelope's tags
+- THEN the transport reads the report and delta back byte-for-byte with no escaping — the
+  report-as-object crash class gone by construction — and the tagless reply surfaces as a malformed
+  hand-off rather than folding a no-op
+
+  ```check
+  handoff round-trips
+  handoff surfaces-malformed
   ```

@@ -288,11 +288,11 @@ def _schedule_invariants() -> None:
         raised = False
         try:
             worker.context(g, root)
-            worker.apply(g, transport=lambda _p: "prose, not a JSON object at all", root=root)
+            worker.apply(g, transport=lambda _p: "prose carrying none of the envelope's tags", root=root)
         except MalformedReply:
             raised = True
         ok(raised,
-           "schedule — a reply with no JSON object raises at apply, before coherence — never a foldable no-op (H3)")
+           "schedule — a reply with none of the envelope's tags raises at apply, before coherence — never a foldable no-op (H3)")
 
         # a crash-stranded IN_FLIGHT node with no live worker is recovered on the next step (C2)
         root = _inv_root()

@@ -19,7 +19,6 @@ true by construction, the way a fixture cannot honestly fake a second OS process
 """
 from __future__ import annotations
 
-import json
 import os
 import shutil
 import subprocess
@@ -27,21 +26,23 @@ import tempfile
 import threading
 import time
 
-from .. import schedule, spec, tree, worker
+from .. import communication, schedule, spec, transport, tree, worker
 from ..scenario import _git                                  # the worlds share the core's git helper
 from . import World as _Base
 
 _TOKENS = ["ALPHAMARK", "BETAMARK", "GAMMAMARK", "DELTAMARK"]  # a distinct token per ready ask; none a substring of another
 _CAPS = ["alpha", "beta", "gamma", "delta"]                  # the capability each ready worker folds
-_COHERENT = json.dumps({"coherent": True, "say": "it landed.", "card": None})
+_COHERENT = transport.emit(communication.COHERENCE_SCHEMA,
+                           {"coherent": True, "say": "it landed.", "card": None})
 
 
 def _built(cap: str) -> str:
     """A worker's hand-off: a report and a delta adding a fresh capability, so each ready node folds
     its own delta into the one spec with no two contending for the same capability."""
-    return json.dumps({"report": f"built {cap}",
-                       "delta": (f"## ADDED — {cap}\n### Requirement: {cap} holds\n"
-                                 f"The {cap} capability MUST hold.\n#### Scenario: s\n- WHEN x\n- THEN y\n")})
+    return transport.emit(worker.WORKER_SCHEMA,
+                          {"report": f"built {cap}",
+                           "delta": (f"## ADDED — {cap}\n### Requirement: {cap} holds\n"
+                                     f"The {cap} capability MUST hold.\n#### Scenario: s\n- WHEN x\n- THEN y\n")})
 
 
 class World(_Base):

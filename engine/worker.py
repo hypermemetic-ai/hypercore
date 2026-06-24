@@ -52,7 +52,7 @@ module. The old `WORKER` constant restated the slice by hand — the exact `work
 drift-by-copy retired for depth, left unretired here. Now the prompt renders the worker's
 own requirement statements through the same `methodology` seam the skills use, so a sharpened
 `spec/worker.md` reaches the next worker with no second copy to drift. Only the genuinely
-non-inferable envelope stays authored in this module: the JSON reply shape, and two grounding facts
+non-inferable envelope stays authored in this module: the tag-delimited reply shape, and two grounding facts
 the slice does not carry — the **corrected single-writer invariant** (stage the exact files a change
 touches, never `-A` over a shared parent; a repo-level lock spans write→commit) and the **scenario
 gate** (you author no loop; build to turn the architect's scenario red→green, and a requirement is
@@ -66,7 +66,7 @@ import subprocess
 from dataclasses import dataclass, field
 
 from . import communication, delta, tree, grill, methodology, spec
-from .transport import parse_object, worker_transport
+from .transport import Envelope, Tag, instruction, read, worker_transport
 
 # The salutation — who the worker is, in one line; the disciplines that follow are single-sourced from
 # spec/worker.md (the methodology seam), not restated here, so they cannot drift from the slice.
@@ -96,14 +96,18 @@ GROUNDING = (
     "discipline for a gated one; hold it yourself, because no gate will."
 )
 
-# The one authored residue that is neither discipline nor grounding: the reply shape the transport parses.
-ENVELOPE = (
-    "Reply with ONLY a JSON object:\n"
-    '{"report": <the technical result and all relevant facts, for the architect>, '
-    '"delta": <the refined spec delta — ADDED/MODIFIED/REMOVED/RENAMED markdown over the '
-    'capabilities the change touches, including any new or sharpened scenario (with its check '
-    'block) the behavior needs>}'
+# The one authored residue that is neither discipline nor grounding: the reply shape the transport reads.
+# The schema is the single source — `ENVELOPE` is its rendered instruction (carried in the prompt) and
+# `read(reply, WORKER_SCHEMA)` parses it; the worker's markdown delta rides in `<delta>…</delta>`
+# verbatim, so its `##` headers and ` ```check ` fences round-trip with no escaping, and a field can
+# never arrive as a typed object to crash on (the report-as-object class is gone by construction).
+WORKER_SCHEMA = Envelope(
+    Tag("report", "the technical result and all relevant facts, for the architect"),
+    Tag("delta", "the refined spec delta — ADDED / MODIFIED / REMOVED / RENAMED markdown over the "
+                 "capabilities the change touches, including any new or sharpened scenario (with its "
+                 "check block) the behavior needs"),
 )
+ENVELOPE = instruction(WORKER_SCHEMA)
 
 
 def _worker_disciplines(root: str | None = None) -> str:
@@ -181,11 +185,11 @@ def prompt(node: tree.Node, ctx: WorkerContext, root: str | None = None) -> str:
     the ask. The long history and grounds of past decisions are *not* inlined: the prompt points the
     worker at `work/archive/` in its fence checkout to grep just-in-time (step 5). This is the whole of
     what the worker is given."""
-    def render(items):
+    def _caps(items):
         return "\n\n".join(f"### capability: {n}\n{t.strip()}" for n, t in items)
     depth_text = next((t.strip() for n, t in ctx.capabilities if n == "depth"), "")
-    grounding = render([(n, t) for n, t in ctx.capabilities if n in ctx.touched and n != "depth"])
-    scan = render([(n, t) for n, t in ctx.capabilities if n not in ctx.touched and n != "depth"])
+    grounding = _caps([(n, t) for n, t in ctx.capabilities if n in ctx.touched and n != "depth"])
+    scan = _caps([(n, t) for n, t in ctx.capabilities if n not in ctx.touched and n != "depth"])
     return (
         f"{SALUTATION}\n\n"
         f"Your standing disciplines (single-sourced from spec/worker.md — what good looks like):\n"
@@ -207,7 +211,7 @@ def prompt(node: tree.Node, ctx: WorkerContext, root: str | None = None) -> str:
         f"nodes are in `work/archive/` at your worktree root; grep them for a past decision's grounds "
         f"as the change needs. The spec capabilities above are preloaded whole — your scannable "
         f"high-signal core.\n\n"
-        "Reply with the JSON object now."
+        "Reply now."
     )
 
 
@@ -262,9 +266,9 @@ def apply(node: tree.Node, transport=None, root: str | None = None) -> WorkerRes
     ctx = context(node, root)                          # no apply without the grounding
     fence = _tree_path(node, root or tree._root())
     transport = transport or worker_transport(fence)   # the live worker runs at its fence (step 5)
-    obj = parse_object(transport(prompt(node, ctx, root)))  # strict: a malformed reply is a failure, not a no-op (H3)
-    report = (obj.get("report") or "").strip()
-    refined = (obj.get("delta") or ctx.delta).strip()
+    obj = read(transport(prompt(node, ctx, root)), WORKER_SCHEMA)  # strict: a tagless reply surfaces, not a no-op (H3)
+    report = obj["report"]
+    refined = obj["delta"] or ctx.delta
     _record(fence, report, refined)                    # the worker's own commit, fenced
     return WorkerResult(report, refined, fence, _capture_code(fence))  # the verified code, captured before teardown
 
