@@ -2,14 +2,17 @@
 
     python3 -m engine --check
 
-Each slice's acceptance check is its own module, driven with a
-*scripted* transport (no LLM, so the loop is deterministic and fast) over the *real*
-tree, spec, conditions, and worktrees — it asserts the system, not a story. The live
-architect and the window are the evidence you watch by running `python3 -m engine`
-and `--frame`; this is the evidence that gates.
+Each capability's acceptance is its own executable scenarios, homed in its `spec/<capability>.md` and
+compiled by the `scenario` binding, driven against the *real* tree, spec, conditions, and worktrees —
+it asserts the system, not a story. The live architect and the window are the evidence you watch by
+running `python3 -m engine` and `--frame`; this is the evidence that gates.
 
-run() lays the shared ground — a throwaway git-backed root — and walks the slices in
-order; each carries its own acceptance contract in its module docstring.
+run() lays the shared ground — a throwaway git-backed root — and runs the scenario acceptance path:
+every migrated capability's check blocks against the live engine, the gated/watched register derived
+off those blocks, the real red→green fold gate, and the watched structural invariants the closed
+scenario vocabulary cannot honestly express. The by-slice harness is gone — the last group
+(queue / interface / channels) migrated to its own scenarios, so nothing is checked by build-slice
+anymore; `scenario` is the one acceptance module.
 """
 from __future__ import annotations
 
@@ -17,23 +20,14 @@ import os
 import subprocess
 import tempfile
 
-# Capability scenarios + the remaining by-slice checks. Migrated capabilities run off their own
-# executable scenarios (`scenarios`), not a slice: folding-conditions left slices 5/7/9/20/21,
-# coherence left slice 21, worker left slices 4/7/10/23, architecture-review left slices 6/7/9/15,
-# schedule left slices 16/18 (and took the cross-cutting single-writer-line proof — slice 8's residue,
-# slice 17 — home with it), self-model left slice 19 and the self-model half of slice 2 (the delta, the
-# transactional fold, the operator view), and communication left slice 1's window half (the thread, the
-# single voice, the three consequences, the no-raw-leak archive) and slice 2's glossary residue. So each
-# wholly-migrated slice file is gone (2/4/5/6/7/8/9/10/15/16/17/18/19/20/21/23); slice 1 survives as a
-# thin residue — the queue's settle path and the interface's render, awaiting those migrations. The gaps
-# in the numbering mark the migration; each remaining capability dissolves its slice content the same
-# way as it migrates, until no slice file is left and `--check` runs entirely off capability scenarios.
-from . import (harness, scenarios, slice1, slice3,
-               slice11, slice12, slice13, slice14, slice22)
+from . import harness, scenarios
 
-SLICES = (slice1, slice3,
-          slice11, slice12, slice13, slice14,
-          slice22, scenarios)
+# The acceptance path is the capability scenarios, end to end. Every migrated capability runs off its
+# own executable scenarios (`spec/<capability>.md`'s `#### Scenario:` check blocks), discovered live —
+# so a newly migrated capability appears with no edit here — never a by-slice module. `scenarios` is the
+# self-verifying gate: it runs every capability's blocks, derives the gated/watched register off them,
+# exercises the real red→green fold gate, and asserts the watched structural invariants from outside.
+SLICES = (scenarios,)
 
 
 def run() -> int:
@@ -52,5 +46,5 @@ def run() -> int:
     if n:
         print(f"  {n} FAILED\n")
         return 1
-    print("  all checks pass — the capability scenarios and the remaining slice checks are met\n")
+    print("  all checks pass — the capability scenarios are met\n")
     return 0

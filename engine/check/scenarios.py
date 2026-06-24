@@ -32,7 +32,8 @@ import tempfile
 import threading
 
 from .harness import ok
-from .. import design, review, scenario, schedule, spec, transport, tree, worker
+from .. import (anchor, channels, design, methodology, review, scenario, schedule,
+                spec, transport, tree, worker)
 
 REAL = tree._DEFAULT_ROOT                                  # hypercore's own source tree — the spec under test
 
@@ -49,7 +50,7 @@ def check(root: str) -> None:
     #    READ OFF the blocks — derived, never hand-tended. The set of migrated capabilities is the set
     #    whose spec carries a block, read live, so a newly migrated capability appears here with no edit.
     migrated = [c.name for c in spec.read_spec(REAL).capabilities if scenario.checks(c.name, REAL)]
-    ok({"folding-conditions", "coherence", "worker", "architecture-review", "design-it-twice", "grilling", "schedule", "self-model", "communication"} <= set(migrated),
+    ok({"folding-conditions", "coherence", "worker", "architecture-review", "design-it-twice", "grilling", "schedule", "self-model", "communication", "queue", "interface", "channels"} <= set(migrated),
        f"the migrated capabilities carry their executable scenarios ({', '.join(migrated)})")
     for cap in migrated:
         for o in scenario.run(cap, REAL):
@@ -129,6 +130,19 @@ def check(root: str) -> None:
        "communication — the glossary defines thread as the operator's throwaway conversation")
     ok("Open question: the name" in glossary,
        "communication — the glossary flags the open 'operator view' naming question, not silently settled")
+
+    # 8. channels — the derived-channel registry's exact composition: a structural fact the closed
+    #    scenario vocabulary cannot honestly express (it names the engine's `CHANNELS` tuple, not a
+    #    domain noun). channels' *behavior* — the fold re-renders every channel from its source, the
+    #    skill is single-sourced, the anchor is minimal, the materialized channels conform and resolve —
+    #    is gated in spec/channels.md; what no in-spec block can say is that the registry IS the one flat
+    #    fold-driven set and that the anchor and its bridge are registered beside the skills, so a
+    #    dropped or duplicated channel goes red here on the registry itself.
+    ok(len(channels.CHANNELS) == len(methodology.METHODOLOGIES) * len(methodology.SKILL_DIRS) + 2,
+       "channels — the registry is one flat fold-driven set: every capability skill per mirrored "
+       "location, plus the anchor and its CLAUDE.md bridge")
+    ok(anchor.materialize in channels.CHANNELS and anchor.bridge_materialize in channels.CHANNELS,
+       "channels — the anchor and its bridge are registered in the channels registry beside the skills")
 
 
 # ── the schedule single-writer-line and failure-recovery invariants, exercised from outside ──

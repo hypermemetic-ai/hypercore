@@ -1,11 +1,11 @@
-"""The acceptance harness's shared kit — the bare assert-and-tally and the scripted
-transport every slice check is written against.
+"""The acceptance harness's shared kit — the bare assert-and-tally the scenario acceptance path is
+written against.
 
-The harness is itself under the deep-module discipline it exercises: the surviving by-slice
-checks are one module each (`slice1`, `slice2`, … — the gaps are the capabilities already
-migrated to their own scenarios), so no single file grows past the length signal the
-architecture review scans for — a split along the per-slice seam (locality), not classitis.
-This module holds only what they all share.
+This module holds only the tally every check shares: `ok` asserts one observation and prints its
+verdict without raising, so a failed run reports the whole picture rather than stopping at the first
+fault, and `reset`/`failures` bracket the run. The acceptance content itself is the capability
+scenarios (`scenarios`), compiled from each `spec/<capability>.md` — the by-slice harness this kit
+once served is gone, its last group migrated to its own scenarios.
 """
 from __future__ import annotations
 
@@ -28,10 +28,3 @@ def ok(cond: bool, label: str) -> None:
 
 def failures() -> int:
     return _fails
-
-
-def scripted(*replies):
-    """A deterministic stand-in for the model transport: hand back the queued replies in
-    order, so a check drives the real tree and the real conditions without an LLM."""
-    q = list(replies)
-    return lambda _prompt: q.pop(0)

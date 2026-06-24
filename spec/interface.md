@@ -41,6 +41,12 @@ attributes.
 - THEN the render returns a list of rows of (text, style) spans, computed without
   any terminal call
 
+  ```check
+  card
+  render
+  spans
+  ```
+
 ### Requirement: the resting face shows the queue over the work
 At rest the window MUST show the queue of decisions above the standing work; a
 fully-handled system shows an empty surface, which is the system at rest,
@@ -49,6 +55,11 @@ not a fault.
 #### Scenario: nothing awaits
 - WHEN no node is awaiting the operator and no work is standing
 - THEN the queue reads "nothing awaiting you" and work reads "no standing work"
+
+  ```check
+  render
+  empty
+  ```
 
 ### Requirement: the operator opens the self-model from the window
 The operator MUST be able to open the operator view from the window and return,

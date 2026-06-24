@@ -40,10 +40,12 @@ Each capability's migration, named:
 Each migration extends the `scenario` verb vocabulary **only as its first scenario needs it** (the
 locality discipline, `spec/depth.md`) — never pre-built — and dissolves that capability's by-slice
 content the same way folding-conditions did (the slice files shrink to their other-capability content,
-then disappear; the gaps in the slice numbering mark where the migration has reached — **done so far:
-folding-conditions, coherence, worker, architecture-review, design-it-twice, grilling, schedule,
-self-model, communication**, leaving slices 1(residue) / 3(residue) / 11–14 / 22). Done when no
-`engine/check/sliceN.py` remains and `python3 -m engine --check` runs entirely off capability scenarios.
+then disappear; the gaps in the slice numbering mark where the migration has reached). **This is now
+complete: all twelve capabilities carry their own executable scenarios** — folding-conditions,
+coherence, worker, architecture-review, design-it-twice, grilling, schedule, self-model, communication,
+and the final queue / interface / channels group. **No `engine/check/sliceN.py` remains**; `python3 -m
+engine --check` runs entirely off capability scenarios, the `scenarios` module the one acceptance path.
+The done-condition the ask set — no slice file left, the check off capability scenarios — is met.
 
 The migration surfaced that the remaining slices are not clean per-capability — three cross-cutting
 seams run through them, each needing one home before the capabilities they touch can finish:
@@ -70,12 +72,37 @@ kept by-slice until queue and interface migrate. (Deleting slice 2 also retired 
 coupling: slice 14 had read its carve from the spec slice 2 seeded into the shared root; it now
 self-seeds the real spec the way slice 22 does.)
 
-What remains is the **queue / interface / channels** group — slices 1(residue) / 3(residue) / 11 / 12 /
-13 / 14 / 22: the queue's settle path and card-kind, the interface's window, and the channels mechanism
-(the materialize-on-fold registry, the anchor, the methodology skill render, the conformance gate). One
-open decision that group must settle first: the channels mechanism has **no `spec/channels.md`** of its
-own — it is referenced as a mechanism across worker/self-model/folding-conditions but never given its
-own capability requirements — so where its slices (11–14, 22) home is the next stake-bearing call, the
-way the concurrency-home decision was for schedule. That group is the last of the by-slice harness.
+The final **queue / interface / channels** group — slices 1(residue) / 3(residue) / 11 / 12 / 13 / 14 /
+22 — is now migrated and the by-slice harness dissolved:
+
+- **queue** → `spec/queue.md` scenarios (the queue-is-a-view, the three endorsements, the card-kind
+  read through the one authority and spoken by the render, the grilling-question card's lean/flip, the
+  ratification gate, the accept-the-length act) — six requirements, all gated; `engine/worlds/queue_world.py`.
+  Took slice 3's card-kind residue (all three recorded kinds — decision, request-for-approval,
+  acceptance — read through `grill.card_kind`) and slice 1's settle-path residue (approve/cut/explain,
+  the durable record proven by the cut's recoverability and the approve's committed fold).
+- **interface** → `spec/interface.md` scenarios (the pure-frame render off a TTY, the resting face's
+  queue-over-work) — two gated; the four keyboard/input-loop requirements stay **watched**, their honest
+  home the running window (`python3 -m engine`), the same class as communication's *the operator's act
+  never makes them wait*. `engine/worlds/interface_world.py`.
+- **channels** — the stake-bearing call this group had to settle. **Decision (now enacted): the channels
+  mechanism homes in its own new `spec/channels.md` capability** (the fold materializes every static
+  channel from its source; a methodology skill is single-sourced from its slice; the anchor is minimal,
+  non-inferable, its index derived; the materialized channels conform to the field standard and resolve)
+  — four requirements, all gated; `engine/worlds/channels_world.py`. The call ran the design-it-twice
+  axes: **locality** — splitting it across self-model/worker/architecture-review would re-smear one
+  concept across three specs, the very anti-pattern this migration kills; **seam/precedent** — the
+  single-writer line could home in schedule only because schedule already named *single-writer*, but
+  channels had **no existing requirement anywhere** to attach to and had to invent its own, which makes
+  them the new capability's; **depth** — the glossary already names *derived channel* and *anchor* and
+  worker.md already defers to "the channels derived from it," so a concept the glossary dignifies but no
+  spec owns *is* the missing capability. The registry's exact composition (one flat fold-driven set; the
+  anchor and bridge registered beside the skills — slices 11/13's structural residue) cannot be said in
+  the closed scenario vocabulary, so it is a **watched** structural invariant exercised from outside in
+  `engine/check/scenarios.py`'s channels section. [machine]
+
+This dissolved slices 1 / 3 / 11 / 12 / 13 / 14 / 22 — the last of the by-slice harness. The migration
+is done: `engine/check/` is now `harness.py` (the bare tally) and `scenarios.py` (the one acceptance
+path); the `slice*.py` modules are gone.
 
 Provenance: `work/archive/scenario-gate/` (the binding contest and the contract this realizes).
