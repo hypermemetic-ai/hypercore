@@ -76,6 +76,18 @@ class World(_Base):
         self._write(f"{b}.py", f"from . import {a}\n\nB = 1\n")
         return True, ""
 
+    def _v_symbol_clash(self, args: list[str]) -> tuple[bool, str]:
+        """symbol-clash — the false-positive guard: a module that imports a SYMBOL whose name matches a
+        sibling module (`from .defs import widget`, while a module `widget` also exists and imports the
+        consumer back) raises NO import-cycle flag. A real cycle needs two modules each importing the
+        other; here the binding edge is to `defs`, not to the symbol's namesake module, so no cycle
+        exists — the exact shape that made `from .transport import render` forge a false cycle."""
+        self._write("defs.py", "widget = 1            # a symbol sharing a sibling module's name\n")
+        self._write("client.py", "from .defs import widget\n\nC = widget\n")
+        self._write("widget.py", "from . import client\n\nW = 1\n")
+        cycles = [fl.subject for fl in review.red_flags(self.scan) if fl.rule == "import cycle"]
+        return (True, "") if not cycles else (False, f"a symbol/module name clash forged a false cycle: {cycles}")
+
     # ── behaviour verbs: the review's verdict over the planted scan ──────────────
     def _v_scan(self, args: list[str]) -> tuple[bool, str]:
         """scan measures <file.py> — the live scan includes the module, measured fresh with a real length."""

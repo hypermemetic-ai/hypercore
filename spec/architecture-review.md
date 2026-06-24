@@ -99,7 +99,10 @@ fabricates a module depth judgment from length or from the mechanical subset.
 The architecture review MUST scan the source tree for the structural red flags a tool can read
 without judgment: a module-level name used nowhere in the package (dead code), and a pair of
 modules that depend on each other (a circular dependency, the structural signature of information
-leakage). It surfaces each in the complexity debt beside the length findings, computed live.
+leakage). The cycle scan reads the dependency *graph*: the edge of a relative `from .x` clause is the
+module `x` it names, never the symbols it binds — depending on a name binds you to that name's module,
+not to a sibling that merely shares the name — so a name clash never forges a cycle that is not there.
+It surfaces each in the complexity debt beside the length findings, computed live.
 These are the **mechanical subset** of the red flags; the model-driven *judgment* —
 shallow module, information leakage, the deletion test — stays judgment and is recorded as
 not-yet-built, never fabricated. A newly introduced instance of either rule returns the scan to
@@ -125,6 +128,16 @@ red, so the standard bites by construction rather than by a reviewer remembering
   cycle ring_a ring_b
   flag cycle ring_a ring_b
   clean
+  ```
+
+#### Scenario: a symbol sharing a module's name is not a false cycle
+- WHEN a module binds a symbol by name from a sibling (a `from .x` clause naming `y`), and another
+  module sharing that name `y` depends back on it, while no two modules actually depend on each other
+- THEN the scan raises no circular-dependency flag — the edge is the clause's module `x`, not the
+  symbol's namesake, so a preventable false positive is prevented by construction
+
+  ```check
+  symbol-clash
   ```
 
 ### Requirement: the review's output is the operator view's upper levels and the backlog

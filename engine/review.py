@@ -299,9 +299,14 @@ def _module_level_names(text: str) -> list[str]:
 
 
 def _sibling_imports(text: str) -> set[str]:
-    """The sibling modules a module imports at top level — `from . import x` and `from .x import y`
-    — the edges of the package's import graph. Deferred (in-function) imports are left out: they do
-    not bind the module at load and are how a real cycle is usually broken."""
+    """The sibling modules a module imports at top level — the edges of the package's import graph.
+    The binding edge of `from .x import y` is the **module** `x` (whatever `y` is — a function, a
+    class, a constant): importing a symbol depends on its module, not on a sibling that happens to
+    share the symbol's name. Only `from . import x, y` names *modules* directly, so its names are
+    edges. Reading every imported name as an edge would forge a false cycle the moment a symbol's
+    name matched another module's (e.g. `from .transport import render` against the `render` module)
+    — a preventable false positive, so it is prevented. Deferred (in-function) imports are left out:
+    they do not bind the module at load and are how a real cycle is usually broken."""
     try:
         body = ast.parse(text).body
     except SyntaxError:
@@ -310,8 +315,9 @@ def _sibling_imports(text: str) -> set[str]:
     for node in body:
         if isinstance(node, ast.ImportFrom) and node.level >= 1:
             if node.module:
-                out.add(node.module.split(".")[0])
-            out.update(a.name for a in node.names)
+                out.add(node.module.split(".")[0])       # from .module import sym, … — the module is the edge
+            else:
+                out.update(a.name for a in node.names)    # from . import module, … — each name is a sibling module
     return out
 
 
