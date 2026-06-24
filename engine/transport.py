@@ -38,6 +38,12 @@ MODEL_LABEL = "opus 4.8"
 WORKER_CMD = "omp"
 WORKER_MODEL = "gpt-5.5"
 
+# The summon timeout — one bound, both roles. It is not a tuned per-role budget but an **extreme-runaway
+# backstop**: a model call (the architect's quick turn or the worker's whole fenced build) that runs past
+# an hour is hung or looping, not working, so the summon kills it and the failure surfaces (C2 recovery)
+# rather than wedging the line forever. Generous on purpose — it bounds the pathological case, nothing else.
+SUMMON_TIMEOUT = 3600       # seconds (1h)
+
 
 class MalformedReply(Exception):
     """The model returned no JSON object where a structured reply was required — a failure to surface,
@@ -53,7 +59,7 @@ def _summon(argv: list[str], cwd: str | None = None) -> str:
     failed summon, not a silent empty reply: it raises `MalformedReply`, so a timeout or a crashed
     harness becomes a surfaced failure (the C2 recovery handles it) rather than a `{"done": True}`
     no-op fold (H3)."""
-    r = subprocess.run(argv, capture_output=True, text=True, timeout=120, cwd=cwd)
+    r = subprocess.run(argv, capture_output=True, text=True, timeout=SUMMON_TIMEOUT, cwd=cwd)
     if r.returncode != 0 or not r.stdout.strip():
         raise MalformedReply(f"the model call failed (exit {r.returncode}, "
                              f"{len(r.stdout)} bytes out)")
