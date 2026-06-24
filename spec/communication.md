@@ -14,6 +14,13 @@ the architect selects among design-it-twice candidates and renders the result ba
 **`communication`**: it owns the operator-facing channel end to end — the thread is one conversation on
 it, and every word that reaches the operator is the architect's.
 
+What crosses the channel is also held to a **clarity** standard — *watched*, judgment not metric. Its
+reader is the system's: **one expert who reads all day and decides hard things**, never a novice and never
+a crowd, and that single fact bends the standard. The readability literature behind it is provenance,
+cited not inlined (`work/archive/communication-clarity/synthesis.md`, the evidence ledger beneath it in
+`research.md`); the disciplines below distill it, and they render into the architect's loaded
+`communication` skill so the voice carries them every episode.
+
 ### Requirement: a thread is throwaway and holds no durable state
 A thread MUST be one conversational session, opened when the operator types in and
 closed when they have what they came for. It MUST hold no durable state and not be
@@ -50,6 +57,38 @@ consequence: filed intent, a card returned to the queue, or an answer.
   speak answer
   answered
   ```
+
+### Requirement: the operator-facing voice is clear — load, not length
+The architect's words MUST spend the operator's **working memory** on the *decision*, not on decoding,
+hunting, or re-reading. Clarity is that load, never a readability metric — a length or syllable score is
+gameable and punishes precise, terse technical prose, so none gates the fold; the standard is **watched**,
+held by judgment. And for the one expert reader, clarity is the **removal of scaffolding, not its
+addition**: the novice aids — widened spacing, connectives a peer infers, labels on the obvious — *slow* a
+fluent reader (the reverse-cohesion and expertise-reversal effects). So the dense, allusive house voice is
+correct rather than a liability, over-explaining a peer is the real failure mode, and the standard gives
+the voice a corridor instead of flattening it.
+
+#### Scenario: the architect authors operator-facing words
+- WHEN the architect renders a card, an answer, or an explanation for the operator
+- THEN it is judged on decision-load and cohesion — whether the reader spends attention on the choice or
+  on the prose — never on a length or readability score, so a dense passage inside the corridor passes and
+  a telegraphic one that has dropped its connectives does not
+
+### Requirement: the words are policed on structure, not word count
+The standard MUST police **structure**, never length: subject and verb kept close (short dependencies),
+shallow embedding, the core stated early with detail appended rightward, the decision in the stress
+position, and the connectives **kept** — over-compression that strips cohesion shifts load onto the reader
+rather than lifting it, so telegraphic is a worse failure than long. Reasoning is carried in prose, not
+fragmented into joint-dropping bullets. **One term, one concept**: the ratified name is repeated verbatim,
+synonym-variation of a defined term being a clarity bug the **vocabulary check** guards; in-group jargon
+*is* the plain version for the one expert reader — a term is a retrieved chunk — so the shared language
+stays tight rather than diluted. Hedge to the evidence, not the nerves.
+
+#### Scenario: a dense passage is judged
+- WHEN a passage is long or technical
+- THEN it is weighed by subject–verb distance, embedding depth, dropped connectives, and term consistency,
+  not by word count — so a long sentence inside the corridor reads as low-load while a short one that
+  buries its subject or drops its joints reads as the defect
 
 ### Requirement: the operator's act never makes them wait
 A turn MUST be summoned off the input loop so the interface stays live while the

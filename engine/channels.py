@@ -13,7 +13,7 @@ drift from the spec it derives from than the spec can drift from a folded delta 
 guarantee `delta.fold` gives the spec and the operator view gives the self-model, pointed at one more
 target.
 
-The skills were the first targets — the architect's four methodologies and the worker's `depth`, each
+The skills were the first targets — the architect's methodologies and the worker's `depth`, each
 rendered by `methodology` from its capability slice into both the harness-neutral `skills/` and the
 `.claude/skills/` location stock Claude Code discovers (role-assembly step 4; depth normalized into a
 capability); and the minimal shared **agents file** (`anchor`, step 3) is the always-on
@@ -28,7 +28,7 @@ from . import anchor, methodology
 
 # The static channels, in render order — each a `(root) -> path` render of one artifact from the spec.
 # `methodology.materializers()` splices in one render per capability skill per mirrored location (the
-# architect's four methodologies and the worker's `depth`, into `skills/` and `.claude/skills/`);
+# architect's methodologies and the worker's `depth`, into `skills/` and `.claude/skills/`);
 # `anchor.materialize` writes the shared agents file; `anchor.bridge_materialize` writes the `CLAUDE.md`
 # import that lands the anchor where Claude Code reads it. New channels append here.
 CHANNELS = (*methodology.materializers(), anchor.materialize, anchor.bridge_materialize)

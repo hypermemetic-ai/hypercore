@@ -131,6 +131,24 @@ def check(root: str) -> None:
     ok("Open question: the name" in glossary,
        "communication — the glossary flags the open 'operator view' naming question, not silently settled")
 
+    # 7b. the clarity standard — communication's *clear* quality: a WATCHED standard carried in the
+    #     architect's loaded skill, never a gated readability metric (the folding condition the
+    #     communication-clarity ask owes). The standard's prose is watched in spec/communication.md (the
+    #     expert-reader inversion, the load test); that it reaches the architect's skill and stays
+    #     watched-not-gated is the structural fact the closed scenario vocabulary cannot say — asserted
+    #     here, from outside, never faked as an in-spec block.
+    comm_skill = methodology.skill("communication", REAL)
+    ok("communication" in methodology.METHODOLOGIES,
+       "communication — the clarity standard is registered as the architect's loaded skill")
+    ok("removal of scaffolding" in comm_skill and "working memory" in comm_skill
+       and "readability metric" in comm_skill,
+       "communication — the skill carries the clarity discipline: the expert-reader inversion, the load "
+       "test, and no gated readability metric")
+    comm_cls = dict(scenario.classification("communication", REAL))
+    clear = [r for r in comm_cls if "clear" in r.lower()]
+    ok(bool(clear) and all(comm_cls[r] == "watched" for r in clear),
+       "communication — clarity is WATCHED, held by judgment, never a gated readability metric")
+
     # 8. channels — the derived-channel registry's exact composition: a structural fact the closed
     #    scenario vocabulary cannot honestly express (it names the engine's `CHANNELS` tuple, not a
     #    domain noun). channels' *behavior* — the fold re-renders every channel from its source, the
