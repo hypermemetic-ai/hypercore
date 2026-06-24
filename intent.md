@@ -25,6 +25,8 @@ The queue is the operator's decision surface. A decision arrives there with the 
 
 A decision is a real judgment call, and its card carries the story. What reaches the queue as a decision is a genuine fork — a choice that turns on reasoning the operator has not yet done — and it arrives carrying that reasoning: what the choice changes about their days, a worked example, where the machine leans, and the one thing that would flip it. What is not a real judgment call is not dressed as one: a step that needs only the operator's go is a request for approval, lighter and named as such — a different kind of card, not a decision. The card's kind matches the kind of the call.
 
+A decision card is decidable at a glance: every heading on it is a synthesis — the finding stated outright — not a label the operator must open to learn what it says, and the detail behind any line sits one keystroke away rather than down a hunt. What is needed to decide is on the face; what the operator might want to confirm is one key below it.
+
 The interface is the only place the operator operates, the only way they catch problems with the system, and the only thing that crosses the operator–machine boundary. Every move the system asks of the operator can be made there; a problem the interface cannot surface is one the operator will never see; blinding the operator in any meaningful way kills the program.
 
 The interface surfaces the evidence; the operator never leaves to gather it. When judging a slice or a decision means seeing what a script produces, what a report says, or what a page shows, the machine runs it and brings the result in — the output rendered on the card, the page or app pulled up, the view opened. Asking the operator to go run something themselves is the interface failing to surface, not a task for them; a verification step the operator will not perform verifies nothing.
@@ -32,6 +34,12 @@ The interface surfaces the evidence; the operator never leaves to gather it. Whe
 The interface shows everything the operator wants to know and nothing they don't. Every element on screen earns its place.
 
 The interface is keyboard-only, high-contrast, and set in deliberate type, with color spent only where it earns its place. It opens fullscreen at login: the day starts where the decisions are.
+
+What earns color a place is one job done well: a redundant, pre-attentive cue the words alone don't carry, never the only thing carrying it. Hue names a kind, not a magnitude. Color says what to look at — the state; space, size, and weight say how the work is shaped — the structure; the two stay separate. The palette stays small: a handful of load-bearing hues and one alarm held in reserve.
+
+The high contrast is soft, not maximal: warm dark on an off-white ground, pitched where the eye reads it all day rather than at the harshest the screen allows. The reader whose eyes want the opposite toggles a soft dark ground — the polarity is theirs to set.
+
+The decision surface lives on a character grid and stays there: the cards, the tree, the queue, the tables all read cheaper on a grid than in free-drawn pixels, so the grid is where the operator decides. The grid is not chained to a bare terminal — it can be painted richer, in a chosen face with real leading and true color, and lose none of its discipline. A pixel canvas opens only for the rare figure a grid genuinely cannot draw — a smooth curve, a dense scatter, a crossing topology — and never for the decision surface itself.
 
 The main screen is the face of the system and wears its best design — immaculate, tasteful. The queue of decisions and the standing work are its two principal elements, each its own place; reference detail lives in the views built for reading it.
 
@@ -41,13 +49,17 @@ The operator's actions never make them wait. An act lands the instant the operat
 
 The conversation is live: words spoken in the interface summon the machine on the spot, and the answer lands while the operator watches.
 
-A key, pressed on any visible element tied to a model's working, spawns a live visual of that model's reasoning — its shape, seen from several angles, in real time — so the operator can tune in to what a model is thinking and steer alongside it. This is a pull the operator makes on purpose, not a push the system sends; symbiosis wants the channel direct. [machine]
+A key, pressed on any visible element tied to a model's working, opens a live loop onto that model's reasoning — and the loop is for acting on, not only watching: the operator prunes a branch, edits a step, resets and reruns, and steers the work by changing its shape. The loop stays honest about its limit — a model's account of its own reasoning can be a confabulation, so it earns trust by what acting on it changes, not by how convincing the picture looks. This is a pull the operator makes on purpose, not a push the system sends; symbiosis wants the channel direct.
 
 Reading the operator's words is machine work. Whether a word is new intent, a new ask, an answer, or a redirect is the machine's call to make and answer for, and what it made of the word returns through the queue. Every operator word lands a concrete, findable consequence — a change, a decision returned to them, or a written reason nothing moved — and the record leads from the word to what was done about it.
 
 The queue is a view, not a place. Each decision lives where it arose — on a statement, on a node, on a piece of evidence — and showing the queue means reading all of those places fresh, every time. There is no list of its own to add to, remove from, or keep in sync, so nothing can be lost in motion and nothing can go stale.
 
 The tree is the interface's one work surface; a thread is the throwaway conversation opened on it. Every operator word and every unit of work lives on the tree, traced to the operator action that began it; a queue card is a view onto its node; a run shows as the live work on the node that spawned it; settling the card folds it into that node, where its decision and grounds are kept. The thread itself keeps none of this — it opens when the operator speaks, lands one consequence on the tree, and closes. A fully-handled system shows an empty surface — the system at rest, not a fault.
+
+A folded node in the view is never an opaque dot: it shows a scent of what it holds — how many children, what shape, and whether what is under it passed or failed — so the operator reads where to look without unfolding it. The view holds several foci at once, because the work runs concurrently and the operator follows more than one arc at a time.
+
+A node's state shows in its glyph first, color only amplifying what the glyph already says — the color law made concrete at the place state changes most. Motion is spent on one thing: a single slow pulse for work that is running, and stillness everywhere else.
 
 The open work is the operator's working channel; the queue is for decisions. A thread is scoped to one node — speaking on a node opens a thread there — so a conversation stays scoped to one part of the arc and never spans the whole. The thread is throwaway and holds no durable state; the node it spoke on keeps what was decided, and a live indicator shows when a run is on it. Standing work is readable from the interface, and setting priorities takes nothing the interface does not show.
 
