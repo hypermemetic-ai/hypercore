@@ -1,8 +1,9 @@
 ---
 kind: ask
-state: standing
+state: folded
 owner: operator
 created: 2026-06-23
+folded: 2026-06-23
 ---
 # scenario-migration — move each remaining capability's checks from by-slice to its own scenarios
 

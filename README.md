@@ -96,7 +96,7 @@ the cure.
 
 *Provenance.* The build ran in numbered construction slices (1–23) and the post-slice arcs above; that
 order lives in `git log` and the folded work under `work/archive/` (`role-assembly/`, `coherence-audit/`,
-`scenario-gate/`, and the standing `work/scenario-migration/`) — cited as a footnote, never depended on.
+`scenario-gate/`, and `scenario-migration/`) — cited as a footnote, never depended on.
 The spec, the code, and the decisions on their nodes stand alone.
 
 ## On documents
