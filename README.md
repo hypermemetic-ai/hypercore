@@ -18,7 +18,7 @@ and the node archives with its work; the decision's outcome lives in the living 
 its grounds are material on the contest node. The live work *is* the tree: `work/` holds the open
 execution trees and `work/archive/` the folded
 ones — each a folder with its own `intent.md` (its ask and folding condition), the archive tucked one
-level down so the front of the tree stays legible. The tree on disk is the
+level down. The tree on disk is the
 folder, not the node — hypercore dogfooding its own §structure. Run the acceptance harness with
 `python3 -m engine --check`; open the live system with `python3 -m engine`.
 

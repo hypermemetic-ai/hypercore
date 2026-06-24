@@ -113,7 +113,7 @@ def view_body(node, sel: int, width: int) -> list[Row]:
 
     structure = getattr(node, "structure", None)         # the architecture review's map
     if structure:
-        rows.append([("structure  ·  modules by length · the context-cost signal", HEAD)])
+        rows.append([("structure  ·  modules by length · the length signal", HEAD)])
         for line in structure:
             style = TAG if "⚑" in line else CARD         # debt marked, in line
             rows.append([("    ", style), (line, style)])
