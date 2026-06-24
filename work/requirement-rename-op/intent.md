@@ -1,8 +1,8 @@
 ---
 kind: ask
-state: standing
+state: in flight
 owner: operator
-created: 2026-06-23
+created: 1782190800
 ---
 # requirement-rename-op — a delta operation that changes a requirement's title in place
 
