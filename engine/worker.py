@@ -179,8 +179,8 @@ def context(node: tree.Node, root: str | None = None) -> WorkerContext:
 
 def prompt(node: tree.Node, ctx: WorkerContext, root: str | None = None) -> str:
     """The worker's grounding, rendered to one prompt — the salutation, then the worker's own
-    disciplines single-sourced from `spec/worker.md`, the non-inferable record grounding, and the JSON
-    envelope; then the depth standards (the proactive defense), the touched capabilities foregrounded
+    disciplines single-sourced from `spec/worker.md`, the non-inferable record grounding, and the
+    tag-delimited reply envelope; then the depth standards (the proactive defense), the touched capabilities foregrounded
     as the grounding, the rest of the spec carried for the rescan, the glossary, the handed delta, and
     the ask. The long history and grounds of past decisions are *not* inlined: the prompt points the
     worker at `work/archive/` in its fence checkout to grep just-in-time (step 5). This is the whole of

@@ -161,4 +161,4 @@ def _prompt(thread: Thread) -> str:
         f"{'operator' if who == 'operator' else 'you'}: {text}"
         for who, text in thread.turns
     )
-    return f"{SYSTEM}\n\n{convo}\n\nReply with the JSON object now."
+    return f"{SYSTEM}\n\n{convo}\n\nReply now."
