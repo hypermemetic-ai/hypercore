@@ -49,7 +49,8 @@ title; within one delta renames resolve first, so the modify finds its target. R
 existing discipline: a rename of an absent old title, or onto a title that already exists, cannot fold
 and leaves the spec untouched; a re-applied rename (old gone, new present) is the idempotent retry.
 The rename lands in the fold's one atomic act with the spec change and the node archive, on the
-single-writer line, like every other op. The spec delta this realizes is `delta.md` beside this file.
+single-writer line, like every other op. The spec delta this realizes is the grilling pass's `[DELTA]`
+(`grilling.md` beside this file — the artifact the crossing hands the worker).
 
 ## folding condition
 - the delta grammar carries RENAMED — `delta.parse` reads it, `delta.check` validates it (an absent
