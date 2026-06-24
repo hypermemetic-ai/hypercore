@@ -148,11 +148,13 @@ candidates on.
 ### Requirement: the worker applies and refines the delta the architect proposed
 A worker MUST rescan the current spec to verify the handed delta against present reality,
 build to turn the capability's architect-authored scenarios **red→green**, and refine the delta —
-including any new or sharpened scenario the behavior needs — to match what it built. It authors **no
-loop** and no check that judges its own work: the oracle is the self-model's own scenario, run
-red→green by the gate over its fence, so the builder can never write the check that clears it. The
-architect then coherence-checks the result against the contract and archives the delta. The crossing
-is propose (architect) → apply (worker) → archive (architect), one delta end to end.
+including any new or sharpened scenario the behavior needs — to match what it built. The worker-facing
+reply grammar MUST name every delta verb the fold accepts — ADDED / MODIFIED / REMOVED / RENAMED — so a
+worker writes a retitle as RENAMED instead of a MODIFIED keyed on a title that the current spec does not
+yet contain. It authors **no loop** and no check that judges its own work: the oracle is the self-model's
+own scenario, run red→green by the gate over its fence, so the builder can never write the check that
+clears it. The architect then coherence-checks the result against the contract and archives the delta.
+The crossing is propose (architect) → apply (worker) → archive (architect), one delta end to end.
 
 #### Scenario: the result integrates
 - WHEN a worker hands back a refined delta and the architect judges the result
@@ -164,4 +166,14 @@ is propose (architect) → apply (worker) → archive (architect), one delta end
   ```check
   build
   integrates
+  ```
+
+#### Scenario: the worker-facing delta grammar names retitles
+- WHEN a worker is asked to refine a delta
+- THEN its reply grammar names RENAMED beside ADDED / MODIFIED / REMOVED, so a title-only retitle is
+  written as a rename operation
+
+  ```check
+  spawn self-model
+  envelope names-renamed
   ```

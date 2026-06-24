@@ -31,6 +31,11 @@ _REAL = tree._DEFAULT_ROOT                                  # hypercore's own mo
 _ADDED = ("queue", "the order is the machine's claim about attention")  # an ADDED into an existing capability
 _NEWCAP = ("beacon", "it shines")                          # an ADDED into a capability that does not yet exist
 _CRASHCAP = ("gamma", "the gamma property holds")          # the cap grown under an injected crash, then retried
+_RENAME_CAP = "queue"
+_RENAME_OLD = "the operator endorses with approve, cut, or explain"
+_RENAME_NEW = "the operator endorses with approve, cut, or explain in the window"
+_RENAME_COLLISION = "the queue is a view of awaiting nodes"
+_REMODELED = "The renamed requirement MUST carry the modified body."
 
 
 def _delta_text(cap: str, req: str) -> str:
@@ -65,6 +70,9 @@ class World(_Base):
         self._sig = None                                   # the spec signature captured before a fold, for unchanged/untouched
         self._commits = 0                                  # HEAD commit count captured before a fold, for atomicity
         self._refused = False
+        self._renamed = None                               # (capability, old title, new title) for rename assertions
+        self._rename_before = None                         # pre-rename block for the untouched-body assertion
+        self._rename_modified = False
 
     # ── internals ────────────────────────────────────────────────────────────────
     def _signature(self) -> set:
@@ -115,6 +123,28 @@ class World(_Base):
             self._added = (cap, req)
             self._node = tree.file_intent(f"grow {cap}")
             self._try_fold(delta.parse(_delta_text(cap, req)), node=self._node)
+        elif mode in ("renamed", "renamed-modified"):
+            self._renamed = (_RENAME_CAP, _RENAME_OLD, _RENAME_NEW)
+            self._rename_before = spec.read_spec(self.root).capability(_RENAME_CAP).requirement(_RENAME_OLD).block
+            self._rename_modified = mode == "renamed-modified"
+            self._node = tree.file_intent(f"rename {_RENAME_OLD}")
+            extra = ""
+            if self._rename_modified:
+                extra = (f"\n## MODIFIED — {_RENAME_CAP}\n### Requirement: {_RENAME_NEW}\n"
+                         f"{_REMODELED}\n#### Scenario: renamed behavior\n"
+                         "- WHEN the renamed behavior is read\n- THEN the modified body is present\n")
+            self._try_fold(delta.parse(f"# delta — rename queue requirement\n\n"
+                                       f"## RENAMED — {_RENAME_CAP}\n"
+                                       f"### Requirement: {_RENAME_OLD}\n→ {_RENAME_NEW}\n{extra}"),
+                           node=self._node)
+        elif mode == "rename-absent":
+            # Catches: a RENAMED parser that drops invalid rename blocks as a trivial delta.
+            self._try_fold(delta.parse(f"## RENAMED — {_RENAME_CAP}\n"
+                                       "### Requirement: an absent old title\n→ a new absent title\n"))
+        elif mode == "rename-collision":
+            # Catches: a retitle that silently overwrites an existing requirement title.
+            self._try_fold(delta.parse(f"## RENAMED — {_RENAME_CAP}\n"
+                                       f"### Requirement: {_RENAME_OLD}\n→ {_RENAME_COLLISION}\n"))
         elif mode == "crash":
             cap, req = _CRASHCAP
             self._added = (cap, req)
@@ -207,6 +237,30 @@ class World(_Base):
         n = tree.find(self._node.id)
         return ((True, "") if on_disk and (n is None or not n.folded)
                 else (False, "the crash did not leave the half-applied state the retry must clear"))
+
+    def _v_retitled(self, args: list[str]) -> tuple[bool, str]:
+        """retitled — a RENAMED requirement is present under the new title, absent under the old title,
+        and, for a pure rename, carries the exact old body and scenarios under the new heading."""
+        # Catches: a rename implementation that changes body/scenario text or leaves the old title live.
+        cap, old, new = self._renamed
+        c = spec.read_spec(self.root).capability(cap)
+        old_req, new_req = c.requirement(old), c.requirement(new)
+        if old_req is not None or new_req is None:
+            return False, "the requirement was not moved from the old title to the new title"
+        if not self._rename_modified:
+            before_tail = "\n".join(self._rename_before.splitlines()[1:])
+            after_tail = "\n".join(new_req.block.splitlines()[1:])
+            if after_tail != before_tail:
+                return False, "the pure rename changed the requirement body or scenarios"
+        return True, ""
+
+    def _v_remodeled(self, args: list[str]) -> tuple[bool, str]:
+        """remodeled — a rename paired with a MODIFIED keyed on the new title lands the modified body."""
+        # Catches: a fold that applies MODIFIED before resolving RENAMED targets.
+        cap, _old, new = self._renamed
+        req = spec.read_spec(self.root).capability(cap).requirement(new)
+        return ((True, "") if req and _REMODELED in req.block
+                else (False, "the MODIFIED keyed on the post-rename title did not land"))
 
     def _v_grew(self, args: list[str]) -> tuple[bool, str]:
         """grew — the fold created a capability that did not exist before."""

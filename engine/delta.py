@@ -1,6 +1,6 @@
 """The delta and the fold — how behavior change reaches the living spec.
 
-A behavior-changing tree carries a delta (ADDED / MODIFIED / REMOVED
+A behavior-changing tree carries a delta (ADDED / MODIFIED / REMOVED / RENAMED
 requirements); a trivial tree carries one with no ops and so says so. Folding a
 tree applies its delta to `spec/` and commits, in one act: the spec never merges
 unless the tree folds, and the tree never folds unless the delta merges. The
@@ -24,11 +24,15 @@ On disk a delta is `delta.md` in a tree's folder:
     ## REMOVED — <capability>
     ### Requirement: <name>
 
+    ## RENAMED — <capability>
+    ### Requirement: <old name>
+    → <new name>
+
 A delta with no `## VERB — capability` sections is trivial and applies nothing. An
 ADDED requirement in a capability that does not yet exist *creates* that capability —
 how the self-model grows a new top-level unit as the work reveals one (the spec's
-own forecast; the worker capability is the first). MODIFIED or REMOVED in an absent
-capability is still a mismatch and cannot fold.
+own forecast; the worker capability is the first). MODIFIED, REMOVED, or RENAMED in
+an absent capability is still a mismatch and cannot fold.
 """
 from __future__ import annotations
 
@@ -37,7 +41,7 @@ from dataclasses import dataclass, field
 
 from . import channels, tree, spec
 
-VERBS = ("ADDED", "MODIFIED", "REMOVED")
+VERBS = ("ADDED", "MODIFIED", "REMOVED", "RENAMED")
 
 
 class CannotFold(Exception):
@@ -49,6 +53,7 @@ class Op:
     verb: str
     capability: str
     requirement: spec.Requirement
+    target: str = ""                 # RENAMED target title; empty for the other verbs
 
 
 @dataclass
@@ -69,8 +74,8 @@ def parse(text: str) -> Delta:
 
     def flush() -> None:
         if verb and cap and block:
-            ops.append(Op(verb, cap, spec._req(block)))
-
+            target = _rename_target(block) if verb == "RENAMED" else ""
+            ops.append(Op(verb, cap, spec._req(block), target))
     for line in text.splitlines():
         if line.startswith("# delta"):
             subject = line[len("# delta"):].lstrip(" —-").strip()
@@ -93,32 +98,69 @@ def parse(text: str) -> Delta:
 # ── the folding condition ─────────────────────────────────────────────────────
 
 def check(delta: Delta | None, sp: spec.Spec) -> str | None:
-    """Why this delta cannot fold, or None when it folds clean. An ADDED requirement that already
-    exists **identically** is not a conflict but an *already-applied* op — the fold is idempotent, so a
-    retry after a crash that landed the spec change but not the archive completes rather than wedging
-    (H1). An ADDED whose requirement exists with *different* content is a genuine conflict and refuses."""
+    """Why this delta cannot fold, or None when it folds clean.
+
+    Renames are resolved before the other verbs within one delta, so a MODIFIED keyed on a
+    post-rename title sees the retitled requirement. A re-applied RENAMED is clean when its old title
+    is gone and its new title is already present; that is the idempotent retry after a crash, not a
+    collision."""
     if delta is None:
         return "missing delta: a tree must carry a delta to fold"
-    for op in delta.ops:
-        if op.verb not in VERBS:
-            return f"unknown verb {op.verb!r}"
-        cap = sp.capability(op.capability)
+    for cap_name in sorted({op.capability for op in delta.ops}):
+        cap = sp.capability(cap_name)
+        cap_ops = [op for op in _renames_first(delta.ops) if op.capability == cap_name]
         if cap is None:
-            if op.verb != "ADDED":
-                return f"{op.verb} in an absent capability: {op.capability!r}"
-            continue  # ADDED into an absent capability creates it on fold
-        existing = cap.requirement(op.requirement.name)
-        if op.verb == "ADDED" and existing is not None and not _same(existing, op.requirement):
-            return f"ADDED requirement already exists: {op.requirement.name!r}"
-        if op.verb in ("MODIFIED", "REMOVED") and existing is None:
-            return f"{op.verb} requirement is absent: {op.requirement.name!r}"
+            bad = next((op for op in cap_ops if op.verb != "ADDED"), None)
+            if bad:
+                return f"{bad.verb} in an absent capability: {cap_name!r}"
+            continue
+        blocks = {r.name: r.block for r in cap.requirements}
+        for op in cap_ops:
+            if op.verb not in VERBS:
+                return f"unknown verb {op.verb!r}"
+            n = op.requirement.name
+            if op.verb == "RENAMED":
+                if not op.target:
+                    return f"RENAMED requirement has no target: {n!r}"
+                old_exists, new_exists = n in blocks, op.target in blocks
+                if old_exists and new_exists:
+                    return f"RENAMED target already exists: {op.target!r}"
+                if not old_exists:
+                    if new_exists:
+                        continue
+                    return f"RENAMED requirement is absent: {n!r}"
+                blocks[op.target] = _retitle(blocks.pop(n), op.target)
+                continue
+            existing = blocks.get(n)
+            if op.verb == "ADDED" and existing is not None and existing.strip() != op.requirement.block.strip():
+                return f"ADDED requirement already exists: {n!r}"
+            if op.verb in ("MODIFIED", "REMOVED") and existing is None:
+                return f"{op.verb} requirement is absent: {n!r}"
+            if op.verb == "MODIFIED":
+                blocks[n] = op.requirement.block
+            elif op.verb == "REMOVED":
+                blocks.pop(n, None)
+            elif op.verb == "ADDED":
+                blocks.setdefault(n, op.requirement.block)
     return None
 
 
-def _same(a: spec.Requirement, b: spec.Requirement) -> bool:
-    """Two requirement blocks are the same applied state — compared on normalized text so a re-applied
-    ADDED (the idempotent-retry case) reads as already-present, not a conflict."""
-    return a.block.strip() == b.block.strip()
+def _renames_first(ops: list[Op]) -> list[Op]:
+    return [op for op in ops if op.verb == "RENAMED"] + [op for op in ops if op.verb != "RENAMED"]
+
+
+def _rename_target(block: list[str]) -> str:
+    return next((line.strip()[1:].strip() for line in block[1:] if line.strip().startswith("→")), "")
+
+
+def _retitle(block: str, target: str) -> str:
+    lines = block.splitlines()
+    if not lines:
+        return f"{spec.REQ} {target}\n"
+    lines[0] = f"{spec.REQ} {target}"
+    return "\n".join(lines).rstrip() + "\n"
+
+
 
 
 # ── the fold (applies the delta; atomic with the commit, both directions) ─────
@@ -244,8 +286,13 @@ def _apply(text: str, ops: list[Op]) -> str:
     reqs = spec._requirements(text)
     blocks = {r.name: r.block for r in reqs}
     order = [r.name for r in reqs]
-    for op in ops:
+    for op in _renames_first(ops):
         n = op.requirement.name
+        if op.verb == "RENAMED":
+            if n in blocks and op.target not in blocks:
+                blocks[op.target] = _retitle(blocks.pop(n), op.target)
+                order = [op.target if x == n else x for x in order]
+            continue
         if op.verb == "REMOVED":
             blocks.pop(n, None)
             order = [x for x in order if x != n]

@@ -42,9 +42,12 @@ never faked. The binding is a hidden deep layer; the scenario stays the high-sig
   mechanically gated, never scripted-and-called-tested
 
 ### Requirement: every behavior-changing tree carries a delta
-A tree that changes behavior MUST carry a delta of ADDED / MODIFIED / REMOVED
-requirements matching what it built. A tree that makes no behavior change carries
-an empty delta and says so.
+A tree that changes behavior MUST carry a delta of ADDED / MODIFIED / REMOVED / RENAMED
+requirements matching what it built. ADDED introduces a requirement; MODIFIED replaces the body and
+scenarios of a requirement matched by its title; REMOVED drops one matched by its title; RENAMED
+changes a requirement's title — its identity — leaving the body and scenarios untouched. A scope-broadening
+retitle is a RENAMED paired with a MODIFIED keyed on the new title, because renames resolve first within
+one delta. A tree that makes no behavior change carries an empty delta and says so.
 
 #### Scenario: a trivial tree
 - WHEN a tree changes no behavior
@@ -56,8 +59,11 @@ an empty delta and says so.
   ```
 
 ### Requirement: a missing or mismatched delta cannot fold
-Folding MUST refuse a behavior-changing tree that carries no delta, and refuse a
-delta that does not apply cleanly to the current spec.
+Folding MUST refuse a behavior-changing tree that carries no delta, and refuse a delta that does not
+apply cleanly to the current spec. A MODIFIED or REMOVED of an absent requirement, an ADDED of one that
+already exists with different content, a RENAMED of an absent old title, and a RENAMED onto a title that
+already exists all fail to apply and leave the spec untouched. A re-applied RENAMED — old gone, new
+present — is the idempotent retry, so a crash-interrupted fold can complete.
 
 #### Scenario: missing delta
 - WHEN a behavior-changing tree carries no delta file
@@ -70,11 +76,24 @@ delta that does not apply cleanly to the current spec.
 
 #### Scenario: mismatched delta
 - WHEN a delta MODIFIES or REMOVES a requirement that is absent, or ADDS one that
-  already exists
+  already exists with different content
 - THEN the fold is refused and the spec is left untouched
 
   ```check
   fold mismatched
+  refused
+  untouched
+  ```
+
+#### Scenario: an unfoldable rename
+- WHEN a delta RENAMES a requirement whose old title is absent, or onto a title that already exists
+- THEN the fold is refused and the spec is left untouched
+
+  ```check
+  fold rename-absent
+  refused
+  untouched
+  fold rename-collision
   refused
   untouched
   ```
@@ -101,11 +120,34 @@ a conflict.
   atomic
   ```
 
+#### Scenario: a requirement is renamed in place
+- WHEN a delta RENAMES a requirement (old title → new title)
+- THEN the requirement is present under the new title with its body and scenarios intact, the old
+  title is gone, and the node is archived — all in the same one atomic act
+
+  ```check
+  fold renamed
+  retitled
+  archived
+  atomic
+  ```
+
+#### Scenario: a rename paired with a modify
+- WHEN a delta RENAMES a requirement and, in the same delta, MODIFIES it keyed on the new title
+- THEN the renames resolve first so the modify finds its target, and the requirement lands under the
+  new title carrying the modified body
+
+  ```check
+  fold renamed-modified
+  retitled
+  remodeled
+  ```
+
 #### Scenario: a crash mid-fold is retried
 - WHEN a fold is interrupted after the spec change lands on disk but before it commits, and
   the fold is retried
 - THEN the retry completes — the requirement is present exactly once and the node is
-  archived — rather than wedging on a permanent "already exists" refusal
+  archived — rather than wedging on a permanent already-exists refusal
 
   ```check
   fold crash

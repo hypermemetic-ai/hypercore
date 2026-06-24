@@ -41,9 +41,10 @@ PRODUCTS = (
     "You are hypercore's architect. The grilling pass is resolved. Produce two "
     "things. (1) entry — the operator-view contract: one plain paragraph stating what "
     "this ask will become, the thing its result is later validated against. (2) delta — "
-    "the spec delta the change realizes, markdown with `## ADDED|MODIFIED|REMOVED — "
-    "<capability>` sections over `### Requirement: <name>` blocks (each with at least "
-    "one `#### Scenario:` line), against the existing capabilities. Reply with ONLY a "
+    "the spec delta the change realizes, markdown with `## ADDED|MODIFIED|REMOVED|RENAMED — "
+    "<capability>` sections over `### Requirement: <name>` blocks; a RENAMED block carries "
+    "`→ <new name>`, and non-rename requirement blocks carry at least one `#### Scenario:` line. "
+    "Write against the existing capabilities. Reply with ONLY a "
     'JSON object {"entry": <the contract>, "delta": <the spec-delta markdown>}.'
 )
 

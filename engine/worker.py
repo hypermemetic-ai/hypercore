@@ -100,7 +100,7 @@ GROUNDING = (
 ENVELOPE = (
     "Reply with ONLY a JSON object:\n"
     '{"report": <the technical result and all relevant facts, for the architect>, '
-    '"delta": <the refined spec delta — ADDED/MODIFIED/REMOVED markdown over the '
+    '"delta": <the refined spec delta — ADDED/MODIFIED/REMOVED/RENAMED markdown over the '
     'capabilities the change touches, including any new or sharpened scenario (with its check '
     'block) the behavior needs>}'
 )

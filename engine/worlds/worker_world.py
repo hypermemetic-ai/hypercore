@@ -136,6 +136,16 @@ class World(_Base):
                     else (False, "the sharpened depth slice did not render into the grounding — a frozen copy?"))
         return False, f"unknown grounding property {prop!r}"
 
+    def _v_envelope(self, args: list[str]) -> tuple[bool, str]:
+        """envelope names-renamed — the worker-facing reply grammar names RENAMED beside the other
+        delta verbs, so retitles have an operation the worker can write."""
+        # Catches: a worker prompt regression that tells workers no RENAMED verb exists for retitles.
+        if args != ["names-renamed"]:
+            return False, f"unknown envelope assertion {' '.join(args)!r}"
+        verbs = ("ADDED", "MODIFIED", "REMOVED", "RENAMED")
+        missing = [v for v in verbs if v not in worker.ENVELOPE]
+        return (True, "") if not missing else (False, f"the worker envelope omits {missing}")
+
     def _v_fence(self, args: list[str]) -> tuple[bool, str]:
         """fence <off-main|binds-cwd> — the worktree isolation, and that the worker's transport runs
         with its working directory bound to its own checkout."""
