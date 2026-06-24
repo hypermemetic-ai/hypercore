@@ -250,6 +250,24 @@ class World(_Base):
             return False, f"unknown loop assertion {args[0]!r}"
         return (True, "") if self._sched.running == [] else (False, "the scheduler is not idle after the failure")
 
+    def _v_total(self, args: list[str]) -> tuple[bool, str]:
+        """total — dispatch was total: every node the scheduler dispatched resolved to exactly one
+        terminal — folded, or escalated as a decision card on it — and none is left in flight with no
+        live worker. The one positive invariant the per-node assertions above each witness half of."""
+        running = set(self._sched.running)
+        for node in tree.read_tree():
+            if node.is_live and node.id not in running:
+                return False, f"a node is stranded in flight with no live worker: {node.id}"
+        cards = tree.cards()
+        for label, node in self._nodes.items():
+            st = tree.find(node.id)
+            folded = st is not None and st.folded
+            escalated = any(c.parent == node.id and c.kind == "decide" for c in cards)
+            if folded == escalated:                          # exactly one terminal — never both, never neither
+                return False, (f"the {label} node did not reach exactly one terminal "
+                               f"(folded={folded}, escalated={escalated})")
+        return True, ""
+
     # ── internals ────────────────────────────────────────────────────────────────
     def _cap(self, name: str) -> bool:
         return spec.read_spec(self.root).capability(name) is not None

@@ -21,10 +21,10 @@ Three properties define it, each structural, not a discipline to remember:
 
 - **Off the operator's path.** Each worker runs on its own thread and the loop polls; `step` never
   blocks, so the window only ever paints the live tree while work moves underneath it (the rule the
-  interface keeps for the architect, held for the scheduler too). A worker that cannot complete
-  returns as a decision on the queue — the loop surfaces it and keeps serving the rest, never crashing
-  and never silently dropping the node (the folding-condition discipline: a tree that cannot meet its
-  condition returns as a decision, it does not vanish).
+  interface keeps for the architect, held for the scheduler too). Dispatch is total: every worker
+  resolves to exactly one terminal — its delta folds, or it escalates as a decision on the queue — so a
+  node can neither crash the loop nor sit stranded in flight with no live worker (the folding-condition
+  discipline: a tree that cannot meet its condition returns as a decision, it does not vanish).
 
 The transport is injectable — the live `claude -p` in the window, a scripted fake in the acceptance
 check — so the loop drives deterministically under the harness without an LLM. `--check` runs the

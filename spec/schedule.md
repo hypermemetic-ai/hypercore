@@ -4,8 +4,9 @@
 The autonomous loop — how work keeps moving. The tree computes the ready work; the scheduler
 consumes it, running a worker on each ready node and keeping work in flight while any remains, so a
 ratified ask is *built* rather than left standing while the system idles (intent §60). Work runs
-concurrently as well as continuously: several workers advance the one tree at once, each fenced, the
-shared record single-writer so their builds overlap while their integrations serialize. The loop runs
+concurrently as well as continuously: the scheduler is a supervisor over isolated actors. Each fenced worker shares no state and reaches
+the one tree through a single channel — the single-writer record, its only mailbox — so builds overlap,
+integrations serialize onto the shared history, and no worker can touch another's. The loop runs
 off the operator's path — its own threads — so it never blocks the window, and a worker that cannot
 complete returns as a decision rather than stalling the loop.
 
@@ -77,12 +78,14 @@ throughput.
   folded 2
   ```
 
-### Requirement: the loop runs off the operator's path and surfaces failure as a decision
+### Requirement: the loop runs off the operator's path, and dispatch is total
 The scheduler MUST run independently of the operator's input loop — each worker on its own thread, the
 loop never blocking — so autonomous work never delays a keystroke and the operator watches progress
-live. A worker that cannot complete MUST return as a decision on the queue (abandon / re-cut / change
-the ask); the loop surfaces it and keeps serving the rest, never crashing and never silently dropping
-the node.
+live. Dispatch MUST be total: every worker the scheduler spawns resolves to exactly one terminal — its
+delta integrates and folds, or it escalates as a decision on the queue (abandon / re-cut / change the
+ask) — so a node can neither crash the loop nor sit stranded in flight with no live worker, and the
+loop keeps serving the rest. Escalation hands the operator the fork; the scheduler runs no retry
+strategy of its own.
 
 #### Scenario: a keystroke during autonomous work
 - WHEN workers are building and the operator types
@@ -101,4 +104,15 @@ the node.
   fence gone
   recovered
   loop idle
+  ```
+
+#### Scenario: dispatch is total — every dispatched worker reaches exactly one terminal
+- WHEN the loop runs over ready work where one worker folds and one cannot complete
+- THEN every node the scheduler dispatched resolves to exactly one terminal — folded, or escalated as a
+  decision on the queue — and none is left in flight with no live worker
+
+  ```check
+  failing
+  run
+  total
   ```

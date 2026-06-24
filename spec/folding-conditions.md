@@ -1,10 +1,13 @@
 # folding-conditions
 
-The conditions a tree's material must meet to fold — the engineering standards made
-structural. The self-model owns the delta and the atomic merge; this
-capability owns the gates on the material a worker produced, run at the archive stage
-before the merge. Advice can be ignored; a folding condition cannot, so the standards
-bite by construction rather than by a reviewer remembering them.
+The conditions a tree's material must meet to fold — the engineering standards made into **guards**.
+A guard is a pure predicate the system evaluates over a node's material and state to decide whether a
+transition may fire; it decides, it never acts. The self-model owns the delta and the atomic merge;
+this capability owns the guards on the `fold` transition — run over the material a worker produced, at
+the archive stage before the merge — while readiness (`tree.ready()`) is their sibling on the
+`dispatch` transition. One vocabulary, two transitions: a guard says when a node may move, never what
+moving does. Advice can be ignored; a folding condition cannot, so the standards bite by construction
+rather than by a reviewer remembering them.
 
 The keystone condition is the **scenario gate**: a behavior change folds only when the
 **architect-authored scenario** of the capability it touches goes red→green — failing at the fork
@@ -39,9 +42,11 @@ cannot certify itself from inside a fold, so the acceptance harness exercises it
   behavior, and narration is never the gate
 
 ### Requirement: length past the signal raises a decision, never a silent refusal
-A source file a tree created or grew past the **length signal** MUST raise a **decision** —
-re-cut, deepen, or accept-with-reason — held on the operator's queue. It MUST NOT
-auto-refuse on length and MUST NOT silently pass. Length is a context-cost signal — every line
+A source file a tree created or grew past the **length signal** trips the depth guard — the system's
+**one escalating guard**. Where an ordinary guard that fails simply withholds its transition, this one
+MUST **raise**: it neither passes silently nor refuses on its own, but escalates a **decision** —
+re-cut, deepen, or accept-with-reason — held on the operator's queue, and holds the fold pending it. It
+thus never auto-refuses on length and never silently passes. Length is a context-cost signal — every line
 is context an agent must load — not a verdict on depth, and there is **no hard length ceiling**:
 even a far-over-signal file raises a decision the operator can accept, never an outright
 refusal (a number standing in for the judgment of depth is the error being removed). The fold
