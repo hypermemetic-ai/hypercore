@@ -17,14 +17,16 @@ not a discipline to remember:
   the whole spec and its rescan catches a capability the handed delta mis-named or missed.
   It holds the spec, never raw code, and never the operator view.
 
-- **It runs fenced in its own git worktree.** Its tree is a separate checkout on its
-  own branch; it builds in isolation and its commits reach the one record without ever
-  touching a sibling's tree or the main line. Its model transport runs with its working
-  directory set to that worktree (`transport.worker_transport`), so the checkout — its source,
-  the archived grounds, and the derived channel files (the anchor and skills) — is what it reads,
-  and the harness auto-loads the fence's anchor and discovers its skills. (intent.md's full
-  fence — the rest of the host read-only — is the system's to enforce around this; the worktree
-  is the seam.)
+- **It runs fenced in its own git worktree, isolated by the OS.** Its tree is a separate checkout
+  on its own branch; it builds in isolation and its commits reach the one record without ever
+  touching a sibling's tree or the main line. Its model transport spawns it inside a real OS jail
+  rooted at that worktree (`transport.worker_transport` → `transport.jail`), so the checkout — its
+  source, the archived grounds, and the derived channel files (the anchor and skills) — is what it
+  reads, the harness auto-loads the fence's anchor and discovers its skills, and yet every path
+  outside the worktree refuses writes at the OS level (intent.md §74's full fence — the rest of the
+  host read-only — is now enforced, not a convention; a cwd was a starting directory, not a jail).
+  The fence is working-trees only: the shared `.git` stays writable so commits land, with deliberate
+  store rewrites barred elsewhere (the single-writer lock, fold-only-to-main).
 
 - **Its output cannot reach the operator.** `apply` returns a `WorkerResult`, written
   for the machine. It has no operator-facing field and is never rendered. The only

@@ -17,6 +17,7 @@ stays inert — the worker capability's own red→green is the gate's concern, n
 from __future__ import annotations
 
 import os
+import shlex
 import shutil
 import subprocess
 import tempfile
@@ -171,9 +172,15 @@ class World(_Base):
         return False, f"unknown handoff assertion {args[0]!r}"
 
     def _v_fence(self, args: list[str]) -> tuple[bool, str]:
-        """fence <off-main|binds-cwd> — the worktree isolation, and that the worker's transport runs
-        with its working directory bound to its own checkout."""
+        """fence <off-main|binds-cwd|host-read-only|worktree-writable|commit-lands> — the worktree
+        isolation and the at-fence cwd binding, plus the OS-level fence: a real `jail` is spawned and
+        a write outside the worktree (the main tree) is refused at the OS level while an in-worktree
+        write and a commit still land. The escape verbs run the SAME pure `transport.jail` production
+        uses, so the gate exercises the real fence; on a host that cannot enforce it they fail loudly
+        (the negative-space invariant), never a silent pass."""
         prop = args[0]
+        if prop in ("host-read-only", "worktree-writable", "commit-lands"):
+            return self._fence_os(prop)
         if prop == "off-main":
             node = self._stage(self._demo_delta())
             fence = worker.worktree(node, self.root)
@@ -209,6 +216,45 @@ class World(_Base):
                 worker.worker_transport = saved
             return (True, "") if seen.get("cwd") == fence else (False, "apply did not run the worker at its fence cwd")
         return False, f"unknown fence property {prop!r}"
+
+    def _fence_os(self, prop: str) -> tuple[bool, str]:
+        """Exercise the real OS fence over a true worktree. `host-read-only`: a worker write to the
+        main tree (outside its worktree) is refused at the OS level. `worktree-writable`: a write
+        inside the worktree succeeds. `commit-lands`: an in-fence commit reaches the shared record.
+        Each spawns `transport.jail` — the exact code path production runs — so the gate tests the
+        live fence, not a stand-in. An unenforceable host is a loud failure, never a silent pass."""
+        reason = transport.jail_available()
+        if reason:
+            return False, f"the OS fence is not enforceable on this host: {reason}"
+        node = self._stage(self._demo_delta())
+        fence = worker.worktree(node, self.root)
+        store = transport._store(fence)
+        if prop == "host-read-only":
+            target = os.path.join(self.root, "FENCE_ESCAPE_PROBE")          # the main tree, outside the worktree
+            subprocess.run(transport.jail(["sh", "-c", f"touch {shlex.quote(target)}"], fence, store),
+                           capture_output=True, text=True)
+            escaped = os.path.exists(target)
+            if escaped:
+                os.remove(target)
+            return ((True, "") if not escaped
+                    else (False, "a worker write to the main tree was NOT refused — the fence leaks"))
+        if prop == "worktree-writable":
+            r = subprocess.run(transport.jail(["sh", "-c", "touch in_fence && test -f in_fence"], fence, store),
+                               capture_output=True, text=True)
+            return ((True, "") if r.returncode == 0
+                    else (False, f"a write inside the worktree was refused under the fence: "
+                                 f"{(r.stderr or r.stdout).strip()[:160]}"))
+        # commit-lands
+        nonce = "fence-commit-" + os.urandom(4).hex()
+        script = (f"echo {nonce} > fence_probe.txt && git add fence_probe.txt && "
+                  f"git -c user.email=f@x -c user.name=f commit -qm {nonce}")
+        r = subprocess.run(transport.jail(["sh", "-c", script], fence, store), capture_output=True, text=True)
+        if r.returncode != 0:
+            return False, f"an in-fence commit failed under the fence: {(r.stderr or r.stdout).strip()[:160]}"
+        log = subprocess.run(["git", "-C", self.root, "log", "--all", "--oneline"],
+                             capture_output=True, text=True).stdout
+        return ((True, "") if nonce in log
+                else (False, "the in-fence commit did not reach the shared record"))
 
     def _v_leak(self, args: list[str]) -> tuple[bool, str]:
         """leak none — the worker's raw report reaches no card, no render, and no node; the only words

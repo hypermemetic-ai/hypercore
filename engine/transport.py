@@ -25,19 +25,25 @@ the shared knowledge; giving it its own module lets `communication`, `grill`, `d
 each depend on it downward, so the cycle and the reaching-through-privates both dissolve.
 
 The two live transports share one summon (`_summon`) and differ only where they must: the
-**architect** runs at the repo root, the **worker** runs at its fence (`worker_transport`, cwd =
-its worktree) so the harness auto-loads the fence's anchor and discovers its skills and the worker
-greps `work/archive/` for past grounds in its own checkout (role-assembly step 5). The worker runs a
-*different* model from the architect by ratified design — GPT via `omp` — named in one place
-(`WORKER_CMD`/`WORKER_MODEL`, role-assembly step 6), the operator's settled spend decision.
+**architect** runs at the repo root, the **worker** runs **jailed at its worktree** (`worker_transport`
+spawns it inside a real OS fence — `jail` — rooted there, the host read-only and the worktree and
+shared store writable) so the harness auto-loads the fence's anchor and discovers its skills and the
+worker greps `work/archive/` for past grounds in its own checkout (role-assembly step 5), and yet can
+write no path outside that checkout. The worker runs a *different* model from the architect by ratified
+design — GPT via `omp` — named in one place (`WORKER_CMD`/`WORKER_MODEL`, role-assembly step 6), the
+operator's settled spend decision. The OS fence is built from one named mechanism (`FENCE_CMD`,
+bubblewrap) behind the pure `jail` seam, so a design re-contest swaps it there and nowhere else.
 
 The transport is **injectable** — the live invocation here, a scripted fake in the acceptance
 check — so the whole system drives deterministically under the harness without an LLM.
 """
 from __future__ import annotations
 
+import os
 import re
+import shutil
 import subprocess
+import tempfile
 from dataclasses import dataclass
 
 MODEL = "claude-opus-4-8"
@@ -49,6 +55,13 @@ MODEL_LABEL = "opus 4.8"
 # The flip to a new vendor was the operator's spend decision (2026-06-22); nothing else names them.
 WORKER_CMD = "omp"
 WORKER_MODEL = "gpt-5.5"
+
+# The OS sandbox the worker fence is built from — the ONE place the enforcement mechanism is named, so
+# the design-it-twice re-contest (Landlock, a container) repoints it here and `jail` and nothing else.
+# bubblewrap (`bwrap`): unprivileged, no root, no daemon, no image — it fences an ordinary process to
+# its worktree on the real machine. (design-decision on `the-worker-fence-must-isolate` → the hybrid:
+# bubblewrap's pure-transform spine, a reason-returning probe, no no-op jail.)
+FENCE_CMD = "bwrap"
 
 # The summon timeout — one bound, both roles. It is not a tuned per-role budget but an **extreme-runaway
 # backstop**: a model call (the architect's quick turn or the worker's whole fenced build) that runs past
@@ -259,14 +272,117 @@ def worker_argv(prompt: str) -> list[str]:
     return [WORKER_CMD, "-p", prompt, "--model", WORKER_MODEL]
 
 
+# ── the OS fence: spawn the worker jailed, not merely at a cwd ─────────────────
+
+def _store(worktree: str) -> str:
+    """The shared git object store the worker's commits must reach, absolute. A worktree's `.git` is a
+    *file* pointing into `<repo>/.git/worktrees/<name>`; the objects and the shared refs live in
+    `<repo>/.git`. `git --git-common-dir` resolves it — the difference between *commits land on the one
+    record* and *commits die in the jail*. It is the second writable region the fence must open, and the
+    reason the fence is **working-trees only**: the store stays reachable so the record is reachable."""
+    r = subprocess.run(["git", "-C", worktree, "rev-parse", "--git-common-dir"],
+                       capture_output=True, text=True)
+    common = (r.stdout.strip() if r.returncode == 0 else "") or os.path.join(worktree, ".git")
+    return os.path.abspath(common if os.path.isabs(common) else os.path.join(worktree, common))
+
+
+def jail(argv: list[str], worktree: str, store: str,
+         tmpfs: tuple = (), rw: tuple = ()) -> list[str]:
+    """Wrap `argv` in an OS jail rooted at `worktree` — the worker-fence seam. **Pure**: it builds the
+    sandbox argv and spawns nothing, so the live fence and the gate's escape-probe run the *identical*
+    code path (the only structural reason the gate validates what production actually runs — the
+    2026-06-24 escape was a fence that was *named* but was not the thing under test). The ONE place the
+    mechanism (`FENCE_CMD`) is named.
+
+    The guarantee, expressed as binds applied in order — a later bind on a sub-path overrides the
+    read-only host, which is how the writable holes punch through:
+
+      `--ro-bind / /`     the whole host, read-only: the main tree and every sibling worktree are
+                          visible but un-writable, so a worker can reach no path outside its own tree.
+      `--dev`/`--proc`    a live runtime without exposing the host's.
+      `--tmpfs /tmp` + each `tmpfs` path   fresh, private, ephemeral filesystems, so a coding-agent
+                          harness inits its scratch without EROFS while exposing nothing of the real
+                          home, and nothing it writes there outlives the fence or reaches a sibling.
+      each `rw` (src,dest)   a seeded per-worker state bound writable (the harness's private home).
+      `--bind worktree`   the worker's own tree, re-opened writable.
+      `--bind store`      the shared object store, writable so the worker's commits reach the record.
+
+    The net is left **open** (§74 — no `--unshare-net`): the fence guards parallel work, not the net;
+    spend/publish/pull is the decisions floor's, not walled here. All binds are **absolute** — a
+    relative dest mkdir's under the read-only `/` and the jail dies before it runs. The `tmpfs`/`rw`
+    holes come **before** the worktree bind so none can shadow it (the home-under-repo footgun)."""
+    worktree, store = os.path.abspath(worktree), os.path.abspath(store)
+    out = [FENCE_CMD, "--ro-bind", "/", "/", "--dev", "/dev", "--proc", "/proc", "--tmpfs", "/tmp"]
+    for d in tmpfs:
+        out += ["--tmpfs", os.path.abspath(d)]
+    for src, dest in rw:
+        out += ["--bind", os.path.abspath(src), os.path.abspath(dest)]
+    out += ["--bind", worktree, worktree]
+    if store != worktree:                                   # the store is the worktree's own .git only for a non-worktree checkout
+        out += ["--bind", store, store]
+    out += ["--die-with-parent", "--chdir", worktree, "--", *argv]
+    return out
+
+
+def jail_available() -> str | None:
+    """Whether this host can enforce the fence — `None` when it can, else a one-line reason naming what
+    is missing. There is **no no-op jail**: absence is a reason the gate surfaces, never a silent pass —
+    the negative-space invariant, the structural bar against the failure that let the escape land. It
+    does not trust `which`: it runs a throwaway **real** jail around a trivial command and reports
+    whether it held, collapsing *binary missing*, *kernel user-namespaces disabled*, and
+    *seccomp/sysctl blocks it* into one truthful bit by exercising the actual mechanism."""
+    probe = tempfile.mkdtemp(prefix="jail-probe-")
+    try:
+        r = subprocess.run(jail(["true"], probe, probe), capture_output=True, text=True, timeout=30)
+        if r.returncode != 0:
+            return (f"the OS fence ({FENCE_CMD}) could not run: "
+                    f"{(r.stderr or r.stdout or '').strip()[:200] or 'non-zero exit'}")
+        return None
+    except FileNotFoundError:
+        return f"the OS fence binary ({FENCE_CMD}) is not installed"
+    except (OSError, subprocess.SubprocessError) as e:
+        return f"the OS fence ({FENCE_CMD}) could not run: {type(e).__name__}: {e}"
+    finally:
+        shutil.rmtree(probe, ignore_errors=True)
+
+
+def _fence_home() -> tuple[str, list, list]:
+    """Seed the per-worker, writable, ephemeral home-state the fence's read-only home would otherwise
+    deny — without it the `omp` coding agent dies at startup with `SQLITE_READONLY` on its
+    `~/.omp/agent` store under `--ro-bind / /` (the hard-won lesson the prior epoch already paid).
+    Returns `(seed_dir, rw, tmpfs)`: a private copy of `~/.omp/agent` (its models and credentials)
+    bound writable so the worker keeps reaching its model, and a fresh tmpfs over `~/.omp/logs` — so
+    nothing the worker writes touches the operator's real home, and each worker is isolated from the
+    next. The caller cleans up `seed_dir`. Whether a *live* omp build runs to completion inside the
+    fence is **watched** evidence (a real model run), like the fence's anchor/skill load — the gate
+    proves the fence *holds*, not that the worker thrives in it."""
+    home = os.path.expanduser("~")
+    agent = os.path.join(home, ".omp", "agent")
+    seed = tempfile.mkdtemp(prefix="fence-omp-")
+    rw: list = []
+    if os.path.isdir(agent):
+        dest = os.path.join(seed, "agent")
+        shutil.copytree(agent, dest)
+        rw.append((dest, agent))
+    tmpfs = [d for d in (os.path.join(home, ".omp", "logs"),) if os.path.isdir(d)]
+    return seed, rw, tmpfs
+
+
 def worker_transport(cwd: str):
-    """Bind the worker's live transport to its fence (role-assembly step 5): every worker call runs
-    with its working directory set to `cwd` = its worktree, so the harness auto-loads the fence's
-    anchor and discovers its skills and the worker greps `work/archive/` for past grounds in its checkout.
-    The injection boundary stays `(prompt) -> str` — the fence is closed over, not threaded through it,
-    so the scripted fakes are untouched — and the binding carries `.cwd` so the scaffold check can
-    assert the worker runs at its fence without a live model."""
+    """Bind the worker's live transport to its fence (role-assembly step 5): every worker call is
+    **spawned inside a real OS jail rooted at its worktree** — not merely with its working directory
+    set there, because a starting directory is not a jail (the 2026-06-24 escape: a cwd-only worker
+    edited the main tree). Under the jail the host is read-only, the worktree and the shared store
+    writable, the net open, and the harness gets seeded ephemeral private state; so the checkout is
+    still the working directory — the harness auto-loads the fence's anchor and skills and the worker
+    greps `work/archive/` in its checkout — but every path outside the worktree refuses writes at the
+    OS level. The injection boundary stays `(prompt) -> str` and `.cwd` is preserved, so the scripted
+    fakes and the scaffold check are untouched."""
     def at_fence(prompt: str) -> str:
-        return _summon(worker_argv(prompt), cwd=cwd)
+        seed, rw, tmpfs = _fence_home()
+        try:
+            return _summon(jail(worker_argv(prompt), cwd, _store(cwd), tmpfs=tuple(tmpfs), rw=tuple(rw)))
+        finally:
+            shutil.rmtree(seed, ignore_errors=True)
     at_fence.cwd = cwd
     return at_fence

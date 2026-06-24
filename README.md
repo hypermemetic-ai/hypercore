@@ -60,10 +60,16 @@ The static channels (skills, anchor) are **materialized on fold** from the spec 
 capability — `engine/methodology.py` renders each skill from its slice, `engine/anchor.py` renders the
 anchor (non-inferable operational lines plus a registry-derived skills index) and its `CLAUDE.md` bridge
 (a derived `@AGENTS.md` import, because Claude Code reads `CLAUDE.md`, not a bare `AGENTS.md`) — so a
-committed artifact can no more drift from the spec than the spec from a folded delta. The worker runs at
-its fence on a *different* model (GPT via `omp`, the operator's settled spend decision); whether a live
-session actually loads the fence's anchor and skills is **watched evidence** the first autonomous run
-confirms, never faked into the harness — the honest limit.
+committed artifact can no more drift from the spec than the spec from a folded delta. The worker runs
+**fenced by the OS**: `transport.jail` spawns it inside an unprivileged bubblewrap sandbox rooted at its
+worktree — host read-only, worktree and shared `.git` writable, net open — and `python3 -m engine --check`
+spawns the real fence and proves a write to the main tree is refused at the OS level while an in-worktree
+write and a commit still land. So escape-prevention is **gated**, not a watched promise (it requires
+bubblewrap on the host; absent it the check skips/fails loudly rather than passing silently). It runs on a
+*different* model (GPT via `omp`, the operator's settled spend decision); what stays **watched evidence**
+the first autonomous run confirms — never faked into the harness — is whether a live session loads the
+fence's anchor and skills and carries a build to completion inside it. The honest limit narrowed: the
+fence is proven to *hold*; that a live worker *thrives* in it is still watched.
 
 **The autonomy seam.** The scheduler (`engine/schedule.py`) consumes the ready work the tree computes —
 dispatch → build fenced → integrate → fold — continuous and concurrent off the operator's input loop,

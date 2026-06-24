@@ -107,13 +107,26 @@ is derived from the model and only the vision is authored.
   ```
 
 ### Requirement: a worker runs fenced in its own git worktree
-A worker MUST run in its own git worktree — a separate checkout on its own branch, fenced
-from its siblings and the main line. It builds in isolation and its own commits reach the
-shared record without touching another worker's tree or the main line until the result
-integrates. The worker's **model transport runs with its working directory set to that
-worktree**, so the checkout is the worker's working directory: its source, the archived grounds
-(`work/archive/`), and the derived channel files (the anchor and skills) are read from the
-checkout, and the harness auto-loads the fence's anchor and discovers its skills.
+A worker MUST run in its own git worktree — a separate checkout on its own branch — and that worktree
+MUST be the **only** filesystem location it can write. The main tree, every sibling worker's worktree,
+and the rest of the host are **read-only at the operating-system level**. A worker's attempt to modify any
+path outside its own worktree fails as an OS refusal, not a convention it could break by accident — the
+2026-06-24 escape (a live worker editing tracked files on main from a cwd-only fence) is barred by
+construction. Its own worktree stays writable and the shared git object store stays **reachable and
+writable**, so the worker's own commits reach the one record without touching another tree or the main
+line until the result integrates. The enforcement wraps the **transport that spawns the worker's model**
+(`transport.worker_transport`): that transport MUST spawn the worker inside a real OS jail rooted at the
+worktree, not merely set the subprocess's working directory to it — a starting directory is not a jail.
+The jail is built from an **unprivileged** OS sandbox primitive present on the host, needing no root and
+no daemon. Because the jail roots at the worktree, the checkout remains the worker's working directory: its
+source, the archived grounds (`work/archive/`), and the derived channel files (the anchor and skills) are
+read from the checkout, and the harness auto-loads the fence's anchor and discovers its skills. The fence
+is **working-trees only**: it walls the filesystem, not the shared object store — a worker deliberately
+rewriting a sibling's branch or the main ref in the shared `.git` is out of scope, already barred where it
+stands by the single-writer record lock and the fold being the only path to main, and unwinnable without
+per-worker object stores. §74's net stays open: only the filesystem and the shared `.git` are fenced.
+Because the host must carry the sandbox primitive for the fence to stand, the acceptance harness's
+enforcement check surfaces a clear **skip or failure** where the primitive is absent, never a silent pass.
 
 #### Scenario: the fence holds
 - WHEN a worker is dispatched a node
@@ -131,6 +144,20 @@ checkout, and the harness auto-loads the fence's anchor and discovers its skills
 
   ```check
   fence binds-cwd
+  ```
+
+#### Scenario: a live worker cannot write outside its worktree
+- WHEN a worker is spawned inside its real fence and attempts to modify a path outside its own worktree —
+  the main tree, a sibling's worktree, or elsewhere on the host — and, separately, writes inside its own
+  worktree and commits
+- THEN the outside write fails at the OS level (the host is read-only to the worker), while the in-worktree
+  write and the git commit both succeed and the commit reaches the shared record — and where the host lacks
+  the sandbox primitive the check surfaces a clear skip or failure rather than a silent pass
+
+  ```check
+  fence host-read-only
+  fence worktree-writable
+  fence commit-lands
   ```
 
 ### Requirement: concurrent workers advance the tree in isolation, each folding its own delta
