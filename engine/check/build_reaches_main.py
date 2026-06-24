@@ -1,11 +1,13 @@
 """Acceptance for the verified fenced build reaching main — exercised from outside the fold it tests.
 
 The fold's code-bearing path (`delta.fold(.., code=)`) lands a worker's verified engine code on the
-merged tree, in one commit with its spec, re-verified on the merged tree before the commit. That
-behavior **cannot certify itself from inside a fold**: re-verify runs the touched capability's
-scenarios in a fresh process against the merged engine, so a scenario that itself folded code would
-recurse — the same self-reference the scenario gate's own red→green carries. So it is proven here, from
-outside, over a real runnable merged tree, never as an in-spec block. The behavior is recorded
+merged tree, in one commit with its spec, re-verified on the merged tree before the commit. The
+re-verify reaches the **whole system** — every capability's scenarios on merged main, not only the ones
+the delta named — so a refactor of a shared engine module cannot break an *untouched* capability and
+still land. That behavior **cannot certify itself from inside a fold**: re-verify runs the merged
+tree's scenarios in a fresh process against the merged engine, so a scenario that itself folded code
+would recurse — the same self-reference the scenario gate's own red→green carries. So it is proven here,
+from outside, over a real runnable merged tree, never as an in-spec block. The behavior is recorded
 **watched** in `spec/self-model.md` ("folding lands the verified build's code on the merged tree").
 
 This is its own module — like the per-capability worlds — because the fixture is heavyweight: it stands
@@ -27,9 +29,11 @@ REAL = tree._DEFAULT_ROOT                                  # hypercore's own sou
 
 
 def check() -> None:
-    """A code-bearing fold lands the build's ENGINE CODE on the merged tree (positive), and a build that
-    would leave the merged tree red is refused with every write rolled back (negative — proving re-verify
-    on the merged tree is the load-bearing keystone, not narration)."""
+    """A code-bearing fold lands the build's ENGINE CODE on the merged tree (positive); a build that would
+    leave the merged tree red is refused with every write rolled back (negative — re-verify on the merged
+    tree is the load-bearing keystone, not narration); and a build whose code breaks a capability the
+    delta never named is refused too (untouched-capability negative — the keystone reaches the whole
+    system, so green-on-the-named-capability can never mean red-on-the-system)."""
     prev = os.environ.get("ENGINE_ROOT")
     root = _full_root()
     rel, spec_rel = "engine/conditions.py", "spec/folding-conditions.md"
@@ -67,6 +71,30 @@ def check() -> None:
            "build-reaches-main — a build red once merged is refused: re-verify on the merged tree is the keystone")
         ok(open(path, encoding="utf-8").read() == before,
            "build-reaches-main — the refused fold rolled back: nothing landed on main")
+
+        # untouched-capability negative — the delta names ONLY folding-conditions, but the code refactors
+        # engine/schedule.py, a module folding-conditions never exercises, with a bug. Under a touched-only
+        # re-verify this lands green-on-the-named-capability, red-on-the-system — the blind spot the rename-op
+        # crossing surfaced (it refactored a shared module and folded green on its one named capability). The
+        # whole-system re-verify runs the *schedule* capability's scenarios on merged main, catches them red,
+        # and refuses: nothing lands.
+        sched_rel = "engine/schedule.py"
+        sched = os.path.join(root, sched_rel)
+        sched_before = open(sched, encoding="utf-8").read()
+        sched_broken = sched_before + "\nraise RuntimeError('a refactor bug breaks the schedule capability')\n"
+        node3 = tree.file_intent("names folding-conditions, code breaks the untouched schedule capability")
+        d3 = delta.parse("# delta — note3\n## ADDED — folding-conditions\n"
+                         "### Requirement: an untouched-break note\nIt holds.\n#### Scenario: s\n- WHEN x\n- THEN y\n")
+        untouched_refused = False
+        try:
+            delta.fold(d3, root, node=node3, code={sched_rel: worker.CodeFile(sched_before, sched_broken)})
+        except delta.CannotFold:
+            untouched_refused = True
+        ok(untouched_refused,
+           "build-reaches-main — a code-bearing fold that breaks an UNTOUCHED capability is refused: re-verify "
+           "reaches the whole system, not only the capabilities the delta names")
+        ok(open(sched, encoding="utf-8").read() == sched_before,
+           "build-reaches-main — the untouched-break fold rolled back: nothing landed on main")
     finally:
         if prev is None:
             os.environ.pop("ENGINE_ROOT", None)

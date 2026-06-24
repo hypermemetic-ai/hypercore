@@ -173,19 +173,24 @@ def gate(result, root: str | None = None) -> str | None:
     return None
 
 
-def reverify(capabilities, root: str) -> str | None:
+def reverify(root: str) -> str | None:
     """The fold's keystone — run after a code-bearing fold lands the verified build and spec on main and
-    **before** it commits. Each touched capability's scenarios run against the **merged working tree** at
-    `root`, in a subprocess that imports `root`'s on-disk engine (cwd = root, so `python3 -m engine`
-    loads the merged code) and whose worlds copy `root`'s merged spec — so what is verified is merged
-    main itself, not the fence. This closes the green-in-fence/red-on-main hole: a build verified against
-    its fork base can still be red once merged onto a moved main, and only re-running on the merged tree
-    catches it. None when every gated touched capability is green on merged main; a reason when one is
-    red or could not run — a build that cannot be re-verified does not land. Skipped inside a scenario
-    run (the guard), so a scenario that itself folds code never recurses into re-verification."""
+    **before** it commits. **Every** capability's scenarios run against the **merged working tree** at
+    `root` — the whole system, not only the capabilities the delta named: a worker's code can refactor a
+    shared engine module (`tree`, `delta`, `record`, `scenario`) an *unnamed* capability depends on, so a
+    re-verify scoped to the named capabilities would let that break land green-on-the-touched-capability,
+    red-on-the-system. The scope is **structural** — this function enumerates the capabilities from the
+    merged spec itself (`_all_capabilities`), so no caller can narrow it and reopen the blind spot. Each
+    runs in a subprocess that imports `root`'s on-disk engine (cwd = root, so `python3 -m engine` loads
+    the merged code) and whose worlds copy `root`'s merged spec — so what is verified is merged main
+    itself, not the fence. This closes both holes: green-in-fence/red-on-main (a build verified against a
+    moved fork base) and green-on-touched/red-on-system (a shared-module break in an unnamed capability).
+    None when every gated capability is green on merged main; a reason when one is red or could not run —
+    a build that cannot be re-verified does not land. Skipped inside a scenario run (the guard), so a
+    scenario that itself folds code never recurses into re-verification."""
     if os.environ.get(_GATE_GUARD):
         return None
-    for cap in sorted(set(capabilities)):
+    for cap in _all_capabilities(root):
         src = _check_source(cap, root)
         if not src:
             continue                                       # a watched capability has nothing to re-verify
@@ -195,8 +200,14 @@ def reverify(capabilities, root: str) -> str | None:
                     "re-verified does not land")
         if code != 0:
             return (f"the scenarios for {cap!r} are red on merged main — the verified fenced build does "
-                    "not hold once merged (green-in-fence, red-on-main), so it does not land")
+                    "not hold once merged (red-on-the-system), so it does not land")
     return None
+
+
+def _all_capabilities(root: str) -> list[str]:
+    """Every capability in the merged spec at `root`, sorted — the whole-system re-verify scope read
+    structurally from the spec, so no caller chooses it and the blind spot cannot be reintroduced."""
+    return sorted(c.name for c in spec.read_spec(root).capabilities)
 
 
 def _run_merged(src: str, capability: str, root: str) -> int | None:

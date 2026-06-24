@@ -186,10 +186,11 @@ def fold(delta: Delta | None, root: str | None = None, node=None, code=None) -> 
     completes through the crossing without leaving main red or the node falsely archived. Three guards
     join the one held line, none of them a new commit or lock: a **staleness pre-check** refuses, before
     any write, a build whose engine paths main has moved under since the fence was cut; the verified tip
-    bytes are **content-replayed** onto main beside the spec; and the touched capabilities are
-    **re-verified on the merged tree** before the commit — a build red once merged rolls every write back
-    and refuses, so green-in-fence can never mean red-on-main. A spec-only fold carries no code and runs
-    none of these — its path is exactly as before."""
+    bytes are **content-replayed** onto main beside the spec; and the **whole system** is
+    **re-verified on the merged tree** before the commit — every capability, not only the ones the delta
+    named, so a build red once merged rolls every write back and refuses, and green-in-fence can never
+    mean red-on-main nor green-on-the-touched-capability red-on-the-system. A spec-only fold carries no
+    code and runs none of these — its path is exactly as before."""
     sp = spec.read_spec(root)
     reason = check(delta, sp)
     if reason:
@@ -217,11 +218,13 @@ def fold(delta: Delta | None, root: str | None = None, node=None, code=None) -> 
         for rel, cf in (code or {}).items():
             write(p := os.path.join(base_dir, rel), cf.tip)
             code_paths.append(p)
-        # the keystone: re-verify the touched capabilities on the MERGED tree before the commit. A build
-        # red once merged rolls back every write and refuses — nothing lands, the node recovers to a decision.
+        # the keystone: re-verify the WHOLE SYSTEM on the MERGED tree before the commit — every capability,
+        # not only the ones the delta named, so a shared-module refactor cannot break an untouched capability
+        # and still land. A build red anywhere rolls back every write and refuses — nothing lands, the node
+        # recovers to a decision. The scope is the re-verify's own (it enumerates the spec), not this caller's.
         if code:
             from . import scenario                         # lazy: scenario reads delta, so bind it at call time
-            red = scenario.reverify(touched, base_dir)
+            red = scenario.reverify(base_dir)
             if red:
                 for path, was in prior.items():
                     _restore(path, was)

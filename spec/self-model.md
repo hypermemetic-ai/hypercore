@@ -177,22 +177,38 @@ not only its spec delta — in the **same one commit** that applies the delta an
 code-bearing ask completes through the crossing without leaving main red or the node falsely archived.
 The code crosses as a self-contained artifact captured at the worker's hand-off — the fence's verified
 bytes for the engine paths it touched — content-replayed into the fold's one held act; no live fence is
-reached at fold time. Before the commit, the touched capability's scenarios are **re-verified on the
-merged tree**: what is verified is the merged main itself, so green-in-fence can no longer mean
-red-on-main — a build that does not hold once merged is refused, every write rolled back, nothing
-landing, the node recovering to standing with a decision. A **staleness pre-check** fast-refuses, before
-any write, a build whose engine paths main has moved under since the fence was cut — a decision to re-cut
-off current main, never a silent clobber. None of these is a new commit, lock, or transaction; they ride
-the one held line the spec fold already runs on. A spec-only (trivial or no-code) fold carries no code
-and runs none of them — its act is exactly as before.
+reached at fold time. Before the commit, **every capability's scenarios are re-verified on the merged
+tree — the whole system, not only the capabilities the delta names**: the worker's code can reach a
+shared engine module (`tree`, `delta`, `record`, `scenario`) that an **unnamed** capability depends on,
+so re-verifying only the touched capabilities would let a shared-module change break an untouched one and
+still land `done`. What is verified is the merged main itself, so green-in-fence can no longer mean
+red-on-main, and green-on-the-touched-capability can no longer mean red-on-the-system — a build that does
+not hold once merged, anywhere a full check would catch it, is refused, every write rolled back, nothing
+landing, the node recovering to a decision. The whole-system reach is **structural**: the re-verify
+enumerates the capabilities itself, so no caller can narrow it. The in-fence red→green **scenario gate**
+stays scoped to the touched capabilities — only a capability the change builds transitions — while the
+re-verify is the whole-system check the gate's scope cannot be. A **staleness pre-check** fast-refuses,
+before any write, a build whose engine paths main has moved under since the fence was cut — a decision to
+re-cut off current main, never a silent clobber. None of these is a new commit, lock, or transaction;
+they ride the one held line the spec fold already runs on. A spec-only (trivial or no-code) fold carries
+no code and runs none of them — its act is exactly as before.
 
 #### Scenario: a code-bearing delta's implementation reaches main
 - WHEN a tree whose worker built and verified engine code in its fence folds
 - THEN that engine code lands on main in the same one commit as the spec delta and the node's archive,
   re-verified green on the merged tree before the commit; a build red once merged, or one whose paths
   main has moved under, is refused and nothing lands
-- watched — proven from outside in `engine/check/scenarios.py`, never from inside the fold it tests
-  (the self-reference the scenario gate's own red→green has, and the same honest home)
+- watched — proven from outside in `engine/check/build_reaches_main.py`, never from inside the fold it
+  tests (the self-reference the scenario gate's own red→green has, and the same honest home)
+
+#### Scenario: a shared-module change that breaks an untouched capability is refused
+- WHEN a code-bearing fold's delta names one capability but its engine code breaks a *different*
+  capability the delta never named — a refactor of a shared module an unnamed capability depends on
+- THEN re-verifying the whole system on the merged tree catches the untouched capability red, the fold
+  is refused, every write rolled back, nothing landing, the node recovering to a decision — the
+  crossing's verdict is green-on-the-system, never green-on-the-touched-capability alone
+- watched — proven from outside in `engine/check/build_reaches_main.py`, the keystone that cannot
+  certify itself from inside a fold
 
 ### Requirement: the operator view renders vision beside as-built and gap
 The operator view MUST render, at every altitude, the **vision** (authored, from

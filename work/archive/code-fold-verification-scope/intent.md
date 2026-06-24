@@ -1,8 +1,8 @@
 ---
 kind: ask
-state: standing
+state: done
 owner: operator
-created: 2026-06-24
+created: 1782277200
 ---
 # code-fold-verification-scope — a code-bearing fold can break an untouched capability its gates never check
 
