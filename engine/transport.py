@@ -115,17 +115,21 @@ def Envelope(*fields: _Field, lenient: bool = False, fallback: str = "") -> Sche
 
 
 def instruction(schema: Schema) -> str:
-    """The reply instruction a role's prompt carries — the envelope's tags shown in order with each
-    field's guidance as its placeholder, so the model emits exactly what `read` parses. One source
-    for the instruction and the parse: a sharpened field description reaches the model with no second
-    copy to drift. (Named `instruction`, not `render`, so it does not collide with the `render`
-    module — a collision the review's import-cycle scan would read as a false dependency edge.)"""
+    """The reply instruction a role's prompt carries, and the prompt's closing line — the envelope's
+    tags shown in order with each field's guidance as its placeholder, then the one imperative to
+    reply. It is meant to come **last** in every prompt: the role's task and material lead, this reply
+    shape closes, so the exact format the model must emit is the freshest thing in view as it answers,
+    and the single "Reply now" line lives here, not hand-appended at each call site (where one copy
+    once drifted to the retired JSON). One source for the instruction, the closing line, and the
+    parse: a sharpened field description reaches the model with no second copy to drift. (Named
+    `instruction`, not `render`, so it does not collide with the `render` module — a collision the
+    review's import-cycle scan would read as a false dependency edge.)"""
     head = [
         "Reply with ONLY these tags, in this order. Put each field's content verbatim between its",
         "tags — nothing escaped; markdown, code fences, and newlines all pass through as-is:",
         "",
     ]
-    return "\n".join(head + _render_fields(schema.fields, 0))
+    return "\n".join(head + _render_fields(schema.fields, 0) + ["", "Reply now."])
 
 
 def _render_fields(fields: tuple, depth: int) -> list[str]:

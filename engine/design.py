@@ -71,7 +71,7 @@ CANDIDATE = (
     "implementing it. Commit radically to the brief below. Produce the interface (the small "
     "surface its callers see), what it hides behind that surface, where the seam falls and "
     "what varies across it, and the deletion-test argument for its depth. Write for the "
-    "machine.\n\n" + instruction(CANDIDATE_SCHEMA)
+    "machine."
 )
 
 # reason-first: the reasoning fills before the pick (the *Let Me Speak Freely?* mitigation), and the
@@ -95,7 +95,7 @@ SELECT = (
     "something real varies). Pick one or hybridize, with a strong recommendation and your "
     "reasoning. This is machine-side design judgment, recorded as material on the node — it reaches "
     "the operator ONLY if the comparison reveals a difference the operator has a stake in "
-    "(operator-visible behavior, hard to reverse, or real cost).\n\n" + instruction(SELECT_SCHEMA)
+    "(operator-visible behavior, hard to reverse, or real cost)."
 )
 
 
@@ -132,10 +132,10 @@ def contest(node: tree.Node, briefs=None, transport=None,
     from the others exactly as concurrent workers are isolated."""
     transport = transport or call
     out: list[Candidate] = []
-    for name, instruction in (briefs or BRIEFS):
+    for name, brief in (briefs or BRIEFS):
         fence = worker.worktree(node, root, tag=name)
-        design = read(transport(_candidate_prompt(node, instruction)), CANDIDATE_SCHEMA)
-        _record_design(fence, name, instruction, design)
+        design = read(transport(_candidate_prompt(node, brief)), CANDIDATE_SCHEMA)
+        _record_design(fence, name, brief, design)
         out.append(Candidate(name, fence, design))
     return out
 
@@ -207,10 +207,10 @@ def design_twice(node: tree.Node, briefs=None, transport=None,
 
 # ── internals ────────────────────────────────────────────────────────────────
 
-def _candidate_prompt(node: tree.Node, instruction: str) -> str:
+def _candidate_prompt(node: tree.Node, brief: str) -> str:
     return (f"{CANDIDATE}\n\nThe interface decision:\n{grill.contract_of(node) or node.text}\n\n"
-            f"Your brief — design radically to it:\n{instruction}\n\n"
-            "Reply now.")
+            f"Your brief — design radically to it:\n{brief}\n\n"
+            f"{instruction(CANDIDATE_SCHEMA)}")
 
 
 def _select_prompt(node: tree.Node, candidates: list[Candidate]) -> str:
@@ -222,14 +222,14 @@ def _select_prompt(node: tree.Node, candidates: list[Candidate]) -> str:
         f"- depth: {c.design.get('depth', '')}"
         for c in candidates)
     return (f"{SELECT}\n\nThe interface decision:\n{grill.contract_of(node) or node.text}\n\n"
-            f"The candidate designs:\n{shown}\n\nReply now.")
+            f"The candidate designs:\n{shown}\n\n{instruction(SELECT_SCHEMA)}")
 
 
-def _record_design(fence: str, name: str, instruction: str, design: dict) -> None:
+def _record_design(fence: str, name: str, brief: str, design: dict) -> None:
     """The candidate commits its design inside its own fence — proof each candidate runs in
     isolation, its material reaching the record on its own branch, fenced from its siblings."""
     tree.atomic_write(os.path.join(fence, "DESIGN.md"),
-        f"# candidate design — {name}\n\n## brief\n{instruction}\n\n"
+        f"# candidate design — {name}\n\n## brief\n{brief}\n\n"
         f"## interface\n{design.get('interface', '')}\n\n## hides\n{design.get('hides', '')}\n\n"
         f"## seam\n{design.get('seam', '')}\n\n## depth\n{design.get('depth', '')}\n")
     worker.commit_tree(fence, f"candidate: {name} design")

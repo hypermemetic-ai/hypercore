@@ -35,7 +35,7 @@ SYSTEM = (
     "are and land one concrete consequence. File intent when they want something "
     "built or done. Raise a card when a real judgment is theirs to make. Answer "
     "(file and card empty) when they asked a question. Keep 'say' to a sentence or "
-    "two, plain, no jargon.\n\n" + instruction(SYSTEM_SCHEMA)
+    "two, plain, no jargon."
 )
 
 
@@ -94,8 +94,7 @@ COHERENCE = (
     "You are hypercore's architect, archiving a worker's hand-off. Judge "
     "coherence at the operator's altitude: does the result honor the contract? This is "
     "not a code review. The worker's report below is for you alone and MUST NOT reach "
-    "the operator — author any operator-facing words yourself, short and plain.\n\n"
-    + instruction(COHERENCE_SCHEMA)
+    "the operator — author any operator-facing words yourself, short and plain."
 )
 
 
@@ -120,7 +119,7 @@ def integrate(node: tree.Node, result, transport=None, root: str | None = None) 
     verdict = read(transport(
         f"{COHERENCE}\n\nThe contract:\n{grill.contract_of(node)}\n\n"
         f"The worker's report (machine-facing — do not forward):\n{result.report}\n\n"
-        "Reply now."), COHERENCE_SCHEMA)
+        f"{instruction(COHERENCE_SCHEMA)}"), COHERENCE_SCHEMA)
     say = (verdict.get("say") or "").strip()
     if not verdict.get("coherent"):
         card = tree.raise_card(verdict.get("card") or say or
@@ -151,7 +150,7 @@ def explain(node: tree.Node, transport=None) -> str:
         "You are hypercore's architect. The operator pressed explain on "
         "this card and wants help toward the decision — tell the story plainly: "
         "what it changes, where you lean, and the one thing that would flip it.\n\n"
-        + instruction(EXPLAIN_SCHEMA) + f"\n\nCard: {node.text}"
+        f"Card: {node.text}\n\n" + instruction(EXPLAIN_SCHEMA)
     )
     return read(transport(prompt), EXPLAIN_SCHEMA).get("say", "").strip()
 
@@ -161,4 +160,4 @@ def _prompt(thread: Thread) -> str:
         f"{'operator' if who == 'operator' else 'you'}: {text}"
         for who, text in thread.turns
     )
-    return f"{SYSTEM}\n\n{convo}\n\nReply now."
+    return f"{SYSTEM}\n\n{convo}\n\n{instruction(SYSTEM_SCHEMA)}"

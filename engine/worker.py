@@ -179,12 +179,13 @@ def context(node: tree.Node, root: str | None = None) -> WorkerContext:
 
 def prompt(node: tree.Node, ctx: WorkerContext, root: str | None = None) -> str:
     """The worker's grounding, rendered to one prompt — the salutation, then the worker's own
-    disciplines single-sourced from `spec/worker.md`, the non-inferable record grounding, and the
-    tag-delimited reply envelope; then the depth standards (the proactive defense), the touched capabilities foregrounded
-    as the grounding, the rest of the spec carried for the rescan, the glossary, the handed delta, and
-    the ask. The long history and grounds of past decisions are *not* inlined: the prompt points the
-    worker at `work/archive/` in its fence checkout to grep just-in-time (step 5). This is the whole of
-    what the worker is given."""
+    disciplines single-sourced from `spec/worker.md`, the non-inferable record grounding, the depth
+    standards (the proactive defense), the ask, the handed delta, the touched capabilities foregrounded
+    as the grounding, the rest of the spec carried for the rescan, and the glossary; the reply envelope
+    (the tag shape and the closing imperative) comes **last**, so the exact format the worker emits is
+    the freshest thing in view when it answers. The long history and grounds of past decisions are
+    *not* inlined: the prompt points the worker at `work/archive/` in its fence checkout to grep
+    just-in-time (step 5). This is the whole of what the worker is given."""
     def _caps(items):
         return "\n\n".join(f"### capability: {n}\n{t.strip()}" for n, t in items)
     depth_text = next((t.strip() for n, t in ctx.capabilities if n == "depth"), "")
@@ -195,7 +196,6 @@ def prompt(node: tree.Node, ctx: WorkerContext, root: str | None = None) -> str:
         f"Your standing disciplines (single-sourced from spec/worker.md — what good looks like):\n"
         f"{_worker_disciplines(root)}\n\n"
         f"{GROUNDING}\n\n"
-        f"{ENVELOPE}\n\n"
         f"The depth standards — you are held to these every episode; build deep up front:\n"
         f"{depth_text}\n\n"
         f"The ask:\n{grill.contract_of(node) or node.text}\n\n"
@@ -211,7 +211,7 @@ def prompt(node: tree.Node, ctx: WorkerContext, root: str | None = None) -> str:
         f"nodes are in `work/archive/` at your worktree root; grep them for a past decision's grounds "
         f"as the change needs. The spec capabilities above are preloaded whole — your scannable "
         f"high-signal core.\n\n"
-        "Reply now."
+        f"{ENVELOPE}"
     )
 
 

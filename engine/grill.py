@@ -40,8 +40,7 @@ FLOOR = (
     "asking when unsure: a wrongly-asked question is cheap, a wrongly-skipped one bites "
     "later. Ask in dependency order. Each question carries your recommended answer "
     "(lean) and the one thing that would flip it (flip). If every decision the work "
-    "needs is already determined, return no questions (an empty <questions>).\n\n"
-    + instruction(FLOOR_SCHEMA)
+    "needs is already determined, return no questions (an empty <questions>)."
 )
 
 PRODUCTS_SCHEMA = Envelope(
@@ -56,7 +55,7 @@ PRODUCTS = (
     "the spec delta the change realizes, markdown with `## ADDED|MODIFIED|REMOVED|RENAMED — "
     "<capability>` sections over `### Requirement: <name>` blocks; a RENAMED block carries "
     "`→ <new name>`, and non-rename requirement blocks carry at least one `#### Scenario:` line. "
-    "Write against the existing capabilities.\n\n" + instruction(PRODUCTS_SCHEMA)
+    "Write against the existing capabilities."
 )
 
 
@@ -121,7 +120,7 @@ def floor(ask: str, transport=None) -> list[Question]:
     """The residual stake-bearing decisions — empty means the ask is below the floor."""
     transport = transport or call
     raw = transport(f"{FLOOR}\n\nThe living spec:\n{_digest()}\n\nThe ask: {ask}\n\n"
-                    "Reply now.")
+                    f"{instruction(FLOOR_SCHEMA)}")
     obj = read(raw, FLOOR_SCHEMA)
     return [Question(q.get("q", ""), q.get("lean", ""), q.get("flip", ""))
             for q in (obj.get("questions") or []) if q.get("q")]
@@ -133,7 +132,7 @@ def products(ask: str, qa: list[tuple[str, str]], transport=None) -> tuple[str, 
     transport = transport or call
     answers = "\n".join(f"- {q}: {a}" for q, a in qa) or "- (none)"
     raw = transport(f"{PRODUCTS}\n\nThe ask: {ask}\n\nResolved:\n{answers}\n\n"
-                    "Reply now.")
+                    f"{instruction(PRODUCTS_SCHEMA)}")
     obj = read(raw, PRODUCTS_SCHEMA)
     return obj.get("entry", "").strip(), obj.get("delta", "").strip()
 
