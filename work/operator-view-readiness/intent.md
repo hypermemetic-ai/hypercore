@@ -1,8 +1,8 @@
 ---
 kind: ask
-state: standing
+state: in flight
 owner: operator
-created: 2026-06-23
+created: 1782190800
 ---
 # operator-view-readiness — make the operator view answer "can I trust a run on this?"
 
