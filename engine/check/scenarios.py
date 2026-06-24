@@ -32,8 +32,8 @@ import tempfile
 import threading
 
 from .harness import ok
-from .. import (anchor, channels, design, methodology, review, scenario, schedule,
-                spec, transport, tree, worker)
+from .. import (anchor, channels, design, machine_writing, methodology, review, scenario,
+                schedule, spec, transport, tree, worker)
 
 REAL = tree._DEFAULT_ROOT                                  # hypercore's own source tree — the spec under test
 
@@ -148,6 +148,33 @@ def check(root: str) -> None:
     clear = [r for r in comm_cls if "clear" in r.lower()]
     ok(bool(clear) and all(comm_cls[r] == "watched" for r in clear),
        "communication — clarity is WATCHED, held by judgment, never a gated readability metric")
+
+    # 7c. writing-for-the-machine — the machine-facing mirror of the clarity standard: a WATCHED
+    #     discipline carried in the shared loaded skill, with one mechanical aid — a non-blocking signal
+    #     over the spec's own prose (the length tripwire's idiom, pointed at writing). The discipline is
+    #     watched in spec/writing-for-the-machine.md; that it registers, reaches the skill, stays watched,
+    #     and that its signal fires on a planted construct yet never gates are the structural facts the
+    #     closed scenario vocabulary cannot say — asserted here from outside, never a faked in-spec block.
+    wm_skill = methodology.skill("writing-for-the-machine", REAL)
+    ok("writing-for-the-machine" in methodology.METHODOLOGIES,
+       "writing-for-the-machine — the machine-writing standard is registered as a shared loaded skill")
+    ok("one instruction per sentence" in wm_skill and "say what to do" in wm_skill and "one pass" in wm_skill,
+       "writing-for-the-machine — the skill carries the core discipline: write for the one-pass reader, "
+       "one instruction per sentence, say what to do")
+    wm_cls = dict(scenario.classification("writing-for-the-machine", REAL))
+    ok(bool(wm_cls) and all(k == "watched" for k in wm_cls.values()),
+       "writing-for-the-machine — the prose discipline is WATCHED throughout, never a gated readability "
+       f"metric ({len(wm_cls)} requirements, all watched)")
+    ok(bool(machine_writing.flags("This sentence has " + "padding word " * 60 + "in it.")),
+       "writing-for-the-machine — the signal detects an over-long sentence (the instruction-density cliff)")
+    ok(any(f.kind == "compound negation" for f in machine_writing.flags("It is never a veto and never a pass.")),
+       "writing-for-the-machine — the signal detects a compound negation")
+    ok(any(f.kind == "mid-clause reference" for f in machine_writing.flags("the scan (ADR 0020) reads the flags")),
+       "writing-for-the-machine — the signal detects a provenance reference off the line-end")
+    ok(not machine_writing.flags("The architect names the actor and states the act. The reference rides at the line-end. (ADR 0005)."),
+       "writing-for-the-machine — clean prose raises no flag, so the signal is a prompt to look, never noise")
+    for line in machine_writing.advisory(REAL):                # the live, non-gating signal over the real spec
+        print(line)
 
     # 8. channels — the derived-channel registry's exact composition: a structural fact the closed
     #    scenario vocabulary cannot honestly express (it names the engine's `CHANNELS` tuple, not a

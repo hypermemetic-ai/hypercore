@@ -17,3 +17,4 @@ Load the one the task in front of you routes to (`skills/<name>/SKILL.md`):
 - `coherence` — hypercore's coherence methodology — the archive-gate judgment over a worker's hand-off: check it against the contract at the operator's altitude (not a code review) and against the depth bar, folding on a pass and raising a decision otherwise.
 - `depth` — hypercore's depth standards — build deep modules (a lot of behavior behind a small interface) and avoid the red flags of shallowness.
 - `communication` — hypercore's communication methodology — the clarity standard for the architect's operator-facing voice.
+- `writing-for-the-machine` — hypercore's writing-for-the-machine methodology — the standard for the agent-facing channels (skills, anchor, prompts, hand-backs), written for the model that reads them in one pass.

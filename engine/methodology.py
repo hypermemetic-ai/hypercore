@@ -2,7 +2,8 @@
 
 An agent carries its specialization in **skills**: the disciplines it routes to when the
 work calls for them — the architect's `design-it-twice`, `architecture-review`, `grilling`,
-`coherence`, and `communication`, and the worker's `depth` — each a clean standalone capability with its own
+`coherence`, and `communication`, the worker's `depth`, and the shared `writing-for-the-machine` (the
+standard for the channels themselves) — each a clean standalone capability with its own
 `spec/<cap>.md`. This module renders each slice into a progressive-disclosure `SKILL.md`: the
 metadata names *when* to load it, the body is the slice's methodology overview (its preamble) and its
 disciplines (each requirement's statement), and the resource pointer is the slice itself for the full
@@ -64,6 +65,12 @@ METHODOLOGIES = {
         "operator-facing voice. Spend the reader's working memory on the decision; for the one expert "
         "reader, clarity is the removal of scaffolding, not its addition. Load when authoring or judging "
         "operator-facing words — a card, an answer, a render, an explanation.",
+    "writing-for-the-machine":
+        "hypercore's writing-for-the-machine methodology — the standard for the agent-facing channels "
+        "(skills, anchor, prompts, hand-backs), written for the model that reads them in one pass. The "
+        "machine-facing mirror of communication: one instruction per sentence, say what to do, density "
+        "is signal. Load when authoring or evaluating a skill, the anchor, a prompt, or a worker "
+        "hand-back.",
 }
 
 # The shipping repo — the fallback source, so the render works against a bare root (the harness plants
