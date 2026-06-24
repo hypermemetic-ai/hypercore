@@ -74,9 +74,9 @@ of sites that must handle an error is a design variable, not a given.
 The red flags MUST be carried as **judgment**, not numbers — shallow module, information leakage,
 temporal decomposition, overexposure, pass-through method, repetition, special-general mixture,
 conjoined methods, comment-repeats-code, vague or hard-to-pick name, nonobvious code — each a symptom
-a judge weighs, none a threshold a tool checks. The system keeps at most a **length** tripwire (a
-context-cost signal that raises a decision, never an auto-refusal); the model-driven red-flag
-scan lives in `architecture-review`, recorded as not-yet-built, never fabricated.
+a judge weighs, none a threshold a tool checks. The system keeps at most a **length** tripwire — a context-cost signal that raises a decision, not an
+auto-refusal. The model-driven red-flag scan lives in `architecture-review`, recorded as
+not-yet-built, never fabricated.
 
 #### Scenario: depth is assessed
 - WHEN a module's depth is assessed at the gate or in the review

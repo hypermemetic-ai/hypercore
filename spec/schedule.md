@@ -79,11 +79,11 @@ throughput.
   ```
 
 ### Requirement: the loop runs off the operator's path, and dispatch is total
-The scheduler MUST run independently of the operator's input loop — each worker on its own thread, the
-loop never blocking — so autonomous work never delays a keystroke and the operator watches progress
+The scheduler MUST run independently of the operator's input loop — each worker on its own thread,
+leaving the loop free — so autonomous work never delays a keystroke and the operator watches progress
 live. Dispatch MUST be total: every worker the scheduler spawns resolves to exactly one terminal — its
 delta integrates and folds, or it escalates as a decision on the queue (abandon / re-cut / change the
-ask) — so a node can neither crash the loop nor sit stranded in flight with no live worker, and the
+ask). A node can therefore neither crash the loop nor sit stranded in flight with no live worker, and the
 loop keeps serving the rest. Escalation hands the operator the fork; the scheduler runs no retry
 strategy of its own.
 

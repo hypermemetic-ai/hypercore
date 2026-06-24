@@ -46,7 +46,7 @@ A source file a tree created or grew past the **length signal** trips the depth 
 **one escalating guard**. Where an ordinary guard that fails simply withholds its transition, this one
 MUST **raise**: it neither passes silently nor refuses on its own, but escalates a **decision** —
 re-cut, deepen, or accept-with-reason — held on the operator's queue, and holds the fold pending it. It
-thus never auto-refuses on length and never silently passes. Length is a context-cost signal — every line
+thus escalates rather than resolving length itself — neither auto-refusing nor silently passing. Length is a context-cost signal — every line
 is context an agent must load — not a verdict on depth, and there is **no hard length ceiling**:
 even a far-over-signal file raises a decision the operator can accept, never an outright
 refusal (a number standing in for the judgment of depth is the error being removed). The fold

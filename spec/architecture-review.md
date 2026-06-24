@@ -97,9 +97,9 @@ fabricates a module depth judgment from length or from the mechanical subset.
 
 ### Requirement: the review reads the mechanical structural red flags
 The architecture review MUST scan the source tree for the structural red flags a tool can read
-without judgment — a module-level name used nowhere in the package (dead code) and a pair of
+without judgment: a module-level name used nowhere in the package (dead code), and a pair of
 modules that depend on each other (a circular dependency, the structural signature of information
-leakage) — and surface each in the complexity debt beside the length findings, computed live.
+leakage). It surfaces each in the complexity debt beside the length findings, computed live.
 These are the **mechanical subset** of the red flags; the model-driven *judgment* —
 shallow module, information leakage, the deletion test — stays judgment and is recorded as
 not-yet-built, never fabricated. A newly introduced instance of either rule returns the scan to

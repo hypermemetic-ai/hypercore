@@ -27,8 +27,8 @@ only describe it: the architect authors the scenario in domain verbs, a deep bin
 compiles it to a runnable assertion over the real engine seams, and the gate runs it red→green. Because
 the self-model's own account of a behavior *is* the check that behavior passes, the description cannot
 drift from the behavior — a requirement is a check that survives its node. The presence of the check
-block is itself the gated/watched classification, never a separately authored register: a requirement
-whose scenarios carry no check block is **watched**, recorded honestly as not mechanically enforced,
+block is itself the gated/watched classification, not a separately authored register. A requirement
+whose scenarios carry no check block is **watched** — recorded honestly as not mechanically enforced,
 never faked. The binding is a hidden deep layer; the scenario stays the high-signal WHEN/THEN interface.
 
 #### Scenario: a scenario is read as a check
@@ -83,8 +83,8 @@ delta that does not apply cleanly to the current spec.
 The act that folds a tree MUST apply its delta to the living spec, re-render the derived
 artifacts, and archive the node — **in one commit**. The spec change and the node's archive
 land together or not at all: a crash can never leave the spec merged while the node is
-un-archived, nor the reverse. The spec is never merged unless the tree folds, and the tree
-never folds unless the delta merges; the living spec is therefore never separately edited.
+un-archived, nor the reverse. The spec merges exactly when the tree folds, and the tree
+folds exactly when the delta merges; the living spec is therefore never separately edited.
 The act is **idempotently retryable**: a retry after a crash that landed the spec change on
 disk but did not commit completes the fold — it does not refuse the already-applied delta as
 a conflict.

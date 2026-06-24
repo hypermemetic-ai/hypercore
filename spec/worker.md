@@ -71,8 +71,8 @@ or missed.
 A worker MUST be handed the **depth standards** as standing grounding in every episode — the
 deep-module framework (a lot of behavior behind a small interface; a simple interface matters
 more than a simple implementation; pull complexity downward), strategic over tactical
-programming, and the **red flags** of shallowness — so it builds **deep up front** rather than
-relying on the gate to catch shallowness after the fact. This is
+programming, and the **red flags** of shallowness. This grounding makes it build **deep up front**
+rather than rely on the gate to catch shallowness after the fact. This is
 the *proactive* primary anti-complexity defense: a worker that shares the long-term-health
 concern produces deep modules, so the folding-conditions depth gate stays a rarely-tripped
 backstop, not an operator-load generator. The grounding is assembled into the worker's prompt

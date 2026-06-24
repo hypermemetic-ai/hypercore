@@ -60,10 +60,10 @@ returns the story toward the decision and leaves the card standing.
 
 ### Requirement: a card's kind is recorded and matches its call
 A card's **kind** MUST be recorded on the node and read at render time, never guessed from the
-card's shape. The kind is one of five along the work's life — a **grilling question**, a
-**ratification**, a **request for approval**, a **decision**, or an **acceptance** — and it MUST
-match the call: a real judgment the operator must reason through is a **decision**; a step needing
-only the operator's go is a lighter **request for approval**, not dressed as a decision.
+card's shape. The kind is one of five along the work's life — a **grilling question**, a **ratification**, a
+**request for approval**, a **decision**, or an **acceptance**. It MUST match the call: a real
+judgment the operator must reason through is a **decision**; a step needing only the operator's go is
+a lighter **request for approval**, not dressed as a decision.
 
 #### Scenario: a genuine fork versus a go-ahead
 - WHEN the machine raises a card
