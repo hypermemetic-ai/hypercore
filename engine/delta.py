@@ -124,46 +124,109 @@ def _same(a: spec.Requirement, b: spec.Requirement) -> bool:
 # ── the fold (applies the delta; atomic with the commit, both directions) ─────
 
 @tree.serialized
-def fold(delta: Delta | None, root: str | None = None, node=None) -> None:
-    """Apply the delta to the living spec, archive the node, and commit — **one act, atomic in both
-    directions** (spec.self-model). Raises CannotFold if the folding condition is not met; on refusal
-    the spec is untouched.
+def fold(delta: Delta | None, root: str | None = None, node=None, code=None) -> None:
+    """Apply the delta to the living spec, **land the verified build's code**, archive the node, and
+    commit — **one act, atomic in every direction** (spec.self-model). Raises CannotFold if a folding
+    condition is not met; on refusal nothing lands and the tree is left untouched.
 
     The spec change *and* the node's archive land in **one commit** under the one held line, so the
     record never shows the spec merged without the node archived (or the reverse) — the H1 wedge, where
     a crash between two separate acts left the delta in the spec but the node un-archived and the retry
     hit a permanent CannotFold, cannot occur. The whole act is **idempotently retryable**: a crash
-    after the on-disk spec write but before the commit leaves an already-applied delta, which `check`
+    after the on-disk write but before the commit leaves an already-applied delta, which `check`
     now reads as already-present (not a conflict), so the retry re-renders identically, moves the node,
     and commits once. Serialized on the one record: concurrent folds land one at a time, never
-    interleaving their spec writes, while their builds ran in parallel. A trivial delta with a node
-    still archives it (the fold of a no-op-delta tree)."""
+    interleaving their writes, while their builds ran in parallel. A trivial delta with a node
+    still archives it (the fold of a no-op-delta tree).
+
+    A **code-bearing** fold (`code` carries the worker's verified engine bytes, a `{path: CodeFile}`
+    artifact captured at the hand-off) lands that code on main in this same act, so a code-bearing ask
+    completes through the crossing without leaving main red or the node falsely archived. Three guards
+    join the one held line, none of them a new commit or lock: a **staleness pre-check** refuses, before
+    any write, a build whose engine paths main has moved under since the fence was cut; the verified tip
+    bytes are **content-replayed** onto main beside the spec; and the touched capabilities are
+    **re-verified on the merged tree** before the commit — a build red once merged rolls every write back
+    and refuses, so green-in-fence can never mean red-on-main. A spec-only fold carries no code and runs
+    none of these — its path is exactly as before."""
     sp = spec.read_spec(root)
     reason = check(delta, sp)
     if reason:
         raise CannotFold(reason)
     assert delta is not None  # check would have refused None
 
+    base_dir = root or tree._root()
+    touched = sorted({op.capability for op in delta.ops})
+
     def land() -> list[str]:
-        touched = sorted({op.capability for op in delta.ops})
+        # A code-bearing fold checks staleness first, under the held line, before any write: a build
+        # whose engine paths main has moved under refuses to a decision rather than clobbering.
+        if code:
+            _staleness(code, base_dir)
+        prior: dict[str, str | None] = {}                 # the pre-write image of every path, for rollback
+        def write(path: str, content: str | None) -> None:
+            prior.setdefault(path, _read_or_none(path))
+            _restore(path, content)
+        # the spec change
         for name in touched:
-            path = spec.cap_path(name, root)
-            base = open(path).read() if os.path.isfile(path) else _seed(name)
-            tree.atomic_write(path, _apply(base, [o for o in delta.ops if o.capability == name]))
+            existing = open(path).read() if os.path.isfile(path := spec.cap_path(name, root)) else _seed(name)
+            write(path, _apply(existing, [o for o in delta.ops if o.capability == name]))
+        # the verified build's code — content-replay of the fence-tip bytes onto main
+        code_paths: list[str] = []
+        for rel, cf in (code or {}).items():
+            write(p := os.path.join(base_dir, rel), cf.tip)
+            code_paths.append(p)
+        # the keystone: re-verify the touched capabilities on the MERGED tree before the commit. A build
+        # red once merged rolls back every write and refuses — nothing lands, the node recovers to a decision.
+        if code:
+            from . import scenario                         # lazy: scenario reads delta, so bind it at call time
+            red = scenario.reverify(touched, base_dir)
+            if red:
+                for path, was in prior.items():
+                    _restore(path, was)
+                raise CannotFold(red)
         # The render step: every fold re-derives the static channels (skills, the agents file) from
         # the spec, so a committed artifact cannot drift from its source. Idempotent: an
         # unchanged source re-renders identically and re-staging no-ops, so a retry is safe.
         rendered = channels.materialize(root)
-        paths = [spec.cap_path(n, root) for n in touched] + rendered
+        paths = [spec.cap_path(n, root) for n in touched] + code_paths + rendered
         if node is not None:
             paths += tree.archive_in_place(node)      # the node's DONE write + folder move, same act
         return paths
 
-    touched = ", ".join(sorted({op.capability for op in delta.ops})) or "channels"
+    label = ", ".join(touched) or "channels"
     subject = delta.subject or (tree._subject(node.text) if node is not None else "delta")
-    # `land` returns the exact paths it wrote (spec files, rendered channels, the node's move
-    # endpoints); `transact` stages precisely those in the one held commit — atomic, both directions.
-    tree.transact(land, None, f"fold: {subject} → {touched}")
+    # `land` returns the exact paths it wrote (spec files, the replayed code, rendered channels, the
+    # node's move endpoints); `transact` stages precisely those in the one held commit — atomic, all directions.
+    tree.transact(land, None, f"fold: {subject} → {label}")
+
+
+def _staleness(code, base_dir: str) -> None:
+    """Refuse a code-bearing fold whose verified base no longer matches main — a concurrent fold moved an
+    engine path under this build since its fence was cut, so its verified bytes would clobber the
+    newer main. A path already at the tip bytes is an already-applied retry, not a collision (idempotent,
+    H1). Read under the held line before any write, so the verdict is race-free and a stale build lands
+    nothing, surfacing as a decision (re-cut off current main) rather than a silent overwrite."""
+    for rel, cf in code.items():
+        cur = _read_or_none(os.path.join(base_dir, rel))
+        if cur == cf.tip:
+            continue                                      # already applied — the idempotent retry, not stale
+        if cur != cf.base:
+            raise CannotFold(f"the verified build is stale: {rel} on main has moved since the fence was "
+                             "cut — re-cut the build off current main")
+
+
+def _read_or_none(path: str) -> str | None:
+    return open(path, encoding="utf-8").read() if os.path.isfile(path) else None
+
+
+def _restore(path: str, content: str | None) -> None:
+    """Make `path` hold exactly `content`, or be absent when `content` is None — the one primitive the
+    fold writes and rolls back through, so a write and its undo are the same operation in reverse."""
+    if content is None:
+        if os.path.isfile(path):
+            os.remove(path)
+    else:
+        tree.atomic_write(path, content)
 
 
 def _seed(name: str) -> str:

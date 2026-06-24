@@ -118,7 +118,16 @@ def integrate(node: tree.Node, result, transport=None, root: str | None = None) 
                                 "the result did not honor the contract",
                                 kind="decide", parent=node.id)
         return Reply(say=say, card=card)
-    delta.fold(delta.parse(result.delta), root, node=node)   # archive ⟺ fold, ONE atomic act (H1)
+    try:
+        delta.fold(delta.parse(result.delta), root, node=node,
+                   code=getattr(result, "code", None))       # archive ⟺ fold ⟺ verified code, ONE atomic act (H1)
+    except delta.CannotFold as refusal:
+        # A code-bearing build that does not hold once merged onto main (re-verify red), or whose paths
+        # main has moved under (stale): nothing landed. Surface the reason as a decision; `run` recovers
+        # the node to standing behind it, so the ask is re-cut off current main rather than half-folded.
+        card = tree.raise_card(str(refusal), kind="decide", parent=node.id)
+        return Reply(say="The verified build didn't hold once merged onto main — the reason is on your "
+                         "queue as a decision.", card=card)
     return Reply(say=say, done=True)
 
 

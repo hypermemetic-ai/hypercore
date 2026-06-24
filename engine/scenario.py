@@ -173,6 +173,58 @@ def gate(result, root: str | None = None) -> str | None:
     return None
 
 
+def reverify(capabilities, root: str) -> str | None:
+    """The fold's keystone — run after a code-bearing fold lands the verified build and spec on main and
+    **before** it commits. Each touched capability's scenarios run against the **merged working tree** at
+    `root`, in a subprocess that imports `root`'s on-disk engine (cwd = root, so `python3 -m engine`
+    loads the merged code) and whose worlds copy `root`'s merged spec — so what is verified is merged
+    main itself, not the fence. This closes the green-in-fence/red-on-main hole: a build verified against
+    its fork base can still be red once merged onto a moved main, and only re-running on the merged tree
+    catches it. None when every gated touched capability is green on merged main; a reason when one is
+    red or could not run — a build that cannot be re-verified does not land. Skipped inside a scenario
+    run (the guard), so a scenario that itself folds code never recurses into re-verification."""
+    if os.environ.get(_GATE_GUARD):
+        return None
+    for cap in sorted(set(capabilities)):
+        src = _check_source(cap, root)
+        if not src:
+            continue                                       # a watched capability has nothing to re-verify
+        code = _run_merged(src, cap, root)
+        if code is None:
+            return (f"the scenarios for {cap!r} could not run on merged main — a build that cannot be "
+                    "re-verified does not land")
+        if code != 0:
+            return (f"the scenarios for {cap!r} are red on merged main — the verified fenced build does "
+                    "not hold once merged (green-in-fence, red-on-main), so it does not land")
+    return None
+
+
+def _run_merged(src: str, capability: str, root: str) -> int | None:
+    """Run the carried scenarios against the merged working tree at `root` in a fresh process, returning
+    the exit code (None when the run could not happen). The subprocess runs with `cwd=root`, so
+    `python3 -m engine` imports `root`'s on-disk engine — the just-replayed code — and its worlds read
+    the merged tree (`root` is the imported engine's default root); the verdict is therefore merged
+    main's behavior under the touched capability's scenarios. Its **ambient record root is a throwaway
+    sink**, never `root`: the parent fold holds the one record line's `flock` on `root/.git` across this
+    call, so any record op the merged engine runs must lock elsewhere or it would deadlock against the
+    held line. The guard is set so a scenario that itself folds code does not re-enter re-verification."""
+    check_file = os.path.join(root, ".reverify.check")
+    sink = tempfile.mkdtemp(prefix="reverify-sink-")
+    try:
+        _write(check_file, src)
+        env = {**os.environ, _GATE_GUARD: "1", "ENGINE_ROOT": sink}
+        r = subprocess.run(["python3", "-m", "engine", "--run-blocks", ".reverify.check",
+                            "--cap", capability], cwd=root, env=env, timeout=180,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return r.returncode
+    except (OSError, subprocess.SubprocessError):
+        return None
+    finally:
+        if os.path.isfile(check_file):
+            os.remove(check_file)
+        shutil.rmtree(sink, ignore_errors=True)
+
+
 def _check_source(capability: str, where: str) -> str:
     """The tip's check blocks for a capability, read from the fence's spec and serialized for the
     carried run — each block under a `>>> <scenario>` header the carried parser splits on."""

@@ -1,8 +1,9 @@
 ---
 kind: ask
-state: standing
+state: folded
 owner: operator
 created: 2026-06-23
+folded: 2026-06-23
 ---
 # worker-build-reaches-main — close the fence→main gap so a code-bearing ask can complete autonomously
 

@@ -31,6 +31,7 @@ import subprocess
 import tempfile
 import threading
 
+from . import build_reaches_main
 from .harness import ok
 from .. import (anchor, channels, design, machine_writing, methodology, review, scenario,
                 schedule, spec, transport, tree, worker)
@@ -78,6 +79,14 @@ def check(root: str) -> None:
            "a tip whose scenarios are not green is refused — narration is never the gate, the exit code is")
     finally:
         _drop(held)
+
+    # 2b. the verified fenced build reaches main — a code-bearing fold lands the build's ENGINE CODE on
+    #     the merged tree (not only its spec), in one commit, re-verified before the commit; a build that
+    #     would leave merged main red is refused and nothing lands. Like the gate red→green above, this
+    #     behavior cannot certify itself from inside the fold it tests, so it is exercised from outside,
+    #     over a real merged tree. Held in its own module (build_reaches_main) — the fixture is heavyweight
+    #     and the harness stays under the length signal it enforces.
+    build_reaches_main.check()
 
     # 3. worker — structural/scaffold invariants the closed scenario vocabulary cannot honestly express
     #    (a retired constant, the model the worker targets, the scheduler's injection point): watched,

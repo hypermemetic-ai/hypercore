@@ -134,6 +134,18 @@ class WorkerContext:
 
 
 @dataclass
+class CodeFile:
+    """One engine path the worker's build touched, captured as a self-contained pair: the byte-image it
+    forked from (`base`, the fence's HEAD~1) and the verified bytes it hands back (`tip`, the fence's
+    working tree). The fold content-replays the `tip` onto main and reads the `base` for its staleness
+    pre-check; either is `None` for a path absent at that end (an added file has no base, a removed one
+    no tip). Content, not a diff — the verified bytes themselves, so the fold consumes a flat artifact
+    and never reaches a live fence."""
+    base: str | None
+    tip: str | None
+
+
+@dataclass
 class WorkerResult:
     """The worker's hand-off — written for the machine. No field of this is operator-facing
     and nothing renders it; the architect authors every operator-facing word from
@@ -141,6 +153,7 @@ class WorkerResult:
     report: str                                       # the technical result, for the architect
     delta: str                                        # the refined spec delta the change realizes
     worktree: str                                     # the fenced tree the work ran in (the gate runs its scenarios red→green here)
+    code: dict[str, CodeFile] = field(default_factory=dict)  # the verified engine code the build touched, for the fold to land on main
 
 
 # ── the spec slice (assembled by construction; no worker runs without it) ─────
@@ -253,7 +266,7 @@ def apply(node: tree.Node, transport=None, root: str | None = None) -> WorkerRes
     report = (obj.get("report") or "").strip()
     refined = (obj.get("delta") or ctx.delta).strip()
     _record(fence, report, refined)                    # the worker's own commit, fenced
-    return WorkerResult(report, refined, fence)
+    return WorkerResult(report, refined, fence, _capture_code(fence))  # the verified code, captured before teardown
 
 
 def run(node: tree.Node, transport=None, root: str | None = None):
@@ -310,6 +323,29 @@ def _tree_path(node: tree.Node, base: str, tag: str = "") -> str:
 
 def _branch(node: tree.Node, tag: str = "") -> str:
     return f"worker/{node.id}" + (f"-{tag}" if tag else "")
+
+
+def _capture_code(fence: str) -> dict[str, CodeFile]:
+    """Capture the engine code the worker built in its fence as a self-contained artifact — per engine
+    path its one commit touched, the byte-image it forked from (`base`, HEAD~1) and the verified bytes
+    it hands back (`tip`, the working tree). The fold content-replays the tip onto main and reads the
+    base for its staleness pre-check; no live fence is reached at fold time. Scoped to `engine/*.py` —
+    where hypercore's code lives — so the spec (folded via the delta), the derived channels
+    (re-rendered on fold), the node's own folder, and the `RESULT.md` scratch never cross as code. A
+    **read** of the fence, run unlocked: the verified bytes are taken into the hand-off, not the fence."""
+    names = subprocess.run(["git", "diff", "--name-only", "HEAD~1", "HEAD"], cwd=fence,
+                           capture_output=True, text=True).stdout.split()
+    code: dict[str, CodeFile] = {}
+    for rel in names:
+        if not (rel.startswith("engine/") and rel.endswith(".py")):
+            continue
+        tip_path = os.path.join(fence, rel)
+        tip = open(tip_path, encoding="utf-8").read() if os.path.isfile(tip_path) else None
+        shown = subprocess.run(["git", "show", f"HEAD~1:{rel}"], cwd=fence,
+                               capture_output=True, text=True)
+        base = shown.stdout if shown.returncode == 0 else None
+        code[rel] = CodeFile(base, tip)
+    return code
 
 
 def _record(fence: str, report: str, refined: str) -> None:

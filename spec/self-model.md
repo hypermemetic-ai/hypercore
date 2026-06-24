@@ -129,6 +129,29 @@ a conflict.
   refused
   ```
 
+### Requirement: folding lands the verified build's code on the merged tree, not only its spec
+The act that folds a **code-bearing** tree MUST land the worker's **verified engine code** on main —
+not only its spec delta — in the **same one commit** that applies the delta and archives the node, so a
+code-bearing ask completes through the crossing without leaving main red or the node falsely archived.
+The code crosses as a self-contained artifact captured at the worker's hand-off — the fence's verified
+bytes for the engine paths it touched — content-replayed into the fold's one held act; no live fence is
+reached at fold time. Before the commit, the touched capability's scenarios are **re-verified on the
+merged tree**: what is verified is the merged main itself, so green-in-fence can no longer mean
+red-on-main — a build that does not hold once merged is refused, every write rolled back, nothing
+landing, the node recovering to standing with a decision. A **staleness pre-check** fast-refuses, before
+any write, a build whose engine paths main has moved under since the fence was cut — a decision to re-cut
+off current main, never a silent clobber. None of these is a new commit, lock, or transaction; they ride
+the one held line the spec fold already runs on. A spec-only (trivial or no-code) fold carries no code
+and runs none of them — its act is exactly as before.
+
+#### Scenario: a code-bearing delta's implementation reaches main
+- WHEN a tree whose worker built and verified engine code in its fence folds
+- THEN that engine code lands on main in the same one commit as the spec delta and the node's archive,
+  re-verified green on the merged tree before the commit; a build red once merged, or one whose paths
+  main has moved under, is refused and nothing lands
+- watched — proven from outside in `engine/check/scenarios.py`, never from inside the fold it tests
+  (the self-reference the scenario gate's own red→green has, and the same honest home)
+
 ### Requirement: the operator view renders vision beside as-built and gap
 The operator view MUST render, at every altitude, the **vision** (authored, from
 `intent.md`) beside the **as-built** (derived from the living spec) and the **gap**
