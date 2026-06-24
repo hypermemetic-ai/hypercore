@@ -23,6 +23,22 @@ capability; `worker.prompt` tells it "author it from the full scan"). That fallb
 The operator's intent: a worker must never silently author its own delta. A node that reaches a worker
 without an architect-proposed delta must surface, not build.
 
+## the integrity stack (one of three composable nodes)
+hypercore's self-verification rests on one claim — the description is the test, and the builder cannot
+fake the verdict. It can fail three independent ways, each its own node; none subsumes another, and a
+short-circuit at any layer defeats the whole:
+- **proposer** — did the architect author the check (WHEN/THEN + verbs), or the builder? — *this node*
+- **run** — did the mechanism actually run and leave a trail, or is the record hand-faked? — `a-record-a-load-bearing`
+- **adequacy** — when it ran, did the check test the property, or a builder-authored proxy? — `gate-vouches-for-the-new-verb`
+This node owns the **proposer** layer: that the *delta and its scenarios* come from the architect, not the
+worker. It does **not** reach below the verb — even fully built, the worker still authors the scenario
+*fixtures* (the `_v_<verb>` world methods) under the architect's verb names, and that artifact's adequacy
+is `gate-vouches-for-the-new-verb`'s, not this node's. So scope the claim precisely: a worker authors no
+*delta*; it may still author *fixtures*, which the adequacy node gates. The three touch shared seams
+(`spec/worker.md`, the scenario gate in `conditions`/`scenario`): each must **ADD** its own requirement
+rather than co-MODIFY a shared one (two MODIFYs of one requirement clobber at fold), or be sequenced on
+another's tip — so three concurrent fences compose.
+
 ## The interface decision to design
 Where in the system is the guarantee "a worker only ever applies an architect-proposed delta"
 enforced, and what becomes of an ask that today reaches work with no delta (the below-floor ask, and
