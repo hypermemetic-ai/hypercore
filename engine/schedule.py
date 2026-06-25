@@ -26,16 +26,19 @@ Three properties define it, each structural, not a discipline to remember:
   node can neither crash the loop nor sit stranded in flight with no live worker (the folding-condition
   discipline: a tree that cannot meet its condition returns as a decision, it does not vanish).
 
-The transport is injectable — the live `claude -p` in the window, a scripted fake in the acceptance
-check — so the loop drives deterministically under the harness without an LLM. `--check` runs the
-scheduler over a throwaway root; only the live window points it at the real tree.
+The loop is elected per tree by a held repo-root lease. A peer window that cannot take the lease still
+operates on the tree, but its scheduler dispatches nothing and recovers nothing; it keeps polling, so
+when the holder exits the lease transfers on the next tick and stranded in-flight work can be recovered
+by the one live loop. The transport is injectable — the live `claude -p` in the window, a scripted fake
+in the acceptance check — so the loop drives deterministically under the harness without an LLM.
+`--check` runs the scheduler over a throwaway root; only the live window points it at the real tree.
 """
 from __future__ import annotations
 
 import threading
 import time
 
-from . import tree, worker
+from . import record, tree, worker
 
 LIMIT = 2          # workers at once — a starting value to tune, like the length signal, not a law
 POLL = 0.2         # seconds between ready work reads while the background loop runs
@@ -55,6 +58,7 @@ class Scheduler:
         self.transport = transport
         self.root = root
         self.limit = limit
+        self._lease = record.Lease(self.root or tree._root(), "loop")
         self._threads: dict[str, threading.Thread] = {}
         self._lock = threading.Lock()      # guards _threads only — not the shared record (tree.LINE)
         self._alive = False
@@ -65,8 +69,12 @@ class Scheduler:
     def step(self) -> None:
         """One pass: reap finished workers, recover any crash-stranded node, then dispatch the ready
         ready work up to the limit. Never blocks — the slow build runs on the dispatched worker's own
-        thread, not here — so the caller (the window's input loop) is free the instant this returns."""
+        thread, not here — so the caller (the window's input loop) is free the instant this returns.
+        A peer scheduler that does not hold the repo-root loop lease returns before recovery or
+        dispatch, so it cannot reset or double-take the holder's live node."""
         self._reap()
+        if not self._lease.acquire():
+            return
         self._recover_stranded()
         for node in tree.ready():
             with self._lock:
@@ -80,23 +88,31 @@ class Scheduler:
 
     def start(self) -> None:
         """Begin the background loop — a daemon thread reading the ready work on each tick — so work
-        runs continuously while the operator does anything else, or nothing. Idempotent."""
+        runs continuously while the operator does anything else, or nothing. Idempotent. A non-holder
+        still starts this polling thread; it simply does no scheduling until it wins the lease."""
         if self._alive:
             return
+        self._lease.acquire()
         self._alive = True
         self._loop = threading.Thread(target=self._run, daemon=True)
         self._loop.start()
 
     def stop(self) -> None:
         """Stop taking new ready work. Workers already in flight run to their natural hand-off; the
-        loop simply stops dispatching, so a closing window never severs a build mid-fence."""
+        live-loop lease releases here, and also if the process dies."""
         self._alive = False
+        self._lease.release()
 
     @property
     def running(self) -> list[str]:
         """The node ids a worker is on right now — read off the live threads, a view not a list."""
         with self._lock:
             return list(self._threads)
+
+    @property
+    def live(self) -> bool:
+        """Whether this scheduler currently holds the tree's autonomous-loop lease."""
+        return self._lease.held
 
     # ── internals ─────────────────────────────────────────────────────────────
 

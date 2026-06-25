@@ -21,7 +21,7 @@ import os
 import shutil
 import tempfile
 
-from .. import render, tree
+from .. import render, schedule, transport, tree
 from ..scenario import _git                                  # the worlds share the core's git helper
 from . import World as _Base
 
@@ -39,6 +39,8 @@ class World(_Base):
                     ("config", "user.name", "scenario")):
             _git(self.root, *cmd)
         self.rows = None
+        self.footers: dict[str, render.Row] = {}
+        self._loops: list[schedule.Scheduler] = []
 
     # ── action verbs ──────────────────────────────────────────────────────────────
     def _v_card(self, args: list[str]) -> tuple[bool, str]:
@@ -49,10 +51,33 @@ class World(_Base):
         return True, ""
 
     def _v_render(self, args: list[str]) -> tuple[bool, str]:
-        """render — build the resting face for the current tree and a selection, as a pure function;
-        the call runs with no terminal, so a returned frame is itself the off-a-TTY proof."""
+        """render — build the resting face, or a loop-status footer, as a pure function."""
+        if args:
+            if len(args) != 2 or args[1] not in ("footer-live", "footer-not-live"):
+                return False, f"unknown render target {' '.join(args)!r}"
+            sched = self._holder() if args[0] == "holder" else self._peer()
+            if sched is None:
+                return False, f"no {args[0]} loop exists"
+            self.footers[args[0]] = render.footer(transport.MODEL_LABEL, "input", "", "", 76,
+                                                  live_loop=sched.live)
+            text = "".join(t for t, _s in self.footers[args[0]])
+            if args[1] == "footer-live":
+                return ((True, "") if "not live loop" not in text
+                        else (False, "the lease holder footer is marked not-live"))
+            return ((True, "") if "not live loop" in text
+                    else (False, "the non-holding footer does not show it is not the live loop"))
         self.rows = render.main_body(tree.read_tree(), 0)
         return True, ""
+
+    def _v_loops(self, args: list[str]) -> tuple[bool, str]:
+        """loops 2 — open two scheduler loops over the same tree and let one take the lease."""
+        if args[0] != "2":
+            return False, f"unknown loop count {args[0]!r}"
+        self._loops = [schedule.Scheduler(root=self.root, limit=0),
+                       schedule.Scheduler(root=self.root, limit=0)]
+        for sched in self._loops:
+            sched.step()
+        return (True, "") if self._holder() and self._peer() else (False, "the loops did not split live/non-live")
 
     # ── assertion verbs ───────────────────────────────────────────────────────────
     def _v_spans(self, args: list[str]) -> tuple[bool, str]:
@@ -85,7 +110,27 @@ class World(_Base):
         return ((True, "") if "no standing work" in text
                 else (False, "an empty work list does not read 'no standing work'"))
 
+    def _v_footer_live(self, args: list[str]) -> tuple[bool, str]:
+        """footer-live — the rendered footer does not mark the lease holder as non-live."""
+        text = "".join(t for t, _s in self.footers.get("holder", []))
+        return ((True, "") if "not live loop" not in text
+                else (False, "the lease holder footer is marked not-live"))
+
+    def _v_footer_not_live(self, args: list[str]) -> tuple[bool, str]:
+        """footer-not-live — the rendered footer marks the non-holder as not the live loop."""
+        text = "".join(t for t, _s in self.footers.get("peer", []))
+        return ((True, "") if "not live loop" in text
+                else (False, "the non-holding footer does not show it is not the live loop"))
+
+    def _holder(self) -> schedule.Scheduler | None:
+        return next((s for s in self._loops if s.live), None)
+
+    def _peer(self) -> schedule.Scheduler | None:
+        return next((s for s in self._loops if not s.live), None)
+
     def teardown(self) -> None:
+        for sched in self._loops:
+            sched.stop()
         if self._prev_root is None:
             os.environ.pop("ENGINE_ROOT", None)
         else:

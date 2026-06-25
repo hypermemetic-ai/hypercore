@@ -1,21 +1,9 @@
-"""The schedule scenario world — the autonomous loop driven through the real `Scheduler` over a
-seeded, isolated tree.
+"""The schedule scenario world: domain-verb checks over the real scheduler in an isolated tree.
 
-The verbs name the loop's domain nouns — the ready work, a worker in flight, its fence, the fold, a
-failure surfaced as a decision — never engine symbols, so a worker rewriting `schedule` has nothing in
-the scenario to tamper with to pass. The fixture is an isolated, git-backed `ENGINE_ROOT` (so
-`tree.file_intent`, `tree.ready`, the fences, and the fold assemble exactly as in production) and the
-real `schedule.Scheduler` runs over it with a prompt-routing scripted transport: a build prompt is
-matched to its node by a token in the ask and answered with that node's delta — held on an event when a
-scenario watches two builds in flight at once, raised mid-build when it drives a failure — while the
-architect's coherence prompt is answered coherent. The root and `ENGINE_ROOT` are restored and dropped
-on teardown, any held build released first, so no worker thread outlives the fixture.
-
-The single-writer line the concurrency scenario rests on is proven at the record-mechanism level —
-exact-path commits, the cross-holder `flock`, slug reservation — as watched invariants exercised from
-outside (`engine/check/scenarios.py`): the scenario here gates the *behavior* (two workers advance and
-each folds its own delta into the one spec), the watched invariants gate the *mechanism* that makes it
-true by construction, the way a fixture cannot honestly fake a second OS process racing the index.
+The fixture drives `Scheduler` through `tree.file_intent`, `tree.ready`, worker fences, folds, failure
+cards, and the loop lease. A prompt-routing transport matches build prompts by per-node tokens, can
+hold a build in flight, kill a holder like process exit, or raise a worker failure; coherence answers
+green. Record-mechanism facts the fixture cannot honestly fake stay in `engine/check/scenarios.py`.
 """
 from __future__ import annotations
 
@@ -46,11 +34,7 @@ def _built(cap: str) -> str:
 
 
 class World(_Base):
-    """A scenario's fixture: an isolated, git-backed `ENGINE_ROOT` the real `Scheduler` runs over.
-    The setup verbs file the ready work (`ready` / `blocked` / `blocked-sibling` / `failing`); the
-    action verbs run the loop (`run` to completion, `dispatch held` + `release` to watch two builds in
-    flight, `step` for one pass); the assertion verbs read the fences, the fold, the ready work, and a
-    failure surfaced as a decision."""
+    """An isolated, git-backed `ENGINE_ROOT` the real scheduler runs over."""
 
     def __init__(self):
         self._prev_root = os.environ.get("ENGINE_ROOT")
@@ -63,18 +47,21 @@ class World(_Base):
         self._mapping: dict[str, str] = {}                 # build token → capability the worker folds
         self._fail: set[str] = set()                       # tokens whose worker errs mid-build
         self._hold: threading.Event | None = None          # set while a scenario holds builds in flight
+        self._loops: list[schedule.Scheduler] = []         # two window schedulers over this one root
+        self._crash: threading.Event | None = None         # kills a holder's in-flight worker like process exit
         self._sched: schedule.Scheduler | None = None
 
     # ── the prompt-routing transport ────────────────────────────────────────────
-    def _transport(self):
-        """The one transport every role calls: the architect's coherence pass is answered coherent; a
-        worker build is matched to its node by the token in its ask — raised when the token is a
-        failure, held until release when a build is held, else answered with that node's delta."""
+    def _transport(self, crash: threading.Event | None = None):
+        """Answer coherence and route each worker build by its token."""
         def t(prompt: str) -> str:
             if "archiving a worker" in prompt:
                 return _COHERENT
             for token, cap in self._mapping.items():
                 if token in prompt:
+                    if crash is not None:
+                        crash.wait(timeout=10)
+                        raise SystemExit()
                     if token in self._fail:
                         raise RuntimeError("the worker hit an error mid-build")
                     if self._hold is not None:
@@ -92,7 +79,6 @@ class World(_Base):
                 self._fail.add(token)
         return node
 
-    # ── setup verbs ──────────────────────────────────────────────────────────────
     def _v_ready(self, args: list[str]) -> tuple[bool, str]:
         """ready <N> — file N independent ready asks, each its own standing leaf with nothing blocking."""
         for i in range(int(args[0])):
@@ -118,7 +104,6 @@ class World(_Base):
         self._file("bad", "FAILMARK", "bad", fail=True)
         return True, ""
 
-    # ── action verbs ─────────────────────────────────────────────────────────────
     def _v_run(self, args: list[str]) -> tuple[bool, str]:
         """run — run the loop to completion over the current tree, each ready node built and folded."""
         self._sched = schedule.Scheduler(transport=self._transport(), root=self.root, limit=2)
@@ -126,7 +111,14 @@ class World(_Base):
         return True, ""
 
     def _v_step(self, args: list[str]) -> tuple[bool, str]:
-        """step — one non-blocking pass over the current tree."""
+        """step — one non-blocking pass; with `loops 2`, both windows poll once."""
+        if self._loops:
+            if tree.ready() and self._hold is None:
+                self._hold = threading.Event()             # keep the holder's node live for peer assertions
+            for sched in self._loops:
+                sched.step()
+            self._sched = self._holder()
+            return True, ""
         self._sched = schedule.Scheduler(transport=self._transport(), root=self.root, limit=2)
         self._sched.step()
         return True, ""
@@ -153,7 +145,98 @@ class World(_Base):
         self._drain()
         return True, ""
 
-    # ── assertion verbs ──────────────────────────────────────────────────────────
+    def _v_loops(self, args: list[str]) -> tuple[bool, str]:
+        """loops 2 — open two scheduler loops over the same tree, like two operator windows."""
+        if args[0] != "2":
+            return False, f"unknown loop count {args[0]!r}"
+        self._loops = [schedule.Scheduler(transport=self._transport(), root=self.root, limit=1),
+                       schedule.Scheduler(transport=self._transport(), root=self.root, limit=1)]
+        return True, ""
+
+    def _v_holder(self, args: list[str]) -> tuple[bool, str]:
+        """holder dispatches|exits — drive the elected loop, then simulate its process/window death."""
+        if args[0] == "dispatches":
+            self._crash = threading.Event()
+            holder = schedule.Scheduler(transport=self._transport(self._crash), root=self.root, limit=1)
+            peer = schedule.Scheduler(transport=self._transport(), root=self.root, limit=1)
+            self._loops = [holder, peer]
+            holder.step()
+            self._sched = holder
+            if not self._wait(lambda: self._live_count() == 1):
+                return False, "the holder did not dispatch a node into flight"
+            return True, ""
+        if args[0] == "exits":
+            holder = self._holder()
+            if holder is None:
+                return False, "no holder exists to exit"
+            holder.stop()
+            if self._crash is not None:
+                self._crash.set()
+            if not self._wait(lambda: all(not t.is_alive() for t in holder._threads.values())):
+                return False, "the holder's worker thread did not exit"
+            return True, ""
+        return False, f"unknown holder action {args[0]!r}"
+
+    def _v_peer(self, args: list[str]) -> tuple[bool, str]:
+        """peer dispatched-none|recovered-none|acquires|files <N>."""
+        if args[0] == "dispatched-none":
+            peer = self._peer()
+            if peer is None:
+                return False, "no non-holding peer exists"
+            return (True, "") if not peer.running else (False, "the peer dispatched a worker")
+        if args[0] == "recovered-none":
+            node = self._nodes.get("0")
+            if node is None:
+                return False, "no ready node was filed"
+            if not self._wait(lambda: (tree.find(node.id) is not None
+                                       and tree.find(node.id).state == tree.IN_FLIGHT)):
+                st = tree.find(node.id)
+                return False, f"the holder's node is not still in flight (state={st.state if st else None!r})"
+            return True, ""
+        if args[0] == "acquires":
+            peer = self._loops[1] if len(self._loops) > 1 else None
+            if peer is None:
+                return False, "no peer exists to acquire the lease"
+            peer.step()
+            if not peer.live:
+                return False, "the peer did not acquire the released loop lease"
+            self._sched = peer
+            self._drain()
+            return True, ""
+        if args[0] == "files":
+            if len(args) < 2:
+                return False, "peer files needs a count"
+            if not self._loops:
+                return False, "peer files needs loops 2 first"
+            if self._holder() is None:
+                for sched in self._loops:                 # elect the holder before the peer files work
+                    sched.step()
+            if self._peer() is None:
+                return False, "no non-holding peer exists"
+            offset = len(self._nodes)
+            for i in range(int(args[1])):
+                ix = offset + i
+                self._file(str(ix), _TOKENS[ix], _CAPS[ix])
+            return True, ""
+        return False, f"unknown peer action {args[0]!r}"
+
+    def _v_holder_polls(self, args: list[str]) -> tuple[bool, str]:
+        """holder-polls — the lease holder reads the tree live after a peer files work and builds it."""
+        holder = self._holder()
+        if holder is None:
+            return False, "no lease holder exists"
+        holder.step()
+        self._sched = holder
+        self._drain()
+        return True, ""
+
+    def _v_dispatched(self, args: list[str]) -> tuple[bool, str]:
+        """dispatched <N> — across two loops, only N workers were dispatched."""
+        n = int(args[0])
+        if not self._wait(lambda: sum(len(s.running) for s in self._loops) == n):
+            return False, f"expected {n} dispatched workers, saw {sum(len(s.running) for s in self._loops)}"
+        return True, ""
+
     def _v_folded(self, args: list[str]) -> tuple[bool, str]:
         """folded <N|good|sibling> — N ready nodes (or the named one) integrated and left the work
         view, each delta folded into the one spec — work moved with no operator act."""
@@ -252,9 +335,7 @@ class World(_Base):
         return (True, "") if self._sched.running == [] else (False, "the scheduler is not idle after the failure")
 
     def _v_total(self, args: list[str]) -> tuple[bool, str]:
-        """total — dispatch was total: every node the scheduler dispatched resolved to exactly one
-        terminal — folded, or escalated as a decision card on it — and none is left in flight with no
-        live worker. The one positive invariant the per-node assertions above each witness half of."""
+        """total — every dispatched node reached exactly one terminal, and none is stranded."""
         running = set(self._sched.running)
         for node in tree.read_tree():
             if node.is_live and node.id not in running:
@@ -269,7 +350,6 @@ class World(_Base):
                                f"(folded={folded}, escalated={escalated})")
         return True, ""
 
-    # ── internals ────────────────────────────────────────────────────────────────
     def _cap(self, name: str) -> bool:
         return spec.read_spec(self.root).capability(name) is not None
 
@@ -285,6 +365,12 @@ class World(_Base):
             time.sleep(0.01)
         return cond()
 
+    def _holder(self) -> schedule.Scheduler | None:
+        return next((s for s in self._loops if s.live), None)
+
+    def _peer(self) -> schedule.Scheduler | None:
+        return next((s for s in self._loops if not s.live), None)
+
     def _drain(self) -> None:
         for _ in range(400):
             self._sched.step()
@@ -295,6 +381,10 @@ class World(_Base):
     def teardown(self) -> None:
         if self._hold is not None:
             self._hold.set()                               # release any held build so no thread outlives the fixture
+        if self._crash is not None:
+            self._crash.set()
+        for sched in self._loops:
+            sched.stop()
         if self._sched is not None:
             try:
                 self._drain()

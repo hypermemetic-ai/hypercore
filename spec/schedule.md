@@ -116,3 +116,59 @@ strategy of its own.
   run
   total
   ```
+
+### Requirement: exactly one autonomous loop runs against a tree
+The autonomous loop MUST be single-instance per tree: at most one scheduler dispatches work against a
+given tree at a time, elected by a held repo-root lease using the record's advisory-lock mechanism at
+loop scope. A second engine started over the same tree acquires no lease and dispatches nothing; it
+stays a full operator window — filing, grilling, and ratifying in parallel through the node-local
+single-writer record — and the one live loop builds whatever any window files, because the ready work
+is read live off the shared tree. This is the guarantee the loop already assumed: with one loop,
+`_recover_stranded`'s invariant (an in-flight node not under this scheduler is stranded) and dispatch's
+read→in-flight window are true, where across two loops they were false. The lease releases when its
+holder's process dies or its window closes, and the next window's loop acquires it on its next poll and
+recovers any node left in flight, so the election is self-healing and needs no manual reclaim. The
+lease is keyed on the tree's root, so a throwaway harness root never contends with the live tree, and
+the loop owns its own lease (it is acquired where the loop starts or steps, not where the window opens),
+so the guarantee holds wherever a loop runs.
+
+#### Scenario: a second loop over one tree dispatches nothing
+- WHEN two schedulers run against the same tree with ready work present
+- THEN exactly one holds the lease and dispatches it; the other dispatches no worker and never recovers
+  the holder's in-flight node
+
+  ```check
+  ready 1
+  loops 2
+  step
+  dispatched 1
+  peer dispatched-none
+  peer recovered-none
+  ```
+
+#### Scenario: the lease is self-healing on its holder's exit
+- WHEN the loop holding the lease exits — its process dies or its window closes — while a peer window is
+  open
+- THEN the lease releases, the peer's loop acquires it on its next poll and dispatches the ready work,
+  and any node left in flight is recovered to standing
+
+  ```check
+  ready 1
+  holder dispatches
+  holder exits
+  peer acquires
+  folded 1
+  ```
+
+#### Scenario: a non-holding window's filed work is still built
+- WHEN a window that does not hold the lease files ready work on the shared tree
+- THEN the lease-holding loop reads ready work live and builds it, so the non-holding window strands
+  nothing
+
+  ```check
+  loops 2
+  step
+  peer files 1
+  holder-polls
+  folded 1
+  ```

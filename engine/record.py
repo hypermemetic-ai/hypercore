@@ -24,12 +24,16 @@ on. It hides three things behind a small interface:
 
 `_root` lives here too — where the record is rooted (the repo, or `ENGINE_ROOT` under the harness) —
 because it is what `commit` writes against; the tree re-exports it so its callers read one façade.
+The scheduler's loop lease uses the same repo-root `flock` mechanism, but a distinct lock file: the
+loop election must not hold the index-writing line forever, because non-live windows still file,
+grill, and ratify through the record while the live loop builds their work.
 """
 from __future__ import annotations
 
 import contextlib
 import fcntl
 import functools
+import hashlib
 import os
 import subprocess
 import tempfile
@@ -56,13 +60,35 @@ def _root() -> str:
     return os.environ.get("ENGINE_ROOT", _DEFAULT_ROOT)
 
 
-def _lockfile(root: str) -> str:
-    """The repo-level advisory lock the line holds across a git-touching act — one file per record,
-    created on demand, never committed. `.git/` is the natural home: it exists for any record, the
-    harness's throwaway roots `git init` it, and it is already ignored by the tree."""
-    d = os.path.join(root, ".git")
+def _git_dir(root: str) -> str:
+    """The shared git directory for `root`, resolving linked worktrees to their common store. The
+    record's locks must be one per repo line, not one per checkout; a worker worktree's `.git` is a
+    file pointing into the shared store, so treating `.git/` as a directory would either fail or split
+    the lock by worktree."""
+    try:
+        r = subprocess.run(["git", "-C", root, "rev-parse", "--git-common-dir"],
+                           capture_output=True, text=True, timeout=5)
+        if r.returncode == 0 and r.stdout.strip():
+            p = r.stdout.strip()
+            return p if os.path.isabs(p) else os.path.abspath(os.path.join(root, p))
+    except Exception:
+        pass
+    dot = os.path.join(root, ".git")
+    if os.path.isfile(dot):
+        first = open(dot, encoding="utf-8").readline().strip()
+        if first.startswith("gitdir:"):
+            p = first.split(":", 1)[1].strip()
+            return p if os.path.isabs(p) else os.path.abspath(os.path.join(root, p))
+    return dot
+
+
+def _lockfile(root: str, name: str = "line") -> str:
+    """A repo-root advisory lock file, created on demand and never committed. The line and the loop
+    lease share the `flock` mechanism and the repo root, while their names keep their lifetimes from
+    blocking each other."""
+    d = _git_dir(root)
     os.makedirs(d, exist_ok=True)
-    return os.path.join(d, "hypercore.line.lock")
+    return os.path.join(d, f"hypercore.{name}.lock")
 
 
 @contextlib.contextmanager
@@ -75,7 +101,7 @@ def _held():
         depth = getattr(_local, "depth", 0)
         fd = None
         if depth == 0:
-            fd = os.open(_lockfile(_root()), os.O_RDWR | os.O_CREAT, 0o644)
+            fd = os.open(_lockfile(_root(), "line"), os.O_RDWR | os.O_CREAT, 0o644)
             fcntl.flock(fd, fcntl.LOCK_EX)
             _local.fd = fd
         _local.depth = depth + 1
@@ -98,6 +124,52 @@ def serialized(fn):
         with _held():
             return fn(*args, **kwargs)
     return wrapped
+
+
+class Lease:
+    """A held repo-root election. `acquire` is non-blocking: one holder keeps the file descriptor open
+    for the lease's life; a peer that cannot take it keeps operating but must not perform the leased
+    behavior. The OS releases the lease when the process dies, and `release` covers a clean window
+    close. The file lives in the git store, but its name carries the working-tree root, so sibling
+    worktrees sharing an object store do not contend unless they are the same tree."""
+
+    def __init__(self, root: str | None = None, name: str = "loop") -> None:
+        self.root = root or _root()
+        self.name = f"{name}.{_root_token(self.root)}"
+        self._fd: int | None = None
+        self._guard = threading.Lock()
+
+    @property
+    def held(self) -> bool:
+        with self._guard:
+            return self._fd is not None
+
+    def acquire(self) -> bool:
+        with self._guard:
+            if self._fd is not None:
+                return True
+            fd = os.open(_lockfile(self.root, self.name), os.O_RDWR | os.O_CREAT, 0o644)
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                os.close(fd)
+                return False
+            self._fd = fd
+            return True
+
+    def release(self) -> None:
+        with self._guard:
+            if self._fd is None:
+                return
+            fd, self._fd = self._fd, None
+        try:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+        finally:
+            os.close(fd)
+
+
+def _root_token(root: str) -> str:
+    return hashlib.sha1(os.path.realpath(root).encode("utf-8")).hexdigest()[:16]
 
 
 def atomic_write(path: str, text: str) -> None:

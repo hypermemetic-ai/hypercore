@@ -131,8 +131,8 @@ def view_body(node, sel: int, width: int) -> list[Row]:
     return rows
 
 
-def footer(model: str, mode: str, buffer: str, status: str, width: int) -> Row:
-    """The bottom line: where the operator speaks, the model named at the right."""
+def footer(model: str, mode: str, buffer: str, status: str, width: int, live_loop: bool = True) -> Row:
+    """The bottom line: where the operator speaks, the model and loop status named at the right."""
     if status:
         left = status
     elif mode == "view":
@@ -145,7 +145,7 @@ def footer(model: str, mode: str, buffer: str, status: str, width: int) -> Row:
         left = "› " + buffer + "▖" + "   esc closes the thread"
     else:
         left = "› " + buffer + "▖" if buffer else "‹ type to speak ›"
-    right = model
+    right = model if live_loop else f"{model} · not live loop"
     pad = max(1, width - _len(left) - len(right) - 2)
     return [(" " + left, HINT), (" " * pad, HINT), (right + " ", MODEL)]
 

@@ -68,3 +68,19 @@ all by keyboard.
 #### Scenario: opening and leaving the view
 - WHEN the operator presses the view key from the resting face
 - THEN the operator view opens in the window; pressing escape returns to the face
+
+### Requirement: a non-live window shows it is not the dispatching loop
+A window that does not hold the autonomous-loop lease MUST signal in its footer that it is not the
+live loop, so the operator can tell at a glance which window dispatches. It remains a full operator
+window — every keystroke move still works and the work it files is built by the live loop — so the
+signal serves the operator's mental model, not a restriction.
+
+#### Scenario: the footer marks the non-live window
+- WHEN a window is open over a tree whose lease another window holds
+- THEN its footer shows it is not the live loop, while the lease-holding window's footer does not
+
+  ```check
+  loops 2
+  render holder footer-live
+  render peer footer-not-live
+  ```

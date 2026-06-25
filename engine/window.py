@@ -66,7 +66,7 @@ def _main(scr) -> None:
     try:
         while True:
             nodes = tree.read_tree()
-            _paint(scr, st, nodes)
+            _paint(scr, st, nodes, sched.live)
             ch = scr.getch()
             if st.pending is not None:
                 st.tick += 1
@@ -221,7 +221,7 @@ def _land(st: State, result) -> None:
 
 # ── painting ──────────────────────────────────────────────────────────────────
 
-def _paint(scr, st: State, nodes) -> None:
+def _paint(scr, st: State, nodes, live_loop: bool = True) -> None:
     scr.erase()
     h, w = scr.getmaxyx()
     if st.mode == "converse":
@@ -238,7 +238,7 @@ def _paint(scr, st: State, nodes) -> None:
     status = ""
     if st.pending is not None:
         status = SPIN[st.tick % len(SPIN)] + " the machine is thinking"
-    foot = render.footer(transport.MODEL_LABEL, st.mode, st.buffer, status, w)
+    foot = render.footer(transport.MODEL_LABEL, st.mode, st.buffer, status, w, live_loop=live_loop)
     _paint_row(scr, h - 1, 0, foot, w)
     scr.noutrefresh()
     curses.doupdate()
