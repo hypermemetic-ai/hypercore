@@ -95,7 +95,7 @@ def check(root: str) -> None:
        "worker — the frozen DEPTH constant is retired; the depth standards are single-sourced from spec/depth.md")
     argv = transport.worker_argv("PROMPT")
     ok(transport.WORKER_CMD in argv and transport.WORKER_MODEL in argv,
-       "worker — the harness binary and model are named in one place, bound at the fence (the OMP/GPT flip point)")
+       "worker — the harness binary and model are named in one place, bound at the fence (the omp→codex flip point)")
     ok(schedule.Scheduler().transport is None,
        "worker — the scheduler forwards the live worker injection point untouched, so the worker binds its own fence")
 

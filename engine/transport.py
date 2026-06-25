@@ -24,15 +24,17 @@ information-leakage red flag) and a `communication ↔ grill` import cycle besid
 the shared knowledge; giving it its own module lets `communication`, `grill`, `design`, and `worker`
 each depend on it downward, so the cycle and the reaching-through-privates both dissolve.
 
-The two live transports share one summon (`_summon`) and differ only where they must: the
-**architect** runs at the repo root, the **worker** runs **jailed at its worktree** (`worker_transport`
-spawns it inside a real OS fence — `jail` — rooted there, the host read-only and the worktree and
-shared store writable) so the harness auto-loads the fence's anchor and discovers its skills and the
-worker greps `work/archive/` for past grounds in its own checkout (role-assembly step 5), and yet can
-write no path outside that checkout. The worker runs a *different* model from the architect by ratified
-design — GPT via `omp` — named in one place (`WORKER_CMD`/`WORKER_MODEL`, role-assembly step 6), the
-operator's settled spend decision. The OS fence is built from one named mechanism (`FENCE_CMD`,
-bubblewrap) behind the pure `jail` seam, so a design re-contest swaps it there and nowhere else.
+The architect and the worker differ only where they must: the **architect** runs at the repo root, the
+**worker** runs **jailed at its worktree** (`worker_transport` spawns it inside a real OS fence —
+`jail` — rooted there, the host read-only and the worktree and shared store writable) so the harness
+auto-loads the fence's anchor and discovers its skills and the worker greps `work/archive/` for past
+grounds in its own checkout (role-assembly step 5), and yet can write no path outside that checkout.
+The worker runs a *different* model from the architect by ratified design — the production model through
+the **codex** coding agent — named in one place (`WORKER_CMD`/`WORKER_MODEL`, role-assembly step 6), the
+operator's settled spend decision. codex's CLI shape (the reply read from an `-o` file, the closed
+stdin, the seeded home) lives one module down in `codex`, so the engine learns none of it. The OS fence
+is built from one named mechanism (`FENCE_CMD`, bubblewrap) behind the pure `jail` seam, so a design
+re-contest swaps it there and nowhere else.
 
 The transport is **injectable** — the live invocation here, a scripted fake in the acceptance
 check — so the whole system drives deterministically under the harness without an LLM.
@@ -46,14 +48,18 @@ import subprocess
 import tempfile
 from dataclasses import dataclass
 
+from . import codex
+
 MODEL = "claude-opus-4-8"
 MODEL_LABEL = "opus 4.8"
 
-# The worker's model identity — its own line, the role-assembly step-6 flip point. The worker runs a
-# *different* model from the architect (Opus) by ratified design: GPT via the `omp`
-# multi-model harness, which auto-loads the fence's anchor and discovers its skills at the worktree.
-# The flip to a new vendor was the operator's spend decision (2026-06-22); nothing else names them.
-WORKER_CMD = "omp"
+# The worker's harness and model identity — the role-assembly step-6 flip point, named here and nowhere
+# else. The worker runs a *different* model from the architect (Opus) by ratified design: the production
+# model summoned through the `codex` coding agent on its own auth, which auto-loads the fence's anchor
+# and discovers its skills at the worktree. `WORKER_CMD` binds codex's own binary identity (one source,
+# `codex.BINARY`) into the seam; `WORKER_MODEL` is the operator's spend-decision model, passed to codex.
+# The omp→codex flip was the operator's settled call; nothing else names them.
+WORKER_CMD = codex.BINARY
 WORKER_MODEL = "gpt-5.5"
 
 # The OS sandbox the worker fence is built from — the ONE place the enforcement mechanism is named, so
@@ -246,11 +252,13 @@ def _emit_fields(fields: tuple, values: dict) -> list[str]:
 # ── the live transports: one summon, two role bindings ────────────────────────
 
 def _summon(argv: list[str], cwd: str | None = None) -> str:
-    """Run one model invocation and return its stdout — the shared body of every live transport
-    (the architect at the repo root, the worker at its fence). A non-zero exit or empty stdout is a
-    failed summon, not a silent empty reply: it raises `MalformedReply`, so a timeout or a crashed
-    harness becomes a surfaced failure (the C2 recovery handles it) rather than a no-op fold (H3)."""
-    r = subprocess.run(argv, capture_output=True, text=True, timeout=SUMMON_TIMEOUT, cwd=cwd)
+    """Run the architect's production model invocation and return its stdout — `claude` answers over
+    stdout. A non-zero exit or empty stdout is a failed summon, not a silent empty reply: it raises
+    `MalformedReply`, so a timeout or a crashed harness becomes a surfaced failure (the C2 recovery
+    handles it) rather than a no-op fold (H3). stdin is closed so a model that probes for it cannot
+    block the line. (codex answers through an `-o` file, not stdout — it summons via `codex.run`.)"""
+    r = subprocess.run(argv, capture_output=True, text=True, timeout=SUMMON_TIMEOUT, cwd=cwd,
+                       stdin=subprocess.DEVNULL)
     if r.returncode != 0 or not r.stdout.strip():
         raise MalformedReply(f"the model call failed (exit {r.returncode}, "
                              f"{len(r.stdout)} bytes out)")
@@ -258,18 +266,30 @@ def _summon(argv: list[str], cwd: str | None = None) -> str:
 
 
 def call(prompt: str) -> str:
-    """Summon the model once with `prompt` and return its stdout — the architect's live transport,
-    run at the repo root. The one place the architect's invocation lives, so its voice, the grilling
-    pass, and the design contest all reach the model the same way."""
-    return _summon(["claude", "-p", prompt, "--model", MODEL])
+    """Summon the model once with `prompt` and return its reply — the architect's live transport, run
+    at the repo root. The one place the architect's invocation lives, so its voice, the grilling pass,
+    and the design contest all reach the model the same way. In production it speaks to `claude` over
+    stdout; under the weak-model experiment profile (`codex.experiment_provider`) it reads the tree
+    through `codex` **read-only** — it edits nothing, exactly as the production architect, a completion,
+    cannot — and takes the reply from codex's `-o` file."""
+    model, provider = codex.experiment_provider()
+    if model is None:
+        return _summon(["claude", "-p", prompt, "--model", MODEL])
+    out, code = codex.read_only(prompt, model, provider, SUMMON_TIMEOUT)
+    if code != 0 or not out.strip():
+        raise MalformedReply(f"the codex architect call failed (exit {code}, {len(out)} bytes out)")
+    return out
 
 
-def worker_argv(prompt: str) -> list[str]:
-    """The argv the worker's live transport runs — the one place the worker's harness binary and
-    model are named, so the role-assembly OMP/GPT flip (step 6) repoints them here and nowhere else.
-    Pure (it spawns nothing), so the scaffold check can assert the worker targets its own model
-    without a live call (the honest harness limit)."""
-    return [WORKER_CMD, "-p", prompt, "--model", WORKER_MODEL]
+def worker_argv(prompt: str, reply_file: str | None = None) -> list[str]:
+    """The argv the worker's live transport runs — the one place the worker's harness binary and model
+    are named, so the role-assembly omp→codex flip (step 6) repoints them here and nowhere else. The
+    worker runs codex **bypass** (the OS jail is already its sandbox) and its reply lands in `reply_file`
+    via codex's `-o`; the experiment profile, when set, repoints the model and adds its provider flags.
+    Pure (it spawns nothing), so the scaffold check can assert the worker targets its own binary and
+    model without a live call (the honest harness limit)."""
+    model, provider = codex.experiment_provider()
+    return codex.argv(prompt, model or WORKER_MODEL, "bypass", reply_file or "", provider)
 
 
 # ── the OS fence: spawn the worker jailed, not merely at a cwd ─────────────────
@@ -346,43 +366,33 @@ def jail_available() -> str | None:
         shutil.rmtree(probe, ignore_errors=True)
 
 
-def _fence_home() -> tuple[str, list, list]:
-    """Seed the per-worker, writable, ephemeral home-state the fence's read-only home would otherwise
-    deny — without it the `omp` coding agent dies at startup with `SQLITE_READONLY` on its
-    `~/.omp/agent` store under `--ro-bind / /` (the hard-won lesson the prior epoch already paid).
-    Returns `(seed_dir, rw, tmpfs)`: a private copy of `~/.omp/agent` (its models and credentials)
-    bound writable so the worker keeps reaching its model, and a fresh tmpfs over `~/.omp/logs` — so
-    nothing the worker writes touches the operator's real home, and each worker is isolated from the
-    next. The caller cleans up `seed_dir`. Whether a *live* omp build runs to completion inside the
-    fence is **watched** evidence (a real model run), like the fence's anchor/skill load — the gate
-    proves the fence *holds*, not that the worker thrives in it."""
-    home = os.path.expanduser("~")
-    agent = os.path.join(home, ".omp", "agent")
-    seed = tempfile.mkdtemp(prefix="fence-omp-")
-    rw: list = []
-    if os.path.isdir(agent):
-        dest = os.path.join(seed, "agent")
-        shutil.copytree(agent, dest)
-        rw.append((dest, agent))
-    tmpfs = [d for d in (os.path.join(home, ".omp", "logs"),) if os.path.isdir(d)]
-    return seed, rw, tmpfs
-
-
 def worker_transport(cwd: str):
     """Bind the worker's live transport to its fence (role-assembly step 5): every worker call is
     **spawned inside a real OS jail rooted at its worktree** — not merely with its working directory
     set there, because a starting directory is not a jail (the 2026-06-24 escape: a cwd-only worker
     edited the main tree). Under the jail the host is read-only, the worktree and the shared store
-    writable, the net open, and the harness gets seeded ephemeral private state; so the checkout is
-    still the working directory — the harness auto-loads the fence's anchor and skills and the worker
-    greps `work/archive/` in its checkout — but every path outside the worktree refuses writes at the
-    OS level. The injection boundary stays `(prompt) -> str` and `.cwd` is preserved, so the scripted
-    fakes and the scaffold check are untouched."""
+    writable, the net open, and codex gets its seeded ephemeral private home (`codex.fence_home`); so
+    the checkout is still the working directory — the harness auto-loads the fence's anchor and skills
+    and the worker greps `work/archive/` in its checkout — but every path outside the worktree refuses
+    writes at the OS level. codex's reply lands in an `-o` file inside a host temp dir bound writable
+    **outside** the worktree, so it never pollutes the delta the worker commits. An empty reply or a
+    non-zero exit raises `MalformedReply` (the wire-level verdict, kept here, not in `codex`), so a
+    timed-out or crashed build surfaces (C2) rather than folding a no-op (H3). The injection boundary
+    stays `(prompt) -> str` and `.cwd` is preserved, so the scripted fakes and the scaffold check are
+    untouched."""
     def at_fence(prompt: str) -> str:
-        seed, rw, tmpfs = _fence_home()
+        seed, rw, tmpfs = codex.fence_home()
+        reply_dir = tempfile.mkdtemp(prefix="fence-codex-reply-")
         try:
-            return _summon(jail(worker_argv(prompt), cwd, _store(cwd), tmpfs=tuple(tmpfs), rw=tuple(rw)))
+            reply_file = os.path.join(reply_dir, "reply.txt")
+            jailed = jail(worker_argv(prompt, reply_file), cwd, _store(cwd),
+                          tmpfs=tuple(tmpfs), rw=(*rw, (reply_dir, reply_dir)))
+            out, code = codex.run(jailed, reply_file, SUMMON_TIMEOUT)
+            if code != 0 or not out.strip():
+                raise MalformedReply(f"the worker's codex build failed (exit {code}, {len(out)} bytes out)")
+            return out
         finally:
             shutil.rmtree(seed, ignore_errors=True)
+            shutil.rmtree(reply_dir, ignore_errors=True)
     at_fence.cwd = cwd
     return at_fence

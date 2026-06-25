@@ -1,9 +1,12 @@
 # setup-notes — validated config + integration plan + findings (handoff for a fresh session)
 
 Material for `weak-model-loop-harness`. Written so the next session continues without re-deriving.
-Status at handoff: **the spine is validated end-to-end; the engine integration was built then reverted**
-(a `git reset --hard ed3326d` cleared this whole session's work after a collision with a concurrent
-session on the shared tree). The validated facts below are real; the engine code is not yet in the tree.
+Status: **the spine is validated end-to-end, and the production engine integration has now LANDED**
+(2026-06-24) — `engine/codex.py` (the codex harness: `argv`/`run`/`read_only`/`fence_home`/
+`experiment_provider`) plus a slimmed `engine/transport.py` delegating to it; `WORKER_CMD = codex.BINARY`,
+`WORKER_MODEL = "gpt-5.5"`; `python3 -m engine --check` is green. So the codex-in-fence worker change
+(the campaign's shared prerequisite) is done; the **experiment runner** (step 4 below) and the live
+end-to-end runs under GLM-5.2 are what remain. The validated facts below are real and still hold.
 
 ## what is validated (live, 2026-06-24)
 - **The protocol gap is real.** codex 0.142 speaks ONLY the OpenAI Responses API (`wire_api="chat"` is
@@ -44,10 +47,12 @@ session on the shared tree). The validated facts below are real; the engine code
   Two hard facts: codex returns its reply through the **`-o <file>`** (stdout is a transcript), and it
   **blocks on an open stdin** — close it (`< /dev/null` / `stdin=DEVNULL`).
 
-## the engine integration plan (rebuild in an ISOLATED git worktree, not the shared tree)
-Do all of this on a dedicated branch/worktree (`git worktree add … weak-model-harness`) — a concurrent
-session works the shared main tree and the two collide otherwise. Per-run loop work uses disposable
-clones (the node's "the runs").
+## the engine integration plan (steps 1–3 LANDED on main 2026-06-24; step 4 remains)
+Per-run loop work uses disposable clones (the node's "the runs"). Steps 1–3 below are now in the tree as
+built — a fresh session on a clean main tree carried them with no collision; minor refinements from the
+plan: codex.py also exposes `read_only` (the architect's read-only reply-dir lifecycle) and `BINARY`
+(codex's one-source binary name `transport.WORKER_CMD` binds to), and transport stays under the 400-line
+signal (398) — the extraction is what keeps the engine's own module under its own bar.
 
 1. **New `engine/codex.py`** — the codex harness, importing nothing from the engine (acyclic; `transport`
    depends on it downward). Holds: `experiment_provider()` (reads `HYPERCORE_SYNTH=1` ->

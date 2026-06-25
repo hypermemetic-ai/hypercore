@@ -323,6 +323,7 @@ against drift each time new words join the live corpus.
 
 - **registry** — a collection the system keeps (the methodologies, the linked project folders).
 
-- **OMP** — the multi-model harness the worker runs under, so it can run a different model from
-  the architect (the operator's ratified spend decision). The worker model is OpenAI
-  GPT-5.5 (xhigh); `omp` is the binary, OMP the concept.
+- **codex** — the coding agent the worker runs under, so it can run a different model from
+  the architect (the operator's ratified spend decision). codex returns its reply through an
+  `-o` file (not stdout) and blocks on an open stdin; `engine/codex.py` holds that shape so the
+  rest of the engine learns none of it. The worker model is OpenAI GPT-5.5, on codex's own auth.

@@ -66,7 +66,7 @@ worktree — host read-only, worktree and shared `.git` writable, net open — a
 spawns the real fence and proves a write to the main tree is refused at the OS level while an in-worktree
 write and a commit still land. So escape-prevention is **gated**, not a watched promise (it requires
 bubblewrap on the host; absent it the check skips/fails loudly rather than passing silently). It runs on a
-*different* model (GPT via `omp`, the operator's settled spend decision); what stays **watched evidence**
+*different* model (GPT via the `codex` coding agent, the operator's settled spend decision); what stays **watched evidence**
 the first autonomous run confirms — never faked into the harness — is whether a live session loads the
 fence's anchor and skills and carries a build to completion inside it. The honest limit narrowed: the
 fence is proven to *hold*; that a live worker *thrives* in it is still watched.
