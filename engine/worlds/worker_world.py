@@ -22,6 +22,7 @@ import shlex
 import shutil
 import subprocess
 import tempfile
+import re
 
 from .. import communication, grill, render, spec, transport, tree, worker
 from ..scenario import _git
@@ -35,6 +36,27 @@ _DEMO_REQ = "the worker's refined delta integrates"
 # never carry — the worker holds the spec, not raw code (slice-4/7 properties, named as domain checks).
 _DEPTH_FRAMEWORK = ("deep modules", "downward", "strategic", "red flags", "shallow module", "depth standards")
 _CODE_TOKENS = ("import ", "curses")
+
+
+def _glossary_entries(text: str) -> list[tuple[str, str]]:
+    rows: list[tuple[str, list[str]]] = []
+    term = ""
+    body: list[str] = []
+    for line in text.splitlines():
+        m = re.match(r"- \*\*(.+?)\*\* — ", line)
+        if m:
+            if term:
+                rows.append((term, body))
+            term, body = m.group(1), [line]
+        elif term:
+            body.append(line)
+    if term:
+        rows.append((term, body))
+    return [(term, "\n".join(lines).rstrip()) for term, lines in rows]
+
+
+def _mentions(text: str, term: str) -> bool:
+    return re.search(rf"(?<![0-9A-Za-z]){re.escape(term)}(?![0-9A-Za-z])", text, re.IGNORECASE) is not None
 
 
 class World(_Base):
@@ -107,8 +129,9 @@ class World(_Base):
         prompt maps every capability — touched in full, the rest indexed — so the worker sees the whole
         spec), `marks <cap>…`, `foregrounds <cap>` (the prompt inlines that capability's full body),
         `indexes <cap>` (the prompt carries it as an index — its requirement titles, body NOT inlined),
-        `carries-depth`, `holds-no-code`, `omits-grounds`, `points-to-archive`, `renders` (the last two
-        read the world's planted sentinels)."""
+        `glossary-economical` (only foregrounded prose's glossary terms are inlined), `carries-depth`,
+        `holds-no-code`, `omits-grounds`, `points-to-archive`, `renders` (the last two read the world's
+        planted sentinels)."""
         if self.ctx is None:
             return False, "grounding read before spawn/sharpen"
         prop = args[0]
@@ -138,6 +161,10 @@ class World(_Base):
             return ((True, "") if header and titled and body not in self.prompt
                     else (False, f"{cap} is not carried as an index "
                                  f"(header={header}, titled={titled}, body-inlined={body in self.prompt})"))
+        if prop == "glossary-economical":
+            # Catches: a worker grounding regression that inlines the whole ratified glossary instead of
+            # only the entries whose terms appear in the ask, handed delta, or touched capability bodies.
+            return self._glossary_economical()
         if prop == "carries-depth":
             return self._needs(_DEPTH_FRAMEWORK)
         if prop == "holds-no-code":
@@ -313,6 +340,30 @@ class World(_Base):
     def _needs(self, tokens) -> tuple[bool, str]:
         missing = [t for t in tokens if t not in self.prompt]
         return (True, "") if not missing else (False, f"the grounding is missing {missing}")
+
+    def _glossary_economical(self) -> tuple[bool, str]:
+        entries = _glossary_entries(open(os.path.join(self.root, "glossary.md"), encoding="utf-8").read())
+        source = "\n\n".join([
+            grill.contract_of(self.node) or self.node.text,
+            self.ctx.delta,
+            *(worker._cap_text(n, self.root) for n in sorted(self.ctx.touched)),
+        ])
+        inlined = [(term, entry) for term, entry in entries if entry in self.prompt]
+        stray = [term for term, _entry in inlined if not _mentions(source, term)]
+        if stray:
+            return False, f"the prompt inlined glossary entries not named by the foregrounded prose: {stray}"
+        named = [term for term in ("worker", "communication", "thread", "architect") if _mentions(source, term)]
+        missing = [term for term, entry in entries if term in named and entry not in self.prompt]
+        if missing:
+            return False, f"the prompt omitted named glossary entries: {missing}"
+        omitted = next((entry for term, entry in entries if term == "accepted length / the ratchet"), "")
+        if not omitted:
+            return False, "the fixture glossary does not define the omitted probe term"
+        if omitted in self.prompt:
+            return False, "an unnamed glossary entry was inlined instead of left for a just-in-time read"
+        reachable = "accepted length / the ratchet" in open(os.path.join(self.root, "glossary.md"),
+                                                           encoding="utf-8").read()
+        return (True, "") if reachable else (False, "the omitted glossary entry is not reachable in glossary.md")
 
     def _stage(self, handed: str) -> tree.Node:
         node = tree.file_intent("a worker builds a change")

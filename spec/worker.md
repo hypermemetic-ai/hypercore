@@ -25,16 +25,20 @@ operator-facing word from the result.
 ### Requirement: a worker is grounded in its capability's spec slice, by construction
 A worker MUST be handed the living spec with the capabilities its change touches **foregrounded in
 full** as its grounding — their requirements and scenarios inlined — AND **every other capability
-carried as a high-signal index** (its vision line and requirement titles, not its body), with the
-glossary, assembled before it runs, so there is no path that runs a worker without its grounding. The
-index spans the whole spec — the small, scannable, high-signal **map**, the defense against the
+carried as a high-signal index** (its vision line and requirement titles, not its body), with its
+glossary terms, assembled before it runs, so there is no path that runs a worker without its grounding.
+The index spans the whole spec — the small, scannable, high-signal **map**, the defense against the
 architect's mis-scoping and against worker myopia: the worker sees every capability even when its body
 is a read away. An untouched capability's full **body** is NOT inlined — carrying every body whole
 spends the worker's attention budget on tokens the change does not touch, the cost our
 context-engineering standard names; the body already lives in the worker's checkout, so it reads it
-**just-in-time** from `spec/<name>.md` when its rescan implicates it. The glossary is preloaded whole.
-The **long history and grounds of past decisions** are likewise NOT inlined: they are the long
-reference with no whole-picture stake, so the worker greps **just-in-time** for them in its own
+**just-in-time** from `spec/<name>.md` when its rescan implicates it. The glossary is carried by the
+**same economy**: a defined term's entry is inlined only when the term appears in the foregrounded
+prose (the touched bodies, the handed delta, the ask); every other entry stays in `glossary.md` in
+the checkout, read **just-in-time** when the rescan implicates the term. The worker still holds every
+term its change names — the whole ratified vocabulary is the architect's asset, not the worker's
+grounding. The **long history and grounds of past decisions** are likewise NOT inlined: they are the
+long reference with no whole-picture stake, so the worker greps **just-in-time** for them in its own
 checkout (`work/archive/`, where a node archives with its work) as the change needs. It holds the
 spec, never raw code, and never the operator view. A worker is **not slice-confined**: a delta cannot
 be authored or verified from one capability in isolation, so its rescan covers the whole map — and
@@ -43,10 +47,11 @@ pulls the body it implicates — catching a capability the handed delta mis-name
 #### Scenario: assembling the context
 - WHEN a worker is run on a node whose handed delta names a set of capabilities
 - THEN its prompt maps the whole spec — the named capabilities foregrounded in full as its grounding,
-  every other capability carried as a vision+requirement-titles index — plus the glossary; an untouched
-  capability's full body, like the long grounds of past decisions, is not inlined but a checkout read
-  away (`spec/<name>.md`, and `work/archive/` for the grounds) for a just-in-time pull, and the index
-  keeps the whole map in view while the grounding is foregrounded
+  every other capability carried as a vision+requirement-titles index — plus the change's glossary
+  terms; an untouched capability's full body, like an untouched glossary entry and the long grounds of
+  past decisions, is not inlined but a checkout read away (`spec/<name>.md`, `glossary.md`, and
+  `work/archive/` for the grounds) for a just-in-time pull, and the index keeps the whole map in view
+  while the grounding is foregrounded
 
   ```check
   plant-grounds
@@ -71,6 +76,19 @@ pulls the body it implicates — catching a capability the handed delta mis-name
   grounding marks tree
   grounding whole-spec
   grounding indexes communication
+  ```
+
+#### Scenario: the glossary carries the change's terms, the rest a read away
+- WHEN a worker's grounding is assembled for a change whose foregrounded prose names some defined terms
+  and not others
+- THEN every glossary entry the prompt inlines is one whose term appears in that prose, at least one
+  defined term the prose does not name is omitted, and the omitted term's definition is reachable
+  just-in-time from `glossary.md` in the checkout — the worker carries its change's vocabulary, not the
+  whole ratified set
+
+  ```check
+  spawn worker communication
+  grounding glossary-economical
   ```
 
 ### Requirement: a worker is grounded in the depth standards, every episode
