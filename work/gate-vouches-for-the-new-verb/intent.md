@@ -2,7 +2,7 @@
 kind: ask
 state: standing
 owner: operator
-created: 2026-06-24
+created: 1782277200
 ---
 # gate-vouches-for-the-new-verb — the scenario gate must prove a new verb tests its behavior, not just that the verb appeared
 
