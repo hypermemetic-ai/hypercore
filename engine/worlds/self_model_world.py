@@ -26,6 +26,7 @@ import tempfile
 from .. import delta, review, spec, tree, view
 from ..scenario import _git                                  # the worlds share the core's git helper
 from . import World as _Base
+from . import _new_verb_fence                                # the heavyweight new-verb gate fixture, held off this module
 
 _REAL = tree._DEFAULT_ROOT                                  # hypercore's own model, seeded so the read/view/fold self-host
 _ADDED = ("queue", "the order is the machine's claim about attention")  # an ADDED into an existing capability
@@ -73,6 +74,7 @@ class World(_Base):
         self._renamed = None                               # (capability, old title, new title) for rename assertions
         self._rename_before = None                         # pre-rename block for the untouched-body assertion
         self._rename_modified = False
+        self._gate_verdict = None                          # the scenario gate's verdict over the last staged new verb
 
     # ── internals ────────────────────────────────────────────────────────────────
     def _signature(self) -> set:
@@ -179,7 +181,31 @@ class World(_Base):
             "### Requirement: it heats\n#### Scenario: cold\n- WHEN cold\n- THEN warm\n")
         return True, ""
 
+    def _v_stage_new_verb(self, args: list[str]) -> tuple[bool, str]:
+        """stage-new-verb <vacuous|real> — stage a fence whose tip introduces a brand-new domain verb
+        (its world fixture) for a capability and run the real scenario gate over it, capturing the
+        verdict for `gate` to read. `vacuous` writes a fixture that asserts nothing real; `real` writes
+        one that genuinely asserts the behavior. The new verb is base-runnable (its fixture needs no
+        engine seam absent at the base), so it is the case the hardened gate must reach."""
+        mode = args[0]
+        if mode not in ("vacuous", "real"):
+            return False, f"unknown new-verb mode {mode!r}"
+        self._gate_verdict = _new_verb_fence.run_gate(mode)
+        return True, ""
+
     # ── assertion verbs ──────────────────────────────────────────────────────────
+    def _v_gate(self, args: list[str]) -> tuple[bool, str]:
+        """gate <held|folds> — the scenario gate's verdict over the staged new verb. `held` asserts the
+        gate refused the fold (the vacuous new verb is caught: its fixture now rides onto the base run,
+        so it is green at the base too and never transitions); `folds` asserts a real fixture for the
+        same new verb still goes red→green and folds — the hardening refuses only the hollow fixture."""
+        want = args[0]
+        held = self._gate_verdict is not None
+        if want == "held":
+            return (True, "") if held else (False, "the gate did not hold — a vacuous new verb cleared it, testing nothing")
+        if want == "folds":
+            return (True, "") if not held else (False, f"the gate held a real fixture that should fold: {self._gate_verdict}")
+        return False, f"unknown gate expectation {want!r}"
     def _v_self_hosts(self, args: list[str]) -> tuple[bool, str]:
         """self-hosts — the read spec yields the glossary and the system's own capabilities, segmented
         by capability."""

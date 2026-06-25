@@ -63,3 +63,28 @@ its own product is the defense against self-judging.
 - WHEN a worker hands back material past the length signal with no accepted-length record accepting it
 - THEN the architect raises a decision (re-cut / deepen / accept-with-reason) and the
   fold is held — the depth surfaces to the operator, not a length number's verdict
+
+### Requirement: a new verb the gate cannot run at the base is a watched archive-gate judgment
+A new domain verb whose fixture needs a **brand-new engine seam** — one absent from the fork base —
+cannot be run at the base at all, so the gate's base run cannot carry it and red→green cannot
+structurally prove the verb **tests** the behavior rather than merely **names** it. The architect MUST
+NOT let the gate claim a guarantee it does not have here: when the gate cannot structurally vouch for a
+new verb, the honest classification is **watched-and-said-so**, never gated. The adequacy of such a verb
+is a **watched judgment the archive gate must actually make** — the single, named exception to
+coherence's standing rule that it is not a code review and never reads the fixture: at the archive gate
+the architect **reads this one residue's fixture** and **attests that the new verb exercises the
+behavior** it names, recorded honestly in the open, exactly as `build_reaches_main` is a watched check
+proven from outside the fold it tests. The classification is read off the **structural reachability** of
+the verb at the base, so the **worker never authors its own classification**, and the residue lands as the
+architect's attestation on the archive path, **never as operator-queue load**. The gate's reach and this
+watched residue together exhaust the new-verb case: gated where the verb runs at the base, watched-and-said-so
+where it cannot — never a structural guarantee silently assumed.
+
+#### Scenario: a brand-new-seam verb's adequacy is attested, not gated
+- WHEN a fold introduces a new domain verb whose fixture needs an engine seam absent at the fork base, so
+  the gate cannot run the verb at the base to prove the behavior transitioned
+- THEN its adequacy is a watched archive-gate judgment — the architect reads this one residue's fixture
+  and attests at coherence that the verb exercises the behavior, recorded as watched-and-said-so, never
+  claimed as a structural gate guarantee and never the worker's to classify
+- watched — the attestation is a model judgment no fixture certifies, proven from outside at the archive
+  gate the way `build_reaches_main` is, and the same honest home

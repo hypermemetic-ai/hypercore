@@ -153,14 +153,23 @@ def gate(result, root: str | None = None) -> str | None:
     fork base (they MUST fail — the behavior was not yet built) and at the tip (they MUST pass), in the
     fence, trusting exit codes. A change folds only when the architect's scenario actually transitioned
     red→green; the worker records nothing the gate trusts. None when every touched capability
-    transitioned (or carries no scenarios — watched, never faked)."""
+    transitioned (or carries no scenarios — watched, never faked).
+
+    Each run carries the tip's **world fixtures** onto the checkout (`_world_source`) beside the tip's
+    check source, so a brand-**new** verb already exists at the base run — base-red can then mean only that
+    the behavior is genuinely absent, never that the verb was missing, and a vacuous fixture that asserts
+    nothing goes green at the base too and cannot clear the gate. The one residue this cannot reach — a
+    verb whose fixture needs an engine seam absent at the base — is the watched archive-gate judgment
+    (`spec/coherence.md`), never a structural guarantee silently assumed."""
     if os.environ.get(_GATE_GUARD):
         return None                                        # inside a base/tip run — never recurse
     for cap in sorted({op.capability for op in delta.parse(result.delta).ops}):
         src = _check_source(cap, result.worktree)
         if not src:
             continue                                       # a capability with no scenarios is watched, not gated
-        base, tip = _run_at(src, cap, result.worktree, "HEAD~1"), _run_at(src, cap, result.worktree, "HEAD")
+        world = _world_source(cap, result.worktree)        # the tip's fixtures, carried onto the base so a new verb exists there
+        base = _run_at(src, world, cap, result.worktree, "HEAD~1")
+        tip = _run_at(src, world, cap, result.worktree, "HEAD")
         if base is None or tip is None:
             return (f"the scenarios for {cap!r} could not run in the fence — a scenario that cannot "
                     "run did not gate the behavior")
@@ -246,6 +255,18 @@ def _check_source(capability: str, where: str) -> str:
     return "\n".join(parts)
 
 
+def _world_source(capability: str, where: str) -> str | None:
+    """The tip's world fixture for a capability — the `_v_<verb>` methods that give its scenario verbs
+    meaning (`engine/worlds/<capability>_world.py`), read from the fence so the gate can carry them onto
+    each checkout exactly as it carries the check source. None when the capability has no world module.
+    Carrying the binding is what lets a brand-new verb exist at the base run: base-red then means the
+    behavior is absent, not the verb — a vacuous fixture goes green at the base too and cannot clear the
+    gate. The one residue this cannot reach — a verb whose fixture needs an engine seam absent at the
+    base — is the watched archive-gate judgment (`spec/coherence.md`)."""
+    path = os.path.join(where, "engine", "worlds", capability.replace("-", "_") + "_world.py")
+    return open(path, encoding="utf-8").read() if os.path.isfile(path) else None
+
+
 def _carried(text: str, capability: str) -> list[Check]:
     out: list[Check] = []
     scen, block = "", []
@@ -261,11 +282,13 @@ def _carried(text: str, capability: str) -> list[Check]:
     return out
 
 
-def _run_at(src: str, capability: str, fence: str, ref: str) -> int | None:
+def _run_at(src: str, world: str | None, capability: str, fence: str, ref: str) -> int | None:
     """Run the carried scenarios against an isolated checkout of `ref` cut from the fence, returning
     the exit code (None when the checkout or run could not happen). A throwaway detached worktree keeps
-    the fence's own tip untouched; the carried block file rides into the checkout, and the checkout's
-    own `engine` runs it — so the verdict is that revision's behavior under the tip's scenarios."""
+    the fence's own tip untouched; the carried block file **and the tip's world fixtures** (`world`) ride
+    into the checkout, and the checkout's own `engine` runs them — so the verdict is that revision's
+    behavior under the tip's scenarios, and a brand-new verb exists even at the base run (its fixture
+    carried), so base-red means the behavior is absent, not the verb missing."""
     co = tempfile.mkdtemp(prefix="scenario-gate-")
     try:
         add = subprocess.run(["git", "worktree", "add", "--detach", "-q", co, ref], cwd=fence,
@@ -273,6 +296,8 @@ def _run_at(src: str, capability: str, fence: str, ref: str) -> int | None:
         if add.returncode != 0:
             return None
         _write(os.path.join(co, ".scenario-gate.check"), src)
+        if world is not None:                              # carry the tip's binding onto the (possibly older) checkout
+            _write(os.path.join(co, "engine", "worlds", capability.replace("-", "_") + "_world.py"), world)
         env = {**os.environ, _GATE_GUARD: "1"}
         try:
             r = subprocess.run(["python3", "-m", "engine", "--run-blocks", ".scenario-gate.check",

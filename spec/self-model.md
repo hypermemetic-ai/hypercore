@@ -271,3 +271,48 @@ vision they sit beside is the one writable region.
   read view
   asbuilt
   ```
+
+### Requirement: a new verb's red→green proves the behavior transitioned, not that the verb appeared
+The scenario gate runs a touched capability's tip scenarios at the fork base (must be **red** — the
+behavior absent) and at the tip (must be **green**), and a behavior folds only on that transition. For
+genuinely **new** behavior the architect's scenario names a **new domain verb** whose fixture
+(`engine/worlds/<cap>_world.py`) the worker writes below the seam in the same fence commit — so at the
+base checkout the world **lacks that verb** and the base run is red with `unknown scenario verb`: **red
+because the verb is missing, not because the behavior is absent**. The redness is overdetermined, and a
+**vacuous** fixture that asserts nothing rides base-red (verb unknown) → tip-green (hollow check) and
+**clears the gate having tested nothing** — the builder authoring the oracle after all, red→green unable
+to tell a real oracle from a hollow one. The gate MUST close this **wherever it is structurally
+reachable**: its base run MUST carry the **tip's world fixtures** onto the **base engine checkout** —
+exactly as it already carries the tip's check **source** into each checkout, extended to the binding — so
+a new verb **exists** at the base run. Base-red can then mean only that the behavior is genuinely absent:
+a **vacuous** fixture for such a verb is **green at the base** too (the hollow check passes against the
+old behavior), fails to transition red→green, and is **refused**; a **real** fixture that asserts the
+behavior stays red at the base and green at the tip and folds. The gate MUST NOT claim a structural
+guarantee it does not have — a verb it genuinely cannot run at the base (one needing a brand-new engine
+seam) is **not** certified by this requirement and is the watched residue (`coherence`). This is the
+**adequacy** layer, kept distinct from trail-presence (`a mechanism-output record folds only when its
+mechanism's trail is present`): that the run happened is one claim; that the run tested the behavior,
+where the gate can structurally vouch, is this one — so the re-derived red→green that node attests no
+longer over-claims self-certification.
+
+#### Scenario: a vacuous fixture for a base-runnable new verb cannot clear the gate
+- WHEN a worker builds a behavior whose architect-authored scenario names a brand-new domain verb that
+  can run at the fork base, and writes a vacuous fixture for it that asserts nothing real
+- THEN the gate's base run carries the tip's world fixtures onto the base engine checkout, finds the
+  vacuous verb green at the base too, sees no red→green transition, and refuses the fold — a hollow
+  fixture for a base-reachable new verb cannot clear the gate
+
+  ```check
+  stage-new-verb vacuous
+  gate held
+  ```
+
+#### Scenario: a real fixture for a new verb still transitions and folds
+- WHEN the same brand-new verb instead carries a real fixture that genuinely asserts the behavior
+- THEN it is red at the base (the behavior absent) and green at the tip, transitions red→green, and
+  folds — the hardening refuses only the hollow fixture, never the real one
+
+  ```check
+  stage-new-verb real
+  gate folds
+  ```
