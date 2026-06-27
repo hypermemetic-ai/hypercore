@@ -90,6 +90,27 @@ stays tight rather than diluted. Hedge to the evidence, not the nerves.
   not by word count — so a long sentence inside the corridor reads as low-load while a short one that
   buries its subject or drops its joints reads as the defect
 
+### Requirement: the defined vocabulary stays consistent — the vocabulary check
+The shared language MUST stay consistent across the live corpus: the **defined concept vocabulary** of
+`glossary.md` is the ratified set, and the system holds the corpus to it. This is communication's
+**consistency** standard, the **vocabulary check** the one-term-one-concept rule already names ("synonym-
+variation of a defined term being a clarity bug the vocabulary check guards"). It binds the **defined
+concept vocabulary, not every token** — ordinary words and pronouns are not terms. It has two halves at
+the two strengths a standard takes. Its **mechanical floor is gated**: a dispositive, non-gameable fact —
+a term `glossary.md` defines that the live corpus no longer uses (the glossary fallen out of step with the
+language), read as a string set-difference, **never a readability metric** (a metric is gamed and punishes
+precise terms — `communication`'s own "no readability gate"). Its **semantic half is watched**: a single
+dedicated run reads the whole corpus for **new or conflicting** vocabulary — a defined concept reappearing
+under a **synonym** (Fowler's "elegant variation" vice) or the language **casually expanded** by a term
+that earns no distinct chunk — a judgment no fixture can certify, guarding the **chunk economy** the
+ubiquitous language rests on, recorded as watched and never pretend-gated.
+
+#### Scenario: a synonym for a defined concept is a watched finding
+- WHEN the corpus names a defined concept under a synonym, or expands the shared language with a term that
+  earns no distinct chunk
+- THEN the watched run surfaces it as a finding for a define / waive / dismiss decision — a judgment no
+  fixture certifies, recorded as watched, not pretend-gated
+
 ### Requirement: the operator's act never makes them wait
 A turn MUST be summoned off the input loop so the interface stays live while the
 machine thinks, and the consequence lands when it returns.

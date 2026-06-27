@@ -129,10 +129,19 @@ against drift each time new words join the live corpus.
   (a recorded design-decision, a contract-check note, an accepted-length record). Its
   presence is a folding condition; its quality is overseen, not gated.
 
-- **vocabulary check** — a delegated, fold-time standard and **communication's
-  consistency** standard: a dedicated run reads the whole live corpus for new or
-  conflicting terms and, on a finding, raises a *define / waive / dismiss* decision
-  and holds the fold. Mechanical floor **gated**, semantic judgment **watched**.
+- **watched-evidence trace** — the **provenance gate**'s third trail type: the verdict a
+  **watched** model-run commits on its node when it runs (the **vocabulary check**'s, the
+  depth scan's). A watched judgment has no red→green to re-derive, so its only honest trail
+  is **presence** — the gate attests the verdict is committed on the node, never re-derives
+  it. **Capability-agnostic**: it reaches "a watched run committed its verdict here," never
+  any one capability's content, so one seam serves every watched standard.
+
+- **vocabulary check** — a fold-time standard, **communication's consistency**
+  standard. Its **gated** mechanical floor — a defined term the live corpus no longer
+  uses — raises a *define / waive / dismiss* decision and **holds the fold**. Its
+  **watched** semantic half — a dedicated run reading the corpus for new or conflicting
+  terms — rides the **watched-evidence trace** but is held **not-yet** (non-blocking)
+  until that run is built; the gated floor is the live guard until then.
 
 - **capability** — a coherent slice of system behavior, named in the domain's own
   words, owning a spec file and any local decisions.

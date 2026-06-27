@@ -255,3 +255,69 @@ The provenance gate MUST bind **forward-only**: only records folded **after** th
   forge accepted-length engine/forged.py @460
   gate held because provenance
   ```
+
+### Requirement: the provenance gate attests a watched-evidence trace
+The provenance gate MUST attest a third trail type beside the authored records it already reaches (the
+accepted-length record, the design decision): a **watched-evidence trace** — the verdict a **watched**
+mechanism commits on its node when it runs. A watched mechanism is a model-run whose judgment no fixture
+can re-derive — it leaves no red→green to reproduce — so its only honest trail is **presence**: the gate
+attests that the run's verdict trace is committed on the node, and refuses (`no trail — re-run the
+mechanism`) when a fold carries a watched standard but no such trace. The attestation is
+**capability-agnostic** — it reaches "a watched run committed its verdict on the node," never any one
+capability's content — so the single seam serves every watched standard (the vocabulary check, the
+model-driven depth scan). Like the gate's other trails it is **presence only** (`Attestation.adequacy`
+deferred, `residue` watched): it proves the run happened, never that its judgment was sound.
+
+#### Scenario: a watched run's committed verdict is a present trail
+- WHEN a watched mechanism committed its verdict trace on the node
+- THEN the provenance gate attests the trail present — presence only, the judgment's soundness still watched
+
+  ```check
+  watched-run committed-verdict
+  provenance attests present
+  ```
+
+#### Scenario: a watched run with no committed verdict has no trail
+- WHEN a fold carries a watched standard but no verdict trace is committed on the node — the run was skipped
+- THEN the gate refuses with the flat reason: no trail, re-run the mechanism
+
+  ```check
+  watched-run no-verdict
+  provenance refuses no-trail
+  ```
+
+### Requirement: the vocabulary check guards the fold — closure gated, the semantic half watched and deferred
+A fold MUST run the **vocabulary check** over the whole live corpus before the merge, as a sibling of the
+depth guard: it is the system's **second escalating guard**, and like the first it neither passes silently
+nor refuses on its own. Its **gated** floor is a dispositive fact: a term `glossary.md` defines that the
+corpus no longer uses raises a `define / waive / dismiss` decision naming that term and **holds the fold**,
+the same flat way a length past the signal raises one. Its **watched** half is the dedicated run's semantic
+judgment — a defined concept under a synonym, the language casually expanded — which no fixture can certify;
+per the trace discipline its verdict is a **watched-evidence trace** the fold checks for presence on the
+provenance gate's shared trail (it does **not** build its own presence check). But the dedicated run that
+commits that verdict is **not yet built**, so this half is held **not-yet** — named honestly the way the
+model-driven depth scan's watched half is, non-blocking until the run lands and re-arming through the shared
+trail the moment it does. So today the live guard is the gated floor; a corpus consistent on its floor
+folds. The check is scoped to the live corpus the fold would publish.
+
+#### Scenario: a defined term fallen out of use raises a decision and holds the fold
+- WHEN the live corpus no longer uses a term `glossary.md` defines and no decision has settled it
+- THEN a `define / waive / dismiss` decision naming that term is raised, the fold is held, and the spec is
+  left untouched — a dispositive fact, never a silent pass
+
+  ```check
+  orphan glossary-term widget
+  gate held because vocabulary names widget
+  spec untouched
+  ```
+
+#### Scenario: a corpus consistent on its floor folds, the watched half held not-yet
+- WHEN the corpus uses every term its glossary defines — the gated floor is met — and the dedicated run is
+  not yet built
+- THEN the vocabulary guard clears on its live floor and the fold may proceed; the watched half is held
+  not-yet and does not hold the fold
+
+  ```check
+  corpus consistent
+  gate folds
+  ```

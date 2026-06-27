@@ -22,6 +22,14 @@ Because the running fence is torn down on every exit, the trail is never the fen
   written through the one accept seam (durable = committed, not a line hand-appended to the working-tree
   ledger), and the recorded candidate set in `design-decision.md` (a real contest's N briefed candidates
   and their comparison, not a bare hand-authored pick).
+- **watched** (the vocabulary check's verdict, the model-driven depth scan's verdict) — a third trail
+  type, a model-run whose judgment **no fixture can re-derive**, so it leaves no red→green and has no
+  durable artifact to reach into for content. Its only honest trail is **presence**: the run commits a
+  verdict trace on its node, and the gate attests that trace is committed (`watched_trace`), never
+  re-deriving the verdict. It is **capability-agnostic** — it reaches "a watched run committed its
+  verdict on this node," never any one capability's content — so the single seam serves every watched
+  standard, each naming its own mechanism; the consumer that knows its standard ran asks for the
+  attestation, so a fold carrying no watched standard demands nothing.
 
 The guarantee is deliberately narrow: **trail-presence only**. Even a real re-derived red→green proves
 the mechanism *ran*, never that the check it ran was **adequate** — a real fence can still test nothing.
@@ -137,6 +145,58 @@ def _node_path(result, node) -> str:
     if node is not None:
         return getattr(node, "path", "")
     return getattr(result, "node_path", "") or ""
+
+
+# ── the watched-evidence trail: a committed verdict's presence (capability-agnostic) ──
+
+def watched_trace(node, mechanism: str, root: str | None = None) -> str | None:
+    """The third trail type — a **watched-evidence trace**: the verdict a watched mechanism commits on
+    its node when it runs. A watched mechanism is a model-run whose judgment no fixture can re-derive, so
+    its only honest trail is **presence**: this attests the run's verdict trace is **committed** on the
+    node, and refuses with the flat `NO_TRAIL` when it is absent (the run was skipped, not merely clean).
+    It is **capability-agnostic** — `mechanism` is a label that forms the trace's path, never inspected
+    for content — so the one seam serves the vocabulary check, the depth scan, and every later watched
+    standard, each naming its own mechanism. Presence only: the verdict's soundness is never claimed
+    (`Attestation.adequacy` deferred, `residue` watched)."""
+    import os
+    path = _node_path(None, node)
+    if not path:
+        return None                                        # no node to carry a trace — nothing to attest
+    rel = os.path.relpath(_verdict_path(path, mechanism), _resolve_root(root))
+    return None if _committed(rel, root) else NO_TRAIL
+
+
+def commit_verdict(node, mechanism: str, verdict: str, root: str | None = None) -> str:
+    """The writer side of `watched_trace`: commit a watched mechanism's verdict trace on its node — the
+    durable artifact a watched run leaves. Like the accept seam it writes **and commits** in one held
+    act, so the trail is what survives the torn-down fence, never a working-tree scratch. Production's
+    watched run (the vocabulary check, the depth scan) calls this; the gate later attests its presence,
+    never re-derives the verdict. Returns the trace file's path."""
+    from . import tree
+    path = _verdict_path(node.path, mechanism)
+    tree.atomic_write(path, f"# {mechanism} — watched verdict [machine]\n\n{verdict.strip()}\n")
+    tree.commit([path], f"{mechanism}: verdict committed on the node")
+    return path
+
+
+def _verdict_path(node_path: str, mechanism: str) -> str:
+    import os
+    return os.path.join(node_path, f"{mechanism}.verdict.md")
+
+
+def _committed(rel: str, root: str | None) -> bool:
+    """True when `rel` is committed at HEAD — the trace durably survived, read through git so what counts
+    is what a commit left, the same discipline the accepted-length trail uses (`_committed_ledger`)."""
+    import os
+    import subprocess
+    r = subprocess.run(["git", "cat-file", "-e", f"HEAD:{rel.replace(os.sep, '/')}"],
+                       cwd=_resolve_root(root), capture_output=True)
+    return r.returncode == 0
+
+
+def _resolve_root(root: str | None) -> str:
+    from .record import _root
+    return root or _root()
 
 
 # ── the derived pair: re-derivation, reframed as a trail (the scenario gate) ─────

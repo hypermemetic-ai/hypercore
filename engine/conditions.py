@@ -88,7 +88,8 @@ def material_unmet(result, root: str | None = None, node=None) -> str | None:
     from . import provenance
     d = delta.parse(result.delta)
     sp = spec.read_spec(root)
-    return _delta(d, sp) or _depth(result, root) or provenance.reachability(result, root, node)
+    return (_delta(d, sp) or _depth(result, root) or _vocabulary(result, root, node)
+            or provenance.reachability(result, root, node))
 
 
 def _delta(d: delta.Delta, sp: spec.Spec) -> str | None:
@@ -143,6 +144,85 @@ def _touched_py(tree: str) -> list[str]:
     out = subprocess.run(["git", "diff", "--name-only", "HEAD~1", "HEAD"], cwd=tree,
                          capture_output=True, text=True).stdout
     return [ln for ln in out.split() if ln.endswith(".py")]
+
+
+# The vocabulary check — communication's consistency standard, the fold's **second escalating guard**.
+# Scoped to the live corpus the fold would publish (glossary.md, intent.md, the spec). Two halves at the
+# two strengths a standard takes: a GATED floor (a defined term the corpus no longer uses, a string
+# set-difference, never a readability metric) that holds the fold now, and a WATCHED half (the dedicated
+# run's semantic verdict) that would ride the provenance gate's watched-evidence trail — but is held
+# NOT-YET, non-blocking, until the run that commits the verdict is built. No glossary in the published
+# corpus → no language to hold to step → inert.
+_VOCAB_STOP = {"the", "a", "an", "of", "and", "or", "to", "its", "it", "is", "in", "on", "as", "at", "by"}
+
+
+def _vocabulary(result, root: str | None, node) -> str | None:
+    """The vocabulary check guards the fold, a sibling of the depth guard. Its **gated** floor names a
+    term `glossary.md` defines that the live corpus no longer uses (a dispositive set-difference) and
+    **holds the fold** — the flat way a length past the signal does. Its **watched** half — the dedicated
+    run's semantic judgment (a defined concept under a synonym, the language casually expanded) — would
+    ride the provenance gate's watched-evidence trail (`provenance.watched_trace`), but the run that
+    commits that verdict is **not yet built**, so this half is held **not-yet**: non-blocking, named not
+    hidden (the spec records it, `spec/folding-conditions.md`), re-arming through the shared trail the
+    moment the run lands. So today the live guard is the gated floor; a corpus consistent on its floor
+    folds even with no verdict trace committed, and the autonomous loop is never halted on a run that
+    nothing yet invokes."""
+    gloss = _corpus_glossary(root)
+    if gloss is None:
+        return None                                        # no live corpus to hold the language to step
+    orphan = _orphan_term(gloss, _corpus_other(root))
+    if orphan:
+        return (f"decision — vocabulary: the live corpus no longer uses the defined term "
+                f"'{orphan}' — define / waive / dismiss. A defined term fallen out of use is the "
+                f"glossary out of step with the language; the fold is held until you settle it.")
+    return None                                            # watched half held not-yet (non-blocking) until its run lands
+
+
+def _orphan_term(gloss: str, other: str) -> str | None:
+    """The first defined term the live corpus no longer uses, or None. A term is **used** when every
+    significant word of its headword appears (as a substring, so inflections count) somewhere in the
+    corpus other than the term's **own** glossary definition line. The corpus is the whole live language
+    — the glossary's other entries (a cross-reference is use), intent.md, and the spec — so the floor
+    catches only a term gone wholly dead, the dispositive set-difference, never a readability metric."""
+    lines = gloss.splitlines()
+    heads = [(i, m.group(1)) for i, ln in enumerate(lines)
+             if (m := re.match(r"\s*-\s+\*\*(.+?)\*\*", ln))]
+    for i, head in heads:
+        text = _vocab_norm(other + "\n" + "\n".join(ln for j, ln in enumerate(lines) if j != i))
+        if not all(w in text for w in _vocab_words(head)):
+            return head
+    return None
+
+
+def _corpus_glossary(root: str | None) -> str | None:
+    f = os.path.join(_corpus_dir(root), "glossary.md")
+    return open(f, encoding="utf-8", errors="ignore").read() if os.path.isfile(f) else None
+
+
+def _corpus_other(root: str | None) -> str:
+    """The live corpus minus the glossary — intent.md and every spec/<cap>.md — the prose the gated
+    floor reads a defined term's use against (the glossary's own entries are added back per-term)."""
+    base, parts = _corpus_dir(root), []
+    intent = os.path.join(base, "intent.md")
+    if os.path.isfile(intent):
+        parts.append(open(intent, encoding="utf-8", errors="ignore").read())
+    sp = spec.spec_dir(root)
+    if os.path.isdir(sp):
+        parts += [open(os.path.join(sp, f), encoding="utf-8", errors="ignore").read()
+                  for f in sorted(os.listdir(sp)) if f.endswith(".md")]
+    return "\n".join(parts)
+
+
+def _corpus_dir(root: str | None) -> str:
+    return os.path.dirname(spec.spec_dir(root))
+
+
+def _vocab_norm(s: str) -> str:
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", s.lower()))
+
+
+def _vocab_words(s: str) -> list[str]:
+    return [w for w in _vocab_norm(s).split() if w not in _VOCAB_STOP and len(w) >= 3]
 
 
 def accepted(rel: str, lines: int, root: str | None) -> bool:

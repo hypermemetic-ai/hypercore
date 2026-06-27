@@ -11,10 +11,16 @@ role **hand-faked** without running it (`forge`), and read whether the gate fold
 refuses the fake. The root is seeded with the real spec and ambient (`ENGINE_ROOT`), so a worker
 crossing, a contest, and the accept seam's durable commit assemble exactly as in production.
 
-A capability with no world module fails honestly; this one carries folding-conditions' length and
-provenance vocabulary. New provenance behavior that needs the brand-new `provenance` seam is lazily
-imported inside its verb — absent at the fork base, present at the tip — the watched-residue shape the
-self-model's new-verb hardening names.
+The **watched-evidence** verbs (`watched-run` / `provenance`) plant a watched mechanism's run on a node
+— a committed verdict vs a skipped run — and read the gate's capability-agnostic presence trail over it.
+The **vocabulary** verbs (`orphan` / `corpus` / `gate` / `spec`) plant a corpus the fold's vocab guard
+reads: an orphan defined term the gated floor names and holds the fold on, or a consistent corpus that
+folds on its live floor — the watched half held not-yet (non-blocking) until its dedicated run is built.
+
+A capability with no world module fails honestly; this one carries folding-conditions' length,
+provenance, watched-evidence, and vocabulary vocabulary. New behavior that needs a brand-new `provenance`
+seam is lazily imported inside its verb — absent at the fork base, present at the tip — the
+watched-residue shape the self-model's new-verb hardening names.
 """
 from __future__ import annotations
 
@@ -81,6 +87,7 @@ class World(_Base):
         _git(self.fence, "add", "-A"); _git(self.fence, "commit", "-qm", "base")     # the fork base (HEAD~1)
         self._dirty = self._final = False
         self.result = self.node = self.selection = None
+        self.vocab_node = self.vrun_node = None            # the vocabulary guard's node, and the watched run's
 
     # ── length fixture verbs ─────────────────────────────────────────────────────
     def _v_grow(self, args: list[str]) -> tuple[bool, str]:
@@ -154,6 +161,40 @@ class World(_Base):
         self.selection = design.design_twice(self.node, _BRIEFS[:int(args[0])], _design_transport(), self.root)
         return True, ""
 
+    # ── watched-evidence + vocabulary fixture verbs ──────────────────────────────
+    def _v_watched_run(self, args: list[str]) -> tuple[bool, str]:
+        """watched-run <committed-verdict|no-verdict> — a watched mechanism's run on a node: it commits
+        its verdict trace (the present-trail baseline) or leaves none (the skipped run the gate catches).
+        Capability-agnostic — a generic `watched-demo` mechanism, never any one capability's content."""
+        from .. import provenance
+        self.vrun_node = tree.file_intent("a watched mechanism's run on its node")
+        if args[:1] == ["committed-verdict"]:
+            provenance.commit_verdict(self.vrun_node, "watched-demo",
+                                      "a model verdict no fixture re-derives", self.root)
+            return True, ""
+        if args[:1] == ["no-verdict"]:
+            return True, ""                                # the run was skipped — no trace committed
+        return False, f"unknown watched-run kind {' '.join(args)!r}"
+
+    def _v_orphan(self, args: list[str]) -> tuple[bool, str]:
+        """orphan glossary-term <term> — plant a controlled minimal corpus whose glossary defines <term>
+        the corpus never uses, so the gated floor's set-difference names it; and a node to fold over."""
+        if args[:1] != ["glossary-term"] or len(args) < 2:
+            return False, f"unknown orphan assertion {' '.join(args)!r}"
+        term = args[1]
+        self._minimal_corpus(f"# glossary\n\n- **{term}** — a defined concept the corpus names nowhere\n")
+        self.vocab_node = tree.file_intent("a fold the vocabulary check guards")
+        return True, ""
+
+    def _v_corpus(self, args: list[str]) -> tuple[bool, str]:
+        """corpus consistent — a controlled minimal corpus whose glossary defines only a term the corpus
+        does use (the gated floor finds no orphan); and a node the vocabulary check guards."""
+        if args[:1] != ["consistent"]:
+            return False, f"unknown corpus assertion {' '.join(args)!r}"
+        self._minimal_corpus("# glossary\n\n- **guard** — a folding condition the system evaluates\n")
+        self.vocab_node = tree.file_intent("a fold over a consistent corpus")
+        return True, ""
+
     # ── provenance assertion verbs ───────────────────────────────────────────────
     def _v_gate(self, args: list[str]) -> tuple[bool, str]:
         """gate <held|folds> [because <word|provenance> …] [names <path> …] — the real gate's verdict on
@@ -195,11 +236,23 @@ class World(_Base):
         return (True, "") if reason is None else (False, f"expected the fold, but: {reason}")
 
     def _v_provenance(self, args: list[str]) -> tuple[bool, str]:
-        """provenance attests-presence — the gate attests the real record's trail is present and a
-        trail-less forge's is absent: the structural verdict, the boundary of what it can say."""
+        """provenance <attests-presence | attests present | refuses no-trail> — the gate's structural
+        verdict. `attests-presence`: the real record's trail is present and a trail-less forge's absent.
+        `attests present` / `refuses no-trail`: the watched-evidence trail over the watched run's node —
+        a committed verdict is present, a skipped run's is refused with the flat `no trail`."""
+        from .. import provenance
+        if args == ["attests", "present"]:
+            if self.vrun_node is None:
+                return False, "attest read before a watched run"
+            r = provenance.watched_trace(self.vrun_node, "watched-demo", self.root)
+            return (True, "") if r is None else (False, f"the committed verdict was not attested present: {r}")
+        if args == ["refuses", "no-trail"]:
+            if self.vrun_node is None:
+                return False, "refuse read before a watched run"
+            r = provenance.watched_trace(self.vrun_node, "watched-demo", self.root)
+            return (True, "") if r and "no trail" in r.lower() else (False, f"expected a no-trail refusal, got {r!r}")
         if args != ["attests-presence"]:
             return False, f"unknown provenance assertion {' '.join(args)!r}"
-        from .. import provenance
         guard = os.environ.pop(_GATE_GUARD, None)
         try:
             present = provenance.attest(self.result, self.root).present
@@ -262,9 +315,22 @@ class World(_Base):
             i += 2 if key in ("because", "names") else 1
         return True, ""
 
+    def _minimal_corpus(self, glossary: str) -> None:
+        """Replace the seeded corpus with a controlled minimal one the gated floor reads — `glossary`,
+        a one-line folding-conditions stub (so the fixture delta still applies), and no other prose — so
+        the only defined-vs-used relation is the one the scenario plants."""
+        sp = os.path.join(self.root, "spec")
+        shutil.rmtree(sp, ignore_errors=True)
+        _write(os.path.join(sp, "folding-conditions.md"), "# folding-conditions\n\nThe guards.\n")
+        _write(os.path.join(self.root, "glossary.md"), glossary)
+        intent = os.path.join(self.root, "intent.md")
+        if os.path.isfile(intent):
+            os.remove(intent)
+
     def _verdict(self) -> str | None:
         self._finalize()
-        return conditions.material_unmet(_Result("scenario fixture", self._delta(), self.fence), self.root)
+        return conditions.material_unmet(_Result("scenario fixture", self._delta(), self.fence),
+                                         self.root, self.vocab_node)
 
     def _fold_verdict(self) -> str | None:
         """The full fold's verdict over the planted record, the gate guard cleared so the derived
