@@ -321,3 +321,29 @@ folds. The check is scoped to the live corpus the fold would publish.
   corpus consistent
   gate folds
   ```
+
+### Requirement: the vocabulary check is its own condition module
+The vocabulary / glossary-consistency check MUST live in its **own module** and be **called** by the
+folding gate exactly as the depth, provenance, and delta conditions are — one module per condition, with
+no inlined exception. The gate module composes the vocabulary condition by calling it the same way
+`material_unmet` already calls `provenance` and `delta.check`; the gate module MUST NOT carry the check's
+body. The extracted module owns the **whole** check — the glossary-corpus assembly it reads (the
+glossary, `intent.md`, and the spec traversal) included — so no second corpus reader appears, and the
+check takes only the live **corpus root** it needs, never the dead sibling-gate parameters a shared
+signature forced onto a check that reads only the corpus. The vocabulary condition is a **folding
+condition only**: its watched semantic half stays held-not-yet and no standing scan is added this pass.
+The gate module then coheres around the length/depth signal and its accepted-length ledger alone.
+
+#### Scenario: the vocabulary guard is reached as its own module
+- WHEN a fold runs the folding conditions over a corpus whose glossary defines a term the corpus no
+  longer uses
+- THEN the vocabulary guard's verdict is produced by the dedicated vocabulary module the gate **calls** —
+  a sibling of the depth and provenance conditions, absent from the gate module's own body — and that
+  verdict still holds the fold naming the orphaned term, so the one-module-per-condition pattern holds
+  with no inlined exception
+
+  ```check
+  orphan glossary-term widget
+  vocabulary is-its-own-module
+  gate held because vocabulary names widget
+  ```

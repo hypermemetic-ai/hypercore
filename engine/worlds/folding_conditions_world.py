@@ -13,9 +13,8 @@ crossing, a contest, and the accept seam's durable commit assemble exactly as in
 
 The **watched-evidence** verbs (`watched-run` / `provenance`) plant a watched mechanism's run on a node
 — a committed verdict vs a skipped run — and read the gate's capability-agnostic presence trail over it.
-The **vocabulary** verbs (`orphan` / `corpus` / `gate` / `spec`) plant a corpus the fold's vocab guard
-reads: an orphan defined term the gated floor names and holds the fold on, or a consistent corpus that
-folds on its live floor — the watched half held not-yet (non-blocking) until its dedicated run is built.
+The **vocabulary** verbs (`orphan` / `corpus` / `vocabulary` / `gate` / `spec`) plant a corpus the
+fold's vocab guard reads and assert that its verdict comes through the dedicated condition module.
 
 A capability with no world module fails honestly; this one carries folding-conditions' length,
 provenance, watched-evidence, and vocabulary vocabulary. New behavior that needs a brand-new `provenance`
@@ -194,6 +193,37 @@ class World(_Base):
         self._minimal_corpus("# glossary\n\n- **guard** — a folding condition the system evaluates\n")
         self.vocab_node = tree.file_intent("a fold over a consistent corpus")
         return True, ""
+
+    def _v_vocabulary(self, args: list[str]) -> tuple[bool, str]:
+        """vocabulary is-its-own-module — the gate reaches the vocabulary verdict through
+        `engine.vocabulary.check(root)`, whose public signature is only the corpus root."""
+        if args != ["is-its-own-module"]:
+            return False, f"unknown vocabulary assertion {' '.join(args)!r}"
+        import inspect
+        from .. import vocabulary
+        if list(inspect.signature(vocabulary.check).parameters) != ["root"]:
+            return False, "vocabulary.check does not take only the corpus root"
+        src = inspect.getsource(conditions)
+        if "def _vocabulary" in src or "_corpus_glossary" in src or "_orphan_term" in src:
+            return False, "conditions.py still carries the vocabulary check body"
+        if "vocabulary.check(root)" not in inspect.getsource(conditions.material_unmet):
+            return False, "material_unmet does not call the vocabulary condition module"
+        self._finalize()
+        prior = vocabulary.check
+        seen = {}
+        def fake(root=None):
+            seen["root"] = root
+            return "decision — vocabulary: sentinel widget"
+        vocabulary.check = fake
+        try:
+            reason = conditions.material_unmet(_Result("scenario fixture", self._delta(), self.fence),
+                                               self.root, self.vocab_node)
+        finally:
+            vocabulary.check = prior
+        if seen.get("root") != self.root:
+            return False, "the gate did not hand vocabulary.check the live corpus root"
+        return ((True, "") if reason == "decision — vocabulary: sentinel widget"
+                else (False, f"the gate did not return vocabulary.check's verdict: {reason!r}"))
 
     # ── provenance assertion verbs ───────────────────────────────────────────────
     def _v_gate(self, args: list[str]) -> tuple[bool, str]:

@@ -1,44 +1,16 @@
-"""The folding conditions — the engineering standards made structural.
+"""The folding gate and its depth signal.
 
-The standards that keep the model from drifting into a god-file of tangled code
-bite only because each is a *folding condition* in hypercore's
-existing sense: the thing that lets a tree fold. Advice can be ignored; a folding
-condition cannot. This module is the gate, run at the archive stage before the merge.
+The gate composes the condition modules that own their own knowledge: `delta.check`,
+`vocabulary.check`, and provenance's reachability / red→green verdicts. This module
+keeps the length/depth condition and the accepted-length ledger, because that is
+the one live authored state the depth signal reads and writes.
 
-Two conditions are **non-negotiable facts** — they refuse the fold automatically, because
-there is nothing to judge:
-
-- **the spec delta applies** — the delta the tree carries lands cleanly on the
-  current spec. (Owned by the self-model; re-checked here so the gate gives one verdict.)
-- **the scenario gate** — a behavior change folds only when the **architect-authored scenarios**
-  of the capabilities it touches go red→green: failing at the fork base (the behavior was not yet
-  built), passing at the tip. The oracle is the self-model's own account of the behavior, run by the
-  side that does not build it — not a loop the worker records about its own work. The mechanism lives
-  in `scenario`; this module asks it for a verdict. A correct narrative with no executed scenario is
-  the failure this kills.
-
-The third condition is a **judgment**, and so it is shaped differently (re-grounded in
-Ousterhout — `spec/depth.md`):
-
-- **depth** — the criterion is a *deep module*: a lot of behavior behind a small interface.
-  Length is not the criterion; it is one **signal** of it, kept for a reason Ousterhout
-  doesn't address and that survives his objection — every line is context an agent must
-  load, so length is a fair proxy for a module's **context cost**. A source file the tree
-  created or grew past the length signal does **not** auto-refuse (length is a signal, not a
-  verdict). It **raises a decision** — re-cut / deepen / accept-with-reason — which
-  `communication.integrate` puts on the operator's queue. The fold is held until that decision
-  is settled; it is never silently refused and never silently passed.
-
-**There is no second, higher length ceiling that auto-refuses.** A ceiling at
-any number would be the very thing this re-grounding removes — a number standing in for the
-judgment of depth — and would force back the escape hatch it deletes. Length raises a
-decision across its whole range; judgment and the operator carry it. The anti-dilution
-guarantee still holds: over-signal material is *un-foldable* until the operator settles the
-decision — stronger than the old coincidental-acceptance escape, not weaker.
-
-The model-driven red-flag **module depth judgment** (is it actually shallow?) is the
-architecture review's standing job to grow and is not yet built; this slice ships
-the mechanical scaffold — length raises the decision, the operator judges depth — honestly.
+Length is not the criterion; a **deep module** is. Length is only a context-cost
+signal: a source file the tree created or grew past the signal raises a decision
+-- re-cut / deepen / accept-with-reason -- and the fold is held until that
+decision is settled. There is no second ceiling that auto-refuses; a number never
+stands in for the judgment of depth. The model-driven module-depth verdict is
+still the architecture review's standing job to grow, not a threshold here.
 """
 from __future__ import annotations
 
@@ -46,7 +18,7 @@ import os
 import re
 import subprocess
 
-from . import delta, spec
+from . import delta, spec, vocabulary
 from .record import atomic_write, transact
 
 # The length signal. Past this many lines a touched source file raises a
@@ -79,16 +51,15 @@ def unmet(result, root: str | None = None, node=None) -> str | None:
 
 
 def material_unmet(result, root: str | None = None, node=None) -> str | None:
-    """The **material** folding conditions — the delta applies, the depth signal is met, and the
-    **authored** records' provenance trail is reachable — judged in-process over a result's own delta,
-    worktree, and node, without the base/tip re-derivation. This is the seam the scenario binding asserts
-    against: a capability's `gate`/`spec` scenario reads the gate's verdict on planted material here, so a
-    scenario can never recurse into the scenario gate that runs scenarios. `unmet` is this plus the
-    derived (re-derivation) trail."""
+    """The **material** folding conditions — delta, depth, vocabulary, and authored provenance —
+    judged in-process over a result's own delta, worktree, node, and live corpus, without the base/tip
+    re-derivation. This is the seam the scenario binding asserts against: a capability's `gate`/`spec`
+    scenario reads the gate's verdict on planted material here, so a scenario can never recurse into the
+    scenario gate that runs scenarios. `unmet` is this plus the derived (re-derivation) trail."""
     from . import provenance
     d = delta.parse(result.delta)
     sp = spec.read_spec(root)
-    return (_delta(d, sp) or _depth(result, root) or _vocabulary(result, root, node)
+    return (_delta(d, sp) or _depth(result, root) or vocabulary.check(root)
             or provenance.reachability(result, root, node))
 
 
@@ -144,85 +115,6 @@ def _touched_py(tree: str) -> list[str]:
     out = subprocess.run(["git", "diff", "--name-only", "HEAD~1", "HEAD"], cwd=tree,
                          capture_output=True, text=True).stdout
     return [ln for ln in out.split() if ln.endswith(".py")]
-
-
-# The vocabulary check — communication's consistency standard, the fold's **second escalating guard**.
-# Scoped to the live corpus the fold would publish (glossary.md, intent.md, the spec). Two halves at the
-# two strengths a standard takes: a GATED floor (a defined term the corpus no longer uses, a string
-# set-difference, never a readability metric) that holds the fold now, and a WATCHED half (the dedicated
-# run's semantic verdict) that would ride the provenance gate's watched-evidence trail — but is held
-# NOT-YET, non-blocking, until the run that commits the verdict is built. No glossary in the published
-# corpus → no language to hold to step → inert.
-_VOCAB_STOP = {"the", "a", "an", "of", "and", "or", "to", "its", "it", "is", "in", "on", "as", "at", "by"}
-
-
-def _vocabulary(result, root: str | None, node) -> str | None:
-    """The vocabulary check guards the fold, a sibling of the depth guard. Its **gated** floor names a
-    term `glossary.md` defines that the live corpus no longer uses (a dispositive set-difference) and
-    **holds the fold** — the flat way a length past the signal does. Its **watched** half — the dedicated
-    run's semantic judgment (a defined concept under a synonym, the language casually expanded) — would
-    ride the provenance gate's watched-evidence trail (`provenance.watched_trace`), but the run that
-    commits that verdict is **not yet built**, so this half is held **not-yet**: non-blocking, named not
-    hidden (the spec records it, `spec/folding-conditions.md`), re-arming through the shared trail the
-    moment the run lands. So today the live guard is the gated floor; a corpus consistent on its floor
-    folds even with no verdict trace committed, and the autonomous loop is never halted on a run that
-    nothing yet invokes."""
-    gloss = _corpus_glossary(root)
-    if gloss is None:
-        return None                                        # no live corpus to hold the language to step
-    orphan = _orphan_term(gloss, _corpus_other(root))
-    if orphan:
-        return (f"decision — vocabulary: the live corpus no longer uses the defined term "
-                f"'{orphan}' — define / waive / dismiss. A defined term fallen out of use is the "
-                f"glossary out of step with the language; the fold is held until you settle it.")
-    return None                                            # watched half held not-yet (non-blocking) until its run lands
-
-
-def _orphan_term(gloss: str, other: str) -> str | None:
-    """The first defined term the live corpus no longer uses, or None. A term is **used** when every
-    significant word of its headword appears (as a substring, so inflections count) somewhere in the
-    corpus other than the term's **own** glossary definition line. The corpus is the whole live language
-    — the glossary's other entries (a cross-reference is use), intent.md, and the spec — so the floor
-    catches only a term gone wholly dead, the dispositive set-difference, never a readability metric."""
-    lines = gloss.splitlines()
-    heads = [(i, m.group(1)) for i, ln in enumerate(lines)
-             if (m := re.match(r"\s*-\s+\*\*(.+?)\*\*", ln))]
-    for i, head in heads:
-        text = _vocab_norm(other + "\n" + "\n".join(ln for j, ln in enumerate(lines) if j != i))
-        if not all(w in text for w in _vocab_words(head)):
-            return head
-    return None
-
-
-def _corpus_glossary(root: str | None) -> str | None:
-    f = os.path.join(_corpus_dir(root), "glossary.md")
-    return open(f, encoding="utf-8", errors="ignore").read() if os.path.isfile(f) else None
-
-
-def _corpus_other(root: str | None) -> str:
-    """The live corpus minus the glossary — intent.md and every spec/<cap>.md — the prose the gated
-    floor reads a defined term's use against (the glossary's own entries are added back per-term)."""
-    base, parts = _corpus_dir(root), []
-    intent = os.path.join(base, "intent.md")
-    if os.path.isfile(intent):
-        parts.append(open(intent, encoding="utf-8", errors="ignore").read())
-    sp = spec.spec_dir(root)
-    if os.path.isdir(sp):
-        parts += [open(os.path.join(sp, f), encoding="utf-8", errors="ignore").read()
-                  for f in sorted(os.listdir(sp)) if f.endswith(".md")]
-    return "\n".join(parts)
-
-
-def _corpus_dir(root: str | None) -> str:
-    return os.path.dirname(spec.spec_dir(root))
-
-
-def _vocab_norm(s: str) -> str:
-    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", s.lower()))
-
-
-def _vocab_words(s: str) -> list[str]:
-    return [w for w in _vocab_norm(s).split() if w not in _VOCAB_STOP and len(w) >= 3]
 
 
 def accepted(rel: str, lines: int, root: str | None) -> bool:
