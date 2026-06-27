@@ -191,16 +191,45 @@ class World(_Base):
         return True, ""
 
     def _v_stage_new_verb(self, args: list[str]) -> tuple[bool, str]:
-        """stage-new-verb <vacuous|real> — stage a fence whose tip introduces a brand-new domain verb
-        (its world fixture) for a capability and run the real scenario gate over it, capturing the
-        verdict for `gate` to read. `vacuous` writes a fixture that asserts nothing real; `real` writes
-        one that genuinely asserts the behavior. The new verb is base-runnable (its fixture needs no
-        engine seam absent at the base), so it is the case the hardened gate must reach."""
+        """stage-new-verb <vacuous|real|multicommit> — stage a fence and run the real scenario gate over
+        it, capturing the verdict for `gate` to read. `vacuous`/`real` introduce a brand-new domain verb
+        (vacuous asserts nothing, real asserts the behavior) to probe the new-verb adequacy hardening.
+        `multicommit` stages a worker that **self-commits**: its real build lands in one commit with a
+        trailing hand-off commit on top, so the fence tip's parent is the already-built tree, not the
+        fork base — the gate must run the base at the worker's *recorded* fork base or it false-refuses a
+        correct build."""
         mode = args[0]
-        if mode not in ("vacuous", "real"):
-            return False, f"unknown new-verb mode {mode!r}"
-        self._gate_verdict = _new_verb_fence.run_gate(mode)
-        return True, ""
+        if mode in ("vacuous", "real"):
+            self._gate_verdict = _new_verb_fence.run_gate(mode)
+            return True, ""
+        if mode == "multicommit":
+            self._gate_verdict = self._multicommit_gate()
+            return True, ""
+        return False, f"unknown new-verb mode {mode!r}"
+
+    def _multicommit_gate(self) -> str | None:
+        """Stage a self-committing worker and run the real gate. `_build('real')` makes a fence whose
+        fork base (C0) lacks the behavior and whose next commit (C1) builds it; a trailing hand-off
+        commit (C2) then sits on top, so `HEAD~1` is C1 — the already-built tree — not the fork base C0.
+        Run with the worker's *recorded* base (C0): the gate must run the base there (red) and the tip
+        green and fold. Reading the base as `HEAD~1` finds C1 already green and false-refuses. The guard
+        is cleared so the nested gate runs; the fence is dropped on the way out. The whole fixture lives
+        here (carried onto the base checkout) so its red→green is honest — only the engine differs."""
+        from .. import scenario, worker
+        fence = _new_verb_fence._build("real")             # C0 fork base (behavior absent) → C1 built tip
+        _new_verb_fence._write(os.path.join(fence, "RESULT.md"), "# worker result\nhand-off\n")
+        _new_verb_fence._commit(fence, "worker: result")    # C2 — the self-committing worker's tip is C1, not the fork
+        base = subprocess.run(["git", "rev-list", "--max-parents=0", "HEAD"], cwd=fence,
+                              capture_output=True, text=True).stdout.strip()        # C0, the recorded fork base
+        result = worker.WorkerResult("built it", _new_verb_fence._DELTA, fence)
+        result.base = base                                  # recorded, never inferred from the tip's parent
+        guard = os.environ.pop(scenario._GATE_GUARD, None)
+        try:
+            return scenario.gate(result, fence)
+        finally:
+            if guard is not None:
+                os.environ[scenario._GATE_GUARD] = guard
+            shutil.rmtree(fence, ignore_errors=True)
 
     # ── assertion verbs ──────────────────────────────────────────────────────────
     def _v_gate(self, args: list[str]) -> tuple[bool, str]:

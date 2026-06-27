@@ -118,6 +118,7 @@ class WorkerResult:
     worktree: str                                     # the fenced tree the work ran in (the gate runs its scenarios red→green here)
     code: dict[str, CodeFile] = field(default_factory=dict)  # the verified engine code the build touched, for the fold to land on main
     node_path: str = ""                               # the result's node folder, so an authored record on it (a design decision) is reachable to the provenance gate
+    base: str = ""                                    # the fork base — the commit the fence was cut from, so the gate runs the base there (not the tip's parent) and the capture spans the whole fork-base→tip range
 
 
 # ── the spec slice (assembled by construction; no worker runs without it) ─────
@@ -272,12 +273,13 @@ def apply(node: tree.Node, transport=None, root: str | None = None) -> WorkerRes
     is committed inside the worker's own tree — its commit reaching the record in isolation."""
     ctx = context(node, root)                          # no apply without the grounding
     fence = _tree_path(node, root or tree._root())
+    base = _head(fence)                                # the fork base — the fence HEAD before the worker builds
     transport = transport or worker_transport(fence)   # the live worker runs at its fence (step 5)
     obj = read(transport(prompt(node, ctx, root)), WORKER_SCHEMA)  # strict: a tagless reply surfaces, not a no-op (H3)
     report = obj["report"]
     refined = obj["delta"] or ctx.delta
     _record(fence, report, refined)                    # the worker's own commit, fenced
-    return WorkerResult(report, refined, fence, _capture_code(fence))  # the verified code, captured before teardown
+    return WorkerResult(report, refined, fence, _capture_code(fence, base), base=base)  # verified code, captured before teardown
 
 
 def run(node: tree.Node, transport=None, root: str | None = None):
@@ -336,15 +338,22 @@ def _branch(node: tree.Node, tag: str = "") -> str:
     return f"worker/{node.id}" + (f"-{tag}" if tag else "")
 
 
-def _capture_code(fence: str) -> dict[str, CodeFile]:
-    """Capture the engine code the worker built in its fence as a self-contained artifact — per engine
-    path its one commit touched, the byte-image it forked from (`base`, HEAD~1) and the verified bytes
-    it hands back (`tip`, the working tree). The fold content-replays the tip onto main and reads the
-    base for its staleness pre-check; no live fence is reached at fold time. Scoped to `engine/*.py` —
-    where hypercore's code lives — so the spec (folded via the delta), the derived channels
-    (re-rendered on fold), the node's own folder, and the `RESULT.md` scratch never cross as code. A
-    **read** of the fence, run unlocked: the verified bytes are taken into the hand-off, not the fence."""
-    names = subprocess.run(["git", "diff", "--name-only", "HEAD~1", "HEAD"], cwd=fence,
+def _head(fence: str) -> str:
+    """The fence's HEAD before the worker builds — the **fork base** the gate and `_capture_code` use,
+    robust to a self-committing worker (`spec/self-model.md`). Empty when the fence is not yet cut."""
+    if not os.path.isdir(fence):
+        return ""
+    r = subprocess.run(["git", "rev-parse", "HEAD"], cwd=fence, capture_output=True, text=True)
+    return r.stdout.strip() if r.returncode == 0 else ""
+
+
+def _capture_code(fence: str, base: str = "") -> dict[str, CodeFile]:
+    """The engine code the worker built — per `engine/*.py` path, `(base, tip)` byte-images over the
+    whole **fork-base→tip** range (`base`, else `HEAD~1`), so a self-committing worker's earlier commits
+    cross too. Replayed onto main at fold, the base read for staleness; only `engine/*.py` crosses as
+    code, never spec/channels/RESULT. A read of the fence, run unlocked — the verified bytes, not it."""
+    ref = base or "HEAD~1"
+    names = subprocess.run(["git", "diff", "--name-only", ref, "HEAD"], cwd=fence,
                            capture_output=True, text=True).stdout.split()
     code: dict[str, CodeFile] = {}
     for rel in names:
@@ -352,10 +361,10 @@ def _capture_code(fence: str) -> dict[str, CodeFile]:
             continue
         tip_path = os.path.join(fence, rel)
         tip = open(tip_path, encoding="utf-8").read() if os.path.isfile(tip_path) else None
-        shown = subprocess.run(["git", "show", f"HEAD~1:{rel}"], cwd=fence,
+        shown = subprocess.run(["git", "show", f"{ref}:{rel}"], cwd=fence,
                                capture_output=True, text=True)
-        base = shown.stdout if shown.returncode == 0 else None
-        code[rel] = CodeFile(base, tip)
+        base_bytes = shown.stdout if shown.returncode == 0 else None
+        code[rel] = CodeFile(base_bytes, tip)
     return code
 
 

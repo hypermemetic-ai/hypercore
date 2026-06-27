@@ -355,3 +355,28 @@ longer over-claims self-certification.
   stage-new-verb real
   gate folds
   ```
+
+### Requirement: the gate's fork base is the worker's recorded dispatch point, not the fence tip's parent
+The scenario gate MUST take its fork base from the **commit the worker's fence was cut from** — recorded
+at the worktree before the build and carried on the hand-off — never from `HEAD~1` of the fence tip,
+which is the fork base only when the worker adds exactly one commit (the scripted transport, whose single
+hand-off commit `_record` writes). A real coding agent **self-commits** its build, so the worker
+contributes more than one commit and the tip's parent is the agent's own already-built tree, not the
+fork; running the base there finds the scenarios already green — "already passed at the fork base" — and
+**false-refuses a correct build**, flattened to a `no trail` refusal. With the recorded base the gate
+runs the base at the true fork point however many commits the worker made, and the **captured code** the
+fold lands spans the whole fork-base→tip range, not only the tip's last commit (which for a
+self-committing worker is just the hand-off record, landing no engine code).
+
+#### Scenario: a self-committing worker's multi-commit build still transitions
+- WHEN a worker self-commits — its build lands in one commit with a trailing hand-off commit on top, so
+  the fence tip's parent is the already-built tree, not the fork base — and hands back its recorded fork
+  base
+- THEN the gate runs the base at that recorded fork point (red — the behavior absent) and the tip green,
+  so the build transitions red→green and folds; reading the base as the tip's parent would find it
+  already green and false-refuse
+
+  ```check
+  stage-new-verb multicommit
+  gate folds
+  ```

@@ -155,6 +155,11 @@ def gate(result, root: str | None = None) -> str | None:
     red→green; the worker records nothing the gate trusts. None when every touched capability
     transitioned (or carries no scenarios — watched, never faked).
 
+    The base is the worker's **recorded fork base** (`result.base`), the commit its fence was cut from —
+    never `HEAD~1` of the tip, which is the fork base only for a worker that adds exactly one commit. A
+    real coding agent self-commits its build, so the tip's parent is the agent's own already-built tree;
+    running the base there would find the scenarios already green and false-refuse a correct build.
+
     Each run carries the tip's **world fixtures** onto the checkout (`_world_source`) beside the tip's
     check source, so a brand-**new** verb already exists at the base run — base-red can then mean only that
     the behavior is genuinely absent, never that the verb was missing, and a vacuous fixture that asserts
@@ -163,12 +168,13 @@ def gate(result, root: str | None = None) -> str | None:
     (`spec/coherence.md`), never a structural guarantee silently assumed."""
     if os.environ.get(_GATE_GUARD):
         return None                                        # inside a base/tip run — never recurse
+    base_ref = getattr(result, "base", "") or "HEAD~1"     # the recorded fork base, never the tip's parent — a self-committing worker makes HEAD~1 its own already-built tree
     for cap in sorted({op.capability for op in delta.parse(result.delta).ops}):
         src = _check_source(cap, result.worktree)
         if not src:
             continue                                       # a capability with no scenarios is watched, not gated
         world = _world_source(cap, result.worktree)        # the tip's fixtures, carried onto the base so a new verb exists there
-        base = _run_at(src, world, cap, result.worktree, "HEAD~1")
+        base = _run_at(src, world, cap, result.worktree, base_ref)
         tip = _run_at(src, world, cap, result.worktree, "HEAD")
         if base is None or tip is None:
             return (f"the scenarios for {cap!r} could not run in the fence — a scenario that cannot "
