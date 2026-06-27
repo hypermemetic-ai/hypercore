@@ -221,10 +221,13 @@ status — the autonomy seam is built but the first autonomous run is still unve
 says so rather than implying green, derived from the watched-evidence trail's emptiness so it flips when
 the first run leaves its trace, never hand-set. The **gap** (wanted-but-not-built) renders distinctly
 from the **complexity debt** (built-but-weak) — the standing output of the architecture review
-(`architecture-review`), kept honest between folds — which the old view conflated. That map renders the
-system's **depth**, not merely its length: length is a context-cost signal against the threshold, and the
-model-driven red-flag depth assessment is recorded as not-yet-built, never fabricated. Readiness,
-as-built, gap, and complexity debt are all derived; only the vision is authored.
+(`architecture-review`), kept honest between folds — which the old view conflated. The gap is the **open
+work** read through the tree's one reader — the standing and in-flight units, never a second walk of the
+work folders. A decision awaiting the operator is a queue card, not gap. Whether a tree is folded is
+read from its location alone, never from a `state:` field a stale archive can contradict. That map
+renders the system's **depth**, not merely its length: length is a context-cost signal against the
+threshold, and the model-driven red-flag depth assessment is recorded as not-yet-built, never
+fabricated. Readiness, as-built, gap, and complexity debt are all derived; only the vision is authored.
 
 #### Scenario: the view is read
 - WHEN the operator opens the view
@@ -293,6 +296,19 @@ as-built, gap, and complexity debt are all derived; only the vision is authored.
   ```check
   read view
   gap-split
+  ```
+
+#### Scenario: the gap is the open work, not a decision on the queue
+- WHEN the view renders the gap with both a standing unit of open work and a decision awaiting the
+  operator open at once
+- THEN the gap surfaces the standing work and excludes the decision — the gap is the open work read
+  through the tree's one reader, not every non-folded node, so a queue card never reads as
+  wanted-but-not-built work
+
+  ```check
+  plant open-mix
+  read view
+  gap-is-work
   ```
 
 ### Requirement: the as-built, readiness, gap, and complexity debt are derived; only the vision is authored

@@ -69,9 +69,12 @@ class Node:
 
 # ── reading: scan work/ (its archive/ nested) recursively for tree folders ──
 
-def read_tree() -> list[Node]:
+def read_tree(root: str | None = None) -> list[Node]:
+    """Scan a tree root's `work/` for every tree folder. `root` defaults to `_root()`; a caller rooted
+    elsewhere (the harness-rooted operator view) passes its own, so the view reads through this one
+    reader instead of re-walking the disk — there is exactly one definition of the work tree."""
     out: list[Node] = []
-    _scan(os.path.join(_root(), "work"), "", out)
+    _scan(os.path.join(root or _root(), "work"), "", out)
     return sorted(out, key=lambda n: n.created)
 
 

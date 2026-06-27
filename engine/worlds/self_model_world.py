@@ -37,6 +37,8 @@ _RENAME_OLD = "the operator endorses with approve, cut, or explain"
 _RENAME_NEW = "the operator endorses with approve, cut, or explain in the window"
 _RENAME_COLLISION = "the queue is a view of awaiting nodes"
 _REMODELED = "The renamed requirement MUST carry the modified body."
+_PROBE_WORK = "PROBE-OPEN-WORK"                            # a standing unit, must surface in the gap
+_PROBE_CARD = "PROBE-DECISION"                             # a decision awaiting the operator, must not
 
 
 def _delta_text(cap: str, req: str) -> str:
@@ -169,17 +171,25 @@ class World(_Base):
         return True, ""
 
     def _v_plant(self, args: list[str]) -> tuple[bool, str]:
-        """plant machinery — plant two capabilities: one declaring a vision binding, one pure machinery
-        declaring none, so the view's per-capability vision is shown to be a derived binding."""
-        if args[0] != "machinery":
-            return False, f"unknown plant subject {args[0]!r}"
-        tree.atomic_write(os.path.join(self.root, "spec", "lighthouse.md"),
-            "# lighthouse\n<!-- vision: legibility -->\n\nA planted capability.\n\n"
-            "### Requirement: it shines\n#### Scenario: night\n- WHEN dark\n- THEN light\n")
-        tree.atomic_write(os.path.join(self.root, "spec", "boiler.md"),
-            "# boiler\n\nA planted machinery capability, declaring no vision.\n\n"
-            "### Requirement: it heats\n#### Scenario: cold\n- WHEN cold\n- THEN warm\n")
-        return True, ""
+        """plant <machinery|open-mix> — plant fixtures into the seeded root. `machinery` plants two
+        capabilities (one declaring a vision binding, one pure machinery declaring none) so the
+        per-capability vision is shown to be a derived binding. `open-mix` files one standing unit of
+        open work and raises one decision awaiting the operator, so the gap can be shown to surface the
+        open work and exclude the decision."""
+        mode = args[0]
+        if mode == "machinery":
+            tree.atomic_write(os.path.join(self.root, "spec", "lighthouse.md"),
+                "# lighthouse\n<!-- vision: legibility -->\n\nA planted capability.\n\n"
+                "### Requirement: it shines\n#### Scenario: night\n- WHEN dark\n- THEN light\n")
+            tree.atomic_write(os.path.join(self.root, "spec", "boiler.md"),
+                "# boiler\n\nA planted machinery capability, declaring no vision.\n\n"
+                "### Requirement: it heats\n#### Scenario: cold\n- WHEN cold\n- THEN warm\n")
+            return True, ""
+        if mode == "open-mix":
+            tree.file_intent(f"{_PROBE_WORK} a standing unit of open work")
+            tree.raise_card(f"{_PROBE_CARD} a decision awaiting the operator")
+            return True, ""
+        return False, f"unknown plant subject {mode!r}"
 
     def _v_watched_evidence(self, args: list[str]) -> tuple[bool, str]:
         """watched-evidence present — plant the committed watched-evidence trace a first autonomous run
@@ -371,6 +381,19 @@ class World(_Base):
     def _v_gap(self, args: list[str]) -> tuple[bool, str]:
         """gap — the view renders the gap between vision and as-built."""
         return (True, "") if self._view.gap else (False, "the view renders no gap")
+
+    def _v_gap_is_work(self, args: list[str]) -> tuple[bool, str]:
+        """gap-is-work — the gap surfaces the open work and excludes the decision awaiting the operator,
+        proving the view reads open work through the tree's one reader, not every non-folded node."""
+        # Catches: a view that re-walks the work tree itself and counts any non-folded node as gap,
+        # surfacing a queue card (or a grilling hold) as wanted-but-not-built work.
+        gap = "\n".join(self._view.gap)
+        if _PROBE_WORK not in gap:
+            return False, "the gap does not surface the open standing work"
+        if _PROBE_CARD in gap:
+            return False, ("the gap surfaces a decision awaiting the operator — the view is reading "
+                           "every non-folded node, not the open work the tree's one reader yields")
+        return True, ""
 
     def _v_readiness(self, args: list[str]) -> tuple[bool, str]:
         """readiness — the view renders the derived gated/watched standard list."""

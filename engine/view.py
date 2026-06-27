@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import os
 import re
-import subprocess
 from dataclasses import dataclass, field
 
 from . import tree, review, spec, scenario
@@ -107,48 +106,22 @@ def _live_status(root: str | None) -> str:
 
 
 def _has_watched_trace(root: str | None) -> bool:
-    base = root or tree._root()
-    tracked = subprocess.run(["git", "ls-files", "work"], cwd=base, capture_output=True, text=True)
-    if tracked.returncode == 0:
-        return any(line.endswith(".verdict.md") for line in tracked.stdout.splitlines())
-    work = os.path.join(base, "work")
-    if not os.path.isdir(work):
-        return False
-    for dirpath, dirs, files in os.walk(work):
-        dirs[:] = [d for d in dirs if d != "__pycache__"]
-        if any(f.endswith(".verdict.md") for f in files):
-            return True
-    return False
+    """A watched run leaves a `<mechanism>.verdict.md` in its node's folder (`provenance.commit_verdict`).
+    Read through the one tree reader — each node's folder, never a second walk of the work tree."""
+    return any(any(f.endswith(".verdict.md") for f in os.listdir(n.path))
+               for n in tree.read_tree(root))
 
 
 def _gap(root: str | None) -> list[str]:
-    open_work = _open_work(root)
+    """The wanted-but-not-built gap: the open work the tree's one reader yields — standing and in-flight,
+    a decision awaiting the operator excluded (it is a queue card, not gap) and foldedness read from
+    `Node.folded` (location), never a stale `state:` field."""
+    open_work = [_subject(n) for n in tree.work(tree.read_tree(root))]
     return open_work or ["no wanted-but-not-built gap — no open work"]
 
 
-def _open_work(root: str | None) -> list[str]:
-    base = os.path.join(root or tree._root(), "work")
-    if not os.path.isdir(base):
-        return []
-    out = []
-    for dirpath, dirs, files in os.walk(base):
-        dirs[:] = [d for d in dirs if d != "__pycache__"]
-        if f"{os.sep}archive{os.sep}" in dirpath + os.sep:
-            continue
-        if "intent.md" in files and not _done(os.path.join(dirpath, "intent.md")):
-            out.append(_intent_subject(os.path.join(dirpath, "intent.md")))
-    return out
-
-
-def _intent_subject(path: str) -> str:
-    text = open(path, encoding="utf-8", errors="ignore").read()
-    if text.startswith("---\n") and "\n---\n" in text[4:]:
-        text = text[text.find("\n---\n", 4) + 5:]
-    return " ".join(text.replace(tree.MARKER, "").split())[:120]
-
-
-def _done(path: str) -> bool:
-    return any(line.strip() == f"state: {tree.DONE}" for line in open(path, encoding="utf-8", errors="ignore"))
+def _subject(node: tree.Node) -> str:
+    return " ".join(node.text.split())[:120]
 
 
 def _is_gap(block: str) -> bool:
