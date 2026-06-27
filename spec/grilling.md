@@ -63,12 +63,17 @@ or answering in their own words, so they ratify far more often than they author.
   ```
 
 ### Requirement: a grilling pass yields the contract and the spec delta
-A resolved grilling pass MUST produce the operator-view entry — the contract the
-result is later validated against — and the spec delta the change will realize,
-authored by the architect against the concise specs its scan reaches. The delta's scenarios are the
-**executable checks** the change is gated by: the architect authors the WHEN/THEN and, where the
-behavior is mechanically checkable, the check block that turns it red→green — so the pass settles not
-only what to build but the oracle that will judge it, owned by the side that does not build it.
+A resolved grilling pass MUST produce the operator-view entry — the contract the result is later
+validated against — and the spec delta the change will realize, authored by the architect against the
+concise specs its scan reaches. The propose stage that authors the delta is **unconditional**: every ask
+that becomes work carries an architect-proposed delta, whatever door it entered through. The
+**interview** stays gated by the floor — an ask whose every decision is already determined files
+straight to standing work, ungrilled — but filing straight through does **not** skip the proposal: a
+below-floor ask still gets an architect-proposed delta authored for it as it files, so it reaches a
+worker with a delta and is build-ready, never deltaless. The delta's scenarios are the **executable
+checks** the change is gated by: the architect authors the WHEN/THEN and, where the behavior is
+mechanically checkable, the check block that turns it red→green — so the pass settles not only what to
+build but the oracle that will judge it, owned by the side that does not build it.
 
 #### Scenario: the pass resolves
 - WHEN the last grilling question is answered
@@ -82,4 +87,16 @@ only what to build but the oracle that will judge it, owned by the side that doe
   entry raised
   delta folds
   ratify spawns
+  ```
+
+#### Scenario: a below-floor ask still carries an architect-proposed delta
+- WHEN every decision a filed ask needs is already determined, so it files straight to standing work
+  with no interview
+- THEN it still carries an architect-proposed delta — the propose stage ran unconditionally, even with
+  no questions asked — so the ask reaches a worker with a delta and is build-ready, never deltaless
+
+  ```check
+  ask below-floor
+  filed standing
+  carries-proposed-delta
   ```

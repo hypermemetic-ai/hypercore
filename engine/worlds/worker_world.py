@@ -341,6 +341,81 @@ class World(_Base):
             return False, "the integrated work did not leave the work view"
         return True, ""
 
+    # ── the proposer layer: a worker applies only an architect-proposed delta ──
+    def _v_proposed(self, args: list[str]) -> tuple[bool, str]:
+        """proposed <cap>… — file a node whose architect-proposed delta names these capabilities (its
+        delta.md), then assemble its grounding; the handed delta IS the node's proposed delta."""
+        self.node = self._stage(self._handed(args)); self._assemble()
+        return True, ""
+
+    def _v_built(self, args: list[str]) -> tuple[bool, str]:
+        """built from-proposal — the worker's handed delta is exactly tree.proposed_delta(node), read
+        from the folder, never reconstructed. Catches: a _handed_delta that scans/rebuilds the delta."""
+        if args != ["from-proposal"]:
+            return False, f"unknown built assertion {' '.join(args)!r}"
+        proposed = tree.proposed_delta(self.node)
+        if proposed is None:
+            return False, "the node carries no proposed delta to build from"
+        if worker._handed_delta(self.node) != proposed or self.ctx is None or self.ctx.delta != proposed:
+            return False, "the handed delta is not the node's proposed delta — it was reconstructed"
+        return True, ""
+
+    def _v_unproposed(self, args: list[str]) -> tuple[bool, str]:
+        """unproposed — a hand-authored standing node with NO delta.md (door 2, never-proposed): written
+        by hand, not file_intent (which lands a proposal), to model an intent that never was proposed."""
+        tree.atomic_write(os.path.join(self.root, "work", "hand-authored-standing-node", "intent.md"),
+                          "---\nkind: ask\nstate: standing\nowner: operator\ncreated: 2026-06-27\n---\n"
+                          "a hand-authored standing node that never went through a propose stage\n")
+        self.node = tree.find("hand-authored-standing-node")
+        return ((True, "") if self.node is not None and not self.node.has_delta
+                else (False, "the unproposed node was not created deltaless"))
+
+    def _v_held(self, args: list[str]) -> tuple[bool, str]:
+        """held off-ready — the never-proposed node is held out of tree.ready, so it is never dispatched
+        or assembled. Catches: a tree.ready that drops the has_delta conjunct."""
+        if args != ["off-ready"] or self.node is None:
+            return False, "held read before unproposed, or unknown assertion"
+        return ((True, "") if self.node.id not in {n.id for n in tree.ready()}
+                else (False, "a node with no proposed delta is in the ready work — it would be dispatched"))
+
+    def _v_awaiting_delta(self, args: list[str]) -> tuple[bool, str]:
+        """awaiting-delta surfaced — the standing render marks the never-proposed node awaiting a proposed
+        delta (no card; the operator sees the gap). Catches: a render that shows it as ordinary work."""
+        if args != ["surfaced"]:
+            return False, f"unknown awaiting-delta assertion {' '.join(args)!r}"
+        nodes = tree.read_tree()
+        frame = "".join(t for row in render.main_body(nodes, -1) for t, _s in row)
+        if "awaiting a proposed delta" not in frame:
+            return False, "the render does not surface the deltaless node as awaiting a proposed delta"
+        return ((True, "") if not any(c.id == self.node.id for c in tree.cards(nodes))
+                else (False, "the deltaless node was raised as a card instead of standing work"))
+
+    def _v_trivial_proposed(self, args: list[str]) -> tuple[bool, str]:
+        """trivial-proposed ready — a node with an empty delta.md (a trivial proposal, distinct from
+        never-proposed) IS build-ready. Catches: a readiness that treats trivial as never-proposed."""
+        if args != ["ready"]:
+            return False, f"unknown trivial-proposed assertion {' '.join(args)!r}"
+        n = tree.file_intent("a node carrying a trivial architect proposal", delta="")
+        if tree.proposed_delta(n) != "" or not n.has_delta:
+            return False, "the trivial proposal did not land as an empty delta.md the node reads as carrying"
+        return ((True, "") if n.id in {r.id for r in tree.ready()}
+                else (False, "a trivially-proposed node is not build-ready — a trivial proposal is still a proposal"))
+
+    def _v_no_author_from_scratch(self, args: list[str]) -> tuple[bool, str]:
+        """no-author-from-scratch — no path foregrounds the whole spec for the worker to author its own
+        delta: _touched("") names no capability (the all-caps branch deleted), and the deltaless node
+        assembled foregrounds none with no 'full scan' instruction. Catches: the deleted fallbacks' return."""
+        sp = spec.read_spec(self.root)
+        if worker._touched("", sp) == {c.name for c in sp.capabilities}:
+            return False, "an empty delta still foregrounds every capability — the author-from-scratch branch survives"
+        if worker._touched("", sp):
+            return False, "an empty delta names a capability — it should name none"
+        ctx = worker.context(self.node, self.root)
+        prompt = worker.prompt(self.node, ctx, self.root)
+        if ctx.touched or "from the full scan" in prompt or "author it from" in prompt or "author the delta from" in prompt:
+            return False, "a deltaless node still foregrounds the spec or instructs authoring from a full scan"
+        return True, ""
+
     # ── internals ────────────────────────────────────────────────────────────
     def _assemble(self) -> None:
         self.ctx = worker.context(self.node, self.root)
@@ -375,9 +450,12 @@ class World(_Base):
         return (True, "") if reachable else (False, "the omitted glossary entry is not reachable in glossary.md")
 
     def _stage(self, handed: str) -> tree.Node:
-        node = tree.file_intent("a worker builds a change")
+        # The handed delta lands as the node's architect-proposed delta (delta.md) in one filing act, so
+        # _handed_delta reads it through tree.proposed_delta; grilling.md carries only the contract for
+        # the ask path (the delta's home is delta.md now, not the pass).
+        node = tree.file_intent("a worker builds a change", delta=handed)
         tree.atomic_write(os.path.join(node.path, "grilling.md"),
-                          grill._render(grill._Pass(0, [], "contract.", handed)))
+                          grill._render(grill._Pass(0, [], "contract.", "")))
         return node
 
     def _handed(self, caps: list[str]) -> str:

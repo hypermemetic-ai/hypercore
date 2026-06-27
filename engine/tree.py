@@ -66,6 +66,13 @@ class Node:
     def is_live(self) -> bool:
         return self.state == IN_FLIGHT and not self.folded
 
+    @property
+    def has_delta(self) -> bool:
+        # Build-readiness is a bare fact about the node's **own folder**: it carries `delta.md`, the
+        # architect-proposed delta. A trivial (empty) `delta.md` still counts — the proposal was made;
+        # only a never-proposed node (no `delta.md` at all) is held. No import into the tree to read it.
+        return os.path.isfile(os.path.join(self.path, "delta.md"))
+
 
 # ── reading: scan work/ (its archive/ nested) recursively for tree folders ──
 
@@ -108,7 +115,7 @@ def ready(nodes: list[Node] | None = None) -> list[Node]:
     pool = read_tree() if nodes is None else nodes
     open_states = (STANDING, IN_FLIGHT, GRILLING, AWAITING)
     blocked = {n.parent for n in pool if n.parent and not n.folded and n.state in open_states}
-    return [n for n in pool if n.is_standing and n.id not in blocked]
+    return [n for n in pool if n.is_standing and n.id not in blocked and n.has_delta]
 
 
 def work(nodes: list[Node] | None = None) -> list[Node]:
@@ -127,12 +134,37 @@ def children(parent_id: str, nodes: list[Node] | None = None) -> list[Node]:
     return [n for n in pool if n.parent == parent_id]
 
 
+def proposed_delta(node: Node) -> str | None:
+    """The node's architect-proposed delta, read from its own folder's `delta.md`. Three states the
+    readiness check and the worker's handed-delta read distinguish: **None** when the file is absent
+    (never proposed — the node is held out of the ready work), **""** when it is empty (a trivial
+    proposal — still proposed, build-ready), and the delta text when it is a real one. No import into
+    the tree to read it; the proposal is a fact about the folder the tree owns."""
+    path = os.path.join(node.path, "delta.md")
+    if not node.path or not os.path.isfile(path):
+        return None
+    with open(path, encoding="utf-8") as f:
+        return f.read()
+
+
 # ── mutations (each lands one intent.md and commits; a fold/cut moves the folder) ──
 
-def file_intent(ask: str) -> Node:
-    """Record the operator's captured intent as standing work — a new top-level tree."""
-    return _create(ask, "ask", STANDING, "operator", machine=False,
+def file_intent(ask: str, delta: str = "") -> Node:
+    """Record the operator's captured intent as standing work — a new top-level tree, landing its
+    `intent.md` and its architect-proposed `delta.md` in **one** act so the node and its proposal never
+    disagree (`tree.propose` is the writer for a proposal landed later). A trivial proposal is an empty
+    `delta`; the node is build-ready either way."""
+    return _create(ask, "ask", STANDING, "operator", machine=False, delta=delta,
                    message=f"file intent: {_subject(ask)}")
+
+
+def propose(node: Node, text: str) -> None:
+    """The one writer of a node's proposed delta: land `delta.md` in the node's folder as an atomic
+    write committed under the held line, staging exactly the node's own folder (the `_persist` transact
+    pattern). After it the node carries a proposed delta and reads as build-ready; the architect's
+    resolved or below-floor propose stage reaches the worker through this one seam."""
+    transact(lambda: atomic_write(os.path.join(node.path, "delta.md"), text),
+             [node.path], f"propose: {_subject(node.text)}")
 
 
 def raise_card(statement: str, kind: str = "decide", parent: str = "") -> Node:
@@ -212,14 +244,16 @@ def recover(node: Node) -> Node:
 # ── on-disk form: one folder per tree, its intent.md the legible record ─────
 
 @serialized
-def _create(text, kind, state, owner, machine, parent="", message="") -> Node:
+def _create(text, kind, state, owner, machine, parent="", message="", delta=None) -> Node:
     """Reserve a slug and land the new tree's intent.md as **one** act on the held line (C3). The
     slug is read off the live tree (`_slug`) and the folder written under the same line, so the
     read-the-taken-set → write-the-folder window is closed: two concurrent creations — two failing
     workers both raising a recovery card, say — can never compute the same slug and overwrite each
-    other's folder. Persisting under the same line that read the taken set is the reservation."""
+    other's folder. Persisting under the same line that read the taken set is the reservation. An
+    architect-proposed `delta` lands in the same act when one is given, so a node and its proposal
+    are written together and never disagree."""
     n = _new(text, kind, state, owner, machine, parent)
-    _persist(n, message)
+    _persist(n, message, delta)
     return n
 
 
@@ -297,12 +331,17 @@ def _relocate(node: Node) -> list[str]:
     return [src, dest]
 
 
-def _persist(node: Node, message: str) -> None:
+def _persist(node: Node, message: str, delta: str | None = None) -> None:
     # The write and its commit are one held act (`transact`): the line spans atomic_write → commit, so
     # no sibling's uncommitted change or live temp is visible to this commit's `git add`. The pathspec
     # is exactly this node's own folder — never a shared parent — so the commit stages only its own act.
-    transact(lambda: atomic_write(os.path.join(node.path, "intent.md"), _render(node)),
-             [node.path], message)
+    # An architect-proposed `delta` (when given) lands beside the intent.md in the same act, so a node
+    # is never written build-ready yet deltaless, nor the reverse.
+    def write() -> None:
+        atomic_write(os.path.join(node.path, "intent.md"), _render(node))
+        if delta is not None:
+            atomic_write(os.path.join(node.path, "delta.md"), delta)
+    transact(write, [node.path], message)
 
 
 def _fold(node: Node, message: str) -> Node:

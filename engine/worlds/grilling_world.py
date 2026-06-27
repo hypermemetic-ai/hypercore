@@ -30,6 +30,10 @@ _PRODUCTS = transport.emit(grill.PRODUCTS_SCHEMA, {
     "delta": ("## ADDED — communication\n### Requirement: a download arc names its source\n"
               "The arc MUST record where it pulls from.\n#### Scenario: an arc is set up\n"
               "- WHEN a download arc is filed\n- THEN its source is named")})
+_PROPOSE_DELTA = transport.emit(grill.PROPOSE_SCHEMA, {
+    "delta": ("## ADDED — communication\n### Requirement: a below-floor ask records its proposed change\n"
+              "The change MUST be recorded where the worker reads it.\n#### Scenario: it is proposed\n"
+              "- WHEN a below-floor ask files\n- THEN its architect-proposed delta is recorded")})
 
 
 class World(_Base):
@@ -52,9 +56,16 @@ class World(_Base):
 
     @staticmethod
     def _transport(floor: str):
-        """Route the floor prompt to its residual questions and the products prompt to the contract +
-        delta — the one transport `consider` and `advance` both call."""
-        return lambda prompt: _PRODUCTS if "grilling pass is resolved" in prompt else floor
+        """Route the floor prompt to its residual questions, the products prompt to the contract +
+        delta, and the now-unconditional propose prompt to a foldable architect-proposed delta — the one
+        transport `consider` and `advance` both call."""
+        def route(prompt: str) -> str:
+            if "grilling pass is resolved" in prompt:
+                return _PRODUCTS
+            if "authoring the spec delta this ask realizes" in prompt:
+                return _PROPOSE_DELTA
+            return floor
+        return route
 
     # ── fixture verbs ───────────────────────────────────────────────────────────
     def _v_ask(self, args: list[str]) -> tuple[bool, str]:
@@ -94,6 +105,15 @@ class World(_Base):
         if args[0] != "none":
             return False, f"unknown grilled assertion {args[0]!r}"
         return (True, "") if grill._load(self.node) is None else (False, "a grilling pass exists for the ask")
+
+    def _v_carries_proposed_delta(self, args: list[str]) -> tuple[bool, str]:
+        """carries-proposed-delta — the below-floor ask carries an architect-proposed delta in its own
+        folder (tree.proposed_delta is not None): the propose stage ran unconditionally, even with no
+        questions, so the ask reaches a worker build-ready, never deltaless."""
+        # Catches: a consider() regression where the below-floor branch files intent without running the
+        # propose stage, so a below-floor ask reaches dispatch with no delta.
+        return ((True, "") if tree.proposed_delta(self.node) is not None
+                else (False, "the below-floor ask carries no proposed delta — the propose stage did not run"))
 
     def _v_standing(self, args: list[str]) -> tuple[bool, str]:
         """standing none — no standing work appeared while the ask is grilled (the gate holds)."""

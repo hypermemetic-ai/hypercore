@@ -48,6 +48,7 @@ _TURN = {
                              {"say": "I am hypercore's architect.", "file": None, "card": None, "done": True}),
 }
 _FLOOR_CLEAR = transport.emit(grill.FLOOR_SCHEMA, {"questions": []})   # below the floor — it files straight through
+_PROPOSE_NONE = transport.emit(grill.PROPOSE_SCHEMA, {"delta": ""})    # the unconditional propose stage a below-floor filing now runs
 
 
 class World(_Base):
@@ -84,8 +85,15 @@ class World(_Base):
             return False, f"unknown speak shape {mode!r}"
         reply = _TURN[mode]
         self.thread = communication.Thread()
-        self.reply = communication.speak(self.thread, f"<operator: {mode}>",
-                                          lambda p: _FLOOR_CLEAR if "grilling pass" in p else reply)
+
+        def route(p: str) -> str:
+            if "grilling pass" in p:
+                return _FLOOR_CLEAR                          # below the floor — files straight through
+            if "authoring the spec delta this ask realizes" in p:
+                return _PROPOSE_NONE                         # the unconditional propose stage runs even below the floor
+            return reply
+
+        self.reply = communication.speak(self.thread, f"<operator: {mode}>", route)
         return True, ""
 
     def _v_hand_back(self, args: list[str]) -> tuple[bool, str]:

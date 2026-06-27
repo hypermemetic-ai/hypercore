@@ -245,6 +245,50 @@ The crossing is propose (architect) → apply (worker) → archive (architect), 
   handoff surfaces-malformed
   ```
 
+### Requirement: a worker applies only an architect-proposed delta, never authoring its own
+A worker MUST build only from the architect-proposed delta it is handed; it never authors its own
+delta from a full scan. The handed delta is the node's own **proposed delta** (`tree.proposed_delta`),
+the architect's product of the propose stage — read from the node's folder, not reconstructed by the
+worker. A node reaching dispatch with **no** architect-proposed delta MUST NOT build: it is held out of
+the ready work and surfaces to the operator as **awaiting a proposed delta**, never silently built from
+a whole-spec scan. The author-from-scratch fallback — a worker that, handed no delta, foregrounds every
+capability and authors its own scenarios, so the builder writes the oracle that clears its own fold — is
+**deleted, not guarded**: once every buildable node carries a proposed delta, that branch is
+unreachable, and an unreachable branch is removed, not left as a guarded path. A **trivial** proposed
+delta (an empty proposal, `delta.Delta.trivial`) is a valid architect proposal and its node is
+buildable; only the **never-proposed** node — no proposal at all — is the one held. This is the
+**proposer** layer of the integrity stack: the delta and its scenarios come from the architect, so the
+anti-self-judging invariant (`the worker applies and refines the delta the architect proposed`) cannot
+be bypassed by a deltaless dispatch.
+
+#### Scenario: a node with a proposed delta builds from it
+- WHEN a worker is dispatched a node carrying an architect-proposed delta that names a set of
+  capabilities
+- THEN its handed delta is exactly that proposed delta — read from the node, not reconstructed — and its
+  grounding marks exactly those capabilities, so it builds from the proposal and authors no delta of its
+  own
+
+  ```check
+  proposed worker communication
+  built from-proposal
+  grounding marks worker communication
+  ```
+
+#### Scenario: a node with no proposed delta is held, not built
+- WHEN a node reaches dispatch with no architect-proposed delta — a below-floor ask filed before any
+  propose stage, or a hand-authored standing node — and, separately, a node carrying a trivial proposal
+- THEN the never-proposed node is held out of the ready work and surfaces as awaiting a proposed delta,
+  with no path that foregrounds the whole spec for the worker to author its own delta from; the
+  trivially-proposed node is build-ready, since a trivial proposal is still an architect proposal
+
+  ```check
+  unproposed
+  held off-ready
+  awaiting-delta surfaced
+  trivial-proposed ready
+  no-author-from-scratch
+  ```
+
 ### Requirement: a worker's RESULT is trusted only by re-derivation, never by the fence the fold tears down
 A worker's RESULT and refined delta are a **derived** record, so the provenance gate MUST attest them by **re-deriving** the touched capability's scenarios red→green — failing at the fork base and passing at the tip in the fence, and re-verified on the merged tree — and MUST NOT rely on the worker's fence branch or commit as the trail: that fence is removed on every exit and the fold re-applies the delta as a fresh commit on main, so the worker commit is not even in main lineage (`a worker runs fenced in its own git worktree`; `folding lands the verified build's code on the merged tree, not only its spec`). A RESULT hand-authored without ever running a fenced worker leaves no red→green to re-derive — its scenarios do not transition — so it has **no trail** and MUST NOT fold: it is refused with `no trail — re-run the mechanism`, never an operator-waveable decision. This attests that the build **ran**; whether its scenarios test the property is deferred to `gate-vouches-for-the-new-verb`.
 

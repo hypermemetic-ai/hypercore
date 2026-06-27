@@ -1,6 +1,6 @@
 ---
 kind: ask
-state: standing
+state: done
 owner: operator
 created: 2026-06-24
 ---

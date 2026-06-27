@@ -46,6 +46,12 @@ def main_body(nodes: list[tree.Node], sel: int, width: int = 76) -> list[Row]:
         if n.is_live:
             rows.append([("  ⟳ ", LIVE), (_subject(n.text), CARD),
                          ("   a worker is on it", LIVE)])
+        elif n.is_standing and not n.has_delta:
+            # A standing node carrying no architect-proposed delta is not build-ready: it is held out of
+            # the ready work and surfaced here as awaiting a proposed delta — no card, the operator sees
+            # the gap (the autonomous build stays legible, never a silent author-from-scratch).
+            rows.append([("  · ", DIM), (_subject(n.text), DIM),
+                         ("   awaiting a proposed delta", TAG)])
         else:
             rows.append([("  · ", CARD), (_subject(n.text), CARD)])
 

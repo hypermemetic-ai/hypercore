@@ -39,6 +39,26 @@ own.
 - THEN it is derived by reading the folders and filtering by state, not from a separately maintained
   list; a grilling pass is read from its tree's `grilling.md`, never a scatter of question files
 
+### Requirement: a node is build-ready only when it carries an architect-proposed delta
+A node MUST carry an architect-proposed delta — recorded as `delta.md` in its own folder — to be
+build-ready. The proposal is a fact about the node's **own folder**: `has_delta` is the presence of that
+file, read with no import into the tree from grilling or delta — the readiness check stays a bare
+file-presence test the tree owns. The ready work is narrowed to nodes that carry a proposed delta, so a
+node with none is held out of scheduling and shown to the operator as **awaiting a proposed delta** —
+standing work, not yet ready, no card. The proposed delta is distinct in three states: **never proposed**
+(no `delta.md`) holds the node; a **trivial** proposal (an empty `delta.md`) and a **real** one
+(non-empty) are both proposed, so both are build-ready. The proposal has one writer
+(`tree.propose`, an atomic write-and-commit); intent MAY be filed with its proposed delta in a single act
+(`tree.file_intent(ask, delta=…)`), so a node and its proposal never disagree and no door lands a node
+that is build-ready yet deltaless.
+
+#### Scenario: a node carries its proposed delta in its own folder
+- WHEN intent is filed for a node together with an architect-proposed delta, and, separately, a node's
+  folder carries no `delta.md`
+- THEN the proposed-delta node lands its `delta.md` in its own folder, reads as carrying a delta, and is
+  in the ready work; the node with no `delta.md` is not in the ready work and surfaces as awaiting a
+  proposed delta
+
 ### Requirement: a mutation lands at once and the commit follows behind
 Every mutation MUST write one `intent.md` atomically (or move/remove one folder), so the act lands
 on disk the instant it is made; the durable commit follows behind and does not gate the act.

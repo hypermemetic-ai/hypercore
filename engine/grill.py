@@ -58,6 +58,20 @@ PRODUCTS = (
     "Write against the existing capabilities."
 )
 
+PROPOSE_SCHEMA = Envelope(
+    Tag("delta", "the spec-delta markdown the change realizes"),
+)
+
+PROPOSE = (
+    "You are hypercore's architect, authoring the spec delta this ask realizes — its proposal, the "
+    "change's executable contract, owned by the side that does not build it. Produce delta — the spec "
+    "delta the change realizes, markdown with `## ADDED|MODIFIED|REMOVED|RENAMED — <capability>` "
+    "sections over `### Requirement: <name>` blocks; a RENAMED block carries `→ <new name>`, and a "
+    "non-rename requirement block carries at least one `#### Scenario:` line with the check block that "
+    "turns the behavior red→green. Write against the existing capabilities. If the ask changes no "
+    "behavior, return an empty <delta>."
+)
+
 
 @dataclass
 class Question:
@@ -78,12 +92,15 @@ class _Pass:
 # ── the pass ─────────────────────────────────────────────────────────────────
 
 def consider(ask: str, transport=None) -> tuple[tree.Node, list[Question]]:
-    """Run the floor on a filed ask. Below it: file standing work, no questions. Above it: hold the
-    ask as its own tree and surface its first question on the queue (the held tree goes AWAITING)."""
+    """Run the floor on a filed ask. Below it: author the architect-proposed delta — the propose stage
+    is **unconditional** — and file standing work carrying it as its `delta.md`, no questions. Above it:
+    hold the ask as its own tree and surface its first question on the queue (the held tree goes
+    AWAITING). The interview is gated by the floor; the proposal is not — a below-floor ask still reaches
+    a worker with a delta, build-ready, never deltaless."""
     transport = transport or call
     questions = floor(ask, transport)
     if not questions:
-        return tree.file_intent(ask), []
+        return tree.file_intent(ask, delta=propose(ask, transport)), []
     held = tree.hold(ask)
     _save(held, _Pass(0, [{"q": q.text, "lean": q.lean, "flip": q.flip, "answer": ""}
                           for q in questions], "", ""))
@@ -107,6 +124,7 @@ def advance(held: tree.Node, answer: str, transport=None) -> tree.Node:
     entry, delta_text = products(held.text, [(q["q"], q["answer"]) for q in p.questions], transport)
     p.contract, p.delta = entry, delta_text
     _save(held, p)
+    tree.propose(tree.find(held.id) or held, delta_text)   # the resolved delta is the node's delta.md — the worker's read
     return tree.find(held.id) or held
 
 
@@ -135,6 +153,18 @@ def products(ask: str, qa: list[tuple[str, str]], transport=None) -> tuple[str, 
                     f"{instruction(PRODUCTS_SCHEMA)}")
     obj = read(raw, PRODUCTS_SCHEMA)
     return obj.get("entry", "").strip(), obj.get("delta", "").strip()
+
+
+def propose(ask: str, transport=None) -> str:
+    """The architect-proposed delta for an ask — the propose stage, run **unconditionally** so every ask
+    that becomes work carries a delta whatever door it entered through. Delta-only (the contract is the
+    interview's separate product): a below-floor ask gets its delta here with no question asked, so it
+    reaches a worker build-ready, never deltaless. The empty string is a trivial proposal — still a
+    proposal."""
+    transport = transport or call
+    raw = transport(f"{PROPOSE}\n\nThe ask: {ask}\n\n{instruction(PROPOSE_SCHEMA)}")
+    obj = read(raw, PROPOSE_SCHEMA)
+    return obj.get("delta", "").strip()
 
 
 # ── reading a card's pass: what the held tree currently shows on the queue ──
@@ -193,13 +223,6 @@ def contract(node: tree.Node) -> str:
 def delta_of(node: tree.Node) -> str:
     p = _load(node)
     return p.delta if p else ""
-
-
-def entry_of(node: tree.Node) -> tree.Node | None:
-    """The tree itself once its pass is resolved — the propose-stage product a worker reads for
-    its handed delta, and the architect later checks the result against."""
-    p = _load(node)
-    return node if (p and p.contract) else None
 
 
 def contract_of(node: tree.Node) -> str:

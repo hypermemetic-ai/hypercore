@@ -162,9 +162,9 @@ def prompt(node: tree.Node, ctx: WorkerContext, root: str | None = None) -> str:
         f"{depth_text}\n\n"
         f"The ask:\n{ask}\n\n"
         f"The handed delta (verify and refine it against the WHOLE spec):\n"
-        f"{ctx.delta or '(none — author it from the full scan)'}\n\n"
+        f"{ctx.delta or '(a trivial proposal — no requirement changes)'}\n\n"
         f"Your grounding — the capabilities the delta names, in full:\n"
-        f"{grounding or '(none named — author the delta from the full scan)'}\n\n"
+        f"{grounding or '(none — a trivial proposal foregrounds no capability)'}\n\n"
         f"The rest of the spec, indexed for your rescan — every other capability by its vision and "
         f"requirement titles, so you see the whole map and can catch one the delta mis-named or "
         f"missed. When your rescan implicates a capability, read its full body just-in-time from "
@@ -311,16 +311,16 @@ def run(node: tree.Node, transport=None, root: str | None = None):
 # ── internals ────────────────────────────────────────────────────────────────
 
 def _handed_delta(node: tree.Node) -> str:
-    entry = grill.entry_of(node)
-    return grill.delta_of(entry) if entry else ""
+    """The architect-proposed delta the worker applies — read from the node's own folder
+    (`tree.proposed_delta`), never reconstructed. Empty when the proposal is trivial; a worker is never
+    handed *no* delta, because a never-proposed node is held out of the ready work and never dispatched."""
+    return tree.proposed_delta(node) or ""
 
 
 def _touched(handed: str, sp: spec.Spec) -> set[str]:
-    """The capabilities a delta touches; with no handed delta, every capability — the
-    worker must scan flat to author one (you cannot tell what a change touches from a
-    single capability in isolation)."""
-    if not handed.strip():
-        return {c.name for c in sp.capabilities}
+    """The capabilities the handed delta names — its ops' capabilities. A worker is never handed no
+    delta (a deltaless node is held, never dispatched), so there is no author-from-scratch full scan to
+    fall back to: an empty (trivial) delta names no capability, and the prompt foregrounds none."""
     return {op.capability for op in delta.parse(handed).ops}
 
 
