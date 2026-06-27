@@ -67,3 +67,17 @@ legibility lives in the view (`operator-view-readiness`), and a blocking approva
 author-from-scratch fallback never opens a window of autonomy the operator cannot see. Design work
 remains; weigh in grilling, do not treat as a settled requirement. (See the matching note on
 `operator-view-readiness`.)
+
+## AX cross-reference — the orientation-cost symptom (machine, 2026-06-27)
+An agent-experience sweep of the worker prompt measured this fallback's other face. With no handed
+delta `worker._touched` foregrounds **every** capability body in full, so the assembled prompt is
+~38,884 tokens (the whole spec) against ~12,275 for a one-capability change — the orientation cost
+peaks exactly when the worker has the least direction. That length is a **symptom**; the load-bearing
+defect is the one this node already owns — with no architect-proposed delta the worker authors its own
+scenarios, so the builder writes the oracle that clears its own fold. Reachability confirmed both ways
+the body names: the below-floor ask (`grill.consider` → `tree.file_intent`, no `grilling.md`, no
+delta) and the hand-authored standing node. So the fix stays **delete the branch**, not shrink the
+prompt: once every buildable node carries an architect-proposed delta, the no-delta foregrounding is
+unreachable and goes with it. Touches the same seams as `work/worker-prompt-leads-with-the-task` and
+`work/worker-disciplines-become-a-loadable-skill` (`worker.py`, `spec/worker.md`) — each ADDs a
+distinct requirement rather than co-MODIFYing a shared one.
