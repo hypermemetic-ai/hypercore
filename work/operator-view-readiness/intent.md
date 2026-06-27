@@ -1,6 +1,6 @@
 ---
 kind: ask
-state: standing
+state: awaiting you
 owner: operator
 created: 1782190800
 ---
@@ -28,15 +28,12 @@ D5/D19 gated/watched/trace).
   status, and separates gap from complexity debt;
 - `python3 -m engine --check` carries an acceptance check for the new surface and is green.
 
-## To surface in grilling — a suggestion, not yet settled (design work remains)
-A coupling raised while grilling `worker-builds-proposed-delta`, filed here as input to weigh, not a
-requirement: that node would delete the worker's silent author-from-scratch fallback so a node never
-builds from a plan the architect did not propose. But deleting it only *relocates* the invisibility —
-from the worker's fallback to a `grilling.md` the operator would have to hunt for — unless the view
-makes an autonomous build **legible to the eye**: what is building, and the architect-proposed plan
-(delta) behind it, surfaced where the operator already looks, not filed where they must dig. The stake
-is **legibility, not control** — the operator wants to *see* an autonomous build, not *approve* it, so a
-blocking approval gate is the wrong tool (it charges approval-cost for a sight-problem). Consider whether
-this readiness surface should also carry a standing "what's building and why" view, and whether
-`worker-builds-proposed-delta` should sequence *after* it (view first). Open: what "at a glance"
-requires, and whether the live-build surface belongs to this node or its own.
+## Settled in grilling (2026-06-26) — the proposer↔view legibility coupling
+The coupling raised while grilling `worker-builds-proposed-delta` is **resolved: already homed**. The
+live "what's building and why" surface — an autonomous build and the architect-proposed plan (delta)
+behind it — is a standing-work-surface concern, not a readiness-surface one: intent §58/§60 already show
+a run as live work on the node that spawned it, with its plan kept as material on that node. So this node
+stays scoped to the three readiness additions, no live-build view is built here, and
+`worker-builds-proposed-delta` carries **no view precondition** (no sequencing dependency on this node).
+The pass — question, lean, flip, the operator's answer, and the contract + delta it produced — is in
+`grilling.md`.
