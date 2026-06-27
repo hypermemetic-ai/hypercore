@@ -22,8 +22,9 @@ import os
 import shutil
 import subprocess
 import tempfile
+import types
 
-from .. import design, render, transport, tree, worker
+from .. import conditions, design, render, transport, tree, worker
 from ..scenario import _git                                  # the worlds share the core's git helper
 from . import World as _Base
 
@@ -47,7 +48,7 @@ class World(_Base):
             _git(self.root, *cmd)
         tree.atomic_write(os.path.join(self.root, ".keep"), "")
         _git(self.root, "add", "-A"); _git(self.root, "commit", "-qm", "base")    # a HEAD for the fences to branch from
-        self.node = self.cands = self.sel = None
+        self.node = self.cands = self.sel = self.forged = None
         self._before_cards = 0
 
     # ── the prompt-routing transport ────────────────────────────────────────────
@@ -123,7 +124,12 @@ class World(_Base):
         return True, ""
 
     def _v_recorded(self, args: list[str]) -> tuple[bool, str]:
-        """recorded — the pick is recorded on the node as a structured, machine-owned design-decision."""
+        """recorded — the pick is recorded on the node as a structured, machine-owned design-decision
+        with its contest's candidate set behind it. After a bare `contest` (candidates live, no pick) it
+        selects and records over them; after `twice` the record already stands."""
+        if self.sel is None and self.cands is not None:
+            self.sel = design.select(self.node, self.cands, self._transport(None))
+            design.record(self.node, self.sel, self.root)
         path = os.path.join(self.node.path, "design-decision.md")
         if not os.path.isfile(path):
             return False, "no design-decision was recorded on the node"
@@ -131,6 +137,28 @@ class World(_Base):
         if "design-decision:" not in text or f"→ {self.sel.chosen}" not in text:
             return False, "the recorded pick is not a structured design-decision"
         return (True, "") if "[machine]" in text else (False, "the design-decision is not marked machine-owned")
+
+    def _v_forge(self, args: list[str]) -> tuple[bool, str]:
+        """forge design-decision — a pick hand-authored with the contest skipped: the decision line
+        alone, no candidate set, byte-indistinguishable from a real `design.record` output (the
+        fabrication already sitting retracted in `work/worker-builds-proposed-delta`). Overwrites the
+        recorded record, so the gate must refuse it for no trail — run the contest."""
+        if args != ["design-decision"]:
+            return False, f"unknown forge kind {' '.join(args)!r}"
+        tree.atomic_write(os.path.join(self.node.path, "design-decision.md"),
+                          "# design-it-twice: a shape [machine]\n\n"
+                          "design-decision: a shape → minimal — minimal is the deepest pick\n")
+        self.forged = types.SimpleNamespace(delta="# delta — trivial\n", worktree=self.node.path,
+                                            report="hand-authored pick, contest skipped",
+                                            node_path=self.node.path)
+        return True, ""
+
+    def _v_fold(self, args: list[str]) -> tuple[bool, str]:
+        """fold held because provenance — the fold refuses the contest-less decision (`no trail`),
+        reaching the node's design-decision.md for a candidate set and finding none."""
+        reason = conditions.unmet(self.forged, self.root)
+        held = bool(reason) and "no trail" in reason.lower()
+        return (True, "") if held else (False, f"expected a provenance refusal, got {reason!r}")
 
     def _v_card(self, args: list[str]) -> tuple[bool, str]:
         """card <none|decide> — the selection raised no operator card, or a decision card parented to

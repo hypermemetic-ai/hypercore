@@ -88,3 +88,17 @@ behavioral difference crosses to the operator.
   stake-crosses
   no-leak
   ```
+
+### Requirement: a recorded design decision carries reachability to its contest's candidate set
+The architect's recorded design decision (`design-decision: <subject> → <chosen> — <reason>`) is an **authored** record with no run to reproduce, so the provenance gate MUST attest it by **reachability** to the durable artifact a real contest commits — the **recorded candidate set** (the N briefed candidates and the comparison) in `design-decision.md` (`the architect selects machine-side and records the design decision`) — and MUST NOT rely on the candidate worktrees, which a real `design-it-twice` removes on exit (`a load-bearing interface decision is designed twice, in isolation`). A decision recorded with **no** candidate set reachable behind it — a role that skipped the contest and authored the pick, the byte-indistinguishable fabrication already sitting retracted in `work/worker-builds-proposed-delta/design-decision.md` — has **no trail** and MUST NOT fold: it is refused with `no trail — run the contest`, never an operator-waveable decision. Only the **structural** reachability (a contest's candidate set exists) is gated; the pick's **reason** is irreducibly creative and stays **watched**, never pretend-gated.
+
+#### Scenario: a contest-less design decision is refused
+- WHEN a design decision is recorded with no candidate set reachable behind it, and, separately, one whose candidate set a real contest committed
+- THEN the contest-less decision is refused at the gate (`no trail — run the contest`), while the one with a reachable candidate set folds, and the pick's reason is watched, not gated
+
+  ```check
+  contest 2
+  recorded
+  forge design-decision
+  fold held because provenance
+  ```

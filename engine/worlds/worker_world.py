@@ -1,19 +1,9 @@
-"""The worker scenario world — the system-facing half of the split, exercised over the real
-`worker.context`/`prompt`/`worktree`/`apply` and `communication.integrate` seams.
-
-The verbs name what the worker *is*, never the engine symbols beneath: `spawn <cap>…` files an ask
-whose handed delta names those capabilities and assembles the grounding; `grounding <property>` reads
-that grounding (the whole spec mapped — the touched capabilities foregrounded in full, every other
-carried as a high-signal index whose body is a checkout read away — the depth standards foregrounded,
-the long past-decision grounds *not* inlined but pointed at in `work/archive/`);
-`sharpen` rewrites the depth slice so `grounding renders` can prove the standards are single-sourced,
-not a frozen copy; `fence off-main`/`fence binds-cwd` prove the worktree isolation and
-the at-fence transport; `build` runs the whole crossing so `leak none` proves the raw report reaches
-no operator path and `integrates` proves the refined delta folds.
-
-Each block runs against an isolated root seeded with the real spec (so the grounding assembles exactly
-as in production). `build`/`fence` use a throwaway capability the delta touches, so the scenario gate
-stays inert — the worker capability's own red→green is the gate's concern, not the fixture's.
+"""The worker scenario world — the system-facing half of the split, over the real worker, integrate,
+and `conditions` seams. The verbs name what the worker *is*, never the engine symbols: `spawn`/
+`grounding` read the assembled grounding; `sharpen` proves the standards are single-sourced; `fence …`
+proves the worktree isolation and at-fence transport; `build`/`integrates`/`leak none` run the whole
+crossing; and `forge`/`fold` prove the provenance gate refuses a RESULT hand-authored with no fenced
+build (no re-derivable trail). Each block runs against an isolated root seeded with the real spec.
 """
 from __future__ import annotations
 
@@ -24,8 +14,8 @@ import subprocess
 import tempfile
 import re
 
-from .. import communication, grill, render, spec, transport, tree, worker
-from ..scenario import _git
+from .. import communication, conditions, grill, render, spec, transport, tree, worker
+from ..scenario import _GATE_GUARD, _git
 from . import World as _Base, scripted
 
 _REAL = tree._DEFAULT_ROOT
@@ -73,7 +63,7 @@ class World(_Base):
         if os.path.isfile(g):
             shutil.copy(g, os.path.join(self.root, "glossary.md"))
         _git(self.root, "add", "-A"); _git(self.root, "commit", "-qm", "base")
-        self.node = self.ctx = self.prompt = self.reply = None
+        self.node = self.ctx = self.prompt = self.reply = self.forged = None
         # Sentinels the worker's grounding is read against. They are world-owned and never authored into
         # a check block — the block's own text is part of the spec the worker's grounding carries, so a
         # sentinel named there would appear in the prompt via the spec and defeat the assertion.
@@ -318,6 +308,25 @@ class World(_Base):
         cards = "".join(c.text for c in nodes)
         return ((False, "the raw worker report reached a card, a render, or a node")
                 if self.raw in frame or self.raw in files or self.raw in cards else (True, ""))
+
+    def _v_forge(self, args: list[str]) -> tuple[bool, str]:
+        """forge result — a worker RESULT hand-authored with no fenced build: its derived red→green
+        cannot re-derive, so the provenance gate must refuse it for no trail."""
+        from .. import provenance                           # the brand-new seam — lazily, absent at the base
+        self.forged = provenance.forged_result(self.root)
+        return True, ""
+
+    def _v_fold(self, args: list[str]) -> tuple[bool, str]:
+        """fold held because provenance — the fold refuses the hand-authored RESULT (`no trail`); the
+        gate guard is cleared so re-derivation runs (the forge is no fence, so it cannot recurse)."""
+        guard = os.environ.pop(_GATE_GUARD, None)
+        try:
+            reason = conditions.unmet(self.forged, self.root)
+        finally:
+            if guard is not None:
+                os.environ[_GATE_GUARD] = guard
+        return ((True, "") if reason and "no trail" in reason.lower()
+                else (False, f"expected a provenance refusal, got {reason!r}"))
 
     def _v_integrates(self, args: list[str]) -> tuple[bool, str]:
         """integrates — the architect folded the worker's refined delta, and the work left the work view."""

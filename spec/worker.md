@@ -244,3 +244,17 @@ The crossing is propose (architect) → apply (worker) → archive (architect), 
   handoff round-trips
   handoff surfaces-malformed
   ```
+
+### Requirement: a worker's RESULT is trusted only by re-derivation, never by the fence the fold tears down
+A worker's RESULT and refined delta are a **derived** record, so the provenance gate MUST attest them by **re-deriving** the touched capability's scenarios red→green — failing at the fork base and passing at the tip in the fence, and re-verified on the merged tree — and MUST NOT rely on the worker's fence branch or commit as the trail: that fence is removed on every exit and the fold re-applies the delta as a fresh commit on main, so the worker commit is not even in main lineage (`a worker runs fenced in its own git worktree`; `folding lands the verified build's code on the merged tree, not only its spec`). A RESULT hand-authored without ever running a fenced worker leaves no red→green to re-derive — its scenarios do not transition — so it has **no trail** and MUST NOT fold: it is refused with `no trail — re-run the mechanism`, never an operator-waveable decision. This attests that the build **ran**; whether its scenarios test the property is deferred to `gate-vouches-for-the-new-verb`.
+
+#### Scenario: a hand-authored RESULT does not re-derive red→green and is refused
+- WHEN a RESULT is handed back that a role authored without a fenced build, and, separately, a RESULT carried by a real fenced build
+- THEN the hand-authored one fails to re-derive the touched scenarios red→green and is refused at the gate (`no trail`), while the real build re-derives and folds
+
+  ```check
+  build
+  integrates
+  forge result
+  fold held because provenance
+  ```

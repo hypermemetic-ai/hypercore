@@ -111,7 +111,7 @@ def integrate(node: tree.Node, result, transport=None, root: str | None = None) 
     incoherent raises a decision rather than folding. Depth surfaces to the operator as a
     decision, never a silent veto and never a silent pass."""
     transport = transport or call
-    blocked = conditions.unmet(result, root)           # the folding conditions, before the merge
+    blocked = conditions.unmet(result, root, node)     # the folding conditions (incl. provenance), before the merge
     if blocked:
         card = tree.raise_card(blocked, kind="decide", parent=node.id)
         return Reply(say="The result can't fold yet — a folding condition isn't met; "

@@ -65,26 +65,30 @@ SIGNAL = 400
 SLACK = 0.1
 
 
-def unmet(result, root: str | None = None) -> str | None:
+def unmet(result, root: str | None = None, node=None) -> str | None:
     """The first folding condition this tree's material fails to meet, or None when all are
-    met. `result` is the worker's hand-off (its delta, its worktree). The delta applies and the depth
-    signal are the **material** conditions, judged in-process; the **scenario gate** is the behavioral
-    proof — the architect-authored scenarios of the capabilities the change touches, run red→green in
-    the fence. The depth condition returns a *decision* (re-cut / deepen / accept), which the architect
-    raises on the operator's queue; the others refuse with a reason."""
-    from . import scenario                              # lazy: scenario reads conditions, so bind it at call time
-    return material_unmet(result, root) or scenario.gate(result, root)
+    met. `result` is the worker's hand-off (its delta, its worktree); `node` is its tree (so an
+    authored record's reachability — a design decision on the node — can be read). The delta applies, the
+    depth signal, and the **authored** provenance trails are the **material** conditions, judged
+    in-process; the **derived** provenance trail is the behavioral proof — the architect-authored
+    scenarios of the touched capabilities re-derived red→green in the fence (`provenance.derived` over
+    the scenario gate). The depth condition returns a *decision* (re-cut / deepen / accept), which the
+    architect raises on the operator's queue; the others refuse with a flat reason."""
+    from . import provenance                            # lazy: provenance reads conditions, so bind it at call time
+    return material_unmet(result, root, node) or provenance.derived(result, root)
 
 
-def material_unmet(result, root: str | None = None) -> str | None:
-    """The **material** folding conditions — the delta applies and the depth signal is met — judged
-    in-process over a result's own delta and worktree, without the base/tip scenario gate. This is the
-    seam the scenario binding asserts against: a capability's `gate`/`spec` scenario reads the gate's
-    verdict on planted material here, so a scenario can never recurse into the scenario gate that runs
-    scenarios. `unmet` is this plus that gate."""
+def material_unmet(result, root: str | None = None, node=None) -> str | None:
+    """The **material** folding conditions — the delta applies, the depth signal is met, and the
+    **authored** records' provenance trail is reachable — judged in-process over a result's own delta,
+    worktree, and node, without the base/tip re-derivation. This is the seam the scenario binding asserts
+    against: a capability's `gate`/`spec` scenario reads the gate's verdict on planted material here, so a
+    scenario can never recurse into the scenario gate that runs scenarios. `unmet` is this plus the
+    derived (re-derivation) trail."""
+    from . import provenance
     d = delta.parse(result.delta)
     sp = spec.read_spec(root)
-    return _delta(d, sp) or _depth(result, root)
+    return _delta(d, sp) or _depth(result, root) or provenance.reachability(result, root, node)
 
 
 def _delta(d: delta.Delta, sp: spec.Spec) -> str | None:
@@ -228,6 +232,35 @@ def _ledger(root: str | None) -> str:
     re-derived on fold like the channels. Reached only through `accepted_at` and `accept`, so the
     location is a hidden decision the rest of the system never names."""
     return os.path.join(os.path.dirname(spec.spec_dir(root)), "engine", "accepted-lengths.md")
+
+
+def working_accepted(root: str | None) -> set[tuple[str, int]]:
+    """Every `(path, @N)` accepted-length record in the **working-tree** ledger — what the depth gate
+    reads. The provenance gate diffs this against the committed ledger to find a record hand-appended
+    this fold (a working-tree line with no commit), the cooperating short-circuit it refuses."""
+    f = _ledger(root)
+    return _ledger_records(open(f, encoding="utf-8", errors="ignore").read()) if os.path.isfile(f) else set()
+
+
+def committed_accepted(root: str | None) -> set[tuple[str, int]]:
+    """Every `(path, @N)` accepted-length record **committed** to the ledger — the durable artifact the
+    one accept seam leaves (it writes and commits in one held act). A record present here either went
+    through the seam or was folded before the gate (grandfathered); a working-tree record absent here is
+    the un-committed forge with no trail."""
+    return _ledger_records(_committed_ledger(root))
+
+
+def _ledger_records(text: str) -> set[tuple[str, int]]:
+    return {rec for line in text.splitlines() if (rec := _depth_record(line))}
+
+
+def _committed_ledger(root: str | None) -> str:
+    """The committed ledger's text at HEAD, or empty when none is committed — read through git so the
+    durable record is what the seam's commit left, never the working tree the forge edits."""
+    base = os.path.dirname(spec.spec_dir(root))
+    r = subprocess.run(["git", "show", "HEAD:engine/accepted-lengths.md"], cwd=base,
+                       capture_output=True, text=True)
+    return r.stdout if r.returncode == 0 else ""
 
 
 def _depth_record(line: str) -> tuple[str, int] | None:

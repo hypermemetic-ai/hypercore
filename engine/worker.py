@@ -117,6 +117,7 @@ class WorkerResult:
     delta: str                                        # the refined spec delta the change realizes
     worktree: str                                     # the fenced tree the work ran in (the gate runs its scenarios red→green here)
     code: dict[str, CodeFile] = field(default_factory=dict)  # the verified engine code the build touched, for the fold to land on main
+    node_path: str = ""                               # the result's node folder, so an authored record on it (a design decision) is reachable to the provenance gate
 
 
 # ── the spec slice (assembled by construction; no worker runs without it) ─────
