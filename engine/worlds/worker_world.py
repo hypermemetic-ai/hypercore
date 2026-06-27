@@ -14,7 +14,7 @@ import subprocess
 import tempfile
 import re
 
-from .. import communication, conditions, grill, render, spec, transport, tree, worker
+from .. import communication, conditions, grill, machine_writing, render, spec, transport, tree, worker
 from ..scenario import _GATE_GUARD, _git
 from . import World as _Base, scripted
 
@@ -66,9 +66,7 @@ class World(_Base):
         self.node = self.ctx = self.prompt = self.reply = self.forged = None
         self.failure = ""                                      # the bare-crossing error the card must preserve
         self.no_delta_called = False                           # proves the missing-proposal refusal built nothing
-        # Sentinels the worker's grounding is read against. They are world-owned and never authored into
-        # a check block — the block's own text is part of the spec the worker's grounding carries, so a
-        # sentinel named there would appear in the prompt via the spec and defeat the assertion.
+        # World-owned sentinels read against the prompt; none are named in check blocks.
         self.raw = "<<RAW-WORKER-PROSE-Rx4 — machine-facing, must reach no operator path>>"
         self.grounds = "<<JIT-ARCHIVE-GROUNDS-Zx9 — long past-decision history, greped JIT, never preloaded>>"
         self.nonce = "<<DEPTH-SOURCE-NONCE-Qz7 — proves the depth grounding is rendered from its slice>>"
@@ -154,13 +152,8 @@ class World(_Base):
 
     # ── assertion verbs ──────────────────────────────────────────────────────
     def _v_grounding(self, args: list[str]) -> tuple[bool, str]:
-        """grounding <property> — read the worker's assembled grounding. Properties: `whole-spec` (the
-        prompt maps every capability — touched in full, the rest indexed — so the worker sees the whole
-        spec), `marks <cap>…`, `foregrounds <cap>` (the prompt inlines that capability's full body),
-        `indexes <cap>` (the prompt carries it as an index — its requirement titles, body NOT inlined),
-        `glossary-economical` (only foregrounded prose's glossary terms are inlined), `carries-depth`,
-        `holds-no-code`, `omits-grounds`, `points-to-archive`, `renders` (the last two read the world's
-        planted sentinels)."""
+        """grounding <property> — read the worker's assembled prompt and context for the grounding
+        economy, depth render, code omission, and archive pointer."""
         if self.ctx is None:
             return False, "grounding read before spawn/sharpen"
         prop = args[0]
@@ -221,11 +214,30 @@ class World(_Base):
         missing = [v for v in verbs if v not in worker.ENVELOPE]
         return (True, "") if not missing else (False, f"the worker envelope omits {missing}")
 
+    def _v_order(self, args: list[str]) -> tuple[bool, str]:
+        """order <ask-leads|envelope-last> — assert the worker prompt's one-pass layout."""
+        if args == ["ask-leads"]:
+            marks = ("The ask:", "The handed delta", "How you are held:", "Your standing disciplines",
+                     "Two facts about the shared record", "The depth standards")
+            pos = [self.prompt.find(m) for m in marks]
+            ok = all(p >= 0 for p in pos) and pos == sorted(pos)
+            return (True, "") if ok else (False, f"prompt order is wrong: {list(zip(marks, pos))}")
+        if args == ["envelope-last"]:
+            return ((True, "") if self.prompt.rstrip().endswith(worker.ENVELOPE.rstrip())
+                    else (False, "the reply envelope is not the prompt's final block"))
+        return False, f"unknown order assertion {' '.join(args)!r}"
+
+    def _v_signal(self, args: list[str]) -> tuple[bool, str]:
+        """signal worker-prose-sharpened — the targeted worker statements no longer trip the signal."""
+        if args != ["worker-prose-sharpened"]:
+            return False, f"unknown signal assertion {' '.join(args)!r}"
+        targets = {"a worker is grounded in its capability's spec slice, by construction",
+                   "a worker's RESULT is trusted only by re-derivation, never by the fence the fold tears down"}
+        bad = [s for s in machine_writing.signals(self.root) if s.cap == "worker" and s.requirement in targets]
+        return (True, "") if not bad else (False, f"targeted worker prose still flags: {bad}")
+
     def _v_handoff(self, args: list[str]) -> tuple[bool, str]:
-        """handoff <round-trips|surfaces-malformed> — the worker hand-off rides the tag envelope. A
-        report and a markdown delta (with #### headers and a fenced ```check block) read back
-        byte-for-byte with no escaping — the report-as-object crash is gone by construction; a reply
-        carrying none of the envelope's tags surfaces as malformed rather than folding a no-op (H3)."""
+        """handoff <round-trips|surfaces-malformed> — round-trip markdown and reject tagless replies."""
         if args[0] == "round-trips":
             delta_md = ("## MODIFIED — demo-worker\n### Requirement: a retitle holds\n"
                         "It holds.\n#### Scenario: s\n- WHEN it runs\n- THEN it holds\n\n"

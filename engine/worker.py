@@ -15,8 +15,8 @@ from .transport import Envelope, Tag, instruction, read, worker_transport
 # spec/worker.md (the methodology seam), not restated here, so they cannot drift from the slice.
 SALUTATION = (
     "You are a hypercore worker — the system-facing half of the split. Your audience is the architect "
-    "and the spec, never the operator. The disciplines below are the standing ones you are held to; "
-    "honor them, then build."
+    "and the spec, never the operator. Your task comes first; the disciplines that follow are how you "
+    "are held."
 )
 
 # The genuinely non-inferable grounding the slice does not carry — two engine facts the worker must be
@@ -128,14 +128,15 @@ def prompt(node: tree.Node, ctx: WorkerContext, root: str | None = None) -> str:
                       "rescan and pull any implicated body just-in-time)")
     return (
         f"{SALUTATION}\n\n"
+        f"The ask:\n{ask}\n\n"
+        f"The handed delta (verify and refine it against the WHOLE spec):\n"
+        f"{handed}\n\n"
+        f"How you are held:\n\n"
         f"Your standing disciplines (single-sourced from spec/worker.md — what good looks like):\n"
         f"{_worker_disciplines(root)}\n\n"
         f"{GROUNDING}\n\n"
         f"The depth standards — you are held to these every episode; build deep up front:\n"
         f"{depth_text}\n\n"
-        f"The ask:\n{ask}\n\n"
-        f"The handed delta (verify and refine it against the WHOLE spec):\n"
-        f"{handed}\n\n"
         f"Your grounding — the capabilities the delta names, in full:\n"
         f"{grounding or grounding_note}\n\n"
         f"The rest of the spec, indexed for your rescan — every other capability by its vision and "

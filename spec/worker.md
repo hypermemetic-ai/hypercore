@@ -23,10 +23,10 @@ operator-facing word from the result.
   ```
 
 ### Requirement: a worker is grounded in its capability's spec slice, by construction
-A worker MUST be handed the living spec with the capabilities its change touches **foregrounded in
-full** as its grounding — their requirements and scenarios inlined — AND **every other capability
-carried as a high-signal index** (its vision line and requirement titles, not its body), with its
-glossary terms, assembled before it runs, so there is no path that runs a worker without its grounding.
+A worker MUST be handed the living spec before it runs. Its grounding foregrounds the capabilities its
+change touches **in full** — their requirements and scenarios are inlined. Every other capability is
+carried as a high-signal index (its vision line and requirement titles, not its body). The grounding
+carries the change's glossary terms. There is no path that runs a worker without this grounding.
 The index spans the whole spec — the small, scannable, high-signal **map**, the defense against the
 architect's mis-scoping and against worker myopia: the worker sees every capability even when its body
 is a read away. An untouched capability's full **body** is NOT inlined — carrying every body whole
@@ -39,8 +39,8 @@ the checkout, read **just-in-time** when the rescan implicates the term. The wor
 term its change names — the whole ratified vocabulary is the architect's asset, not the worker's
 grounding. The **long history and grounds of past decisions** are likewise NOT inlined: they are the
 long reference with no whole-picture stake, so the worker greps **just-in-time** for them in its own
-checkout (`work/archive/`, where a node archives with its work) as the change needs. It holds the
-spec, never raw code, and never the operator view. A worker is **not slice-confined**: a delta cannot
+checkout (`work/archive/`, where a node archives with its work) as the change needs. The grounding holds
+the spec. The architect carries the raw code and the operator view. A worker is **not slice-confined**: a delta cannot
 be authored or verified from one capability in isolation, so its rescan covers the whole map — and
 pulls the body it implicates — catching a capability the handed delta mis-named or missed.
 
@@ -246,7 +246,16 @@ The crossing is propose (architect) → apply (worker) → archive (architect), 
   ```
 
 ### Requirement: a worker's RESULT is trusted only by re-derivation, never by the fence the fold tears down
-A worker's RESULT and refined delta are a **derived** record, so the provenance gate MUST attest them by **re-deriving** the touched capability's scenarios red→green — failing at the fork base and passing at the tip in the fence, and re-verified on the merged tree — and MUST NOT rely on the worker's fence branch or commit as the trail: that fence is removed on every exit and the fold re-applies the delta as a fresh commit on main, so the worker commit is not even in main lineage (`a worker runs fenced in its own git worktree`; `folding lands the verified build's code on the merged tree, not only its spec`). A RESULT hand-authored without ever running a fenced worker leaves no red→green to re-derive — its scenarios do not transition — so it has **no trail** and MUST NOT fold: it is refused with `no trail — re-run the mechanism`, never an operator-waveable decision. This attests that the build **ran**; whether its scenarios test the property is deferred to `gate-vouches-for-the-new-verb`.
+A worker's RESULT and refined delta are a **derived** record. The provenance gate MUST attest them by
+**re-deriving** the touched capability's scenarios red→green — failing at the fork base, passing at the
+tip in the fence, and re-verified on the merged tree. The gate MUST NOT rely on the worker's fence
+branch or commit as the trail. That fence is removed on every exit. The fold re-applies the delta as a
+fresh commit on main, so the worker commit is absent from main lineage (`a worker runs fenced in its
+own git worktree`; `folding lands the verified build's code on the merged tree, not only its spec`). A
+RESULT hand-authored without ever running a fenced worker leaves no red→green to re-derive — its
+scenarios do not transition — so it has **no trail** and MUST NOT fold: it is refused with
+`no trail — re-run the mechanism`, never an operator-waveable decision. This attests that the build
+**ran**; whether its scenarios test the property is deferred to `gate-vouches-for-the-new-verb`.
 
 #### Scenario: a hand-authored RESULT does not re-derive red→green and is refused
 - WHEN a RESULT is handed back that a role authored without a fenced build, and, separately, a RESULT carried by a real fenced build
@@ -310,4 +319,34 @@ and still builds; only a delta never proposed is refused.
   surfaces decision
   builds nothing
   fallback gone
+  ```
+
+### Requirement: the worker prompt is built for the one-pass reader
+The assembled worker prompt MUST lead with the task. The ask and handed delta come first, right after
+the salutation. The worker spends its freshest attention on the job. The standing disciplines, the
+record grounding, and the depth standards follow as **how you are held**. The reply envelope MUST stay
+last, preserving the transport's reason-first, format-last invariant (`transport.instruction`). The
+worker's own discipline prose MUST read in one pass. The re-derivation statement is split so no
+sentence crosses the writing-for-the-machine length signal. The grounding requirement states the
+positive ownership line, so the compound-negation construct is gone.
+
+#### Scenario: the prompt leads with the task and ends with the envelope
+- WHEN a worker prompt is assembled for a node whose handed delta names a set of capabilities
+- THEN the ask and the handed delta both appear before the standing disciplines, the record grounding,
+  and the depth standards, and the reply envelope is the prompt's final block
+
+  ```check
+  spawn worker communication
+  order ask-leads
+  order envelope-last
+  ```
+
+#### Scenario: the worker's flagged disciplines no longer trip the signal
+- WHEN the writing-for-the-machine signal reads the worker capability's requirement statements
+- THEN the grounding requirement and the re-derivation requirement do not appear in the signal: the
+  positive grounding line raises no compound-negation flag, and the split re-derivation statement
+  raises no over-long-sentence flag
+
+  ```check
+  signal worker-prose-sharpened
   ```
