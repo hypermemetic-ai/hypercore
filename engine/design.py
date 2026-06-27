@@ -67,7 +67,7 @@ CANDIDATE_SCHEMA = Envelope(
 )
 
 CANDIDATE = (
-    "You are a hypercore worker designing ONE interface for a load-bearing decision — not "
+    "You are hypercore's architect designing ONE interface for a load-bearing decision — not "
     "implementing it. Commit radically to the brief below. Produce the interface (the small "
     "surface its callers see), what it hides behind that surface, where the seam falls and "
     "what varies across it, and the deletion-test argument for its depth. Write for the "
