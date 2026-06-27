@@ -33,7 +33,7 @@ import threading
 
 from . import build_reaches_main
 from .harness import ok
-from .. import (anchor, channels, design, machine_writing, methodology, review, scenario,
+from .. import (anchor, audit, channels, design, machine_writing, methodology, review, scenario,
                 schedule, spec, transport, tree, worker)
 
 REAL = tree._DEFAULT_ROOT                                  # hypercore's own source tree — the spec under test
@@ -199,6 +199,22 @@ def check(root: str) -> None:
        "location, plus the anchor and its CLAUDE.md bridge")
     ok(anchor.materialize in channels.CHANNELS and anchor.bridge_materialize in channels.CHANNELS,
        "channels — the anchor and its bridge are registered in the channels registry beside the skills")
+
+    # 9. audit — the standing drift sweep over hypercore's OWN committed tree (engine/audit.py): the
+    #    coherence sibling of section 4's depth scan, proven from outside a fold like build_reaches_main.
+    #    These are facts about the committed artifact, not a behavior over a fixture, so no in-spec block
+    #    can say them: channels' gated scenarios prove the render *mechanism*, never that the *committed*
+    #    SKILL.md was actually re-rendered after its source last moved — exactly the gap that let two
+    #    skills go stale while the scenario gate stayed green. A hand-driven fold that skips the render or
+    #    the archive move now goes red here, on the live tree itself.
+    drift = audit.channel_drift(REAL)
+    ok(not drift,
+       "audit — every committed derived channel matches a fresh render from the live spec"
+       + ("" if not drift else f": DRIFTED {', '.join(drift)} — run channels.materialize() to reconcile"))
+    violations = audit.tree_hygiene(REAL)
+    ok(not violations,
+       "audit — every execution-tree folder carries its intent.md and no work/archive container is empty"
+       + ("" if not violations else f": {'; '.join(violations)}"))
 
 
 # ── the schedule single-writer-line and failure-recovery invariants, exercised from outside ──
