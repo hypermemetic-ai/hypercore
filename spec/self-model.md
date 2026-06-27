@@ -439,3 +439,69 @@ other machine commits through the same seam.
   fold faithful
   faithful
   ```
+
+### Requirement: a re-verify time-budget overrun is a distinct, scaling resource limit, never a broken build
+The whole-system re-verify the fold runs before it commits MUST NOT treat a slow run as a broken build.
+Its per-suite time bound MUST **scale with the suite it runs** — a per-scenario allotment with a floor —
+rather than a fixed constant a growing scenario count creeps past; the per-suite shape is kept (one
+capped subprocess per capability), so the cost does not explode into a per-scenario startup multiplier.
+The bound MUST be enforced through a **single capped-run seam** that takes the bound as a parameter and
+classifies the subprocess at the one point the bound is reached into exactly one of three outcomes: it
+**completed** (its exit code is the verdict), it **overran the bound** (a distinct **resource-limit**
+outcome), or it **could not run at all** (an OSError — a missing interpreter, a missing binary). The
+conflation that returns the same `None` for an overrun and a could-not-run MUST be removed: a genuine
+could-not-run still refuses ("the scenarios could not be re-verified — a build that cannot be re-verified
+does not land"), but an overrun is **never** that refusal and **never** the "red once merged" refusal.
+A resource-limit overrun MUST be retried once with headroom, and if it persists MUST surface as a
+distinct, **retryable** "resource limit reached" decision, honest that the machine ran out of time, not
+that the build is broken. A slow machine reads as a slow machine; a perf blip never discards a verified
+build; a genuinely unrunnable scenario still refuses.
+
+#### Scenario: a fold whose re-verify overruns its bound surfaces a resource limit, never a broken build
+- WHEN a code-bearing fold's whole-system re-verify overruns its scaled time bound on a slow run,
+  versus one whose merged scenarios genuinely cannot run
+- THEN the overrun surfaces a distinct, retryable "resource limit reached" decision with the verified
+  build not discarded as broken and not reported as "did not hold once merged", while the
+  genuinely-unrunnable case still refuses — and the bound scales with the suite rather than a fixed
+  constant a growing scenario count outgrows
+- watched — proven from outside the fold in `engine/check/build_reaches_main.py`, the re-verify
+  keystone's own home
+
+#### Scenario: an overrun is classified distinctly from a could-not-run at the capped-run seam
+- WHEN the capped-run seam the re-verify enforces its bound through meets, against a small budget, a run
+  that overruns the budget, a run whose interpreter or binary cannot start, and a run that completes
+- THEN it yields a distinct resource-limit outcome for the overrun, a could-not-run refusal for the
+  unstartable run, and the exit code for the completing run — the overrun is never collapsed into the
+  could-not-run refusal
+- watched — proven from outside the fold in `engine/check/build_reaches_main.py`, the same home and for
+  the same self-reference reason as the re-verify keystone it refines
+
+### Requirement: the scenario gate skips a capability whose gated scenarios a delta does not change
+The scenario gate MUST demand a red→green transition only for the gated scenarios a delta actually adds
+or changes. A delta that adds **only watched** scenarios to a capability — leaving the capability's
+executable check-block source **unchanged** between the fork base and the tip — has **nothing for the
+gate to run**, exactly as a wholly-watched capability does, and MUST be **skipped**, not refused. Today
+such a delta is mis-refused: the gate runs the capability's whole suite, finds it already green at the
+base, and reports "already passed at the fork base — proved nothing", flattening a legitimate
+watched-only refinement into a false claim that the change should have transitioned. The skip MUST be
+**narrow** — it applies only when the gated check-block source is genuinely unchanged base→tip, so a
+delta that adds or changes any gated scenario still gets the full red→green. It is also
+documentation-only: if the fence changes engine code, the capability still gets the full gate and the
+merged-tree re-verify. This is a tightening of the gate's existing wholly-watched-capability handling,
+never a loosening: a watched-only refinement's proof is still its watched scenario and the whole-system
+re-verify, not a transition it has no gated oracle to make.
+
+#### Scenario: a watched-only addition to a gated capability folds; an already-green gated addition still refuses
+- WHEN the scenario gate judges a delta that adds only a watched scenario to a gated capability whose
+  executable check-block source is unchanged base→tip, versus a delta that adds a gated scenario already
+  green at the base
+- THEN the watched-only addition is skipped — nothing to gate, it folds — while the already-green gated
+  addition is still refused "proved nothing"; the gate demands a transition only for the gated scenarios
+  the delta changes
+
+  ```check
+  gate-judges watched-only-addition
+  gate-verdict folds
+  gate-judges already-green-gated-addition
+  gate-verdict refused
+  ```

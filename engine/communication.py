@@ -129,6 +129,10 @@ def integrate(node: tree.Node, result, transport=None, root: str | None = None) 
     try:
         delta.fold(delta.parse(result.delta), root, node=node,
                    code=getattr(result, "code", None))       # archive ⟺ fold ⟺ verified code, ONE atomic act (H1)
+    except delta.ResourceLimitReached as refusal:
+        card = tree.raise_card(str(refusal), kind="decide", parent=node.id)
+        return Reply(say="The merged re-verify hit a resource limit — the retryable decision is on "
+                         "your queue.", card=card)
     except delta.CannotFold as refusal:
         # A code-bearing build that does not hold once merged onto main (re-verify red), or whose paths
         # main has moved under (stale): nothing landed. Surface the reason as a decision; `run` recovers

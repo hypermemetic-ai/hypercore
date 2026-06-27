@@ -1,35 +1,9 @@
-"""The scenario binding — a capability's prose scenario IS its executable check.
+"""The scenario binding — a capability's prose scenario is its executable check.
 
-The self-model is self-verifying: a `#### Scenario:` in `spec/<capability>.md` carries a fenced
-``` ```check ``` ``` block of **domain verbs**, and this module is the deep layer that turns those
-verbs into a runnable assertion over the real engine seams. The architect authors the verbs (the
-high-signal WHEN/THEN interface); the worker turns them red→green; nothing below the seam is the
-architect's to write, and there is no escape hatch into raw code — a scenario that needs something
-the vocabulary cannot say either earns a new verb here, in the same edit, or stays *watched*. So the
-builder can never author the oracle that judges it, and the description of a behavior cannot drift
-from the behavior, because the description is the test. *(design-decision: `binding-contest`.)*
-
-The verbs name domain nouns, never engine symbols or paths-into-the-code, so a worker rewriting the
-engine has nothing in the scenario to tamper with to pass. The per-capability vocabularies and the
-fixtures they drive live in `engine/worlds/` — **one module per capability** (folding-conditions'
-`grow` / `accept` / `gate` / `spec` drive the real `conditions` gate over a planted fixture) — so no
-single file carries every capability's verbs, and the vocabulary extends one verb at a time as each
-migrating capability first needs it (`spec/depth.md`'s locality discipline), never pre-built. This
-module reaches a capability's world through the one `worlds.for_capability` seam.
-
-Two runners share the one interpreter:
-
-- **run** — the acceptance path. A capability's check blocks run in-process against the live engine
-  (green here means the system meets its own spec right now). This is what `python3 -m engine --check`
-  reads instead of a by-slice harness.
-- **gate** — the fold gate (replacing the worker's self-authored loop). The capability a behavior
-  change *touches* has its tip scenarios run at the fork base (must be red — the behavior was not yet
-  built) and at the tip (must be green), trusting exit codes, so a change folds only when the
-  architect's scenario actually transitioned.
-
-The gated/watched classification is **derived, not hand-tended**: a requirement is gated exactly when
-one of its scenarios carries a check block, watched when none does (`scenario.classification`). The
-register cannot drift from what is actually gated, because the block's presence *is* the register.
+`run` executes check blocks against the live engine for acceptance. `gate` carries the tip's check
+source and world fixture to the fork base and tip, requiring red→green for the gated source a delta
+changed. `reverify` runs every capability's suite on merged main before code-bearing folds commit.
+The gated/watched register is derived from check-block presence.
 """
 from __future__ import annotations
 
@@ -45,6 +19,14 @@ from . import delta, spec, worlds
 # the base/tip gate, so running scenarios can never recurse into running scenarios. One name, system-wide.
 _GATE_GUARD = "HYPERCORE_SCENARIO_GATE"
 
+COMPLETED, OVERRAN, COULD_NOT_RUN = "completed", "overran", "could-not-run"
+RED = "red"
+RESOURCE_LIMIT = "resource-limit"
+
+SUITE_TIMEOUT_FLOOR = 180.0
+SUITE_TIMEOUT_PER_SCENARIO = 10.0
+SUITE_RETRY_HEADROOM = 1.5
+
 
 # ── parsing: a capability's scenarios, and the check blocks they carry ─────────
 
@@ -57,6 +39,31 @@ class Check:
     scenario: str
     statements: list[tuple[str, list[str]]]
     source: str
+
+
+@dataclass(frozen=True)
+class RunOutcome:
+    kind: str
+    code: int | None = None
+
+    @classmethod
+    def completed(cls, code: int) -> "RunOutcome":
+        return cls(COMPLETED, code)
+
+    @classmethod
+    def overran(cls) -> "RunOutcome":
+        return cls(OVERRAN)
+
+    @classmethod
+    def could_not_run(cls) -> "RunOutcome":
+        return cls(COULD_NOT_RUN)
+
+
+@dataclass(frozen=True)
+class ReverifyFailure:
+    kind: str
+    capability: str
+    message: str
 
 
 def checks(capability: str, root: str | None = None) -> list[Check]:
@@ -169,53 +176,64 @@ def gate(result, root: str | None = None) -> str | None:
     if os.environ.get(_GATE_GUARD):
         return None                                        # inside a base/tip run — never recurse
     base_ref = getattr(result, "base", "") or "HEAD~1"     # the recorded fork base, never the tip's parent — a self-committing worker makes HEAD~1 its own already-built tree
-    for cap in sorted({op.capability for op in delta.parse(result.delta).ops}):
+    ops = delta.parse(result.delta).ops
+    for cap in sorted({op.capability for op in ops}):
         src = _check_source(cap, result.worktree)
         if not src:
             continue                                       # a capability with no scenarios is watched, not gated
+        cap_ops = [op for op in ops if op.capability == cap]
+        if (_adds_only_watched(cap_ops)
+                and not _engine_changed(result.worktree, base_ref)
+                and _check_blocks_source_at(cap, result.worktree, base_ref) == _check_blocks_source(cap, result.worktree)):
+            continue                                       # the delta changed no gated source for this capability
         world = _world_source(cap, result.worktree)        # the tip's fixtures, carried onto the base so a new verb exists there
-        base = _run_at(src, world, cap, result.worktree, base_ref)
-        tip = _run_at(src, world, cap, result.worktree, "HEAD")
-        if base is None or tip is None:
+        budget = _suite_budget(src)
+        base = _run_at(src, world, cap, result.worktree, base_ref, budget)
+        tip = _run_at(src, world, cap, result.worktree, "HEAD", budget)
+        if base.kind == OVERRAN or tip.kind == OVERRAN:
+            return (f"resource limit reached while running the scenarios for {cap!r} in the fence — "
+                    "retry the fold when the machine has enough headroom")
+        if base.kind == COULD_NOT_RUN or tip.kind == COULD_NOT_RUN:
             return (f"the scenarios for {cap!r} could not run in the fence — a scenario that cannot "
                     "run did not gate the behavior")
-        if base == 0:
+        if base.code == 0:
             return (f"the scenarios for {cap!r} already passed at the fork base — the change is not "
                     "what makes them green, so it proved nothing")
-        if tip != 0:
+        if tip.code != 0:
             return (f"the scenarios for {cap!r} did not pass at the tip — the behavior is not green "
                     "after the change")
     return None
 
 
-def reverify(root: str) -> str | None:
-    """The fold's keystone — run after a code-bearing fold lands the verified build and spec on main and
-    **before** it commits. **Every** capability's scenarios run against the **merged working tree** at
-    `root` — the whole system, not only the capabilities the delta named: a worker's code can refactor a
-    shared engine module (`tree`, `delta`, `record`, `scenario`) an *unnamed* capability depends on, so a
-    re-verify scoped to the named capabilities would let that break land green-on-the-touched-capability,
-    red-on-the-system. The scope is **structural** — this function enumerates the capabilities from the
-    merged spec itself (`_all_capabilities`), so no caller can narrow it and reopen the blind spot. Each
-    runs in a subprocess that imports `root`'s on-disk engine (cwd = root, so `python3 -m engine` loads
-    the merged code) and whose worlds copy `root`'s merged spec — so what is verified is merged main
-    itself, not the fence. This closes both holes: green-in-fence/red-on-main (a build verified against a
-    moved fork base) and green-on-touched/red-on-system (a shared-module break in an unnamed capability).
-    None when every gated capability is green on merged main; a reason when one is red or could not run —
-    a build that cannot be re-verified does not land. Skipped inside a scenario run (the guard), so a
-    scenario that itself folds code never recurses into re-verification."""
+def reverify(root: str) -> ReverifyFailure | None:
+    """Run every capability's suite on merged main before code-bearing folds commit."""
     if os.environ.get(_GATE_GUARD):
         return None
     for cap in _all_capabilities(root):
         src = _check_source(cap, root)
         if not src:
             continue                                       # a watched capability has nothing to re-verify
-        code = _run_merged(src, cap, root)
-        if code is None:
-            return (f"the scenarios for {cap!r} could not run on merged main — a build that cannot be "
-                    "re-verified does not land")
-        if code != 0:
-            return (f"the scenarios for {cap!r} are red on merged main — the verified fenced build does "
-                    "not hold once merged (red-on-the-system), so it does not land")
+        budget = _suite_budget(src)
+        run = _run_merged(src, cap, root, budget)
+        if run.kind == OVERRAN:
+            retry_budget = _retry_budget(budget)
+            run = _run_merged(src, cap, root, retry_budget)
+            if run.kind == OVERRAN:
+                return ReverifyFailure(
+                    RESOURCE_LIMIT, cap,
+                    f"resource limit reached while re-verifying {cap!r}: the suite overran its "
+                    f"{_format_budget(budget)}s budget and its {_format_budget(retry_budget)}s retry "
+                    "with headroom. Retry the fold; this is a resource limit, not a broken build.")
+        if run.kind == COULD_NOT_RUN:
+            return ReverifyFailure(
+                COULD_NOT_RUN, cap,
+                f"the scenarios for {cap!r} could not run on merged main — a build that cannot be "
+                "re-verified does not land")
+        if run.code != 0:
+            return ReverifyFailure(
+                RED, cap,
+                f"the scenarios for {cap!r} are red on merged main — the verified fenced build does "
+                "not hold once merged (red-on-the-system), so it does not land")
     return None
 
 
@@ -225,9 +243,9 @@ def _all_capabilities(root: str) -> list[str]:
     return sorted(c.name for c in spec.read_spec(root).capabilities)
 
 
-def _run_merged(src: str, capability: str, root: str) -> int | None:
+def _run_merged(src: str, capability: str, root: str, budget: float) -> RunOutcome:
     """Run the carried scenarios against the merged working tree at `root` in a fresh process, returning
-    the exit code (None when the run could not happen). The subprocess runs with `cwd=root`, so
+    a typed capped-run outcome. The subprocess runs with `cwd=root`, so
     `python3 -m engine` imports `root`'s on-disk engine — the just-replayed code — and its worlds read
     the merged tree (`root` is the imported engine's default root); the verdict is therefore merged
     main's behavior under the touched capability's scenarios. Its **ambient record root is a throwaway
@@ -239,12 +257,8 @@ def _run_merged(src: str, capability: str, root: str) -> int | None:
     try:
         _write(check_file, src)
         env = {**os.environ, _GATE_GUARD: "1", "ENGINE_ROOT": sink}
-        r = subprocess.run(["python3", "-m", "engine", "--run-blocks", ".reverify.check",
-                            "--cap", capability], cwd=root, env=env, timeout=180,
-                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        return r.returncode
-    except (OSError, subprocess.SubprocessError):
-        return None
+        return _capped_run(["python3", "-m", "engine", "--run-blocks", ".reverify.check",
+                            "--cap", capability], root, env, budget)
     finally:
         if os.path.isfile(check_file):
             os.remove(check_file)
@@ -259,6 +273,34 @@ def _check_source(capability: str, where: str) -> str:
         return ""
     parts = [f">>> {c.scenario}\n{c.source}" for c in _parse(open(path, encoding="utf-8").read(), capability)]
     return "\n".join(parts)
+
+
+def _check_blocks_source(capability: str, where: str) -> str:
+    path = os.path.join(where, "spec", capability + ".md")
+    if not os.path.isfile(path):
+        return ""
+    return _check_blocks_source_from_text(open(path, encoding="utf-8").read(), capability)
+
+
+def _check_blocks_source_at(capability: str, fence: str, ref: str) -> str | None:
+    r = subprocess.run(["git", "show", f"{ref}:spec/{capability}.md"], cwd=fence,
+                       capture_output=True, text=True)
+    return _check_blocks_source_from_text(r.stdout, capability) if r.returncode == 0 else None
+
+
+def _check_blocks_source_from_text(text: str, capability: str) -> str:
+    return "\n---\n".join(c.source for c in _parse(text, capability))
+
+
+def _adds_only_watched(ops: list[delta.Op]) -> bool:
+    return bool(ops) and all(op.verb == "ADDED" and not _parse(op.requirement.block, op.capability)
+                             for op in ops)
+
+
+def _engine_changed(fence: str, base_ref: str) -> bool:
+    r = subprocess.run(["git", "diff", "--name-only", base_ref, "HEAD", "--", "engine"], cwd=fence,
+                       capture_output=True, text=True)
+    return any(line.endswith(".py") for line in r.stdout.splitlines())
 
 
 def _world_source(capability: str, where: str) -> str | None:
@@ -288,9 +330,10 @@ def _carried(text: str, capability: str) -> list[Check]:
     return out
 
 
-def _run_at(src: str, world: str | None, capability: str, fence: str, ref: str) -> int | None:
+def _run_at(src: str, world: str | None, capability: str, fence: str, ref: str,
+            budget: float) -> RunOutcome:
     """Run the carried scenarios against an isolated checkout of `ref` cut from the fence, returning
-    the exit code (None when the checkout or run could not happen). A throwaway detached worktree keeps
+    a typed capped-run outcome. A throwaway detached worktree keeps
     the fence's own tip untouched; the carried block file **and the tip's world fixtures** (`world`) ride
     into the checkout, and the checkout's own `engine` runs them — so the verdict is that revision's
     behavior under the tip's scenarios, and a brand-new verb exists even at the base run (its fixture
@@ -300,22 +343,44 @@ def _run_at(src: str, world: str | None, capability: str, fence: str, ref: str) 
         add = subprocess.run(["git", "worktree", "add", "--detach", "-q", co, ref], cwd=fence,
                              capture_output=True, text=True)
         if add.returncode != 0:
-            return None
+            return RunOutcome.could_not_run()
         _write(os.path.join(co, ".scenario-gate.check"), src)
         if world is not None:                              # carry the tip's binding onto the (possibly older) checkout
             _write(os.path.join(co, "engine", "worlds", capability.replace("-", "_") + "_world.py"), world)
         env = {**os.environ, _GATE_GUARD: "1"}
-        try:
-            r = subprocess.run(["python3", "-m", "engine", "--run-blocks", ".scenario-gate.check",
-                                "--cap", capability], cwd=co, env=env, timeout=180,
-                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            return r.returncode
-        except (OSError, subprocess.SubprocessError):
-            return None
+        return _capped_run(["python3", "-m", "engine", "--run-blocks", ".scenario-gate.check",
+                            "--cap", capability], co, env, budget)
     finally:
         subprocess.run(["git", "worktree", "remove", "--force", co], cwd=fence,
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         shutil.rmtree(co, ignore_errors=True)
+
+
+def _capped_run(argv: list[str], cwd: str, env: dict[str, str], budget: float) -> RunOutcome:
+    try:
+        r = subprocess.run(argv, cwd=cwd, env=env, timeout=budget,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return RunOutcome.completed(r.returncode)
+    except subprocess.TimeoutExpired:
+        return RunOutcome.overran()
+    except OSError:
+        return RunOutcome.could_not_run()
+
+
+def _suite_budget(src: str) -> float:
+    return max(SUITE_TIMEOUT_FLOOR, _scenario_count(src) * SUITE_TIMEOUT_PER_SCENARIO)
+
+
+def _scenario_count(src: str) -> int:
+    return max(1, sum(1 for line in src.splitlines() if line.startswith(">>> ")))
+
+
+def _retry_budget(budget: float) -> float:
+    return budget * SUITE_RETRY_HEADROOM
+
+
+def _format_budget(budget: float) -> str:
+    return str(int(budget)) if budget.is_integer() else f"{budget:.1f}"
 
 
 def _git(cwd: str, *args: str) -> None:

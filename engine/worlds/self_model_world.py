@@ -1,20 +1,8 @@
-"""The self-model scenario world — the living spec, the delta, the transactional fold, and the
-operator view, driven through the real `spec` / `delta` / `view` over hypercore's own seeded model.
+"""The self-model scenario world.
 
-The verbs name the self-model's domain nouns — the spec read flat, a delta that folds or is refused, a
-fold that lands and archives in one act, a crash mid-fold, the operator view's vision/as-built/gap —
-never engine symbols, so a worker rewriting the fold has nothing in the scenario to tamper with to
-pass. The fixture seeds hypercore's *own* spec, intent, and glossary into an isolated `ENGINE_ROOT` (so
-the read self-hosts, the view renders the real vision beside the real as-built, and a fold grows the
-real model exactly as in production) and drives the real `delta.fold` / `view.operator_view`. The
-crash-mid-fold scenario injects a failure into the fold's archive step the way a process killed between
-the spec write and the commit would, then proves the retry completes idempotently rather than wedging.
-The root and `ENGINE_ROOT` are restored and dropped on teardown.
-
-The self-verifying requirement (a scenario *is* the executable check of its requirement) is not gated
-by a block here — it is the very mechanism this whole harness embodies, proven from outside over every
-migrated capability and the real red→green gate (`engine/check/scenarios.py` sections 1–2): it stays
-**watched**, its honest home the harness's own structure, never a self-referential block.
+The verbs drive the real spec, delta fold, worker integration, and operator view over an isolated
+`ENGINE_ROOT` seeded with hypercore's own model. The self-verifying mechanism itself stays watched:
+it is proven by the harness that runs every migrated capability and the red→green gate from outside.
 """
 from __future__ import annotations
 
@@ -49,10 +37,7 @@ def _delta_text(cap: str, req: str) -> str:
             f"The {cap} MUST hold.\n#### Scenario: s\n- WHEN x\n- THEN y\n")
 
 class World(_Base):
-    """A scenario's fixture: an isolated, git-backed `ENGINE_ROOT` seeded with hypercore's own spec,
-    intent, and glossary, the real `delta` / `view` run over it. The `read` verb caches the spec or the
-    view; the `fold` verb performs a fold variant; the assertion verbs read what landed, what was
-    refused, the one-commit atomicity, and the view's derived renders."""
+    """An isolated, git-backed self-model fixture."""
 
     def __init__(self):
         self._prev_root = os.environ.get("ENGINE_ROOT")
@@ -79,6 +64,7 @@ class World(_Base):
         self._rename_before = None                         # pre-rename block for the untouched-body assertion
         self._rename_modified = False
         self._gate_verdict = None                          # the scenario gate's verdict over the last staged new verb
+        self._gate_judged = None                           # the scenario gate's verdict over the watched-only fixture
         self._faithful_messages: list[str] = []             # commit subjects from the faithful-provenance fixture
 
     # ── internals ────────────────────────────────────────────────────────────────
@@ -91,8 +77,6 @@ class World(_Base):
         return int(out) if out else 0
 
     def _try_fold(self, d, node=None) -> None:
-        """Attempt a fold, recording whether it was refused — so the refusal scenarios read a real
-        CannotFold, never a swallowed one."""
         self._sig = self._signature()
         self._commits = self._commit_count()
         try:
@@ -103,8 +87,6 @@ class World(_Base):
 
     # ── action verbs ─────────────────────────────────────────────────────────────
     def _v_read(self, args: list[str]) -> tuple[bool, str]:
-        """read <spec|view|view-real> — read the seeded spec, or render the operator view over the
-        seeded model (or over hypercore's real tree, where the root's structural map is read)."""
         if args[0] == "spec":
             self._spec = spec.read_spec(self.root)
         elif args[0] == "view":
@@ -116,8 +98,6 @@ class World(_Base):
         return True, ""
 
     def _v_fold(self, args: list[str]) -> tuple[bool, str]:
-        """fold <trivial|missing|mismatched|added|newcap|crash|retry|faithful> — perform one fold variant
-        against the seeded spec, node-backed where a fold also archives a node."""
         mode = args[0]
         if mode == "trivial":
             self._try_fold(delta.parse("# delta — trivial (no behavior change)"))
@@ -181,11 +161,6 @@ class World(_Base):
         return True, ""
 
     def _v_plant(self, args: list[str]) -> tuple[bool, str]:
-        """plant <machinery|open-mix> — plant fixtures into the seeded root. `machinery` plants two
-        capabilities (one declaring a vision binding, one pure machinery declaring none) so the
-        per-capability vision is shown to be a derived binding. `open-mix` files one standing unit of
-        open work and raises one decision awaiting the operator, so the gap can be shown to surface the
-        open work and exclude the decision."""
         mode = args[0]
         if mode == "machinery":
             tree.atomic_write(os.path.join(self.root, "spec", "lighthouse.md"),
@@ -202,22 +177,17 @@ class World(_Base):
         return False, f"unknown plant subject {mode!r}"
 
     def _v_watched_evidence(self, args: list[str]) -> tuple[bool, str]:
-        """watched-evidence present — plant a committed non-fenced watched-evidence trace, so the view's
-        live-run signal proves it reads only fenced-run evidence."""
         if args != ["present"]:
             return False, f"unknown watched-evidence assertion {' '.join(args)!r}"
         _live_run_fixture.plant_non_fenced_trace(self.root)
         return True, ""
 
     def _v_fenced_crossing(self, args: list[str]) -> tuple[bool, str]:
-        """fenced-crossing folds — drive the real worker-apply → integrate path over a fenced worktree
-        with scripted models, so the only way the view can flip is the integrate-stage fenced-run trace."""
         if args != ["folds"]:
             return False, f"unknown fenced-crossing action {' '.join(args)!r}"
         return _live_run_fixture.fold_fenced_crossing(self.root)
 
     def _v_stage_new_verb(self, args: list[str]) -> tuple[bool, str]:
-        """stage-new-verb <vacuous|real|multicommit> — stage a fence and run the real scenario gate."""
         mode = args[0]
         if mode in ("vacuous", "real"):
             self._gate_verdict = _new_verb_fence.run_gate(mode)
@@ -227,8 +197,44 @@ class World(_Base):
             return True, ""
         return False, f"unknown new-verb mode {mode!r}"
 
+    def _v_gate_judges(self, args: list[str]) -> tuple[bool, str]:
+        if args[0] not in ("watched-only-addition", "already-green-gated-addition"):
+            return False, f"unknown gate judgment {' '.join(args)!r}"
+        self._gate_judged = self._watched_only_gate(args[0])
+        return True, ""
+
+    def _watched_only_gate(self, mode: str) -> str | None:
+        from .. import scenario, worker
+        cap = "gateprobe"
+        base_spec = ("# gateprobe\n\n### Requirement: the existing gated behavior holds\n"
+                     "#### Scenario: existing\n```check\nprobe-ok\n```\n")
+        world = ("from . import World as _Base\n\nclass World(_Base):\n"
+                 "    def _v_probe_ok(self, args):\n        return True, \"\"\n")
+        watched = ("\n### Requirement: the watched note is recorded\n"
+                   "A watched note MUST be recorded.\n#### Scenario: watched\n- WHEN it is read\n- THEN it is present\n")
+        gated = ("\n### Requirement: the already-green gated note is recorded\n"
+                 "#### Scenario: already green\n```check\nprobe-ok\n```\n")
+        f = tempfile.mkdtemp(prefix="watched-only-gate-")
+        for c in (("init", "-q"), ("config", "user.email", "wo@hypercore"), ("config", "user.name", "wo")):
+            subprocess.run(["git", *c], cwd=f, check=True, stdout=subprocess.DEVNULL)
+        for d in ("engine", "spec"):
+            shutil.copytree(os.path.join(_REAL, d), os.path.join(f, d), ignore=shutil.ignore_patterns("__pycache__"))
+        _new_verb_fence._write(os.path.join(f, "spec", cap + ".md"), base_spec)
+        _new_verb_fence._write(os.path.join(f, "engine", "worlds", cap + "_world.py"), world)
+        _new_verb_fence._commit(f, "base — existing gated behavior already green")
+        addition = watched if mode == "watched-only-addition" else gated
+        _new_verb_fence._write(os.path.join(f, "spec", cap + ".md"), base_spec + addition)
+        _new_verb_fence._commit(f, "tip — planted gate judgment")
+        dlt = f"# delta — planted gate judgment\n## ADDED — {cap}\n" + addition.lstrip()
+        guard = os.environ.pop(scenario._GATE_GUARD, None)
+        try:
+            return scenario.gate(worker.WorkerResult("built it", dlt, f), f)
+        finally:
+            if guard is not None:
+                os.environ[scenario._GATE_GUARD] = guard
+            shutil.rmtree(f, ignore_errors=True)
+
     def _multicommit_gate(self) -> str | None:
-        """Stage a self-committing worker and run the real gate from the recorded fork base."""
         from .. import scenario, worker
         fence = _new_verb_fence._build("real")             # C0 fork base (behavior absent) → C1 built tip
         _new_verb_fence._write(os.path.join(fence, "RESULT.md"), "# worker result\nhand-off\n")
@@ -247,10 +253,6 @@ class World(_Base):
 
     # ── assertion verbs ──────────────────────────────────────────────────────────
     def _v_gate(self, args: list[str]) -> tuple[bool, str]:
-        """gate <held|folds> — the scenario gate's verdict over the staged new verb. `held` asserts the
-        gate refused the fold (the vacuous new verb is caught: its fixture now rides onto the base run,
-        so it is green at the base too and never transitions); `folds` asserts a real fixture for the
-        same new verb still goes red→green and folds — the hardening refuses only the hollow fixture."""
         want = args[0]
         held = self._gate_verdict is not None
         if want == "held":
@@ -258,6 +260,15 @@ class World(_Base):
         if want == "folds":
             return (True, "") if not held else (False, f"the gate held a real fixture that should fold: {self._gate_verdict}")
         return False, f"unknown gate expectation {want!r}"
+
+    def _v_gate_verdict(self, args: list[str]) -> tuple[bool, str]:
+        want = args[0]
+        held = self._gate_judged is not None
+        if want == "folds":
+            return (True, "") if not held else (False, f"the gate refused a watched-only addition: {self._gate_judged}")
+        if want == "refused":
+            return (True, "") if held else (False, "the gate folded an already-green gated addition")
+        return False, f"unknown gate verdict {want!r}"
 
     def _v_faithful(self, args: list[str]) -> tuple[bool, str]:
         fold_msg = next((m for m in self._faithful_messages if m.startswith("fold: ")), "")
@@ -274,8 +285,6 @@ class World(_Base):
         return True, ""
 
     def _v_self_hosts(self, args: list[str]) -> tuple[bool, str]:
-        """self-hosts — the read spec yields the glossary and the system's own capabilities, segmented
-        by capability."""
         sp = self._spec
         names = {c.name for c in sp.capabilities}
         if not {"interface", "tree", "queue", "communication", "self-model"} <= names:
@@ -283,25 +292,19 @@ class World(_Base):
         return (True, "") if sp.glossary.strip() else (False, "the read yields no glossary")
 
     def _v_covered(self, args: list[str]) -> tuple[bool, str]:
-        """covered — every requirement the read yields carries at least one scenario (the floor of
-        requirement↔scenario coverage)."""
         uncovered = [r.name for c in self._spec.capabilities for r in c.requirements if not r.scenarios]
         return (True, "") if not uncovered else (False, f"a requirement carries no scenario: {uncovered}")
 
     def _v_unchanged(self, args: list[str]) -> tuple[bool, str]:
-        """unchanged — the trivial fold applied nothing: the spec is exactly as before."""
         return (True, "") if self._signature() == self._sig else (False, "a trivial fold changed the spec")
 
     def _v_refused(self, args: list[str]) -> tuple[bool, str]:
-        """refused — the last fold was refused (CannotFold)."""
         return (True, "") if self._refused else (False, "the fold was not refused")
 
     def _v_untouched(self, args: list[str]) -> tuple[bool, str]:
-        """untouched — a refused fold left the spec exactly as it was."""
         return (True, "") if self._signature() == self._sig else (False, "a refused fold altered the spec")
 
     def _v_landed(self, args: list[str]) -> tuple[bool, str]:
-        """landed [once] — the added requirement is present in its capability's spec (exactly once)."""
         cap, req = self._added
         c = spec.read_spec(self.root).capability(cap)
         present = [r for r in (c.requirements if c else []) if r.name == req]
@@ -312,18 +315,14 @@ class World(_Base):
         return True, ""
 
     def _v_archived(self, args: list[str]) -> tuple[bool, str]:
-        """archived — the folded node left the work view (archived in the same act)."""
         n = tree.find(self._node.id)
         return (True, "") if n is not None and n.folded else (False, "the node was not archived by the fold")
 
     def _v_atomic(self, args: list[str]) -> tuple[bool, str]:
-        """atomic — the spec merge and the node archive were ONE commit (atomic, both directions)."""
         d = self._commit_count() - self._commits
         return (True, "") if d == 1 else (False, f"the fold spanned {d} commits, not one — not atomic both directions")
 
     def _v_half_applied(self, args: list[str]) -> tuple[bool, str]:
-        """half-applied — after the crash, the delta is on disk but the node is not yet archived (the
-        wedge precondition the retry must clear)."""
         cap, req = self._added
         c = spec.read_spec(self.root).capability(cap)
         on_disk = c is not None and c.requirement(req) is not None

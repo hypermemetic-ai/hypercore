@@ -23,7 +23,7 @@ import subprocess
 import tempfile
 
 from .harness import ok
-from .. import delta, tree, worker
+from .. import delta, scenario, tree, worker
 
 REAL = tree._DEFAULT_ROOT                                  # hypercore's own source tree, copied into the merged fixture
 
@@ -95,6 +95,8 @@ def check() -> None:
            "reaches the whole system, not only the capabilities the delta names")
         ok(open(sched, encoding="utf-8").read() == sched_before,
            "build-reaches-main — the untouched-break fold rolled back: nothing landed on main")
+
+        _resource_limit_reverify(root, rel)
     finally:
         if prev is None:
             os.environ.pop("ENGINE_ROOT", None)
@@ -126,3 +128,69 @@ def _committed_together(root: str, *rels: str) -> bool:
                          capture_output=True, text=True).stdout
     names = set(out.split())
     return all(r in names for r in rels)
+
+
+def _resource_limit_reverify(root: str, rel: str) -> None:
+    """The re-verify hardening: capped-run classification, scaling budget, retry, and rollback."""
+    env = os.environ.copy()
+    over = scenario._capped_run(["python3", "-c", "import time; time.sleep(1)"], root, env, 0.01)
+    missing = scenario._capped_run([os.path.join(root, "missing-hypercore-binary")], root, env, 1)
+    done = scenario._capped_run(["python3", "-c", "import sys; sys.exit(7)"], root, env, 5)
+    ok(over.kind == scenario.OVERRAN and missing.kind == scenario.COULD_NOT_RUN
+       and done.kind == scenario.COMPLETED and done.code == 7,
+       "build-reaches-main — capped-run classifies overrun, could-not-run, and completed distinctly")
+
+    small = ">>> one\nprobe"
+    large = "\n".join(f">>> s{i}\nprobe" for i in range(25))
+    ok(scenario._suite_budget(large) > scenario._suite_budget(small) >= scenario.SUITE_TIMEOUT_FLOOR,
+       "build-reaches-main — the re-verify suite budget scales with scenario count and keeps a floor")
+
+    real_all, real_src, real_run = scenario._all_capabilities, scenario._check_source, scenario._run_merged
+    try:
+        scenario._all_capabilities = lambda _root: ["probe"]
+        scenario._check_source = lambda _cap, _root: large
+        calls: list[float] = []
+        def over_then_green(src, cap, r, budget):
+            calls.append(budget)
+            return scenario.RunOutcome.overran() if len(calls) == 1 else scenario.RunOutcome.completed(0)
+        scenario._run_merged = over_then_green
+        ok(scenario.reverify(root) is None and len(calls) == 2 and calls[1] > calls[0],
+           "build-reaches-main — a re-verify overrun is retried once with headroom")
+        scenario._run_merged = lambda src, cap, r, budget: scenario.RunOutcome.overran()
+        failed = scenario.reverify(root)
+        ok(failed is not None and failed.kind == scenario.RESOURCE_LIMIT
+           and "resource limit reached" in failed.message and "not a broken build" in failed.message,
+           "build-reaches-main — a persistent overrun is a retryable resource limit, not merged-red")
+        scenario._run_merged = lambda src, cap, r, budget: scenario.RunOutcome.could_not_run()
+        failed = scenario.reverify(root)
+        ok(failed is not None and failed.kind == scenario.COULD_NOT_RUN and "could not run" in failed.message,
+           "build-reaches-main — a genuinely unrunnable re-verify still refuses as could-not-run")
+    finally:
+        scenario._all_capabilities, scenario._check_source, scenario._run_merged = real_all, real_src, real_run
+
+    path = os.path.join(root, rel)
+    before = open(path, encoding="utf-8").read()
+    spec_rel = os.path.join(root, "spec", "folding-conditions.md")
+    spec_before = open(spec_rel, encoding="utf-8").read()
+    node = tree.file_intent("a code-bearing ask that exhausts the re-verify budget")
+    d = delta.parse("# delta — resource limit note\n## ADDED — folding-conditions\n"
+                    "### Requirement: a resource limit note\nIt holds.\n#### Scenario: s\n- WHEN x\n- THEN y\n")
+    real_reverify = scenario.reverify
+    try:
+        scenario.reverify = lambda _root: scenario.ReverifyFailure(
+            scenario.RESOURCE_LIMIT, "probe",
+            "resource limit reached — retryable; this is not a broken build")
+        refused, message = False, ""
+        try:
+            delta.fold(d, root, node=node, code={rel: worker.CodeFile(before, before + "\n# resource limit probe\n")})
+        except delta.ResourceLimitReached as e:
+            refused, message = True, str(e)
+        except delta.CannotFold as e:
+            message = f"wrong refusal type: {e}"
+        ok(refused and "resource limit reached" in message and "not a broken build" in message,
+           "build-reaches-main — resource-limit re-verify branches away from the broken-build refusal")
+        ok(open(path, encoding="utf-8").read() == before
+           and open(spec_rel, encoding="utf-8").read() == spec_before,
+           "build-reaches-main — a resource-limit re-verify rolls back the merge without discarding it as broken")
+    finally:
+        scenario.reverify = real_reverify

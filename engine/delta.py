@@ -48,6 +48,10 @@ class CannotFold(Exception):
     """The folding condition refused the fold; the spec is left untouched."""
 
 
+class ResourceLimitReached(CannotFold):
+    """The merged-tree re-verify hit a retryable resource limit, not a broken build."""
+
+
 @dataclass
 class Op:
     verb: str
@@ -228,7 +232,9 @@ def fold(delta: Delta | None, root: str | None = None, node=None, code=None) -> 
             if red:
                 for path, was in prior.items():
                     _restore(path, was)
-                raise CannotFold(red)
+                if red.kind == scenario.RESOURCE_LIMIT:
+                    raise ResourceLimitReached(red.message)
+                raise CannotFold(red.message)
         # The render step: every fold re-derives the static channels (skills, the agents file) from
         # the spec, so a committed artifact cannot drift from its source. Idempotent: an
         # unchanged source re-renders identically and re-staging no-ops, so a retry is safe.
