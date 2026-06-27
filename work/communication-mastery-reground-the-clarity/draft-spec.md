@@ -79,7 +79,13 @@ name so `check/scenarios.py`'s watched-classification probe still matches):
 > generative bar: a word, term, or figure earns its density by what it lets the reader **regenerate**, not
 > by parsing cheaply — a figure passes only if cashing it into plain language yields a true,
 > decision-relevant inference the plain sentence would not, and none of its silent entailments is false on
-> the surface that bears the weight. **One term, one concept**: the ratified name repeated verbatim,
+> the surface that bears the weight. **Reach for the shared symbol** is the positive of that bar:
+> where a relation or comparison *is* the point, prefer the symbol the one reader already runs — →, ≠, ≤,
+> the system's own glyphs — over the prose that spells it out, when it decompresses faster and carries the
+> idea at least as faithfully. The generative bar above judges it and the shared-decoder split classifies
+> it, so it earns and fails its place exactly as a term of art does: ciphertext to a key the reader lacks,
+> or a form that sheds the qualifier it should carry. One symbol, one concept — symbols join the chunk
+> economy the **vocabulary check** guards. **One term, one concept**: the ratified name repeated verbatim,
 > synonym-variation of a defined term a clarity bug the **vocabulary check** guards; a term of art is the
 > cheap encoder, admitted only where the reader truly holds it and it still does work, never a slot-filler.
 > And the hardest discipline — the load-bearing **caveat lands as hard as the claim**: the qualifier the
@@ -88,12 +94,20 @@ name so `check/scenarios.py`'s watched-classification probe still matches):
 >
 > Scenario: a dense passage and its caveat are judged — WHEN a passage is long or technical, or carries a
 > load-bearing qualifier; THEN it is weighed by whether the reader can regenerate it and whether the caveat
-> keeps its weight (subject–verb distance, dropped connectives, a figure's entailments, a qualifier buried
+> keeps its weight (subject–verb distance, dropped connectives, a figure's or symbol's entailments, a
+> symbol whose decoder this reader lacks, a qualifier buried
 > beneath the headline), never by word count. (watched — no check block)
 
 Note: the just-folded "the defined vocabulary stays consistent — the vocabulary check" requirement quotes
 the old wording ("synonym-variation of a defined term being a clarity bug the vocabulary check guards");
 the reframe keeps the "vocabulary check" reference, but the verbatim quote will drift — reconcile it.
+
+Note (exemplar to author for the skill rendering): the **reach-for-the-shared-symbol** directive needs one
+before→after pair, since it is an un-stateable move the rule alone does not transmit — symbol-earns vs
+symbol-as-decoration. A first cut: *earns it* — "ready: open ∧ folding-condition named ∧ no open child"
+reads as the one predicate the reader already runs, faster than the three spelled conjuncts and shedding
+nothing; *decoration* — "the worker's result ⟹ the fold ⟹ the record" wears arrows as a vague "leads to,"
+decoding to nothing the prose did not carry while shedding that the fold is gated on coherence.
 
 ## C. The new GATED requirement (architect authors the scenario; the worker builds the engine)
 
