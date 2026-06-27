@@ -58,15 +58,11 @@ and deleted, not merely guarded.
 - the touched capabilities (`spec/worker.md`, `spec/grilling.md`, and any seam the chosen design moves)
   carry the change with its scenarios, and `python3 -m engine --check` is green.
 
-## Note — a suggestion from a prior grilling pass, not settled
-Grilling surfaced that this node's guarantee (a worker only applies an architect-proposed delta) keeps
-the operator's *touch* with the system only if the autonomous build is **legible** — the proposed plan
-must reach the operator's eye through the view, not sit in a `grilling.md` they must hunt for. So
-legibility lives in the view (`operator-view-readiness`), and a blocking approval gate is the wrong tool
-(the operator wants to *see*, not *approve*). Leaning **view first, then this**, so removing the silent
-author-from-scratch fallback never opens a window of autonomy the operator cannot see. Design work
-remains; weigh in grilling, do not treat as a settled requirement. (See the matching note on
-`operator-view-readiness`.)
+## Note — the view-first lean is settled (no view precondition)
+Resolved in the `operator-view-readiness` grilling pass (2026-06-26): #2 carries **no view
+precondition**. The proposed-plan legibility is homed in the standing-work surface (intent §58/§60),
+not a blocker here, so this node holds behind nothing. The earlier "lean view-first, not settled"
+suggestion is retired.
 
 ## AX cross-reference — the orientation-cost symptom (machine, 2026-06-27)
 An agent-experience sweep of the worker prompt measured this fallback's other face. With no handed
