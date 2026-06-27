@@ -45,9 +45,9 @@ def run() -> int:
         print("  " + _flat(row))
     print("  " + _flat(render.footer(transport.MODEL_LABEL, "input", "", "", WIDTH)))
 
-    # the operator view root, with the architecture review's standing output: the
-    # structural map of as-built reality (modules by length against the signal, debt marked)
-    # and the complexity debt as the gap — the system's shape read without reading code.
+    # the operator view root, with the architecture review's standing output: the structural map of
+    # as-built reality (modules by length against the signal, debt marked), readiness, the wanted-but-
+    # not-built gap, and the complexity debt split out.
     print("\n  ── the operator view (root) · the architecture review's map ──\n")
     root = view.operator_view(root=real)
     for row in render.view_body(root, 0, WIDTH):

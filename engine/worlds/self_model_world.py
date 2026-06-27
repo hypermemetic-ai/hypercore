@@ -23,7 +23,7 @@ import shutil
 import subprocess
 import tempfile
 
-from .. import delta, review, spec, tree, view
+from .. import delta, provenance, review, spec, tree, view
 from ..scenario import _git                                  # the worlds share the core's git helper
 from . import World as _Base
 from . import _new_verb_fence                                # the heavyweight new-verb gate fixture, held off this module
@@ -181,6 +181,15 @@ class World(_Base):
             "### Requirement: it heats\n#### Scenario: cold\n- WHEN cold\n- THEN warm\n")
         return True, ""
 
+    def _v_watched_evidence(self, args: list[str]) -> tuple[bool, str]:
+        """watched-evidence present — plant the committed watched-evidence trace a first autonomous run
+        would leave, so the view's never-run-live status must flip without a hand-set flag."""
+        if args != ["present"]:
+            return False, f"unknown watched-evidence assertion {' '.join(args)!r}"
+        node = tree.file_intent("a watched autonomous run leaves evidence")
+        provenance.commit_verdict(node, "autonomous-run", "first live run left a trace", self.root)
+        return True, ""
+
     def _v_stage_new_verb(self, args: list[str]) -> tuple[bool, str]:
         """stage-new-verb <vacuous|real> — stage a fence whose tip introduces a brand-new domain verb
         (its world fixture) for a capability and run the real scenario gate over it, capturing the
@@ -334,6 +343,34 @@ class World(_Base):
         """gap — the view renders the gap between vision and as-built."""
         return (True, "") if self._view.gap else (False, "the view renders no gap")
 
+    def _v_readiness(self, args: list[str]) -> tuple[bool, str]:
+        """readiness — the view renders the derived gated/watched standard list."""
+        text = "\n".join(self._view.readiness)
+        ok = "gated —" in text and "watched —" in text
+        return (True, "") if ok else (False, "the readiness surface does not mark standards gated and watched")
+
+    def _v_never_live(self, args: list[str]) -> tuple[bool, str]:
+        """never-live — the view reports the autonomy seam as built but the first autonomous run as
+        unverified, derived from an empty watched-evidence trail."""
+        line = next((r.lower() for r in self._view.readiness if "never-run-live" in r), "")
+        ok = "still unverified" in line and "green" not in line
+        return (True, "") if ok else (False, "the never-run-live status is absent or implies green")
+
+    def _v_live_trace(self, args: list[str]) -> tuple[bool, str]:
+        """live-trace — once a watched-evidence trace exists, the never-run-live line flips away."""
+        text = "\n".join(self._view.readiness).lower()
+        ok = "live-run-trace" in text and "never-run-live" not in text
+        return (True, "") if ok else (False, "the watched-evidence trace did not flip the live status")
+
+    def _v_gap_split(self, args: list[str]) -> tuple[bool, str]:
+        """gap-split — wanted-but-not-built gap and built-but-weak complexity debt render separately."""
+        if not self._view.gap:
+            return False, "the wanted-but-not-built gap is absent"
+        if not self._view.complexity_debt:
+            return False, "the complexity debt region is absent"
+        overlap = set(self._view.gap) & set(self._view.complexity_debt)
+        return (True, "") if not overlap else (False, f"gap and complexity debt are conflated: {sorted(overlap)}")
+
     def _v_structure(self, args: list[str]) -> tuple[bool, str]:
         """structure — the root's structural map is the architecture review's standing output, derived
         from the scan, not hand-authored."""
@@ -344,8 +381,8 @@ class World(_Base):
     def _v_debt(self, args: list[str]) -> tuple[bool, str]:
         """debt — the root's complexity debt is the architecture review's backlog, derived from the
         scan."""
-        backlog = review.backlog(review.review(_REAL))
-        return ((True, "") if backlog == self._view.gap[:len(backlog)]
+        debt = review.complexity_debt(review.review(_REAL))
+        return ((True, "") if debt == self._view.complexity_debt
                 else (False, "the root's complexity debt is not the architecture review's derived backlog"))
 
     def teardown(self) -> None:

@@ -5,8 +5,8 @@ tree live for complexity debt and renders two things from one scan: the
 **complexity debt** — the engine that surfaces god-files-in-the-making before they
 set — and the operator view's **"what the system is" upper levels** — the structural
 map of as-built reality, debt marked, read without reading code. The review is not a
-separate artifact; its output *is* the operator view's as-built and gap, kept honest
-between folds. It consults the same accepted-length record `folding-conditions`
+separate artifact; its output *is* the operator view's structure and complexity debt, kept honest between
+folds. It consults the same accepted-length record `folding-conditions`
 gates with — one criterion (depth, signalled by length) at two scopes: the per-tree gate at
 the fold, this standing whole-tree scan.
 
@@ -52,8 +52,8 @@ not score depth. The mechanical structural red flags a tool can read — dead mo
 circular dependencies — are the only depth-adjacent facts the scan computes, and they are a
 narrow subset, not the judgment. The model-driven **red-flag module depth judgment** — the deletion test, the
 shallow-module and information-leakage judgments, testable-through-the-interface — is **not yet built**.
-The review records that absence honestly, here and in the operator's gap, and never
-fabricates a module depth judgment from length or from the mechanical subset.
+The review records that absence honestly, as wanted-but-not-built gap rather than complexity debt, and
+never fabricates a module depth judgment from length or from the mechanical subset.
 
 #### Scenario: a god-file in the making
 - WHEN a source file crosses the length signal with no accepted-length record accepting it
@@ -140,12 +140,12 @@ red, so the standard bites by construction rather than by a reviewer remembering
   symbol-clash
   ```
 
-### Requirement: the review's output is the operator view's upper levels and the backlog
+### Requirement: the review's output is the operator view's upper levels and complexity debt
 The review's output MUST be the operator view's "what the system is" upper levels — the
 structural map of the modules by length against the signal, debt marked, rendered visually
-where a picture carries it — and its findings MUST be the complexity debt the operator reads
-as the gap. Both are derived from the scan, never hand-authored, so the operator reads the current,
-honest shape of the system at a glance without reading code.
+where a picture carries it — and its findings MUST be the complexity debt the operator reads, distinct
+from the wanted-but-not-built gap. Both are derived from the scan, never hand-authored, so the operator
+reads the current, honest shape of the system at a glance without reading code.
 
 #### Scenario: the operator reads the map
 - WHEN the operator opens the operator view
@@ -154,6 +154,6 @@ honest shape of the system at a glance without reading code.
 
   ```check
   view renders-map
-  view gap-derived
+  view complexity-debt-derived
   view no-source
   ```

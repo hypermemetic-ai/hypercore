@@ -210,21 +210,26 @@ no code and runs none of them — its act is exactly as before.
 - watched — proven from outside in `engine/check/build_reaches_main.py`, the keystone that cannot
   certify itself from inside a fold
 
-### Requirement: the operator view renders vision beside as-built and gap
-The operator view MUST render, at every altitude, the **vision** (authored, from
-`intent.md`) beside the **as-built** (derived from the living spec) and the **gap**
-between them, as a recursive tree to the depth the work reaches. The upper levels'
-"what the system is" structural map and the complexity debt are the standing output
-of the architecture review (`architecture-review` capability), kept honest between folds.
-The map renders the system's **depth**, not merely its length: length is shown as a
-context-cost signal against the threshold, and the deeper model-driven red-flag depth
-assessment is recorded as not-yet-built, never fabricated —
-so the operator reads depth, not just a line count.
+### Requirement: the operator view renders vision beside as-built, readiness, gap, and complexity debt
+The operator view MUST render, at every altitude, the **vision** (authored, from `intent.md`) beside the
+**as-built** (derived from the living spec), and — answering *can I trust a run on this?* — a
+**readiness** surface, the **gap**, and the **complexity debt**, as a recursive tree to the depth the
+work reaches. The readiness surface is an honest list of the standards, each marked **gated** (a scenario
+carries an executable check block) or **watched** (model judgment no fixture certifies, its only trail
+presence), so the operator reads exactly what rests on trust; and it carries the **never-run-live**
+status — the autonomy seam is built but the first autonomous run is still unverified — rendered so it
+says so rather than implying green, derived from the watched-evidence trail's emptiness so it flips when
+the first run leaves its trace, never hand-set. The **gap** (wanted-but-not-built) renders distinctly
+from the **complexity debt** (built-but-weak) — the standing output of the architecture review
+(`architecture-review`), kept honest between folds — which the old view conflated. That map renders the
+system's **depth**, not merely its length: length is a context-cost signal against the threshold, and the
+model-driven red-flag depth assessment is recorded as not-yet-built, never fabricated. Readiness,
+as-built, gap, and complexity debt are all derived; only the vision is authored.
 
 #### Scenario: the view is read
 - WHEN the operator opens the view
-- THEN it shows the vision, the as-built capabilities and their requirements, and the
-  gap; drilling into a capability zooms the same three to that grain
+- THEN it shows the vision, the as-built capabilities and their requirements, the readiness surface, the
+  gap, and the complexity debt; drilling into a capability zooms the same to that grain
 
   ```check
   read view
@@ -257,14 +262,48 @@ so the operator reads depth, not just a line count.
   debt
   ```
 
-### Requirement: the as-built and gap are derived; only the vision is authored
-No statement in the as-built or gap renders MUST be hand-authored or hand-maintained
-as prose; each is a render of the model and changes when the model changes. The
-vision they sit beside is the one writable region.
+#### Scenario: the readiness surface names what rests on trust
+- WHEN the operator opens the view
+- THEN it renders an honest list of the standards, each marked gated (a scenario carries an executable
+  check) or watched (model judgment, no fixture), and a never-run-live status that says the first
+  autonomous run is unverified rather than implying green — all derived, never hand-set
+
+  ```check
+  read view
+  readiness
+  never-live
+  ```
+
+#### Scenario: never-run-live flips when watched evidence exists
+- WHEN the first autonomous run leaves a watched-evidence trace
+- THEN the view no longer renders never-run-live; it renders the trace-present live status without a
+  hand-set flag
+
+  ```check
+  watched-evidence present
+  read view
+  live-trace
+  ```
+
+#### Scenario: gap is distinct from complexity debt
+- WHEN the operator reads the view's shortfalls
+- THEN the wanted-but-not-built gap renders as its own region, distinct from the built-but-weak
+  complexity debt the architecture review produces, which the old view conflated
+
+  ```check
+  read view
+  gap-split
+  ```
+
+### Requirement: the as-built, readiness, gap, and complexity debt are derived; only the vision is authored
+No statement in the as-built, readiness, gap, or complexity-debt renders MUST be hand-authored or
+hand-maintained as prose; each is a render of the model and changes when the model changes. The vision
+they sit beside is the one writable region.
 
 #### Scenario: the model changes
 - WHEN a delta folds into the spec
-- THEN the as-built and gap renders change in the same act, with nothing hand-edited
+- THEN the as-built, readiness, gap, and complexity-debt renders change in the same act, with nothing
+  hand-edited
 
   ```check
   fold added

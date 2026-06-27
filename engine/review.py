@@ -11,7 +11,7 @@ report. It has two roles, and this module serves both from one scan:
   renders the structural map of as-built reality — every module by length against the
   signal, debt marked — so the operator reads the shape of the system at a glance,
   without reading code. The review is *not a separate artifact*: its output is the
-  operator view's as-built and gap (`view.operator_view`), kept honest between folds.
+  operator view's structure and complexity debt (`view.operator_view`), kept honest between folds.
 
 What it measures is **length** — what a module costs a worker's window — which the
 depth re-grounding keeps as one **signal** of depth, not the criterion. Depth is
@@ -119,19 +119,24 @@ def bars(rv: Review) -> list[str]:
             for m in rv.modules]
 
 
-def backlog(rv: Review) -> list[str]:
-    """The complexity debt as the operator reads it — the gap: the length findings, then the
-    mechanical red flags, and **always** the honest record that the model-driven module depth judgment beyond
-    them is not yet built. The unbuilt-judgment line is unconditional, not shown only on a clean tree:
-    depth is judgment, never a threshold the scan enforces (the depth de-claim), so the review
-    states the judgment is unbuilt whether or not a length finding happens to be present — a length
-    finding is a context-cost signal, not the module depth judgment, and must never read as one."""
+def complexity_debt(rv: Review) -> list[str]:
+    """The complexity debt as the operator reads it: length findings and mechanical red flags. This is
+    built-but-weak work to deepen, kept distinct from the wanted-but-not-built gap."""
     out = [f"{f.subject}: {f.note} ({f.strength})" for f in rv.findings]
     out += [f"{rf.subject}: {rf.detail} (red flag: {rf.rule})" for rf in rv.flags]
-    if not out:
-        out = [f"no complexity debt — every module is within the length signal "
-               f"({conditions.SIGNAL} lines), no dead symbols, no circular imports"]
-    return out + [DEPTH_NOT_YET]
+    return out or [f"no complexity debt — every module is within the length signal "
+                   f"({conditions.SIGNAL} lines), no dead symbols, no circular imports"]
+
+
+def gap() -> list[str]:
+    """The review-owned wanted-but-not-built line: the model-driven module depth judgment is desired
+    but not built. It belongs with the gap, not with built-but-weak complexity debt."""
+    return [DEPTH_NOT_YET]
+
+
+def backlog(rv: Review) -> list[str]:
+    """Compatibility render for older callers that still ask for the review backlog."""
+    return complexity_debt(rv) + gap()
 
 
 # ── internals ────────────────────────────────────────────────────────────────

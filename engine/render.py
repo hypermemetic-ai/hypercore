@@ -95,8 +95,8 @@ def converse_body(thread: Thread, width: int, explain_text: str | None = None) -
 
 
 def view_body(node, sel: int, width: int) -> list[Row]:
-    """One node of the operator view: vision beside as-built beside gap, then the
-    children to drill into. `node` is a view.ViewNode (duck-typed to stay decoupled)."""
+    """One node of the operator view: vision beside as-built, readiness, gap, and complexity debt,
+    then the children to drill into. `node` is a view.ViewNode (duck-typed to stay decoupled)."""
     rows: list[Row] = [[(f"operator view  ·  {node.title}", TITLE)], []]
 
     def block(label: str, lines: list[str], style: str) -> None:
@@ -110,6 +110,7 @@ def view_body(node, sel: int, width: int) -> list[Row]:
 
     block("vision", node.vision, SAY)
     block("as-built", node.asbuilt, CARD)
+    block("readiness", getattr(node, "readiness", []), CARD)
 
     structure = getattr(node, "structure", None)         # the architecture review's map
     if structure:
@@ -120,6 +121,7 @@ def view_body(node, sel: int, width: int) -> list[Row]:
         rows.append([])
 
     block("gap", node.gap, TAG)
+    block("complexity debt", getattr(node, "complexity_debt", []), TAG)
 
     if node.children:
         rows.append([("drill in", HEAD)])

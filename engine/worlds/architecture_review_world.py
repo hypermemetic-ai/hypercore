@@ -179,17 +179,18 @@ class World(_Base):
 
     # ── the operator view: the review's output read over hypercore's own tree ────
     def _v_view(self, args: list[str]) -> tuple[bool, str]:
-        """view <renders-map|gap-derived|no-source> — the operator view's upper levels ARE the review's
-        output, read over hypercore's own tree: the visual structural map (`renders-map`), the
-        complexity debt derived from the review (`gap-derived`), read with no source code (`no-source`)."""
+        """view <renders-map|complexity-debt-derived|no-source> — the operator view's upper levels ARE
+        the review's output, read over hypercore's own tree: the visual structural map (`renders-map`),
+        the complexity debt derived from the review, read with no source code (`no-source`)."""
         what = args[0]
         v = view.operator_view(root=_REAL)
         if what == "renders-map":
             return (True, "") if v.structure and any("█" in ln for ln in v.structure) else (
                 False, "the operator view root renders no visual structural map")
-        if what == "gap-derived":
-            missing = [ln for ln in review.backlog(review.review(_REAL)) if ln not in v.gap]
-            return (True, "") if not missing else (False, f"the gap is not the review's backlog ({len(missing)} lines absent)")
+        if what == "complexity-debt-derived":
+            missing = [ln for ln in review.complexity_debt(review.review(_REAL)) if ln not in v.complexity_debt]
+            return ((True, "") if not missing else
+                    (False, f"the complexity debt is not the review's backlog ({len(missing)} lines absent)"))
         if what == "no-source":
             text = "".join(t for row in render.view_body(v, 0, 76) for t, _s in row)
             ok = ("operator view" in text and "█" in text and f"/{conditions.SIGNAL}" in text
