@@ -81,3 +81,21 @@ prompt: once every buildable node carries an architect-proposed delta, the no-de
 unreachable and goes with it. Touches the same seams as `work/worker-prompt-leads-with-the-task` and
 `work/worker-disciplines-become-a-loadable-skill` (`worker.py`, `spec/worker.md`) — each ADDs a
 distinct requirement rather than co-MODIFYing a shared one.
+
+## Adequacy cross-reference — the oracle the builder still authors (machine, 2026-06-27)
+An architecture-review panel re-read the integrity stack's **adequacy** layer (line 32, owned by the
+now-folded `gate-vouches-for-the-new-verb`) and found the headline claim — "the builder can never
+author the oracle that judges it" (`scenario.py:9`) — holds mechanically only against **vacuity**, not
+adequacy. The worker authors both the scenario and its fixture, and the gate reads both from the
+worker's own fence (`scenario._check_source`/`_world_source`, scenario.py:254-273). The new-verb fence
+catches a fixture that asserts *nothing* (`_new_verb_fence.py:44-48`) but does not judge whether a
+non-vacuous fixture tests the *property* or a builder-authored proxy: a verb
+`return (True,"") if hasattr(m,"NEW") else (False,"")` over a planted constant goes red→green and folds,
+having tested the existence of a constant. The system concedes this verbatim —
+`provenance.py:34-36`, `Attestation.adequacy="deferred"`. So adequacy-beyond-vacuity is **unowned**: the
+adequacy node shipped the vacuity fence and deferred the rest, and no open node carries the residue.
+This is the proposer node's neighbor, not its job — this node still scopes to "a worker authors no
+*delta*; it may still author *fixtures*" (line 35-37) — recorded here so the stack's open edge is
+visible from the live node. Closure is a judgment problem (whether a fixture tests the property is not
+mechanically decidable), kin to the depth-as-judgment the model-driven-depth-scan ask carries. Left
+**parked** per the operator, not filed.
