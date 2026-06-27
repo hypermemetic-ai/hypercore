@@ -282,3 +282,32 @@ crossing under the scheduler still surfaces exactly one decision, the same one, 
   card parented
   node not-ready
   ```
+
+### Requirement: a worker only ever applies an architect-proposed delta
+A worker MUST be handed a node that carries an **architect-proposed delta** — the propose stage is the
+architect's, never the worker's. `worker.run` MUST refuse, at the worker boundary before it dispatches
+the node, any node that carries no resolved propose product (`grill.entry_of` is unreachable): it raises
+one parented decision card on the operator's queue naming the missing architect-proposed delta and the
+operator's fork (propose one, abandon, or change the ask), and builds nothing. The node stays standing
+and blocked on that card rather than going live or folding. This boundary is the one place the guarantee
+is enforced, so every door into a worker is covered alike: the autonomous scheduler and the bare
+hand-driven `worker.run(tree.find(id))` path.
+
+Because the boundary refuses a node with no proposed delta, the grounding assembly has no
+author-from-scratch path left. The former fallback is deleted, not guarded: `worker._touched` of an
+empty delta names no capability, and `worker.prompt` no longer tells the worker to author the delta
+from a whole-spec scan. A delta the architect proposed and judged **trivial** is still a proposed delta
+and still builds; only a delta never proposed is refused.
+
+#### Scenario: a node with no architect-proposed delta surfaces and builds nothing
+- WHEN a worker crossing is run on a node that carries no architect-proposed delta
+- THEN `worker.run` raises one parented decision card naming the missing architect-proposed delta and
+  builds nothing — the node stays standing, not live and not folded — and the author-from-scratch
+  fallback in `worker._touched`/`worker.prompt` is gone, so an empty delta names no capability to scan
+
+  ```check
+  no-delta dispatched
+  surfaces decision
+  builds nothing
+  fallback gone
+  ```

@@ -4,10 +4,12 @@ Before an ask that opens real choices becomes work, the architect runs a grillin
 resolves every decision it can from the living spec and intent, and surfaces only the residue —
 the decisions the operator has a stake in — as questions on the queue, **one at a time**, each
 carrying the machine's *lean* and the one thing that would *flip* it. An ask whose every decision
-is already determined files straight to work, ungrilled.
+is already determined files straight to work without surfacing an operator interview, but it still
+carries the architect's propose-stage product.
 
 A finished pass yields the **view entry** — the contract the result is later checked against — and
-the **spec delta** the change will realize. Work does not spawn until the entry is ratified.
+the **spec delta** the change will realize. Above the floor, work does not spawn until the entry is
+ratified; below it, the same product is attached to the standing work directly.
 
 Design B: the pass is durable **within its tree's folder**, in `grilling.md`, not as a
 scatter of question/entry node files. The held tree itself sits on the queue (state AWAITING) and
@@ -78,12 +80,14 @@ class _Pass:
 # ── the pass ─────────────────────────────────────────────────────────────────
 
 def consider(ask: str, transport=None) -> tuple[tree.Node, list[Question]]:
-    """Run the floor on a filed ask. Below it: file standing work, no questions. Above it: hold the
-    ask as its own tree and surface its first question on the queue (the held tree goes AWAITING)."""
+    """Run the floor on a filed ask. Below it: file standing work with the resolved propose product,
+    no surfaced questions. Above it: hold the ask as its own tree and surface its first question on the
+    queue (the held tree goes AWAITING)."""
     transport = transport or call
     questions = floor(ask, transport)
     if not questions:
-        return tree.file_intent(ask), []
+        entry, delta_text = products(ask, [], transport)
+        return propose(tree.file_intent(ask), entry, delta_text), []
     held = tree.hold(ask)
     _save(held, _Pass(0, [{"q": q.text, "lean": q.lean, "flip": q.flip, "answer": ""}
                           for q in questions], "", ""))
@@ -114,6 +118,17 @@ def ratify(held: tree.Node) -> tree.Node:
     """The view entry approved: the held ask spawns as standing work. The gate opens here and only
     here; the contract and delta stay in the tree's grilling.md as the worker's handed input."""
     return tree.spawn(tree.find(held.id) or held)
+
+
+def propose(node: tree.Node, contract: str, delta_text: str) -> tree.Node:
+    """Attach the architect's resolved propose product to an already-filed node without surfacing an
+    operator interview. This is the below-floor path and the hand-authored-material path: callers do
+    not learn the `grilling.md` format, only that a standing node now carries the contract and delta a
+    worker is allowed to apply."""
+    p = _Pass(0, [], contract.strip(), delta_text.strip())
+    tree.atomic_write(_pass_path(node), _render(p))
+    tree._persist(node, f"propose: {tree._subject(node.text)}")
+    return tree.find(node.id) or node
 
 
 def floor(ask: str, transport=None) -> list[Question]:

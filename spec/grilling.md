@@ -18,9 +18,11 @@ and the **spec delta** the change will realize.
 An ask that opens real choices MUST pass a grilling floor before spawning work: the
 architect resolves every decision it can from the living spec and intent, and
 only a residual decision the operator has a stake in keeps the ask above the floor. An
-ask whose every decision is already determined files straight to standing work,
-ungrilled. The floor is a standing guard, not a front gate — the same test re-fires
-whenever a stake-bearing choice surfaces mid-work.
+ask whose every decision is already determined files straight to standing work without an operator
+interview — but the architect still **proposes its delta**: the standing work carries the propose
+product (the contract and the spec delta), authored with no question surfaced, so it is buildable and
+never reaches a worker without an architect-proposed delta. The floor is a standing guard, not a front
+gate — the same test re-fires whenever a stake-bearing choice surfaces mid-work.
 
 #### Scenario: above the floor
 - WHEN a filed ask leaves a stake-bearing decision open after the machine resolves
@@ -35,12 +37,13 @@ whenever a stake-bearing choice surfaces mid-work.
 
 #### Scenario: below the floor
 - WHEN every decision a filed ask needs is already determined by intent or the spec
-- THEN it files directly as standing work, with no grilling
+- THEN it files directly as standing work, carrying the architect's proposed delta (its propose
+  product), with no operator interview surfaced
 
   ```check
   ask below-floor
   filed standing
-  grilled none
+  proposed delta
   ```
 
 ### Requirement: grilling asks one question at a time, each carrying a lean

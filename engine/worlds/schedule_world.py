@@ -3,7 +3,7 @@
 The fixture drives `Scheduler` through `tree.file_intent`, `tree.ready`, worker fences, folds, failure
 cards, and the loop lease. A prompt-routing transport matches build prompts by per-node tokens, can
 hold a build in flight, kill a holder like process exit, or raise a worker failure; coherence answers
-green. Record-mechanism facts the fixture cannot honestly fake stay in `engine/check/scenarios.py`.
+green. Record-mechanism facts stay in `engine/check/scenarios.py`.
 """
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ import tempfile
 import threading
 import time
 
-from .. import communication, schedule, spec, transport, tree, worker
+from .. import communication, grill, schedule, spec, transport, tree, worker
 from ..scenario import _git                                  # the worlds share the core's git helper
 from . import World as _Base
 
@@ -27,11 +27,12 @@ _COHERENT = transport.emit(communication.COHERENCE_SCHEMA,
 def _built(cap: str) -> str:
     """A worker's hand-off: a report and a delta adding a fresh capability, so each ready node folds
     its own delta into the one spec with no two contending for the same capability."""
-    return transport.emit(worker.WORKER_SCHEMA,
-                          {"report": f"built {cap}",
-                           "delta": (f"## ADDED — {cap}\n### Requirement: {cap} holds\n"
-                                     f"The {cap} capability MUST hold.\n#### Scenario: s\n- WHEN x\n- THEN y\n")})
+    return transport.emit(worker.WORKER_SCHEMA, {"report": f"built {cap}", "delta": _delta(cap)})
 
+
+def _delta(cap: str) -> str:
+    return (f"## ADDED — {cap}\n### Requirement: {cap} holds\n"
+            f"The {cap} capability MUST hold.\n#### Scenario: s\n- WHEN x\n- THEN y\n")
 
 class World(_Base):
     """An isolated, git-backed `ENGINE_ROOT` the real scheduler runs over."""
@@ -72,6 +73,8 @@ class World(_Base):
 
     def _file(self, label: str, token: str, cap: str, fail: bool = False) -> tree.Node:
         node = tree.file_intent(f"schedule the {token or label} work")
+        if cap:
+            node = grill.propose(node, node.text, _delta(cap))
         self._nodes[label] = node
         if token:
             self._mapping[token] = cap

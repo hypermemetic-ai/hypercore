@@ -35,7 +35,7 @@ _PRODUCTS = transport.emit(grill.PRODUCTS_SCHEMA, {
 class World(_Base):
     """A scenario's fixture: an isolated, git-backed `ENGINE_ROOT` seeded with the real spec, the
     real `grill` run over it. `ask` runs the floor; `answer` advances the interview; the assertion
-    verbs read the held tree's pass, the queue, and the produced delta."""
+    verbs read the held tree's pass, the queue, and the produced proposal."""
 
     def __init__(self):
         self._prev_root = os.environ.get("ENGINE_ROOT")
@@ -81,10 +81,10 @@ class World(_Base):
         return (True, "") if grill.is_question(self.node) else (False, "the ask is not held and grilled")
 
     def _v_filed(self, args: list[str]) -> tuple[bool, str]:
-        """filed standing — the ask filed straight to standing work (no grilling pass)."""
+        """filed standing — the ask filed straight to standing work with no operator interview."""
         if args[0] != "standing":
             return False, f"unknown filed assertion {args[0]!r}"
-        if grill.is_question(self.node) or grill.is_entry(self.node):
+        if grill.is_question(self.node) or self.node.id in {c.id for c in tree.cards()}:
             return False, "the ask was grilled, not filed straight through"
         return ((True, "") if len(tree.standing()) == self.base_standing + 1
                 else (False, "the below-floor ask is not standing work"))
@@ -139,6 +139,21 @@ class World(_Base):
             return False, "the pass produced a trivial delta"
         reason = delta.check(d, spec.read_spec())
         return (True, "") if reason is None else (False, f"the delta does not fold clean: {reason}")
+
+    def _v_proposed(self, args: list[str]) -> tuple[bool, str]:
+        """proposed delta — the below-floor standing work carries the architect's propose product:
+        a contract and a delta reachable through the same entry seam a worker reads."""
+        if args != ["delta"]:
+            return False, f"unknown proposed assertion {' '.join(args)!r}"
+        if grill.entry_of(self.node) is None:
+            return False, "the standing ask does not carry a resolved propose product"
+        if not grill.contract_of(self.node):
+            return False, "the proposed product carries no contract"
+        d = delta.parse("# delta — below-floor product\n\n" + grill.delta_of(self.node))
+        if d.trivial:
+            return False, "the proposed delta is trivial in a fixture that should prove a real product"
+        reason = delta.check(d, spec.read_spec())
+        return (True, "") if reason is None else (False, f"the proposed delta does not fold clean: {reason}")
 
     def _v_ratify(self, args: list[str]) -> tuple[bool, str]:
         """ratify spawns — ratifying the entry spawns the work as standing and clears the pass from

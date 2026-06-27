@@ -48,6 +48,9 @@ _TURN = {
                              {"say": "I am hypercore's architect.", "file": None, "card": None, "done": True}),
 }
 _FLOOR_CLEAR = transport.emit(grill.FLOOR_SCHEMA, {"questions": []})   # below the floor — it files straight through
+_PRODUCTS = transport.emit(grill.PRODUCTS_SCHEMA,
+                           {"entry": "download the new berserk episodes.",
+                            "delta": "# delta — below-floor ask"})
 
 
 class World(_Base):
@@ -85,13 +88,16 @@ class World(_Base):
         reply = _TURN[mode]
         self.thread = communication.Thread()
         self.reply = communication.speak(self.thread, f"<operator: {mode}>",
-                                          lambda p: _FLOOR_CLEAR if "grilling pass" in p else reply)
+                                          lambda p: (_PRODUCTS if "grilling pass is resolved" in p
+                                                     else _FLOOR_CLEAR if "running a grilling pass" in p
+                                                     else reply))
         return True, ""
 
     def _v_hand_back(self, args: list[str]) -> tuple[bool, str]:
         """hand-back — a worker produces a machine-facing result carrying the leak sentinel, and the
         architect integrates it at the archive gate with a coherent verdict and its own authored words."""
-        self.node = tree.file_intent("a worker hands back a technical result")
+        self.node = grill.propose(tree.file_intent("a worker hands back a technical result"),
+                                  "contract.", self._delta())
         worker.worktree(self.node, self.root)
         tree.dispatch(self.node)
         result = worker.apply(self.node, scripted(transport.emit(worker.WORKER_SCHEMA,

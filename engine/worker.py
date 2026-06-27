@@ -1,21 +1,6 @@
-"""The worker: system-facing, fenced, grounded in the living spec.
-
-This module owns the engine seam that assembles a worker prompt, runs the model at its
-fenced worktree, and returns a machine-facing hand-off. The standing discipline is
-single-sourced from `spec/worker.md`; only engine facts the spec cannot infer stay here.
-
-Prompt grounding is economical by construction:
-- touched capability bodies are foregrounded;
-- untouched capability bodies are indexed and read just-in-time from `spec/<name>.md`;
-- glossary entries are derived from terms named in the ask, handed delta, and touched bodies;
-- all other glossary entries stay in `glossary.md`;
-- past-decision grounds stay in `work/archive/`.
-
-The worker still sees the whole spec map, the depth standards from `spec/depth.md`, the
-single-writer record warning, and the tag-delimited reply envelope. It never receives raw code
-or the operator view, and its raw report has no path to the operator; the architect authors
-anything operator-facing from the `WorkerResult`.
-"""
+"""The worker seam: assemble grounding, run the model at its fence, and return a machine-facing
+hand-off. The spec supplies the role discipline; this module holds the prompt economy, fence, and
+handoff mechanics."""
 from __future__ import annotations
 
 import os
@@ -54,11 +39,7 @@ GROUNDING = (
     "discipline for a gated one; hold it yourself, because no gate will."
 )
 
-# The one authored residue that is neither discipline nor grounding: the reply shape the transport reads.
-# The schema is the single source — `ENVELOPE` is its rendered instruction (carried in the prompt) and
-# `read(reply, WORKER_SCHEMA)` parses it; the worker's markdown delta rides in `<delta>…</delta>`
-# verbatim, so its `##` headers and ` ```check ` fences round-trip with no escaping, and a field can
-# never arrive as a typed object to crash on (the report-as-object class is gone by construction).
+# One schema renders the prompt instruction and parses the hand-off; markdown rides verbatim.
 WORKER_SCHEMA = Envelope(
     Tag("report", "the technical result and all relevant facts, for the architect"),
     Tag("delta", "the refined spec delta — ADDED / MODIFIED / REMOVED / RENAMED markdown over the "
@@ -78,18 +59,13 @@ def _worker_disciplines(root: str | None = None) -> str:
 
 @dataclass
 class WorkerContext:
-    """The grounding a worker runs on — assembled from the model, never free-form. It carries the
-    *whole* spec (the worker is not slice-confined): `capabilities` is every capability, `touched` marks
-    the ones the change names. `prompt` foregrounds the touched ones in full, renders every other as a
-    high-signal index (vision + requirement titles), and derives the inlined glossary entries from the
-    terms named in the foregrounded prose, so the rescan sees the whole map while untouched bodies and
-    glossary entries stay read-away. `depth` is among the capabilities, foregrounded every episode. The
-    long grounds of past decisions are *not* here — greped from `work/archive/` just-in-time (step 5).
-    Nothing of the operator view and nothing of the code is in here."""
+    """The whole-spec grounding model. `prompt` decides what is foregrounded, indexed, or left read-away;
+    operator view, code, and archive grounds stay out."""
     capabilities: list[tuple[str, str]] = field(default_factory=list)  # (name, spec text) — all
     glossary: str = ""
     delta: str = ""                                   # the handed delta, to verify + refine
     touched: set[str] = field(default_factory=set)    # the grounding: capabilities the delta names
+    proposed: bool = False                            # a resolved architect propose product exists
 
     @property
     def names(self) -> list[str]:
@@ -98,12 +74,7 @@ class WorkerContext:
 
 @dataclass
 class CodeFile:
-    """One engine path the worker's build touched, captured as a self-contained pair: the byte-image it
-    forked from (`base`, the fence's HEAD~1) and the verified bytes it hands back (`tip`, the fence's
-    working tree). The fold content-replays the `tip` onto main and reads the `base` for its staleness
-    pre-check; either is `None` for a path absent at that end (an added file has no base, a removed one
-    no tip). Content, not a diff — the verified bytes themselves, so the fold consumes a flat artifact
-    and never reaches a live fence."""
+    """One touched engine path as fork-base bytes and verified tip bytes, content-replayed at fold."""
     base: str | None
     tip: str | None
 
@@ -135,17 +106,12 @@ def context(node: tree.Node, root: str | None = None) -> WorkerContext:
     handed = _handed_delta(node)
     touched = _touched(handed, sp)
     caps = [(c.name, _cap_text(c.name, root)) for c in sp.capabilities]   # all — full scan, incl. depth
-    return WorkerContext(caps, sp.glossary, handed, touched)
+    return WorkerContext(caps, sp.glossary, handed, touched, _has_proposed_delta(node))
 
 
 def prompt(node: tree.Node, ctx: WorkerContext, root: str | None = None) -> str:
-    """The worker's grounding rendered to one prompt — salutation, disciplines single-sourced from
-    `spec/worker.md`, the record grounding, the depth standards, the ask, the handed delta, the
-    **touched** capabilities in full, **every other as a high-signal index** (vision + requirement
-    titles), and only the glossary entries whose terms appear in the foregrounded prose; the reply
-    envelope comes **last**. Untouched bodies, glossary entries, and past-decision grounds are read
-    just-in-time from the checkout (`spec/<name>.md`, `glossary.md`, `work/archive/`); the index spans
-    the whole spec, so every capability stays in view at a fraction of the bodies' budget."""
+    """Render one worker prompt: touched bodies in full, untouched bodies indexed, named glossary terms
+    inlined, depth foregrounded, and the reply envelope last."""
     def _caps(items):
         return "\n\n".join(f"### capability: {n}\n{t.strip()}" for n, t in items)
     depth_text = next((t.strip() for n, t in ctx.capabilities if n == "depth"), "")
@@ -153,6 +119,13 @@ def prompt(node: tree.Node, ctx: WorkerContext, root: str | None = None) -> str:
     index = _index([(n, t) for n, t in ctx.capabilities if n not in ctx.touched and n != "depth"])
     ask = grill.contract_of(node) or node.text
     glossary = _glossary(ask, ctx, root)
+    handed = (ctx.delta if ctx.delta.strip()
+              else ("(empty architect-proposed delta — a valid trivial delta; do not author a "
+                    "replacement)" if ctx.proposed
+                    else "(missing architect-proposed delta — worker.run refuses this node before "
+                         "dispatch; do not author one)"))
+    grounding_note = ("(no capabilities named by the proposed delta; use the whole-spec index for the "
+                      "rescan and pull any implicated body just-in-time)")
     return (
         f"{SALUTATION}\n\n"
         f"Your standing disciplines (single-sourced from spec/worker.md — what good looks like):\n"
@@ -162,9 +135,9 @@ def prompt(node: tree.Node, ctx: WorkerContext, root: str | None = None) -> str:
         f"{depth_text}\n\n"
         f"The ask:\n{ask}\n\n"
         f"The handed delta (verify and refine it against the WHOLE spec):\n"
-        f"{ctx.delta or '(none — author it from the full scan)'}\n\n"
+        f"{handed}\n\n"
         f"Your grounding — the capabilities the delta names, in full:\n"
-        f"{grounding or '(none named — author the delta from the full scan)'}\n\n"
+        f"{grounding or grounding_note}\n\n"
         f"The rest of the spec, indexed for your rescan — every other capability by its vision and "
         f"requirement titles, so you see the whole map and can catch one the delta mis-named or "
         f"missed. When your rescan implicates a capability, read its full body just-in-time from "
@@ -290,6 +263,9 @@ def run(node: tree.Node, transport=None, root: str | None = None):
     Refusal is the steady-state path, not an edge: a folding-condition block, failed coherence, a
     malformed reply, or an error mid-build leaves one parented decision card blocking the node. The fence
     tears down in `finally`; error raises the card here before recovery and re-raise."""
+    if not _has_proposed_delta(node):
+        card = _raise_missing_delta(node)
+        return communication.Reply(say="", card=card)
     tree.dispatch(node)
     try:
         worktree(node, root)
@@ -315,12 +291,28 @@ def _handed_delta(node: tree.Node) -> str:
     return grill.delta_of(entry) if entry else ""
 
 
+def _has_proposed_delta(node: tree.Node) -> bool:
+    return grill.entry_of(node) is not None
+
+
+def _raise_missing_delta(node: tree.Node) -> tree.Node:
+    existing = [c for c in tree.cards()
+                if c.parent == node.id and c.kind == "decide"
+                and "architect-proposed delta" in c.text]
+    if existing:
+        return existing[0]
+    return tree.raise_card(
+        "missing architect-proposed delta: this node carries no resolved propose product; "
+        "propose one, abandon it, or change the ask",
+        kind="decide", parent=node.id)
+
+
 def _touched(handed: str, sp: spec.Spec) -> set[str]:
-    """The capabilities a delta touches; with no handed delta, every capability — the
-    worker must scan flat to author one (you cannot tell what a change touches from a
-    single capability in isolation)."""
+    """The capabilities a delta touches. An empty delta names no capability: the worker boundary
+    refuses a node with no resolved propose product before dispatch, and a proposed trivial delta still
+    builds without reviving the author-from-scratch fallback."""
     if not handed.strip():
-        return {c.name for c in sp.capabilities}
+        return set()
     return {op.capability for op in delta.parse(handed).ops}
 
 

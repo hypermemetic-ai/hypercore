@@ -65,6 +65,7 @@ class World(_Base):
         _git(self.root, "add", "-A"); _git(self.root, "commit", "-qm", "base")
         self.node = self.ctx = self.prompt = self.reply = self.forged = None
         self.failure = ""                                      # the bare-crossing error the card must preserve
+        self.no_delta_called = False                           # proves the missing-proposal refusal built nothing
         # Sentinels the worker's grounding is read against. They are world-owned and never authored into
         # a check block — the block's own text is part of the spec the worker's grounding carries, so a
         # sentinel named there would appear in the prompt via the spec and defeat the assertion.
@@ -134,6 +135,22 @@ class World(_Base):
             self.failure = str(e)
             return True, ""
         return False, "the bare worker.run did not re-raise the build failure"
+
+    def _v_no_delta(self, args: list[str]) -> tuple[bool, str]:
+        """no-delta dispatched — call the worker boundary on a standing node that carries no resolved
+        architect proposal. The transport sentinel proves the boundary refused before any dispatch or
+        build path could run."""
+        if args != ["dispatched"]:
+            return False, f"unknown no-delta action {' '.join(args)!r}"
+        self.node = tree.file_intent("a worker node carrying no architect-proposed delta")
+        self.no_delta_called = False
+
+        def should_not_build(_prompt: str) -> str:
+            self.no_delta_called = True
+            return transport.emit(worker.WORKER_SCHEMA, {"report": "should not run", "delta": self._demo_delta()})
+
+        self.reply = worker.run(self.node, should_not_build, self.root)
+        return True, ""
 
     # ── assertion verbs ──────────────────────────────────────────────────────
     def _v_grounding(self, args: list[str]) -> tuple[bool, str]:
@@ -246,6 +263,58 @@ class World(_Base):
         needed = ("could not complete", self.failure, "abandon", "re-cut", "change")
         missing = [token for token in needed if token and token not in text]
         return (True, "") if not missing else (False, f"the decision card is missing {missing}")
+
+    def _v_surfaces(self, args: list[str]) -> tuple[bool, str]:
+        """surfaces decision — the missing-proposal refusal raises exactly one parented decision card
+        that names the missing architect-proposed delta and the operator's fork."""
+        if args != ["decision"]:
+            return False, f"unknown surfaces assertion {' '.join(args)!r}"
+        if self.node is None:
+            return False, "decision checked before no-delta dispatch"
+        cards = [c for c in tree.cards()
+                 if c.parent == self.node.id and c.kind == "decide"
+                 and "architect-proposed delta" in c.text]
+        if len(cards) != 1:
+            return False, f"expected one missing-delta decision, saw {len(cards)}"
+        missing = [token for token in ("missing", "architect-proposed delta", "propose", "abandon", "change")
+                   if token not in cards[0].text]
+        return (True, "") if not missing else (False, f"the missing-delta card omits {missing}")
+
+    def _v_builds(self, args: list[str]) -> tuple[bool, str]:
+        """builds nothing — the missing-proposal refusal did not dispatch, fold, or summon a worker,
+        and the parented card blocks the standing node from ready work."""
+        if args != ["nothing"]:
+            return False, f"unknown builds assertion {' '.join(args)!r}"
+        if self.node is None:
+            return False, "builds checked before no-delta dispatch"
+        current = tree.find(self.node.id)
+        if current is None:
+            return False, "the missing-delta node disappeared"
+        if current.state != tree.STANDING:
+            return False, f"the node did not stay standing (state={current.state!r})"
+        if current.id in {n.id for n in tree.ready()}:
+            return False, "the missing-delta node re-entered ready work instead of being blocked"
+        if self.no_delta_called:
+            return False, "the worker transport was summoned despite the missing proposed delta"
+        if os.path.isdir(worker._tree_path(current, self.root)):
+            return False, "a worker fence was cut for a node with no proposed delta"
+        return True, ""
+
+    def _v_fallback(self, args: list[str]) -> tuple[bool, str]:
+        """fallback gone — an empty delta names no capability to foreground, and the prompt no longer
+        carries the deleted author-from-scratch instruction."""
+        if args != ["gone"]:
+            return False, f"unknown fallback assertion {' '.join(args)!r}"
+        touched = worker._touched("", spec.read_spec(self.root))
+        if touched:
+            return False, f"empty delta still marked capabilities: {sorted(touched)}"
+        if self.node is None:
+            self.node = tree.file_intent("a worker node carrying no architect-proposed delta")
+        ctx = worker.context(self.node, self.root)
+        prompt = worker.prompt(self.node, ctx, self.root)
+        banned = ("author it from the full scan", "author the delta from the full scan")
+        found = [phrase for phrase in banned if phrase in prompt]
+        return (True, "") if not found else (False, f"the prompt still carries deleted fallback text: {found}")
 
     def _v_node(self, args: list[str]) -> tuple[bool, str]:
         """node not-ready — the failed node was recovered out of `IN_FLIGHT`, but the parented decision
@@ -435,9 +504,7 @@ class World(_Base):
 
     def _stage(self, handed: str) -> tree.Node:
         node = tree.file_intent("a worker builds a change")
-        tree.atomic_write(os.path.join(node.path, "grilling.md"),
-                          grill._render(grill._Pass(0, [], "contract.", handed)))
-        return node
+        return grill.propose(node, "contract.", handed)
 
     def _handed(self, caps: list[str]) -> str:
         return "".join(

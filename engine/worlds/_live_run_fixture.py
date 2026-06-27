@@ -7,7 +7,7 @@ another mini-crossing.
 """
 from __future__ import annotations
 
-from .. import communication, provenance, transport, tree, worker
+from .. import communication, grill, provenance, transport, tree, worker
 from . import scripted
 
 _LIVE_CAP = "demo-live-run"
@@ -20,7 +20,7 @@ def plant_non_fenced_trace(root: str) -> None:
 
 
 def fold_fenced_crossing(root: str) -> tuple[bool, str]:
-    node = tree.file_intent("a fenced crossing folds")
+    node = grill.propose(tree.file_intent("a fenced crossing folds"), "contract.", _live_delta())
     worker.worktree(node, root)
     try:
         tree.dispatch(node)

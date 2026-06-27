@@ -15,7 +15,7 @@ import os
 import shutil
 import tempfile
 
-from .. import communication, spec, transport, tree, worker
+from .. import communication, grill, spec, transport, tree, worker
 from ..scenario import _git                                 # the worlds share the core's git helper
 from . import World as _Base, scripted
 
@@ -50,7 +50,7 @@ class World(_Base):
         """hand <coherent|incoherent> — stage a node, run a worker (scripted hand-back), and run the
         architect's integrate with a scripted coherent/incoherent verdict over the result."""
         coherent = args[0] in ("coherent", "honors")
-        self.node = tree.file_intent("a worker hands a result back")
+        self.node = grill.propose(tree.file_intent("a worker hands a result back"), "contract.", self._delta())
         worker.worktree(self.node, self.root)
         tree.dispatch(self.node)
         result = worker.apply(self.node, scripted(transport.emit(worker.WORKER_SCHEMA,
