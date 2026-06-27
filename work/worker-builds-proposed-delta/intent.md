@@ -1,8 +1,8 @@
 ---
 kind: ask
-state: standing
+state: in flight
 owner: operator
-created: 2026-06-24
+created: 1782277200
 ---
 # worker-builds-proposed-delta — a worker only ever applies an architect-proposed delta
 
