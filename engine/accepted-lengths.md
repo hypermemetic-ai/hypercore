@@ -1,0 +1,1 @@
+accepted: worlds/self_model_world.py @422 — the multi-commit gate fixture (a self-committing worker) must live in the carried world module for its red->green to be honest -- only <cap>_world.py rides onto the base checkout, so it cannot factor into the un-carried _new_verb_fence helper
