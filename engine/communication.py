@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from . import conditions, delta, tree, grill
+from . import conditions, delta, provenance, tree, grill
 from .transport import Envelope, Flag, Tag, call, instruction, read
 
 SYSTEM_SCHEMA = Envelope(
@@ -136,7 +136,15 @@ def integrate(node: tree.Node, result, transport=None, root: str | None = None) 
         card = tree.raise_card(str(refusal), kind="decide", parent=node.id)
         return Reply(say="The verified build didn't hold once merged onto main — the reason is on your "
                          "queue as a decision.", card=card)
+    provenance.commit_verdict(node, provenance.FENCED_RUN, _fenced_run_verdict(node), root)
     return Reply(say=say, done=True)
+
+
+def _fenced_run_verdict(node: tree.Node) -> str:
+    """The live-run trace's payload: evidence that this node reached the archive stage through a
+    fenced worker crossing. It deliberately carries no worker report, so the machine-facing hand-off
+    still has no path to the operator-facing tree."""
+    return f"fenced worker crossing folded\n\nnode: {node.id}\nsubject: {tree._subject(node.text)}"
 
 
 EXPLAIN_SCHEMA = Envelope(Tag("say", "your explanation toward the decision"),

@@ -23,9 +23,10 @@ import shutil
 import subprocess
 import tempfile
 
-from .. import delta, provenance, review, spec, tree, view
+from .. import delta, review, spec, tree, view
 from ..scenario import _git                                  # the worlds share the core's git helper
 from . import World as _Base
+from . import _live_run_fixture
 from . import _new_verb_fence                                # the heavyweight new-verb gate fixture, held off this module
 
 _REAL = tree._DEFAULT_ROOT                                  # hypercore's own model, seeded so the read/view/fold self-host
@@ -43,11 +44,9 @@ _FAITHFUL_SUMMARY = "the faithful summary survives intact"
 _FAITHFUL_LONG_TOKEN = "boundarytoken" + "x" * 120
 _FAITHFUL_TEXT = f"# faithful-crossing — {_FAITHFUL_SUMMARY} before {_FAITHFUL_LONG_TOKEN}\n\ntrivial"
 
-
 def _delta_text(cap: str, req: str) -> str:
     return (f"# delta — grow {cap}\n\n## ADDED — {cap}\n### Requirement: {req}\n"
             f"The {cap} MUST hold.\n#### Scenario: s\n- WHEN x\n- THEN y\n")
-
 
 class World(_Base):
     """A scenario's fixture: an isolated, git-backed `ENGINE_ROOT` seeded with hypercore's own spec,
@@ -203,13 +202,19 @@ class World(_Base):
         return False, f"unknown plant subject {mode!r}"
 
     def _v_watched_evidence(self, args: list[str]) -> tuple[bool, str]:
-        """watched-evidence present — plant the committed watched-evidence trace a first autonomous run
-        would leave, so the view's never-run-live status must flip without a hand-set flag."""
+        """watched-evidence present — plant a committed non-fenced watched-evidence trace, so the view's
+        live-run signal proves it reads only fenced-run evidence."""
         if args != ["present"]:
             return False, f"unknown watched-evidence assertion {' '.join(args)!r}"
-        node = tree.file_intent("a watched autonomous run leaves evidence")
-        provenance.commit_verdict(node, "autonomous-run", "first live run left a trace", self.root)
+        _live_run_fixture.plant_non_fenced_trace(self.root)
         return True, ""
+
+    def _v_fenced_crossing(self, args: list[str]) -> tuple[bool, str]:
+        """fenced-crossing folds — drive the real worker-apply → integrate path over a fenced worktree
+        with scripted models, so the only way the view can flip is the integrate-stage fenced-run trace."""
+        if args != ["folds"]:
+            return False, f"unknown fenced-crossing action {' '.join(args)!r}"
+        return _live_run_fixture.fold_fenced_crossing(self.root)
 
     def _v_stage_new_verb(self, args: list[str]) -> tuple[bool, str]:
         """stage-new-verb <vacuous|real|multicommit> — stage a fence and run the real scenario gate."""
@@ -416,17 +421,17 @@ class World(_Base):
         return (True, "") if ok else (False, "the readiness surface does not mark standards gated and watched")
 
     def _v_never_live(self, args: list[str]) -> tuple[bool, str]:
-        """never-live — the view reports the autonomy seam as built but the first autonomous run as
-        unverified, derived from an empty watched-evidence trail."""
+        """never-live — the view reports that no fenced crossing has folded yet, derived from an empty
+        fenced-run trail rather than any other watched-evidence verdict."""
         line = next((r.lower() for r in self._view.readiness if "never-run-live" in r), "")
-        ok = "still unverified" in line and "green" not in line
+        ok = "fenced crossing" in line and "still unverified" in line and "green" not in line
         return (True, "") if ok else (False, "the never-run-live status is absent or implies green")
 
     def _v_live_trace(self, args: list[str]) -> tuple[bool, str]:
-        """live-trace — once a watched-evidence trace exists, the never-run-live line flips away."""
+        """live-trace — once a fenced-run trace exists, the never-run-live line flips away."""
         text = "\n".join(self._view.readiness).lower()
-        ok = "live-run-trace" in text and "never-run-live" not in text
-        return (True, "") if ok else (False, "the watched-evidence trace did not flip the live status")
+        ok = "live-run-trace" in text and "fenced-run" in text and "never-run-live" not in text
+        return (True, "") if ok else (False, "the fenced-run trace did not flip the live status")
 
     def _v_gap_split(self, args: list[str]) -> tuple[bool, str]:
         """gap-split — wanted-but-not-built gap and built-but-weak complexity debt render separately."""

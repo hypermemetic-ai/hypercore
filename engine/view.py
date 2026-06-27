@@ -21,7 +21,7 @@ import os
 import re
 from dataclasses import dataclass, field
 
-from . import tree, review, spec, scenario
+from . import tree, review, spec, scenario, provenance
 
 GAP = ("unbuilt", "not yet built", "not-yet")
 COMPLEXITY = ("shallow", "complexity debt")
@@ -100,16 +100,15 @@ def _readiness(caps: list[spec.Capability], root: str | None) -> list[str]:
 
 
 def _live_status(root: str | None) -> str:
-    if _has_watched_trace(root):
-        return "live-run-trace — watched evidence present; the first autonomous run left a trace"
-    return "never-run-live — autonomy seam built; first autonomous run still unverified"
+    if _has_fenced_run_trace(root):
+        return "live-run-trace — fenced crossing folded; fenced-run trace present"
+    return "never-run-live — no fenced crossing has folded yet; first live fenced crossing still unverified"
 
 
-def _has_watched_trace(root: str | None) -> bool:
-    """A watched run leaves a `<mechanism>.verdict.md` in its node's folder (`provenance.commit_verdict`).
-    Read through the one tree reader — each node's folder, never a second walk of the work tree."""
-    return any(any(f.endswith(".verdict.md") for f in os.listdir(n.path))
-               for n in tree.read_tree(root))
+def _has_fenced_run_trace(root: str | None) -> bool:
+    """A live run means a fenced worker crossing folded. Read only that named verdict trace through
+    the one tree reader, so vocabulary/depth verdicts cannot masquerade as fenced evidence."""
+    return any(provenance.verdict_present(n, provenance.FENCED_RUN) for n in tree.read_tree(root))
 
 
 def _gap(root: str | None) -> list[str]:

@@ -217,17 +217,24 @@ The operator view MUST render, at every altitude, the **vision** (authored, from
 work reaches. The readiness surface is an honest list of the standards, each marked **gated** (a scenario
 carries an executable check block) or **watched** (model judgment no fixture certifies, its only trail
 presence), so the operator reads exactly what rests on trust; and it carries the **never-run-live**
-status — the autonomy seam is built but the first autonomous run is still unverified — rendered so it
-says so rather than implying green, derived from the watched-evidence trail's emptiness so it flips when
-the first run leaves its trace, never hand-set. The **gap** (wanted-but-not-built) renders distinctly
-from the **complexity debt** (built-but-weak) — the standing output of the architecture review
-(`architecture-review`), kept honest between folds — which the old view conflated. The gap is the **open
-work** read through the tree's one reader — the standing and in-flight units, never a second walk of the
-work folders. A decision awaiting the operator is a queue card, not gap. Whether a tree is folded is
-read from its location alone, never from a `state:` field a stale archive can contradict. That map
-renders the system's **depth**, not merely its length: length is a context-cost signal against the
-threshold, and the model-driven red-flag depth assessment is recorded as not-yet-built, never
-fabricated. Readiness, as-built, gap, and complexity debt are all derived; only the vision is authored.
+status — the fenced-crossing seam is built but no fenced `worker.run` crossing has folded yet, so the
+first live run is still unverified — rendered so it says so rather than implying green, derived from the
+**fenced-run** trail's emptiness so it flips the moment a fenced crossing folds and leaves its trace,
+never hand-set. "Live-run" is **fenced** (a codex worker built it in the fence and it folded, whoever
+pressed go), not autonomous (the machine self-dispatched, no operator in the loop): the signal #11 reads
+is that a worker loaded its skills and completed a build in the fence, the evidence the dispatch path
+actually produces. The fenced-run trace is written by the integrate stage on the node it folds and is
+read **by its own mechanism name** — never any committed verdict — so it is never conflated with the
+vocabulary or depth watched traces that ride the same `commit_verdict` seam under their own names. The
+**gap** (wanted-but-not-built) renders distinctly from the **complexity debt** (built-but-weak) — the
+standing output of the architecture review (`architecture-review`), kept honest between folds — which the
+old view conflated. The gap is the **open work** read through the tree's one reader — the standing and
+in-flight units, never a second walk of the work folders. A decision awaiting the operator is a queue
+card, not gap. Whether a tree is folded is read from its location alone, never from a `state:` field a
+stale archive can contradict. That map renders the system's **depth**, not merely its length: length is a
+context-cost signal against the threshold, and the model-driven red-flag depth assessment is recorded as
+not-yet-built, never fabricated. Readiness, as-built, gap, and complexity debt are all derived; only the
+vision is authored.
 
 #### Scenario: the view is read
 - WHEN the operator opens the view
@@ -268,8 +275,9 @@ fabricated. Readiness, as-built, gap, and complexity debt are all derived; only 
 #### Scenario: the readiness surface names what rests on trust
 - WHEN the operator opens the view
 - THEN it renders an honest list of the standards, each marked gated (a scenario carries an executable
-  check) or watched (model judgment, no fixture), and a never-run-live status that says the first
-  autonomous run is unverified rather than implying green — all derived, never hand-set
+  check) or watched (model judgment, no fixture), and a never-run-live status that says no fenced
+  crossing has folded yet — the first live run unverified — rather than implying green, all derived,
+  never hand-set
 
   ```check
   read view
@@ -277,15 +285,28 @@ fabricated. Readiness, as-built, gap, and complexity debt are all derived; only 
   never-live
   ```
 
-#### Scenario: never-run-live flips when watched evidence exists
-- WHEN the first autonomous run leaves a watched-evidence trace
+#### Scenario: the live-run signal flips when a fenced crossing folds
+- WHEN a fenced `worker.run` crossing builds on codex and folds, leaving its fenced-run trace on the
+  node it archived
 - THEN the view no longer renders never-run-live; it renders the trace-present live status without a
   hand-set flag
 
   ```check
-  watched-evidence present
+  fenced-crossing folds
   read view
   live-trace
+  ```
+
+#### Scenario: a non-fenced watched trace alone does not flip the live-run signal
+- WHEN a watched mechanism (the vocabulary check or the depth scan) commits its verdict trace but no
+  fenced `worker.run` crossing has folded
+- THEN the live-run signal stays never-run-live — the gate reads the fenced-run trace alone, never any
+  committed verdict, so the vocabulary and depth traces are never conflated with fenced evidence
+
+  ```check
+  watched-evidence present
+  read view
+  never-live
   ```
 
 #### Scenario: gap is distinct from complexity debt

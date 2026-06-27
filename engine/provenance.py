@@ -57,6 +57,7 @@ GENESIS = frozenset({"AGENTS.md", "CLAUDE.md", "README.md", "intent.md", "glossa
 # decision. The only path past the gate is to run the mechanism, never to author its record.
 NO_TRAIL = "no trail — re-run the mechanism"
 NO_CONTEST = "no trail — run the contest"
+FENCED_RUN = "fenced-run"
 
 
 @dataclass(frozen=True)
@@ -177,6 +178,15 @@ def commit_verdict(node, mechanism: str, verdict: str, root: str | None = None) 
     tree.atomic_write(path, f"# {mechanism} — watched verdict [machine]\n\n{verdict.strip()}\n")
     tree.commit([path], f"{mechanism}: verdict committed on the node")
     return path
+
+
+def verdict_present(node, mechanism: str) -> bool:
+    """True when a mechanism's verdict trace is present in a node folder. This is the read side for
+    live renders that need a trace's presence in the current tree, while `watched_trace` stays the fold
+    gate's committed-presence attestation."""
+    import os
+    path = _node_path(None, node)
+    return bool(path and os.path.isfile(_verdict_path(path, mechanism)))
 
 
 def _verdict_path(node_path: str, mechanism: str) -> str:
