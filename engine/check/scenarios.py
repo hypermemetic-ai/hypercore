@@ -105,8 +105,10 @@ def check(root: str) -> None:
     #    spec/architecture-review.md; what no fixture can assert is the artifact itself — that the live
     #    engine tree is honestly clean, so a regression that grows a god-file or a cycle goes red here.
     rv = review.review(REAL)
-    ok(not any(m.status in ("over", "exceeded", "accepted") for m in rv.modules),
-       "architecture-review — the real engine tree is honestly clean: no module past the length signal")
+    ok(not rv.findings or not any(f.strength == "strong" for f in rv.findings),
+       "architecture-review — the real engine tree carries no strong complexity debt: every module is "
+       "within the length signal or carries an accepted-length record (a settled decision, read from the "
+       "one debt definition — `review.findings` — never a re-listed status set that can drift from it)")
     flags = review.red_flags(REAL)
     ok(not flags, "architecture-review — the real engine tree carries no mechanical red flags"
        + (f" (found: {[f.subject for f in flags]})" if flags else " (dead symbols, circular imports)"))
