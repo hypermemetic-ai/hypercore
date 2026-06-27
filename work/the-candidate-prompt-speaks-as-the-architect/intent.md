@@ -1,8 +1,8 @@
 ---
 kind: ask
-state: standing
+state: in flight
 owner: operator
-created: 2026-06-27
+created: 1782536400
 ---
 # the-candidate-prompt-speaks-as-the-architect — the salutation matches the seat
 
