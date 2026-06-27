@@ -1,8 +1,8 @@
 ---
 kind: ask
-state: standing
+state: in flight
 owner: operator
-created: 2026-06-27
+created: 1782536400
 ---
 # architect-prompts-route-to-skills — the per-episode prompt loads the skill, never restates it
 
