@@ -39,6 +39,9 @@ _RENAME_COLLISION = "the queue is a view of awaiting nodes"
 _REMODELED = "The renamed requirement MUST carry the modified body."
 _PROBE_WORK = "PROBE-OPEN-WORK"                            # a standing unit, must surface in the gap
 _PROBE_CARD = "PROBE-DECISION"                             # a decision awaiting the operator, must not
+_FAITHFUL_SUMMARY = "the faithful summary survives intact"
+_FAITHFUL_LONG_TOKEN = "boundarytoken" + "x" * 120
+_FAITHFUL_TEXT = f"# faithful-crossing — {_FAITHFUL_SUMMARY} before {_FAITHFUL_LONG_TOKEN}\n\ntrivial"
 
 
 def _delta_text(cap: str, req: str) -> str:
@@ -77,6 +80,7 @@ class World(_Base):
         self._rename_before = None                         # pre-rename block for the untouched-body assertion
         self._rename_modified = False
         self._gate_verdict = None                          # the scenario gate's verdict over the last staged new verb
+        self._faithful_messages: list[str] = []             # commit subjects from the faithful-provenance fixture
 
     # ── internals ────────────────────────────────────────────────────────────────
     def _signature(self) -> set:
@@ -113,7 +117,7 @@ class World(_Base):
         return True, ""
 
     def _v_fold(self, args: list[str]) -> tuple[bool, str]:
-        """fold <trivial|missing|mismatched|added|newcap|crash|retry> — perform one fold variant
+        """fold <trivial|missing|mismatched|added|newcap|crash|retry|faithful> — perform one fold variant
         against the seeded spec, node-backed where a fold also archives a node."""
         mode = args[0]
         if mode == "trivial":
@@ -127,6 +131,13 @@ class World(_Base):
             self._added = (cap, req)
             self._node = tree.file_intent(f"grow {cap}")
             self._try_fold(delta.parse(_delta_text(cap, req)), node=self._node)
+        elif mode == "faithful":
+            self._node = tree.file_intent(_FAITHFUL_TEXT)
+            tree.dispatch(self._node)
+            self._try_fold(delta.parse("# delta\n\nNo behavior change.\n"), node=self._node)
+            self._faithful_messages = subprocess.run(
+                ["git", "log", "-5", "--format=%s"], cwd=self.root, capture_output=True, text=True
+            ).stdout.splitlines()
         elif mode in ("renamed", "renamed-modified"):
             self._renamed = (_RENAME_CAP, _RENAME_OLD, _RENAME_NEW)
             self._rename_before = spec.read_spec(self.root).capability(_RENAME_CAP).requirement(_RENAME_OLD).block
@@ -201,13 +212,7 @@ class World(_Base):
         return True, ""
 
     def _v_stage_new_verb(self, args: list[str]) -> tuple[bool, str]:
-        """stage-new-verb <vacuous|real|multicommit> — stage a fence and run the real scenario gate over
-        it, capturing the verdict for `gate` to read. `vacuous`/`real` introduce a brand-new domain verb
-        (vacuous asserts nothing, real asserts the behavior) to probe the new-verb adequacy hardening.
-        `multicommit` stages a worker that **self-commits**: its real build lands in one commit with a
-        trailing hand-off commit on top, so the fence tip's parent is the already-built tree, not the
-        fork base — the gate must run the base at the worker's *recorded* fork base or it false-refuses a
-        correct build."""
+        """stage-new-verb <vacuous|real|multicommit> — stage a fence and run the real scenario gate."""
         mode = args[0]
         if mode in ("vacuous", "real"):
             self._gate_verdict = _new_verb_fence.run_gate(mode)
@@ -218,13 +223,7 @@ class World(_Base):
         return False, f"unknown new-verb mode {mode!r}"
 
     def _multicommit_gate(self) -> str | None:
-        """Stage a self-committing worker and run the real gate. `_build('real')` makes a fence whose
-        fork base (C0) lacks the behavior and whose next commit (C1) builds it; a trailing hand-off
-        commit (C2) then sits on top, so `HEAD~1` is C1 — the already-built tree — not the fork base C0.
-        Run with the worker's *recorded* base (C0): the gate must run the base there (red) and the tip
-        green and fold. Reading the base as `HEAD~1` finds C1 already green and false-refuses. The guard
-        is cleared so the nested gate runs; the fence is dropped on the way out. The whole fixture lives
-        here (carried onto the base checkout) so its red→green is honest — only the engine differs."""
+        """Stage a self-committing worker and run the real gate from the recorded fork base."""
         from .. import scenario, worker
         fence = _new_verb_fence._build("real")             # C0 fork base (behavior absent) → C1 built tip
         _new_verb_fence._write(os.path.join(fence, "RESULT.md"), "# worker result\nhand-off\n")
@@ -254,6 +253,21 @@ class World(_Base):
         if want == "folds":
             return (True, "") if not held else (False, f"the gate held a real fixture that should fold: {self._gate_verdict}")
         return False, f"unknown gate expectation {want!r}"
+
+    def _v_faithful(self, args: list[str]) -> tuple[bool, str]:
+        fold_msg = next((m for m in self._faithful_messages if m.startswith("fold: ")), "")
+        dispatch_msg = next((m for m in self._faithful_messages if m.startswith("dispatch: ")), "")
+        msgs = [fold_msg, dispatch_msg]
+        if not all(msgs):
+            return False, "the faithful crossing did not record both dispatch and fold subjects"
+        bad = [msg for msg in msgs if "# faithful-crossing" in msg or _FAITHFUL_SUMMARY not in msg
+               or (_FAITHFUL_LONG_TOKEN[:24] in msg and _FAITHFUL_LONG_TOKEN not in msg)]
+        if bad:
+            return False, "unfaithful subject: " + "; ".join(bad)
+        if "→ channels" in fold_msg or not fold_msg.endswith("→ no-op"):
+            return False, f"the fold subject did not name the honest no-capability label: {fold_msg}"
+        return True, ""
+
     def _v_self_hosts(self, args: list[str]) -> tuple[bool, str]:
         """self-hosts — the read spec yields the glossary and the system's own capabilities, segmented
         by capability."""

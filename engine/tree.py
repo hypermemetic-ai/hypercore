@@ -331,5 +331,15 @@ def _ts(s: str) -> float:
             return 0.0
 
 
+_SUBJECT_LIMIT = 96
+
+
 def _subject(text: str) -> str:
-    return " ".join(text.split())[:50]
+    line = next((ln.strip() for ln in text.splitlines() if ln.strip()), "")
+    line = re.sub(r"^#{1,6}\s+", "", line).strip()
+    line = re.sub(r"\s+#{1,6}$", "", line).strip()
+    subject = " ".join(line.split())
+    if len(subject) <= _SUBJECT_LIMIT:
+        return subject
+    cut = subject.rfind(" ", 0, _SUBJECT_LIMIT + 1)
+    return subject if cut <= 0 else subject[:cut].rstrip()

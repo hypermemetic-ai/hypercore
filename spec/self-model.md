@@ -396,3 +396,25 @@ self-committing worker is just the hand-off record, landing no engine code).
   stage-new-verb multicommit
   gate folds
   ```
+
+### Requirement: a fenced crossing's commit subject is faithful provenance
+The `fold:` and `dispatch:` commit subjects a fenced crossing composes MUST read as faithful
+operator-facing provenance, not a crude truncation. Each carries the node's first non-empty line with
+its leading heading marker stripped and its one-line summary cut on a word boundary; it must not leak a
+`# ` from the body or sever a token mid-word. The `fold:` subject names what the change actually routed
+to: the capabilities its delta touched when it touched any, and otherwise an honest token for what the
+fold did — `code` for a code-only crossing, `no-op` for one that changed neither spec nor code — never
+the `channels` sentinel, which names a capability the fold merely re-rendered. The one subject composer
+(`tree._subject`) backs every machine commit, so this faithfulness reaches the dispatch subject and the
+other machine commits through the same seam.
+
+#### Scenario: a trivial crossing's provenance subject reads true
+- WHEN a fenced crossing folds a trivial delta whose node title carries a leading heading marker
+- THEN the composed `fold:` and `dispatch:` subjects strip the marker, carry the node's real one-line
+  summary cut on a word boundary, and name an honest no-capability fold label — never the `channels`
+  sentinel
+
+  ```check
+  fold faithful
+  faithful
+  ```

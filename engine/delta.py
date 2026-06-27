@@ -238,11 +238,21 @@ def fold(delta: Delta | None, root: str | None = None, node=None, code=None) -> 
             paths += tree.archive_in_place(node)      # the node's DONE write + folder move, same act
         return paths
 
-    label = ", ".join(touched) or "channels"
+    label = _fold_label(touched, code)
     subject = delta.subject or (tree._subject(node.text) if node is not None else "delta")
     # `land` returns the exact paths it wrote (spec files, the replayed code, rendered channels, the
     # node's move endpoints); `transact` stages precisely those in the one held commit — atomic, all directions.
     tree.transact(land, None, f"fold: {subject} → {label}")
+
+
+def _fold_label(touched: list[str], code) -> str:
+    """The fold subject's right-hand provenance label: spec capabilities first, then honest fallbacks.
+
+    Rendered channels are an implementation side-effect of every fold, not the thing routed; naming
+    them in a no-capability fold made the record lie about what crossed."""
+    if touched:
+        return ", ".join(touched)
+    return "code" if code else "no-op"
 
 
 def _staleness(code, base_dir: str) -> None:
