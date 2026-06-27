@@ -2,7 +2,7 @@
 kind: ask
 state: standing
 owner: operator
-created: 2026-06-27
+created: 1782536400
 ---
 # worker-prompt-leads-with-the-task — the ask comes first, and the disciplines read in one pass
 
