@@ -188,10 +188,14 @@ class World(_Base):
                 else (False, "the skill copied the slice's scenarios — not progressive disclosure"))
 
     def _v_minimal(self, args: list[str]) -> tuple[bool, str]:
-        """minimal — the anchor carries the non-inferable operational lines (the check command and the
-        hand-back convention) and nothing inferable: no per-capability requirements, no code, no prose."""
+        """minimal — the anchor carries the non-inferable operational lines (the check command, the
+        build-deep discipline, and the hand-back convention) and nothing inferable: no per-capability
+        requirements, no code, no prose."""
         if anchor.CHECK not in self._anchor:
             return False, "the anchor drops the non-inferable check command"
+        if "build deep" not in self._anchor.lower():
+            return False, ("the anchor drops the build-deep discipline — the builder's proactive defense; "
+                           "without it the always-on context reverts to the whole-tree check as the build bar")
         if "for the machine" not in self._anchor or "operator-facing word" not in self._anchor:
             return False, "the anchor drops the build/hand-back convention"
         if "### Requirement:" in self._anchor or "import " in self._anchor or "You are hypercore" in self._anchor:

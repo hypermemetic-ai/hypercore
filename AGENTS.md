@@ -4,8 +4,8 @@
 
 ## Operating (the runtime roles)
 
-- **Check.** Run the acceptance harness before handing back: `python3 -m engine --check`. It is the red→green feedback loop; nothing folds that does not pass it.
-- **Build, and hand back for the machine.** Build behind that loop and hand back a complete result written for the machine, never for the operator — the architect authors every operator-facing word.
+- **Build deep, hand back for the machine.** Build deep up front — load the `depth` skill; depth is judgment, never a line count to trim to. A worker's proof is its own capability's scenarios going red→green over its fence, run by the gate; it authors no loop, and the whole-tree scan is the architect's, not its hand-back bar. Hand back a complete result written for the machine, never for the operator — the architect authors every operator-facing word.
+- **Check is the architect's fold gate.** `python3 -m engine --check` runs the acceptance harness over the merged result; nothing folds that does not pass it. Its whole-tree depth and complexity review is the architect's safeguard over the build — resolve a long module by deepening it or recording the accepted length, never by trimming it to pass.
 
 ## Skills — the specialization, loaded on demand
 

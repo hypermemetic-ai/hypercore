@@ -53,16 +53,18 @@ single-sourced — no second copy of the requirement set to drift.
   ```
 
 ### Requirement: the anchor is the minimal shared agents file, its skills index derived
-The shared anchor MUST carry only non-inferable operational content — the check command and the
-build/hand-back convention — and nothing inferable: no per-capability requirements, no code, no
-identity prose. Its skills index MUST be derived from the channels' own registry, so a newly registered
+The shared anchor MUST carry only non-inferable operational content — the check command, the
+build-deep discipline (build deep up front; the whole-tree scan is the architect's review, not the
+builder's bar), and the build/hand-back convention — and nothing inferable: no per-capability
+requirements, no code, no identity prose. Its skills index MUST be derived from the channels' own registry, so a newly registered
 skill appears by construction. Claude Code reads `CLAUDE.md`, not a bare `AGENTS.md`, so a derived
 `CLAUDE.md` bridge imports the anchor (`@AGENTS.md`).
 
 #### Scenario: the anchor is minimal and its index is derived
 - WHEN the anchor is rendered
-- THEN it carries the check command and the hand-back convention and nothing inferable, its skills
-  index lists every registered skill pulled from the registry, and the `CLAUDE.md` bridge imports it
+- THEN it carries the check command, the build-deep discipline, and the hand-back convention and
+  nothing inferable, its skills index lists every registered skill pulled from the registry, and the
+  `CLAUDE.md` bridge imports it
 
   ```check
   anchor
