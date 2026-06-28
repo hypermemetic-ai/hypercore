@@ -9,7 +9,7 @@ from __future__ import annotations
 import textwrap
 from dataclasses import dataclass
 
-from . import grill, tree
+from . import card_render, tree
 from .communication import Thread
 
 # styles (the window owns their colors)
@@ -129,7 +129,7 @@ STATE_CUES = {
 
 
 def main_body(nodes: list[tree.Node], sel: int, width: int = 76,
-              polarity: str = LIGHT, tick: int = 0) -> Frame:
+              polarity: str = LIGHT, tick: int = 0, confirm_card: str = "") -> Frame:
     """The resting face of the system: the queue over the work."""
     rows: list[Row] = [[("hypercore", TITLE)], []]
 
@@ -144,7 +144,7 @@ def main_body(nodes: list[tree.Node], sel: int, width: int = 76,
                      (_subject(c.text), SEL if chosen else CARD),
                      ("   awaiting · " + _card_label(c), AWAIT)])
         if chosen:
-            rows.extend(_card_detail(c, width))
+            rows.extend(_card_detail(c, width, confirm=(confirm_card == c.id)))
 
     rows.append([])
     rows.append([("work", HEAD)])
@@ -249,27 +249,12 @@ def _plural(n: int, word: str) -> str:
 
 def _card_label(c: tree.Node) -> str:
     """A card's kind, named — read from the one authority (`grill.card_kind`), not guessed here."""
-    return grill.card_kind(c)
+    return card_render.label(c)
 
 
-def _card_detail(c: tree.Node, width: int) -> list[Row]:
-    """The selected card, opened: a question shows its lean and what would flip it;
-    a ratification shows the contract it endorses; any other card, its commands. The kind is read
-    from `grill.card_kind`, the same authority the label reads — the render no longer infers it."""
-    kind = grill.card_kind(c)
-    if kind == "grilling question":
-        rows = [[("      lean  ", DIM), (grill.lean_of(c), SAY)]]
-        if grill.flip_of(c):
-            rows.append([("      flips ", DIM), (grill.flip_of(c), TAG)])
-        rows.append([("      [a] accept the lean   ·   type to answer", DIM)])
-        return rows
-    if kind == "ratification":
-        rows: list[Row] = []
-        for w in _wrap(grill.contract(c), width - 8):
-            rows.append([("      ", SAY), (w, SAY)])
-        rows.append([("      [a] ratify — spawns the work   ·   [c] cut", DIM)])
-        return rows
-    return [[("      [a] approve   [c] cut   [e] explain", DIM)]]
+def _card_detail(c: tree.Node, width: int, confirm: bool = False) -> list[Row]:
+    """The selected card, opened through the card row leaf."""
+    return card_render.detail(c, width, confirm)
 
 
 def converse_body(thread: Thread, width: int, explain_text: str | None = None,
@@ -336,7 +321,7 @@ def footer(model: str, mode: str, buffer: str, status: str, width: int, live_loo
     elif mode == "view":
         left = "view · ↑↓ select · →/enter drill · ←/esc up · type to speak"
     elif mode == "browse":
-        left = "browse · ↑↓ select · a/c/e act · v view · esc or type to speak"
+        left = "browse · ↑↓ · enter detail · a/c/e · v view · esc/type speak"
     elif mode == "answer":
         left = "answer › " + buffer + "▖" + "   esc cancels"
     elif mode == "converse":

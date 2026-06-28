@@ -23,7 +23,7 @@ import tempfile
 
 from .. import render, schedule, transport, tree
 from ..scenario import _git                                  # the worlds share the core's git helper
-from . import World as _Base
+from . import World as _Base, decision_card_fixture as decision_fixture
 
 
 class World(_Base):
@@ -44,6 +44,8 @@ class World(_Base):
         self._loops: list[schedule.Scheduler] = []
         self.arc_parent: tree.Node | None = None
         self.arc_child: tree.Node | None = None
+        self.decision: tree.Node | None = None
+        self.confirm_rows = None
 
     # ── action verbs ──────────────────────────────────────────────────────────────
     def _v_card(self, args: list[str]) -> tuple[bool, str]:
@@ -110,6 +112,15 @@ class World(_Base):
         tree.file_intent("a standing at-rest slice")
         self.frame = render.main_body(tree.read_tree(), 0)
         self.rows = self.frame
+        return True, ""
+
+    def _v_decide_card(self, args: list[str]) -> tuple[bool, str]:
+        """decide-card — open a decision card carrying full node-recorded anatomy on the resting face."""
+        self.decision = tree.raise_card(decision_fixture.SUBJECT, kind="decide",
+                                        anatomy=decision_fixture.anatomy())
+        self.frame = render.main_body(tree.read_tree(), 0)
+        self.rows = self.frame
+        self.confirm_rows = render.main_body(tree.read_tree(), 0, confirm_card=self.decision.id)
         return True, ""
 
     # ── assertion verbs ───────────────────────────────────────────────────────────
@@ -279,6 +290,22 @@ class World(_Base):
             if has_pulse != is_running:
                 return False, f"row {y} pulse={has_pulse} running={is_running}: {text!r}"
         return True, ""
+
+    def _v_laid_out(self, args: list[str]) -> tuple[bool, str]:
+        """laid-out — the opened decision face carries the full anatomy."""
+        return decision_fixture.laid_out(self.rows)
+
+    def _v_synthesis(self, args: list[str]) -> tuple[bool, str]:
+        """synthesis — the decision rows state their findings outright, not bare labels."""
+        return decision_fixture.synthesis(self.rows)
+
+    def _v_face(self, args: list[str]) -> tuple[bool, str]:
+        """face — the default face has decision material and withholds confirming detail."""
+        return decision_fixture.face(self.rows)
+
+    def _v_confirm_below(self, args: list[str]) -> tuple[bool, str]:
+        """confirm-below — one confirm keystroke unfolds detail beneath its line."""
+        return decision_fixture.confirm_below(self.confirm_rows)
 
     def _v_footer_live(self, args: list[str]) -> tuple[bool, str]:
         """footer-live — the rendered footer does not mark the lease holder as non-live."""

@@ -14,15 +14,21 @@ WIDTH = 76
 def run() -> int:
     real = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     os.environ["ENGINE_ROOT"] = tempfile.mkdtemp(prefix="engine-frame-")
-    from . import tree, grill, render, transport, view
+    from . import card_anatomy, tree, grill, render, transport, view
 
-    tree.raise_card("the intake box pulls torrents from nyaa")
+    decision = tree.raise_card("choose whether the card anatomy lives on the node",
+                               anatomy=_decision_anatomy(card_anatomy))
     tree.file_intent("download the new Berserk episodes")
 
     print("\n  ── the resting face ──\n")
     for row in render.main_body(tree.read_tree(), 0, WIDTH):
         print("  " + _flat(row))
     print("  " + _flat(render.footer(transport.MODEL_LABEL, "input", "", "", WIDTH)))
+
+    print("\n  ── the decision card · confirming detail unfolded ──\n")
+    for row in render.main_body(tree.read_tree(), 0, WIDTH, confirm_card=decision.id):
+        print("  " + _flat(row))
+    print("  " + _flat(render.footer(transport.MODEL_LABEL, "browse", "", "", WIDTH)))
 
     # a grilling question on the queue: its lean and what would flip it, expanded
     held = tree.hold("absorb the seasonal anime tracker")
@@ -59,3 +65,36 @@ def run() -> int:
 
 def _flat(row) -> str:
     return "".join(text for text, _style in row).rstrip()
+
+
+def _decision_anatomy(card_anatomy):
+    return card_anatomy.DecisionAnatomy(
+        synthesis="Put the decision anatomy on the node before rendering the card",
+        synthesis_detail="the same node front matter already carries the recorded kind",
+        options=(
+            card_anatomy.DecisionOption(
+                "Store it with the kind",
+                "one authority for queue and interface",
+                "old callers until they provide anatomy",
+                "no side queue",
+                "a metadata migration",
+                "the renderer reads the node payload, not prose shape",
+            ),
+            card_anatomy.DecisionOption(
+                "Parse it from the body",
+                "a quick first paint",
+                "the kind is no longer the only authority",
+                "render guesses",
+                "parser drift",
+                "the option stays visible as a consequence, not the chosen path",
+            ),
+        ),
+        delay=card_anatomy.DelayCost(
+            "operator judgment on real forks",
+            "bare cards keep accumulating unbacked context",
+            "queue order is already a claim about delay cost",
+        ),
+        lean="store it with the kind",
+        flip="the node format cannot carry structured front matter safely",
+        lean_detail="the flip is about durable authority, not screen taste",
+    )

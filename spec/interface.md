@@ -160,3 +160,34 @@ stillness everywhere else.
 - THEN a single slow pulse plays on the running work and nothing else moves
 - watched — a live motion fact no headless fixture certifies, confirmed on the running window
   (`python3 -m engine`), the honest home of the interface's motion
+
+### Requirement: the decision card lays out its full anatomy, decidable at a glance
+The opened decision card MUST lay out its full anatomy on the grid — the synthesis, the options and what
+each entails, the cost of its delay, and the machine's lean with the one flip. Every heading MUST state
+its finding outright, never a bare label the operator must open to learn what it says. What is needed to
+decide MUST be on the face; the confirming detail behind a line MUST sit one keystroke below it — held
+off the face, advertised by its affordance, and surfaced only when summoned — so the card is decidable
+at a glance.
+
+#### Scenario: the opened decision card lays out its anatomy, every heading a synthesis
+- WHEN a decision card carrying its full anatomy is opened on the resting face
+- THEN its detail lays out the synthesis, the options and what each entails, the cost of its delay, and the
+  machine's lean with the one flip, every heading stating its finding outright rather than naming a label to
+  open
+
+  ```check
+  decide-card
+  laid-out
+  synthesis
+  ```
+
+#### Scenario: what is needed to decide is on the face, the confirming detail one keystroke below
+- WHEN a decision card is opened on the resting face
+- THEN what is needed to decide is on the face, and the confirming detail behind its lines is held off the
+  face one keystroke below — advertised by its affordance and surfaced only when summoned
+
+  ```check
+  decide-card
+  face
+  confirm-below
+  ```

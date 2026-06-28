@@ -182,6 +182,11 @@ def card_kind(node: tree.Node) -> str:
     return _KIND.get(node.kind, node.kind)
 
 
+def decision_anatomy(node: tree.Node):
+    """The decision's recorded anatomy, read through the same card authority as its kind."""
+    return node.decision_anatomy if card_kind(node) == "decision" else None
+
+
 def lean_of(node: tree.Node) -> str:
     q = _surfaced(node)
     return q["lean"] if q else ""

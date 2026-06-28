@@ -23,7 +23,7 @@ import tempfile
 
 from .. import communication, conditions, grill, render, transport, tree
 from ..scenario import _git                                  # the worlds share the core's git helper
-from . import World as _Base, scripted
+from . import World as _Base, decision_card_fixture as decision_fixture, scripted
 
 _DECISION = "a real fork the operator must reason through"
 _STATEMENT = "a machine-owned statement to cut"
@@ -73,7 +73,8 @@ class World(_Base):
         }.get(kind, (None, None))
         if text is None:
             return False, f"unknown card kind {kind!r}"
-        self.card = tree.raise_card(text, kind=code)
+        anatomy = decision_fixture.anatomy() if code == "decide" else None
+        self.card = tree.raise_card(text, kind=code, anatomy=anatomy)
         return True, ""
 
     def _v_approve(self, args: list[str]) -> tuple[bool, str]:
@@ -165,6 +166,35 @@ class World(_Base):
             return False, f"the recorded kind reads {kind!r}, not {want!r}"
         return ((True, "") if render._card_label(self.card) == want
                 else (False, "the render does not speak the recorded kind"))
+
+    def _v_anatomy(self, args: list[str]) -> tuple[bool, str]:
+        """anatomy — the current decision carries its full recorded anatomy, and the render reads it
+        back from the node: options with entailments, delay cost, lean, and flip."""
+        reread = tree.find(self.card.id)
+        anatomy = grill.decision_anatomy(reread or self.card)
+        if anatomy is None or anatomy != decision_fixture.anatomy():
+            return False, "the decision anatomy was not read back from the node"
+        detail = " ".join(" ".join("".join(t for t, _s in row)
+                                   for row in render._card_detail(reread or self.card, 76)).split())
+        for cue in ("unblocks", "breaks", "running unbacked", "reversal costs",
+                    "Waiting blocks", "Machine leans", anatomy.flip):
+            if cue not in detail:
+                return False, f"the opened decision card is missing {cue!r}"
+        return True, ""
+
+    def _v_lighter(self, args: list[str]) -> tuple[bool, str]:
+        """lighter — a request for approval keeps its recorded approval kind and is not dressed with
+        decision anatomy in the node or in the opened render."""
+        reread = tree.find(self.card.id)
+        if grill.card_kind(reread or self.card) != "request for approval":
+            return False, "the approval card does not read as a request for approval"
+        if (reread or self.card).decision_anatomy is not None:
+            return False, "the approval card persisted decision anatomy"
+        detail = " ".join(" ".join("".join(t for t, _s in row)
+                                   for row in render._card_detail(reread or self.card, 76)).split())
+        if decision_fixture.SYNTHESIS in detail or "Machine leans" in detail:
+            return False, "the approval render is dressed with decision anatomy"
+        return True, ""
 
     def _v_question(self, args: list[str]) -> tuple[bool, str]:
         """question — the surfaced card reads as a grilling question and its opened detail carries the

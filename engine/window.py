@@ -28,6 +28,7 @@ class State:
     view_path: list[int] = field(default_factory=list)  # drill-down into the view
     view_sel: int = 0
     answer_id: str = ""            # the grilling question being answered, if any
+    confirm_id: str = ""           # the selected decision whose confirming detail is unfolded
     polarity: str = render.LIGHT
 
 
@@ -127,14 +128,20 @@ def _browse(st: State, ch: int, nodes) -> bool:
         return False
     if ch in (curses.KEY_UP, ord("k")):
         st.sel = max(0, st.sel - 1)
+        st.confirm_id = ""
     elif ch in (curses.KEY_DOWN, ord("j")):
         st.sel = min(max(0, len(cards) - 1), st.sel + 1)
+        st.confirm_id = ""
     elif ch == ESC:
         st.mode = "input"
     elif ch == ord("v"):
         st.mode = "view"
         st.view_path = []
         st.view_sel = 0
+    elif cards and ch in ENTER:
+        card = cards[st.sel]
+        if grill.card_kind(card) == "decision" and grill.decision_anatomy(card):
+            st.confirm_id = "" if st.confirm_id == card.id else card.id
     elif cards and ch == ord("a"):
         card = cards[st.sel]
         kind = grill.card_kind(card)                  # the one authority, not inferred here
@@ -150,9 +157,11 @@ def _browse(st: State, ch: int, nodes) -> bool:
                 conditions.accept_length(card.text)    # a length decision records its length; else a no-op
                 tree.approve(card)
         st.sel = 0
+        st.confirm_id = ""
     elif cards and ch == ord("c"):
         tree.cut(cards[st.sel])
         st.sel = 0
+        st.confirm_id = ""
     elif cards and ch == ord("e"):
         card = cards[st.sel]
         st.mode = "converse"
@@ -236,7 +245,8 @@ def _paint(scr, st: State, nodes, live_loop: bool = True) -> None:
         node = view.resolve(view.operator_view(), st.view_path)
         rows = render.view_body(node, st.view_sel, w, st.polarity)
     else:
-        rows = render.main_body(nodes, st.sel, w, tick=st.tick, polarity=st.polarity)
+        rows = render.main_body(nodes, st.sel, w, tick=st.tick, polarity=st.polarity,
+                                confirm_card=st.confirm_id)
     _apply_frame_theme(rows)
     scr.bkgd(" ", _BG_ATTR)
     scr.erase()

@@ -130,3 +130,26 @@ operator's go is the act; the durable record is its consequence.
   off-queue
   recorded
   ```
+
+### Requirement: a decision card carries its full anatomy
+A decision card MUST carry its full anatomy on its node, recorded where the render reads it and never
+guessed from the card's shape. It MUST be read from the same authority the card's kind is read from.
+The anatomy MUST name the synthesis of the call, the options on the table and what each entails, the
+cost of its delay, the machine's lean, and the one thing that would flip it. An option's entailments
+MUST name what it unblocks, what it breaks, what keeps running unbacked, and what reversing it later
+would cost. A delay cost MUST name what it blocks and what compounds while it waits. A request for
+approval is the lighter card and MUST NOT be dressed with the decision anatomy; its kind matches its
+call.
+
+#### Scenario: a decision carries its anatomy, a request for approval stays lighter
+- WHEN a decision card carrying its full anatomy and a request-for-approval card are raised
+- THEN the decision card carries its anatomy read off the node — the options and their entailments, the
+  cost of its delay, and the machine's lean with the one flip — while the request for approval stays the
+  lighter card, not dressed with the decision anatomy, its kind matching its call
+
+  ```check
+  raise decision
+  anatomy
+  raise approval
+  lighter
+  ```

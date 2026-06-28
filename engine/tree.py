@@ -22,6 +22,8 @@ import shutil
 import time
 from dataclasses import dataclass
 
+from . import card_anatomy
+
 # The durable-write floor the tree rests on — atomic write, exact-path commit, the write→commit
 # transaction, and the single-writer line that lets concurrent workers fold without colliding on the
 # record (intent §62). Re-exported so the tree's callers read one façade: `tree.atomic_write`,
@@ -48,6 +50,7 @@ class Node:
     created: float
     parent: str = ""   # the enclosing tree's id, derived from folder location ("" if top-level)
     path: str = ""     # the tree's folder on disk
+    decision_anatomy: card_anatomy.DecisionAnatomy | None = None
 
     @property
     def folded(self) -> bool:
@@ -138,10 +141,13 @@ def file_intent(ask: str) -> Node:
                    message=f"file intent: {_subject(ask)}")
 
 
-def raise_card(statement: str, kind: str = "decide", parent: str = "") -> Node:
+def raise_card(statement: str, kind: str = "decide", parent: str = "",
+               anatomy: card_anatomy.DecisionAnatomy | dict | None = None) -> Node:
     """Put a machine-owned statement or decision on the queue — a tree awaiting the operator,
     nested in `parent`'s work/ when one is given (the decision lives where it arose), else top-level."""
+    carried = card_anatomy.coerce(anatomy) if kind == "decide" else None
     return _create(statement, kind, AWAITING, "machine", machine=True, parent=parent,
+                   anatomy=carried,
                    message=f"raise {kind}: {_subject(statement)}")
 
 
@@ -215,22 +221,22 @@ def recover(node: Node) -> Node:
 # ── on-disk form: one folder per tree, its intent.md the legible record ─────
 
 @serialized
-def _create(text, kind, state, owner, machine, parent="", message="") -> Node:
+def _create(text, kind, state, owner, machine, parent="", message="", anatomy=None) -> Node:
     """Reserve a slug and land the new tree's intent.md as **one** act on the held line (C3). The
     slug is read off the live tree (`_slug`) and the folder written under the same line, so the
     read-the-taken-set → write-the-folder window is closed: two concurrent creations — two failing
     workers both raising a recovery card, say — can never compute the same slug and overwrite each
     other's folder. Persisting under the same line that read the taken set is the reservation."""
-    n = _new(text, kind, state, owner, machine, parent)
+    n = _new(text, kind, state, owner, machine, parent, anatomy)
     _persist(n, message)
     return n
 
 
-def _new(text, kind, state, owner, machine, parent="") -> Node:
+def _new(text, kind, state, owner, machine, parent="", anatomy=None) -> Node:
     slug = _slug(text)
     base = _child_base(parent) if parent else os.path.join(_root(), "work")
     return Node(slug, kind, state, owner, text.strip(), machine, time.time(),
-                parent, os.path.join(base, slug))
+                parent, os.path.join(base, slug), card_anatomy.coerce(anatomy))
 
 
 def _child_base(parent_id: str) -> str:
@@ -277,6 +283,7 @@ def _read(path: str, parent: str) -> Node:
         created=_ts(meta.get("created", "0")),
         parent=parent,
         path=folder,
+        decision_anatomy=card_anatomy.loads(meta.get("decision_anatomy", "")),
     )
 
 
@@ -284,8 +291,11 @@ def _render(node: Node) -> str:
     """The node's intent.md text — front-matter and body, the marker re-appended for a machine node.
     One place the on-disk form lives, so `_persist` and the archive write never drift apart."""
     body = node.text + (f"\n\n{MARKER}" if node.machine else "")
-    return (f"---\nkind: {node.kind}\nstate: {node.state}\n"
-            f"owner: {node.owner}\ncreated: {node.created:.0f}\n---\n{body}\n")
+    meta = [f"kind: {node.kind}", f"state: {node.state}", f"owner: {node.owner}",
+            f"created: {node.created:.0f}"]
+    if node.kind == "decide" and node.decision_anatomy:
+        meta.append(f"decision_anatomy: {card_anatomy.dumps(node.decision_anatomy)}")
+    return "---\n" + "\n".join(meta) + f"\n---\n{body}\n"
 
 
 def _relocate(node: Node) -> list[str]:
