@@ -218,23 +218,31 @@ verbatim, never dressed as negotiable prose.
 The architect MUST run the clarity self-check on its own draft before the words cross, and a load-bearing
 **caveat dropped by the compression MUST be caught before it reaches the operator**. The four-count
 self-check (re-derivable · caveat survives · truth survives form-strip · this reader, not the gallery) is
-watched judgment and edits expression only, never the decision. The one count a tool holds without a
-model — caveat-survival — is built into the architect's archive render: the operator-facing words are
-checked against the load-bearing caveat the contract carries, and words that drop it do not cross as
-drafted. The entailment verdict is model-driven and stays **watched** — live it is the architect's
-judgment — so only the **routing** is mechanically **gated**: a dropped caveat is provably caught and
-raises a decision, never silently passed.
+watched judgment and **edits expression only, never the decision the words carry** — so a dropped caveat is
+the architect's to **repair, not the operator's to settle**: the architect **redrafts its own
+operator-facing words** to carry the caveat in its stress position, then crosses the corrected words, never
+a re-cut/abandon decision raised over a wording omission. The one count a tool holds without a model —
+caveat-survival — is built into the archive render: the words are checked against the load-bearing caveat
+the contract carries, and words that drop it **do not cross as drafted** — they are redrafted and the
+verdict re-run over the revision, a bounded number of times, until the caveat lands. Only a caveat that
+**cannot be carried** after that bounded self-revision surfaces as a decision — the rare contract-level
+miss the wording cannot cure, pointing past the render to the build or the ask — with the verified build
+**held** behind it. The entailment verdict is model-driven and stays **watched** — live it is the
+architect's judgment — so only the **routing** is mechanically **gated**: a dropped caveat is provably
+caught and redrafted, never silently passed.
 
-#### Scenario: a dropped caveat is caught, a surviving one crosses
+#### Scenario: a dropped caveat is redrafted to carry it, a surviving one crosses
 - WHEN the architect integrates a worker hand-off whose contract carries a load-bearing caveat
-- THEN words that drop the caveat are caught before they cross — the routing gated on the survival verdict,
-  raising a decision — while words that keep it cross and fold, the verdict itself the architect's watched
-  judgment
+- THEN words that drop the caveat do not cross as drafted — the architect redrafts its own words until the
+  caveat survives and the corrected words cross and fold; a caveat that cannot be carried after bounded
+  revision surfaces a held-build decision; words that keep the caveat from the start cross unchanged
 
   ```check
   contract-caveat
   drafts-without
-  caught
+  redrafted-crosses
+  drafts-uncarriable
+  escalates-held
   drafts-with
   crosses
   ```

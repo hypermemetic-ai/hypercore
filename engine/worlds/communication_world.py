@@ -83,6 +83,11 @@ def _entailment(survives: bool) -> str:
     return f"<survives>{'true' if survives else 'false'}</survives>"
 
 
+def _redraft_reply(say: str) -> str:
+    """The architect's redrafted operator-facing words — the self-repair of a dropped caveat."""
+    return f"<say>{say}</say>"
+
+
 class World(_Base):
     """A scenario's fixture: an isolated, git-backed `ENGINE_ROOT` the real architect speaks over.
     `speak` runs one operator turn; `hand-back` stages a worker result and runs the archive integrate;
@@ -103,7 +108,8 @@ class World(_Base):
         _git(self.root, "add", "-A"); _git(self.root, "commit", "-qm", "base")    # a HEAD for the fence to diff against
         self.thread = self.reply = self.node = None
         self.caveat_node = self.caveat_result = None
-        self.dropped_reply = self.dropped_node = None
+        self.redrafted_reply = self.redrafted_node = None
+        self.held_reply = self.held_node = None
         self.kept_reply = self.kept_node = None
         self._caveat_nodes = []
 
@@ -154,35 +160,69 @@ class World(_Base):
         return True, ""
 
     def _v_drafts_without(self, args: list[str]) -> tuple[bool, str]:
-        """drafts-without — integrate a coherent architect draft that drops the contract's caveat,
-        with the scripted entailment oracle returning that it did not survive."""
+        """drafts-without — integrate a coherent architect draft that drops the contract's caveat. The
+        scripted oracle returns not-survived on the first draft; the architect redrafts its own words to
+        carry the caveat, and the verdict re-run over the revision returns survived — the self-repair path
+        (dropped → redraft-carrying → survived)."""
         if self.caveat_node is None or self.caveat_result is None:
             self.caveat_node, self.caveat_result = self._stage_caveat_handoff()
-        self.dropped_node = self.caveat_node
-        self.dropped_reply = communication.integrate(
+        self.redrafted_node = self.caveat_node
+        self.redrafted_reply = communication.integrate(
             self.caveat_node, self.caveat_result,
-            _sequence(_coherence_reply(_WITHOUT_CAVEAT, _CAVEAT), _entailment(False)),
+            _sequence(_coherence_reply(_WITHOUT_CAVEAT, _CAVEAT), _entailment(False),
+                      _redraft_reply(_WITH_CAVEAT), _entailment(True)),
             self.root)
         return True, ""
 
-    def _v_caught(self, args: list[str]) -> tuple[bool, str]:
-        """caught — the dropped-caveat draft did not fold and raised a parented decision."""
-        if self.dropped_reply is None or self.dropped_node is None:
-            return False, "no dropped-caveat draft was integrated"
-        if self.dropped_reply.done:
-            return False, "the dropped-caveat draft folded"
-        if _WITHOUT_CAVEAT in self.dropped_reply.say:
-            return False, "the dropped-caveat operator-facing words crossed in the reply"
-        node = tree.find(self.dropped_node.id)
+    def _v_redrafted_crosses(self, args: list[str]) -> tuple[bool, str]:
+        """redrafted-crosses — the dropped caveat was repaired by the architect's redraft, not raised: the
+        corrected words carrying the caveat crossed and folded, with no decision and no held artifact left."""
+        if self.redrafted_reply is None or self.redrafted_node is None:
+            return False, "no redrafted-caveat draft was integrated"
+        if not self.redrafted_reply.done:
+            return False, "the redrafted-caveat draft did not fold"
+        if self.redrafted_reply.card is not None:
+            return False, "the dropped caveat raised a decision instead of being redrafted to fold"
+        if self.redrafted_reply.say != _WITH_CAVEAT:       # exact: the redraft carrying it, not the dropped words
+            return False, "the words that crossed are not the redraft carrying the caveat"
+        node = tree.find(self.redrafted_node.id)
+        if node is None or not node.folded:
+            return False, "the redrafted-caveat draft did not archive the node"
+        if communication.has_held_build(node):
+            return False, "the redrafted-and-folded build left a held artifact"
+        return True, ""
+
+    def _v_drafts_uncarriable(self, args: list[str]) -> tuple[bool, str]:
+        """drafts-uncarriable — integrate a coherent draft whose caveat the architect's redrafts never
+        carry; the scripted oracle returns not-survived on the first draft and on every redraft, so the
+        bounded self-revision exhausts and the verdict must escalate."""
+        self.held_node, result = self._stage_caveat_handoff()
+        replies = [_coherence_reply(_WITHOUT_CAVEAT, _CAVEAT), _entailment(False)]
+        for _ in range(communication.CAVEAT_ATTEMPTS):
+            replies += [_redraft_reply(_WITHOUT_CAVEAT), _entailment(False)]
+        self.held_reply = communication.integrate(self.held_node, result, _sequence(*replies), self.root)
+        return True, ""
+
+    def _v_escalates_held(self, args: list[str]) -> tuple[bool, str]:
+        """escalates-held — the uncarriable caveat surfaced a held-build decision: the draft did not fold,
+        the dropped words never crossed, a parented decision was raised, and the verified build is held for a
+        no-rebuild settle — preserve-and-decide intact for the genuine, wording-incurable miss."""
+        if self.held_reply is None or self.held_node is None:
+            return False, "no uncarriable-caveat draft was integrated"
+        if self.held_reply.done:
+            return False, "the uncarriable-caveat draft folded"
+        if _WITHOUT_CAVEAT in self.held_reply.say:
+            return False, "the dropped-caveat words crossed in the reply"
+        node = tree.find(self.held_node.id)
         if node is None or node.folded:
-            return False, "the dropped-caveat draft archived the node"
-        decisions = [c for c in tree.cards() if c.parent == self.dropped_node.id]
+            return False, "the uncarriable-caveat draft archived the node"
+        if not communication.has_held_build(node):
+            return False, "the verified build was not held behind the decision"
+        decisions = [c for c in tree.cards() if c.parent == self.held_node.id]
         if not decisions:
-            return False, "the dropped-caveat draft raised no parented decision"
-        if any(_WITHOUT_CAVEAT in c.text for c in decisions):
-            return False, "the dropped-caveat operator-facing words crossed on the decision card"
-        return ((True, "") if any("load-bearing caveat was dropped" in c.text for c in decisions)
-                else (False, "the decision did not name the dropped load-bearing caveat"))
+            return False, "the uncarriable-caveat draft raised no parented decision"
+        return ((True, "") if any("could not be carried" in c.text for c in decisions)
+                else (False, "the decision did not name the uncarriable caveat"))
 
     def _v_drafts_with(self, args: list[str]) -> tuple[bool, str]:
         """drafts-with — integrate a second coherent draft under the same caveated contract, this time

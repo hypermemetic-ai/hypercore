@@ -83,3 +83,34 @@ modify slice to subsume:
   provenance, but it grows the archive by the full size of the touched files on every override, against the
   legible-minimal-tree bar. The modify seam should drop (or decline to archive) the held artifact once the
   fold lands, keeping only the verdict record.
+
+---
+
+**Update — 2026-06-28 (finding 1 was misdiagnosed; the real defect found and fixed from recovered evidence).**
+Finding 1 above — "`caveat_survives` over-fires, the verdict is miscalibrated, false-refusing over a caveat
+that was not dropped" — is **wrong**, and acting on it (loosening the entailment bar) would have **broken
+the safety property**, silently crossing dropped caveats to the operator. The three over-fire `(say,
+caveat)` pairs, believed lost with the torn-down fences, were **recovered** from Claude Code's per-call
+session logs (`~/.claude/projects/-home-qqp-projects-hypercore/`, the live `claude -p` coherence/entailment
+calls). Reading them settles it: in **all 3**, the architect's `say` was a confident headline and the
+load-bearing caveat — each a *"this part is watched, not gate-proven"* hedge — was **genuinely dropped**
+from the words that cross. The verdict fired **correctly 3/3**. It is not miscalibrated; it is a working
+alarm.
+
+The true defect is the one this node's filing already half-named: a misinterpretation **baked in at
+construction**. `spec/communication.md` intends caveat-survival as the architect's **clarity self-check on
+its own draft** — "edits expression only, never the decision." It was *built* as an operator-escalation
+gate: a dropped caveat raised a **re-cut/abandon decision** on the operator's queue. A wording self-repair
+became a decision the operator pays for — which is exactly why the alarm read as noise. Fixed by realigning
+the build to the spec's intent (architect-direct, same rationale as the core — the fix is the caveat
+machinery itself):
+
+- **A dropped caveat is now redrafted, not raised.** `communication.carry_caveat` re-asks the architect to
+  rewrite its own operator-facing words to carry the caveat in its stress position (`communication.REDRAFT`),
+  re-runs the watched entailment verdict over the revision, bounded `CAVEAT_ATTEMPTS` times, then crosses the
+  corrected words. The `ENTAILMENT` verdict is **unchanged** — it was always right.
+- **Only a caveat the wording cannot carry escalates** — after the bound, a held-build decision (the rare
+  contract-level miss past the render), preserving preserve-and-decide. Spec requirement + scenario rewritten
+  (`a dropped caveat is redrafted to carry it`); the `communication` skill re-rendered; gated red→green with
+  `redrafted-crosses` / `escalates-held` in `communication_world`; `python3 -m engine --check` green.
+- **Residue 2 (`settle_held` archive cruft) is untouched** — still open for the modify slice.

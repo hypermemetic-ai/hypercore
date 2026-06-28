@@ -112,32 +112,64 @@ ENTAILMENT = (
     "model judgment; return only the survival flag."
 )
 
+REDRAFT_SCHEMA = Envelope(Tag("say", "your operator-facing words, redrafted to carry the caveat"),
+                          lenient=True, fallback="say")
 
-def caveat_survives(say: str, caveat: str, transport=None) -> tuple[bool, str]:
-    """The archive render's caveat-survival routing seam.
+REDRAFT = (
+    "Load the `communication` skill before you answer. Your operator-facing words below dropped the "
+    "load-bearing caveat. Redraft the words to carry it in its own stress position — as concrete and as "
+    "hard as the claim. Edit expression only; do not change what the words decide. Return the redrafted words."
+)
 
-    Empty caveats are the normal no-caveat path and make no model call. A non-empty caveat asks the
-    injected transport for the watched entailment verdict, then returns the deterministic routing result
-    the gate can exercise with a scripted oracle."""
+CAVEAT_ATTEMPTS = 3
+
+
+def carry_caveat(say: str, caveat: str, transport=None) -> tuple[str, bool]:
+    """The archive render's caveat-survival self-repair seam — the architect editing its own expression.
+
+    An empty caveat is the no-caveat path and makes no model call. A non-empty caveat is checked for
+    survival in the operator-facing words; a dropped one is the architect's to repair, not the operator's
+    to settle — the words are redrafted to carry the caveat (edits expression only), the watched verdict
+    re-run over each revision, up to `CAVEAT_ATTEMPTS` times. Returns the words to cross — the redraft once
+    it carries the caveat — and whether the caveat is carried. A caveat still dropped after the bound is the
+    rare contract-level miss the wording cannot cure, surfaced (not silently crossed) by the False flag."""
     caveat = (caveat or "").strip()
     if not caveat:
-        return True, ""
+        return say, True
     transport = transport or call
+    if _survives(say, caveat, transport):
+        return say, True
+    for _ in range(CAVEAT_ATTEMPTS):
+        say = _redraft(say, caveat, transport)
+        if _survives(say, caveat, transport):
+            return say, True
+    return say, False
+
+
+def _survives(say: str, caveat: str, transport) -> bool:
+    """The watched entailment verdict — does the draft carry the caveat — over a scriptable oracle."""
     verdict = read(transport(
         f"{ENTAILMENT}\n\n"
         f"Operator-facing words:\n{(say or '').strip()}\n\n"
         f"Load-bearing caveat:\n{caveat}\n\n"
         f"{instruction(ENTAILMENT_SCHEMA)}"), ENTAILMENT_SCHEMA)
-    if verdict.get("survives"):
-        return True, ""
-    return (False, "decision — the load-bearing caveat was dropped from the operator-facing "
-                   "words; re-cut the render, change the ask, or abandon it")
+    return bool(verdict.get("survives"))
+
+
+def _redraft(say: str, caveat: str, transport) -> str:
+    """Ask the architect to rewrite its own words to carry the dropped caveat; the decision is untouched."""
+    redrafted = read(transport(
+        f"{REDRAFT}\n\n"
+        f"Your operator-facing words:\n{(say or '').strip()}\n\n"
+        f"The load-bearing caveat they dropped:\n{caveat}\n\n"
+        f"{instruction(REDRAFT_SCHEMA)}"), REDRAFT_SCHEMA).get("say", "").strip()
+    return redrafted or say
 
 
 # ── the held build: preserve-and-decide (spec.coherence) ─────────────────────
-# A watched integrate verdict — an incoherence judgment, a dropped-caveat verdict — over a build whose
-# deterministic gate is green raises a decision but MUST NOT discard the verified build. The build (its
-# refined delta and the captured engine bytes) is held as durable material on the node, surviving the
+# A watched integrate verdict — an incoherence judgment, or a caveat the architect's redrafts cannot carry —
+# over a build whose deterministic gate is green raises a decision but MUST NOT discard the verified build.
+# The build (its refined delta and the captured engine bytes) is held as durable material on the node, surviving the
 # fence's teardown because it lands in the node's folder, not the fence. Settling by override re-folds
 # the *same* artifact through the unchanged `delta.fold` — no rebuild. The deterministic gate stays
 # authoritative for soundness; only a genuine re-verify failure on merged main still discards.
@@ -233,12 +265,12 @@ def integrate(node: tree.Node, result, transport=None, root: str | None = None) 
                                 "the result did not honor the contract",
                                 kind="decide", parent=node.id)
         return Reply(say=say, card=card)
-    survives, reason = caveat_survives(say, verdict.get("caveat") or "", transport)
-    if not survives:
-        hold_build(node, result, root)                 # preserve-and-decide: the dropped-caveat verdict holds, never discards
-        card = tree.raise_card(reason, kind="decide", parent=node.id)
-        return Reply(say="The result can't fold yet — the load-bearing caveat was dropped; "
-                         "the decision is on your queue.", card=card)
+    say, carried = carry_caveat(say, verdict.get("caveat") or "", transport)   # a dropped caveat is redrafted, not raised
+    if not carried:
+        hold_build(node, result, root)                 # the rare caveat the wording cannot carry: held, never discarded
+        card = tree.raise_card(_caveat_uncarriable(CAVEAT_ATTEMPTS), kind="decide", parent=node.id)
+        return Reply(say="The result can't fold yet — the load-bearing caveat could not be carried in the "
+                         "words even after redrafting; the decision is on your queue.", card=card)
     try:
         delta.fold(delta.parse(result.delta), root, node=node,
                    code=getattr(result, "code", None))       # archive ⟺ fold ⟺ verified code, ONE atomic act (H1)
@@ -289,6 +321,14 @@ def _unreadable_coherence(attempts: int) -> str:
         f"decision — coherence reply unreadable after {attempts} attempts. Retry the coherence "
         "judgment, re-cut the ask, or change the ask; the verified build is held live behind this "
         "decision."
+    )
+
+
+def _caveat_uncarriable(attempts: int) -> str:
+    return (
+        f"decision — the load-bearing caveat could not be carried in the operator-facing words after "
+        f"{attempts} redrafts; the words cannot honor it, which points past the wording to the build or "
+        "the ask. Re-cut, change the ask, or abandon — the verified build is held live behind this decision."
     )
 
 
