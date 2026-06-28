@@ -35,6 +35,7 @@ class World(_Base):
     def __init__(self):
         self.scan = tempfile.mkdtemp(prefix="scenario-review-")
         self._rv: review.Review | None = None
+        self._depth_result = None
 
     # ── fixture verbs: plant the scan tree ──────────────────────────────────────
     def _v_module(self, args: list[str]) -> tuple[bool, str]:
@@ -211,6 +212,36 @@ class World(_Base):
         finally:
             shutil.rmtree(d, ignore_errors=True)
 
+    def _v_depth_scan(self, args: list[str]) -> tuple[bool, str]:
+        """depth-scan <built|consults-map|finding-has-lean-flip> — drive the model-depth seam with a
+        scripted transport. The import is deliberately inside the verb: the carried world exists at the
+        fork base, but `engine.depth_scan` does not, so base-red proves the seam was absent."""
+        from .. import depth_scan
+
+        want = args[0] if args else ""
+        if want == "built":
+            if "not yet built" in review.DEPTH_NOT_YET.lower():
+                return False, "the review gap still says the model-driven depth scan is not yet built"
+            if "built" not in review.DEPTH_NOT_YET.lower() or "watched" not in review.DEPTH_NOT_YET.lower():
+                return False, f"the review gap does not name the built watched scan: {review.DEPTH_NOT_YET!r}"
+            return (True, "") if callable(getattr(depth_scan, "assess", None)) else (
+                False, "engine.depth_scan exposes no assess seam")
+
+        assessment, prompt = self._depth_assessment(depth_scan)
+        if want == "consults-map":
+            if "facade.py" not in prompt or "ghost.py" in prompt:
+                return False, "the prompt did not consult exactly the handed review map"
+            if assessment.targets != ("facade.py",):
+                return False, f"the assessment targets were not filtered through the map: {assessment.targets!r}"
+            return True, ""
+        if want == "finding-has-lean-flip":
+            found = next((f for f in assessment.findings if f.subject == "facade.py"), None)
+            if found is None:
+                return False, "the assessment returned no finding for the mapped target"
+            missing = [name for name in ("lean", "flip") if not getattr(found, name)]
+            return (True, "") if not missing else (False, f"the finding lacks {missing}")
+        return False, f"unknown depth-scan assertion {want!r}"
+
     # ── the operator view: the review's output read over hypercore's own tree ────
     def _v_view(self, args: list[str]) -> tuple[bool, str]:
         """view <renders-map|complexity-debt-derived|no-source> — the operator view's upper levels ARE
@@ -245,6 +276,21 @@ class World(_Base):
     def _module_named(self, name: str) -> review.Module | None:
         return next((m for m in self._review().modules if m.rel == name), None)
 
+    def _depth_assessment(self, depth_scan):
+        if self._depth_result is None:
+            self._write("facade.py", "# scenario fixture: facade.py\n" + "x = 0\n" * (conditions.SIGNAL + 59))
+            rv = self._review()
+            tree.atomic_write(os.path.join(self.scan, "engine", "ghost.py"),
+                              "# written after the review map was computed\nGHOST = 1\n")
+            seen: list[str] = []
+
+            def scripted(prompt: str) -> str:
+                seen.append(prompt)
+                return _depth_reply(depth_scan)
+
+            self._depth_result = (depth_scan.assess(["facade.py", "ghost.py"], rv, scripted), seen[0])
+        return self._depth_result
+
     @staticmethod
     def _lines(spec_: str) -> int:
         return {"past-signal": conditions.SIGNAL + 60,
@@ -273,3 +319,24 @@ def _reaches(graph: dict[str, set[str]], start: str, target: str, seen: set[str]
         if nxt == target or _reaches(graph, nxt, target, seen):
             return True
     return False
+
+
+def _depth_reply(depth_scan) -> str:
+    from .. import transport
+    return transport.emit(depth_scan.ASSESSMENT_SCHEMA, {
+        "findings": [{
+            "subject": "facade.py",
+            "red_flag": "shallow module",
+            "evidence": "the handed map marks one large facade target with no deeper seam",
+            "lean": "split the interface around the hidden decision",
+            "flip": "if callers use one stable operation and the complexity is truly hidden",
+        }, {
+            "subject": "ghost.py",
+            "red_flag": "deletion test",
+            "evidence": "this row should be ignored because ghost.py is absent from the handed map",
+            "lean": "ignore it",
+            "flip": "if it appears on the review map",
+        }],
+        "lean": "deepen facade.py",
+        "flip": "facade.py already hides a stable abstraction",
+    })

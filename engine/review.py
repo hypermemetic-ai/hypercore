@@ -92,8 +92,8 @@ class Review:
 # model-driven *judgment* (shallow module, information leakage, the deletion test) is judgment
 # and stays not-yet-built, surfaced in the operator's gap rather than hidden.
 DEPTH_NOT_YET = ("the model-driven red-flag judgment — shallow module, information leakage, the "
-                 "deletion test — is judgment, not yet built; the mechanical red flags "
-                 "(dead symbols, circular imports) and the length signal are what the scan reads here")
+                 "deletion test — is built as a watched depth scan; the live review stays "
+                 "deterministic here, and the dedicated verdict trace is the evidence")
 
 
 def review(root: str | None = None) -> Review:

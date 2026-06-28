@@ -185,3 +185,36 @@ provenance gate's real dependencies are visible at module scope rather than disg
   layer provenance-gate declares-layer
   layer no-cycle depth-gate provenance-gate
   ```
+
+### Requirement: the model-driven depth scan is a built, watched assessment over the standing map
+The model-driven red-flag depth assessment MUST be **built** — no longer recorded as not-yet-built —
+as a **watched** mechanism: a model judgment no deterministic fixture can certify, so it leaves a
+verdict trace whose presence is its only honest trail, never a fabricated depth score and never a
+gameable metric. It is the single place the depth judgment is computed — the **shared
+depth-assessment seam** (`engine/depth_scan.py`) — consulted by this standing whole-tree scan and fed,
+at the fold, the one flagged file (`a depth-gate trip raises a neighborhood-aware assessment`). The
+seam MUST **consult** the standing architecture review's already-computed structural map and complexity
+debt rather than walking the source tree a second time: the assessment reads the `Review` it is handed,
+so there is no second whole-tree scan and no second copy of the depth standard to drift. Its output is
+a model-judged assessment — the depth red flags a tool cannot read but a model can (a shallow module, a
+design decision smeared across modules past the mechanical cycle, a module that fails the deletion
+test) — each carrying a **lean** (the recommendation) and a **flip** (the one thing that would change
+it), returned for the dedicated watched run to trace and for the later committed-trace view path to
+surface beside the length and mechanical findings. The review's standing gap MUST no longer carry the
+unconditional *not-yet-built* line: the scan is built, its verdict watched. The model verdict itself
+stays **watched** — no `#### Scenario:` certifies whether a module is actually shallow — while the seam's
+*structure* (it is built, it consults the handed map and never re-scans, it yields a finding carrying a
+lean and a flip) is gated below.
+
+#### Scenario: the depth scan is built, watched, and consults the standing map
+- WHEN the model-driven depth scan assesses the tree
+- THEN the seam reads the structural map the standing review already computed rather than walking the
+  tree a second time, returns a model-judged assessment carrying a finding, a lean, and a flip, and the
+  review's standing gap no longer reads the unconditional not-yet-built line — the scan is built, its
+  verdict watched, never a fabricated score
+
+  ```check
+  depth-scan built
+  depth-scan consults-map
+  depth-scan finding-has-lean-flip
+  ```
