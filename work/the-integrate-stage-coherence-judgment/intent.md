@@ -1,6 +1,6 @@
 ---
 kind: ask
-state: in flight
+state: standing
 owner: operator
 created: 1782638347
 ---
