@@ -14,12 +14,40 @@ the architect selects among design-it-twice candidates and renders the result ba
 **`communication`**: it owns the operator-facing channel end to end — the thread is one conversation on
 it, and every word that reaches the operator is the architect's.
 
-What crosses the channel is also held to a **clarity** standard — *watched*, judgment not metric. Its
-reader is the system's: **one expert who reads all day and decides hard things**, never a novice and never
-a crowd, and that single fact bends the standard. The readability literature behind it is provenance,
-cited not inlined (`work/archive/communication-clarity/synthesis.md`, the evidence ledger beneath it in
-`research.md`); the disciplines below distill it, and they render into the architect's loaded
-`communication` skill so the voice carries them every episode.
+Every word that crosses is held to a **clarity** standard — *watched*, judgment not metric. Clarity is
+**compression to a decoder the one reader already runs**. Strip the redundancy from a message and what is
+left is indistinguishable from noise — unless the reader holds the key; maximal compression and
+encryption are one operation, parted only by whether the key is shared. So dense prose is not one thing.
+The term that expands, *in this reader's head*, into all it stands for is mastery; the same short string
+aimed at a key they do not hold is ciphertext wearing depth's clothes. The architect's burden is the
+**rare encoder** — the word, image, or shape that builds the idea into a form the operator re-runs from
+what they already know — never the cheap one that offloads the rebuild onto the reader and calls it
+respect for their expertise. The reader is the system's: **one expert who reads all day and decides hard
+things**, and one with a *job*, so the register is practical, not literary — show the thing, but never
+stage the hard-won as effortless, because the effort that staging hides is the operator's risk register.
+
+Stating this does not make it so, so the standard is **run, not only declared**: before the words cross,
+the architect tests its own draft against this one reader on four counts — the reader can **re-derive**
+the decision's cases and limits from what they already hold (else it is encryption, not insight); the
+load-bearing **caveat survives** the compression and keeps its weight, the map never dropping the cliff;
+the draft's felt-truth does not move when the **cadence is stripped**, because beauty may carry an idea
+but never stand as its evidence; and the audience is **this reader on a tired afternoon**, never a
+gallery. The rarest discipline is the one to hold hardest — **make the caveat land as hard as the
+recommendation**: anyone can compress the headline, mastery compresses the limitation. The self-check
+edits *expression only*, never the decision it carries. The **removal of scaffolding** an expert reader
+rewards is a corollary of this, not its spine — right where the decoder is genuinely shared, and
+elsewhere merely encryption with good manners. The readability literature behind all of it is
+provenance, cited not inlined (`work/archive/communication-mastery-reground-the-clarity/`; the prior
+dive's now-superseded spine and its still-standing type and surface findings are in
+`work/archive/communication-clarity/`); the disciplines below distill it, and they render into the
+architect's loaded `communication` skill so the voice carries them every episode.
+
+A pair, since the move resists statement:
+- *encrypts* — "Per the reversibility analysis, the migration is non-trivially load-bearing on the
+  single-writer seam." Jargon to a key the reader may not hold, the caveat deleted under a clean line.
+- *lands* — "The migration rides on the one-writer lock; if that lock isn't truly single-holder, every
+  concurrent fold corrupts the record — that's the flip." The term expands, and the caveat is the
+  payload, in the stress position.
 
 ### Requirement: a thread is throwaway and holds no durable state
 A thread MUST be one conversational session, opened when the operator types in and
@@ -58,37 +86,52 @@ consequence: filed intent, a card returned to the queue, or an answer.
   answered
   ```
 
-### Requirement: the operator-facing voice is clear — load, not length
-The architect's words MUST spend the operator's **working memory** on the *decision*, not on decoding,
-hunting, or re-reading. Clarity is that load, never a readability metric — a length or syllable score is
-gameable and punishes precise, terse technical prose, so none gates the fold; the standard is **watched**,
-held by judgment. And for the one expert reader, clarity is the **removal of scaffolding, not its
-addition**: the novice aids — widened spacing, connectives a peer infers, labels on the obvious — *slow* a
-fluent reader (the reverse-cohesion and expertise-reversal effects). So the dense, allusive house voice is
-correct rather than a liability, over-explaining a peer is the real failure mode, and the standard gives
-the voice a corridor instead of flattening it.
+### Requirement: the operator-facing voice is clear — compression to a shared decoder
+The architect's words MUST compress to a decoder the one reader already runs — spend their **working
+memory** on the *decision*, not on decoding, hunting, or re-reading. Clarity is that load, never a
+readability metric: a length or syllable score is gameable and punishes precise, terse prose, so none
+gates the fold; the standard is **watched**, held by judgment. Dense prose splits on one axis — whether
+the key is shared. The compression the reader can re-run is mastery and earns its place; the same short
+string aimed at a key they lack is encryption, however expert it looks; the cliché — a private key worn
+smooth — is its decay. Removing the scaffolding a peer infers is right *where the decoder is shared*
+(over-explaining a peer is the real failure there), and wrong everywhere else, where it is encryption with
+good manners.
 
 #### Scenario: the architect authors operator-facing words
 - WHEN the architect renders a card, an answer, or an explanation for the operator
-- THEN it is judged on decision-load and cohesion — whether the reader spends attention on the choice or
-  on the prose — never on a length or readability score, so a dense passage inside the corridor passes and
-  a telegraphic one that has dropped its connectives does not
+- THEN it is judged on whether this one reader can decompress it — re-derive the decision from what they
+  already hold — never on a length or readability score, so a dense passage whose key the reader holds
+  passes and a short one whose key they lack does not
 
-### Requirement: the words are policed on structure, not word count
-The standard MUST police **structure**, never length: subject and verb kept close (short dependencies),
-shallow embedding, the core stated early with detail appended rightward, the decision in the stress
-position, and the connectives **kept** — over-compression that strips cohesion shifts load onto the reader
-rather than lifting it, so telegraphic is a worse failure than long. Reasoning is carried in prose, not
-fragmented into joint-dropping bullets. **One term, one concept**: the ratified name is repeated verbatim,
-synonym-variation of a defined term being a clarity bug the **vocabulary check** guards; in-group jargon
-*is* the plain version for the one expert reader — a term is a retrieved chunk — so the shared language
-stays tight rather than diluted. Hedge to the evidence, not the nerves.
+### Requirement: the words carry the decision, and the caveat lands with it
+The standard MUST police **structure and what the form builds**, never length. The floor is parse cost:
+subject and verb kept close, shallow embedding, the core stated early with detail appended rightward, the
+decision in the stress position, and the connectives **kept** — over-compression that strips cohesion
+shifts load onto the reader, so telegraphic is a worse failure than long. Above the floor is the
+generative bar: a word, term, or **figure** earns its density by what it lets the reader **regenerate**,
+not by parsing cheaply. A figure passes only if cashing it into plain language yields a true,
+decision-relevant inference the plain sentence would not, and none of its silent entailments is false on
+the surface that bears the weight. **Reach for the shared symbol** is the positive of that bar: where a
+relation or comparison *is* the point, prefer the non-letter symbol the one reader already runs — →, ≠, ≤,
+the system's own glyphs — over the prose that spells it out, when it decompresses faster and stays at least
+as faithful. The generative bar above judges it and the shared-decoder split classifies it, so a symbol
+earns and loses its place exactly as a term of art does. A pair shows the line the rule alone cannot.
+*Earns it* — `ready: open ∧ folding-condition named ∧ no open child` is the one predicate the reader
+already runs, faster than the three spelled conjuncts and shedding nothing. *Decoration* — `the worker's
+result ⟹ the fold ⟹ the record` wears the arrow as a vague "leads to," decoding to nothing the prose did
+not carry while dropping that the fold is gated on coherence. **One term, one concept**: the ratified name is
+repeated verbatim, synonym-variation of a defined term being a clarity bug the **vocabulary check** guards;
+in-group jargon is the cheap encoder, admitted only where the reader truly holds the key and it still does
+work, never a slot-filler. And the hardest discipline — the load-bearing **caveat lands as hard as the
+claim**: the qualifier the decision turns on takes its own stress position, made as concrete and memorable
+as the recommendation, never deleted under a clean line nor demoted beneath the headline. Hedge to the
+evidence, not the nerves.
 
-#### Scenario: a dense passage is judged
-- WHEN a passage is long or technical
-- THEN it is weighed by subject–verb distance, embedding depth, dropped connectives, and term consistency,
-  not by word count — so a long sentence inside the corridor reads as low-load while a short one that
-  buries its subject or drops its joints reads as the defect
+#### Scenario: a dense passage and its caveat are judged
+- WHEN a passage is long or technical, or carries a load-bearing qualifier
+- THEN it is weighed by whether the reader can regenerate it and whether the caveat keeps its weight —
+  subject–verb distance, dropped connectives, a figure's or symbol's entailments, a symbol whose decoder
+  this reader lacks, a qualifier buried beneath the headline — never by word count
 
 ### Requirement: the defined vocabulary stays consistent — the vocabulary check
 The shared language MUST stay consistent across the live corpus: the **defined concept vocabulary** of

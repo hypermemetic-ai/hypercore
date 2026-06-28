@@ -67,9 +67,9 @@ METHODOLOGIES = {
         "carrying out a spawned ask as the worker.",
     "communication":
         "hypercore's communication methodology — the clarity standard for the architect's "
-        "operator-facing voice. Spend the reader's working memory on the decision; for the one expert "
-        "reader, clarity is the removal of scaffolding, not its addition. Load when authoring or judging "
-        "operator-facing words — a card, an answer, a render, an explanation.",
+        "operator-facing voice. Clarity is compression to a decoder the one reader already runs; spend "
+        "their working memory on the decision, and make the caveat land as hard as the claim. Load when "
+        "authoring or judging operator-facing words — a card, an answer, a render, an explanation.",
     "writing-for-the-machine":
         "hypercore's writing-for-the-machine methodology — the standard for the agent-facing channels "
         "(skills, anchor, prompts, hand-backs), written for the model that reads them in one pass. The "

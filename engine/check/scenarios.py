@@ -148,16 +148,17 @@ def check(root: str) -> None:
     # 7b. the clarity standard — communication's *clear* quality: a WATCHED standard carried in the
     #     architect's loaded skill, never a gated readability metric (the folding condition the
     #     communication-clarity ask owes). The standard's prose is watched in spec/communication.md (the
-    #     expert-reader inversion, the load test); that it reaches the architect's skill and stays
+    #     compression-to-a-shared-decoder spine, the working-memory load test); that it reaches the
+    #     architect's skill and stays
     #     watched-not-gated is the structural fact the closed scenario vocabulary cannot say — asserted
     #     here, from outside, never faked as an in-spec block.
     comm_skill = methodology.skill("communication", REAL)
     ok("communication" in methodology.METHODOLOGIES,
        "communication — the clarity standard is registered as the architect's loaded skill")
-    ok("removal of scaffolding" in comm_skill and "working memory" in comm_skill
+    ok("compression" in comm_skill and "working memory" in comm_skill
        and "readability metric" in comm_skill,
-       "communication — the skill carries the clarity discipline: the expert-reader inversion, the load "
-       "test, and no gated readability metric")
+       "communication — the skill carries the clarity discipline: compression to a decoder the one reader "
+       "already runs, the working-memory load test, and no gated readability metric")
     comm_cls = dict(scenario.classification("communication", REAL))
     clear = [r for r in comm_cls if "clear" in r.lower()]
     ok(bool(clear) and all(comm_cls[r] == "watched" for r in clear),
