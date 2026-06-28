@@ -33,8 +33,8 @@ import threading
 
 from . import build_reaches_main
 from .harness import ok
-from .. import (anchor, audit, channels, design, machine_writing, methodology, review, scenario,
-                schedule, spec, transport, tree, worker)
+from .. import (anchor, audit, channels, communication, design, grill, machine_writing, methodology,
+                review, scenario, schedule, spec, transport, tree, worker)
 
 REAL = tree._DEFAULT_ROOT                                  # hypercore's own source tree — the spec under test
 
@@ -113,12 +113,15 @@ def check(root: str) -> None:
     ok(not flags, "architecture-review — the real engine tree carries no mechanical red flags"
        + (f" (found: {[f.subject for f in flags]})" if flags else " (dead symbols, circular imports)"))
 
-    # 5. design-it-twice — the architect's selection prompt names the three comparison axes by
-    #    construction (a prompt-construction fact no domain verb can honestly express without naming the
-    #    prompt; cf. the worker prompt invariants). The contest behavior is gated in
-    #    spec/design-it-twice.md.
-    ok(all(ax in design.SELECT for ax in ("DEPTH", "LOCALITY", "SEAM PLACEMENT")),
-       "design-it-twice — the selection prompt compares candidates on depth, locality, and seam placement")
+    # 5. design-it-twice — the architect's selection prompt routes to its skill, while the three
+    #    comparison axes live in that rendered skill (a prompt-construction fact no domain verb can
+    #    honestly express without naming the prompt; cf. the worker prompt invariants). The contest
+    #    behavior is gated in spec/design-it-twice.md.
+    dit_skill = methodology.skill("design-it-twice", REAL).lower()
+    ok(_loads_skill(design.SELECT, "design-it-twice")
+       and all(ax in dit_skill for ax in ("depth", "locality", "seam placement")),
+       "design-it-twice — the selection prompt loads the skill, and the skill single-sources the "
+       "depth, locality, and seam-placement axes")
 
     # 6. schedule — the single-writer line the concurrency scenario rests on, proven at the
     #    record-mechanism level: facts the closed scenario vocabulary cannot honestly express — an
@@ -184,6 +187,18 @@ def check(root: str) -> None:
        "writing-for-the-machine — the signal detects a provenance reference off the line-end")
     ok(not machine_writing.flags("The architect names the actor and states the act. The reference rides at the line-end. (ADR 0005)."),
        "writing-for-the-machine — clean prose raises no flag, so the signal is a prompt to look, never noise")
+    prompts = (
+        ("communication.SYSTEM", communication.SYSTEM, "communication"),
+        ("communication.COHERENCE", communication.COHERENCE, "coherence"),
+        ("communication.EXPLAIN", communication.EXPLAIN, "communication"),
+        ("grill.FLOOR", grill.FLOOR, "grilling"),
+        ("grill.PRODUCTS", grill.PRODUCTS, "grilling"),
+        ("design.SELECT", design.SELECT, "design-it-twice"),
+    )
+    ok(all(_loads_skill(prompt, skill) for _, prompt, skill in prompts),
+       "writing-for-the-machine — each per-episode architect prompt names and instructs loading its "
+       "corresponding skill ("
+       + ", ".join(f"{name}→{skill}" for name, _, skill in prompts) + ")")
     for line in machine_writing.advisory(REAL):                # the live, non-gating signal over the real spec
         print(line)
 
@@ -325,6 +340,11 @@ def _schedule_invariants() -> None:
             os.environ.pop("ENGINE_ROOT", None)
         else:
             os.environ["ENGINE_ROOT"] = prev
+
+
+def _loads_skill(prompt: str, skill: str) -> bool:
+    """A prompt-construction watched fact: the prompt names a skill and tells the model to load it."""
+    return bool(re.search(rf"\b[Ll]oad\b[^.]*`{re.escape(skill)}` skill", prompt))
 
 
 # ── a fence with a real engine at two commits: the base and tip differ only in the length signal ──

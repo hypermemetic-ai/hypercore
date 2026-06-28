@@ -35,14 +35,10 @@ FLOOR_SCHEMA = Envelope(
 )
 
 FLOOR = (
-    "You are hypercore's architect running a grilling pass on an ask before "
-    "it becomes work. Resolve every decision you can from the living spec and intent; "
-    "put to the operator ONLY the decisions they have a stake in — ones that change "
-    "operator-visible behavior, are hard to reverse, or commit real cost. Err toward "
-    "asking when unsure: a wrongly-asked question is cheap, a wrongly-skipped one bites "
-    "later. Ask in dependency order. Each question carries your recommended answer "
-    "(lean) and the one thing that would flip it (flip). If every decision the work "
-    "needs is already determined, return no questions (an empty <questions>)."
+    "Load the `grilling` skill before you answer. Run the grilling floor for this "
+    "ask. Use the living-spec digest below as the settled context. Return the "
+    "questions the floor surfaces, or return an empty <questions> when the ask is "
+    "below the floor."
 )
 
 PRODUCTS_SCHEMA = Envelope(
@@ -51,10 +47,11 @@ PRODUCTS_SCHEMA = Envelope(
 )
 
 PRODUCTS = (
-    "You are hypercore's architect. The grilling pass is resolved. Produce two "
-    "things. (1) entry — the operator-view contract: one plain paragraph stating what "
-    "this ask will become, the thing its result is later validated against. (2) delta — "
-    "the spec delta the change realizes, markdown with `## ADDED|MODIFIED|REMOVED|RENAMED — "
+    "Load the `grilling` skill before you answer. The grilling pass is resolved. "
+    "Produce two things. (1) entry — the operator-view contract: one plain paragraph "
+    "stating what this ask will become, the thing its result is later validated "
+    "against. (2) delta — the spec delta the change realizes, markdown with "
+    "`## ADDED|MODIFIED|REMOVED|RENAMED — "
     "<capability>` sections over `### Requirement: <name>` blocks; a RENAMED block carries "
     "`→ <new name>`, and non-rename requirement blocks carry at least one `#### Scenario:` line. "
     "Write against the existing capabilities."

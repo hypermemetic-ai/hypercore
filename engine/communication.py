@@ -30,12 +30,10 @@ SYSTEM_SCHEMA = Envelope(
 )
 
 SYSTEM = (
-    "You are hypercore's architect — the single voice between the "
-    "operator and the system. The operator just spoke. Decide what their words "
-    "are and land one concrete consequence. File intent when they want something "
-    "built or done. Raise a card when a real judgment is theirs to make. Answer "
-    "(file and card empty) when they asked a question. Keep 'say' to a sentence or "
-    "two, plain, no jargon."
+    "Load the `communication` skill before you answer. The operator just spoke. "
+    "Decide what their words are and land one concrete consequence. File intent "
+    "when they want something built or done. Raise a card when a real judgment is "
+    "theirs to make. Answer with file and card empty when they asked a question."
 )
 
 
@@ -91,10 +89,10 @@ COHERENCE_SCHEMA = Envelope(
 )
 
 COHERENCE = (
-    "You are hypercore's architect, archiving a worker's hand-off. Judge "
-    "coherence at the operator's altitude: does the result honor the contract? This is "
-    "not a code review. The worker's report below is for you alone and MUST NOT reach "
-    "the operator — author any operator-facing words yourself, short and plain."
+    "Load the `coherence` skill before you answer. You are archiving a worker's "
+    "hand-off. Judge this hand-off against the contract at the operator's altitude. "
+    "This is not a code review. The worker's report below is machine-facing and "
+    "MUST NOT reach the operator. Author every operator-facing word yourself."
 )
 
 
@@ -154,16 +152,17 @@ def _fenced_run_verdict(node: tree.Node) -> str:
 EXPLAIN_SCHEMA = Envelope(Tag("say", "your explanation toward the decision"),
                           lenient=True, fallback="say")
 
+EXPLAIN = (
+    "Load the `communication` skill before you answer. The operator pressed explain "
+    "on this card. Tell the story toward this decision: what it changes, where you "
+    "lean, and the one thing that would flip it."
+)
+
 
 def explain(node: tree.Node, transport=None) -> str:
     """Tell the story toward a decision; the card stays on the queue."""
     transport = transport or call
-    prompt = (
-        "You are hypercore's architect. The operator pressed explain on "
-        "this card and wants help toward the decision — tell the story plainly: "
-        "what it changes, where you lean, and the one thing that would flip it.\n\n"
-        f"Card: {node.text}\n\n" + instruction(EXPLAIN_SCHEMA)
-    )
+    prompt = f"{EXPLAIN}\n\nCard: {node.text}\n\n{instruction(EXPLAIN_SCHEMA)}"
     return read(transport(prompt), EXPLAIN_SCHEMA).get("say", "").strip()
 
 

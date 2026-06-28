@@ -88,14 +88,13 @@ SELECT_SCHEMA = Envelope(
 )
 
 SELECT = (
-    "You are hypercore's architect, holding design judgment over a design-it-twice contest. "
-    "The candidate interfaces below each realize the same load-bearing decision under a "
-    "different brief. Compare them on DEPTH (the most behavior behind the smallest interface), "
-    "LOCALITY (the change stays where it belongs), and SEAM PLACEMENT (the seam falls where "
-    "something real varies). Pick one or hybridize, with a strong recommendation and your "
-    "reasoning. This is machine-side design judgment, recorded as material on the node — it reaches "
-    "the operator ONLY if the comparison reveals a difference the operator has a stake in "
-    "(operator-visible behavior, hard to reverse, or real cost)."
+    "Load the `design-it-twice` skill before you answer. You are holding design "
+    "judgment over a design-it-twice contest. The candidate interfaces below each "
+    "realize the same load-bearing decision under a different brief. Pick one or "
+    "hybridize, with a strong recommendation and your reasoning. This machine-side "
+    "design judgment is recorded as material on the node. If the comparison reveals "
+    "a stake-bearing difference for the operator, write that stake; otherwise leave "
+    "stake empty."
 )
 
 
