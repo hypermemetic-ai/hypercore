@@ -2,7 +2,7 @@
 kind: ask
 state: standing
 owner: operator
-created: 2026-06-27
+created: 1782536400
 ---
 # worker-disciplines-become-a-loadable-skill — the worker loads its disciplines, it does not re-read them inline
 
