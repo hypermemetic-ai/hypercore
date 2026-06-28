@@ -1,0 +1,24 @@
+---
+kind: ask
+state: standing
+owner: operator
+created: 1782641995
+---
+Integrate-stage watched verdicts must not discard a gate-proven build — preserve-and-decide, one discipline for a failure type now patched four times.
+
+A **watched** judgment on the integrate path (a model call no fixture certifies) can throw away a build the **deterministic** gate already proved sound. By the time `communication.integrate` runs its model judgments, the build has cleared both halves of the gate — its capability's scenarios went red->green (`conditions.verdict` / `scenario.gate`) and the whole system re-verified green on the merged tree (`scenario.reverify`). Yet a watched verdict that refuses sends `worker.run` down `tree.recover` and tears the fence down (`worker.run`'s `finally: teardown`): the ~20-minute verified build is gone, the node re-readies to rebuild from scratch, and only the verified bytes dangling in git let a human rescue it by hand. The deterministic gate is authoritative for **soundness**; a watched verdict discarding what the gate proved is the defect.
+
+This is **one failure type**, seen four times and patched one seam at a time — the whack-a-mole this ask ends:
+- `the-fold-s-re-verification` (folded): a re-verify timeout silently reclassified as a broken build.
+- `worker-run-is-not-total` (folded): a raised crossing loses its decision card, re-readies, invites a blind retry.
+- `the-integrate-stage-coherence-judgment` (folded 2026-06-28): an unreadable coherence reply (the `coherent` flag absent) collapsed into explicit incoherence and refused.
+- the **caveat-survival entailment verdict** (`communication.caveat_survives`): over-fired on the very crossing that built the coherence fix (2026-06-28), false-refusing a gate-proven build over a caveat that was not dropped. Crucially this was an **adverse** verdict (`survives: false`), not an *unobtainable* one — so the coherence fix's "unreadable != veto" shape does NOT catch it. Each of the four folded only because a human took the architect seat and hand-re-integrated the gate-proven build, keeping every gated check and the whole-system re-verify intact. That human-in-the-loop is the live blocker between the watchably-driven dispatch and hands-off autonomy.
+
+**Ratified spine (operator, 2026-06-28): preserve-and-decide.** The deterministic gate is authoritative for soundness. A watched verdict at integrate MAY **raise a decision** — the operator-altitude contract miss the gate cannot mechanize, which is why the coherence judgment exists — but MUST NEVER **discard** the verified build. The build is **held**, so settling the decision (or overriding a flake) folds the **same** artifact with no rebuild. An **unobtainable** verdict (absent / unreadable / malformed / errored / timed-out) is retried a bounded number of times, then surfaced as a distinct outcome — never collapsed into a refusal. This is ONE discipline that subsumes the four one-off fixes, not a fifth patch: a watched verdict's worst case is a held build plus a decision the operator settles, never lost work.
+
+To surface in grilling (residue, not pre-resolved):
+- **The decided-against disposition.** When the operator settles the decision AGAINST the held build (a genuine contract miss / dropped caveat they confirm), what happens to the preserved artifact: **re-cut** (rebuild from scratch), or **modify the build** (a targeted amend on the verified artifact, cheaper than a rebuild), or a card that offers the operator both. Operator leans toward *offering modify*; unsettled.
+- **The load-bearing seam (design-it-twice): where the held build lives across the operator's decision** — the fence persists past integrate; or the verified `WorkerResult` (the captured `CodeFile` bytes + refined delta + base) rides on the decision card and is re-applied at settle; or the build is reconstructed on demand from its commit. Whichever seam wins MUST keep the deterministic gate AND the whole-system re-verify intact at the eventual fold — a held build still re-verifies on merged main, since main may have moved under it (the staleness path `delta.fold` already guards).
+- **Scope.** Whether this folds the three landed integrate-family fixes (timeout, lost-card, unreadable) into the one shared seam, or only binds watched verdicts going forward and leaves the landed fixes as instances.
+
+Folding condition: a watched integrate-stage verdict, over a build whose deterministic gate is green, never discards the verified build — it retries an unobtainable verdict, and for an adverse one raises a decision with the build held for a no-rebuild fold; a red->green scenario proves that a flaky OR over-firing watched verdict no longer discards a gate-proven, re-verified build (covering both the unreadable and the caveat-survival shapes); the disposition-on-decided-against and the preservation seam are settled; `python3 -m engine --check` is green.
