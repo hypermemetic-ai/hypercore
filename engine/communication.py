@@ -82,6 +82,7 @@ def speak(thread: Thread, text: str, transport=None) -> Reply:
 
 COHERENCE_SCHEMA = Envelope(
     Tag("say", "your plain note to the operator about what landed, or what is in doubt"),
+    Tag("caveat", "the load-bearing qualifier the operator-facing words must carry, or leave empty"),
     Flag("coherent", "true if the result honors the contract"),
     Tag("card", "if not coherent, the decision to put on the queue — re-cut, abandon, or change "
                 "the ask — else leave empty"),
@@ -94,6 +95,38 @@ COHERENCE = (
     "This is not a code review. The worker's report below is machine-facing and "
     "MUST NOT reach the operator. Author every operator-facing word yourself."
 )
+
+
+ENTAILMENT_SCHEMA = Envelope(
+    Flag("survives", "true if the operator-facing words entail the load-bearing caveat"),
+)
+
+ENTAILMENT = (
+    "Load the `communication` skill before you answer. Judge only whether the "
+    "operator-facing words entail the load-bearing caveat. The verdict is watched "
+    "model judgment; return only the survival flag."
+)
+
+
+def caveat_survives(say: str, caveat: str, transport=None) -> tuple[bool, str]:
+    """The archive render's caveat-survival routing seam.
+
+    Empty caveats are the normal no-caveat path and make no model call. A non-empty caveat asks the
+    injected transport for the watched entailment verdict, then returns the deterministic routing result
+    the gate can exercise with a scripted oracle."""
+    caveat = (caveat or "").strip()
+    if not caveat:
+        return True, ""
+    transport = transport or call
+    verdict = read(transport(
+        f"{ENTAILMENT}\n\n"
+        f"Operator-facing words:\n{(say or '').strip()}\n\n"
+        f"Load-bearing caveat:\n{caveat}\n\n"
+        f"{instruction(ENTAILMENT_SCHEMA)}"), ENTAILMENT_SCHEMA)
+    if verdict.get("survives"):
+        return True, ""
+    return (False, "decision — the load-bearing caveat was dropped from the operator-facing "
+                   "words; re-cut the render, change the ask, or abandon it")
 
 
 def integrate(node: tree.Node, result, transport=None, root: str | None = None) -> Reply:
@@ -123,6 +156,11 @@ def integrate(node: tree.Node, result, transport=None, root: str | None = None) 
                                 "the result did not honor the contract",
                                 kind="decide", parent=node.id)
         return Reply(say=say, card=card)
+    survives, reason = caveat_survives(say, verdict.get("caveat") or "", transport)
+    if not survives:
+        card = tree.raise_card(reason, kind="decide", parent=node.id)
+        return Reply(say="The result can't fold yet — the load-bearing caveat was dropped; "
+                         "the decision is on your queue.", card=card)
     try:
         delta.fold(delta.parse(result.delta), root, node=node,
                    code=getattr(result, "code", None))       # archive ⟺ fold ⟺ verified code, ONE atomic act (H1)

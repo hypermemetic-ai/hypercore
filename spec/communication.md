@@ -213,3 +213,28 @@ verbatim, never dressed as negotiable prose.
   integrate depth-trip assessment-with-lean-flip
   integrate flat-refusal verbatim
   ```
+
+### Requirement: a dropped caveat never reaches the operator
+The architect MUST run the clarity self-check on its own draft before the words cross, and a load-bearing
+**caveat dropped by the compression MUST be caught before it reaches the operator**. The four-count
+self-check (re-derivable · caveat survives · truth survives form-strip · this reader, not the gallery) is
+watched judgment and edits expression only, never the decision. The one count a tool holds without a
+model — caveat-survival — is built into the architect's archive render: the operator-facing words are
+checked against the load-bearing caveat the contract carries, and words that drop it do not cross as
+drafted. The entailment verdict is model-driven and stays **watched** — live it is the architect's
+judgment — so only the **routing** is mechanically **gated**: a dropped caveat is provably caught and
+raises a decision, never silently passed.
+
+#### Scenario: a dropped caveat is caught, a surviving one crosses
+- WHEN the architect integrates a worker hand-off whose contract carries a load-bearing caveat
+- THEN words that drop the caveat are caught before they cross — the routing gated on the survival verdict,
+  raising a decision — while words that keep it cross and fold, the verdict itself the architect's watched
+  judgment
+
+  ```check
+  contract-caveat
+  drafts-without
+  caught
+  drafts-with
+  crosses
+  ```

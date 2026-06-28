@@ -1,6 +1,6 @@
 ---
 kind: ask
-state: standing
+state: done
 owner: operator
 created: 1782532501
 ---

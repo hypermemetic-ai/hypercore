@@ -54,6 +54,33 @@ _FLOOR_CLEAR = transport.emit(grill.FLOOR_SCHEMA, {"questions": []})   # below t
 _PRODUCTS = transport.emit(grill.PRODUCTS_SCHEMA,
                            {"entry": "download the new berserk episodes.",
                             "delta": "# delta — below-floor ask"})
+_CAVEAT = "if the one-writer lock is not a true single holder, concurrent folds corrupt the record"
+_CAVEAT_CONTRACT = f"land the migration, carrying this load-bearing caveat: {_CAVEAT}"
+_WITHOUT_CAVEAT = "The migration can land on the one-writer lock."
+_WITH_CAVEAT = ("The migration can land on the one-writer lock only if it is a true single holder; "
+                "otherwise concurrent folds corrupt the record.")
+_CAVEAT_DELTA = "# delta — caveat routing fixture"
+
+
+def _sequence(*replies: str):
+    """A prompt-order scripted transport: coherence first, entailment second."""
+    pending = list(replies)
+    def call(_prompt: str) -> str:
+        return pending.pop(0) if pending else ""
+    return call
+
+
+def _coherence_reply(say: str, caveat: str) -> str:
+    """A coherence envelope with the caveat tag written manually so the base engine, whose schema lacks
+    the tag, still runs the scenario and fails for the behavior rather than for a missing fixture seam."""
+    return (f"<say>{say}</say>\n"
+            f"<caveat>{caveat}</caveat>\n"
+            "<coherent>true</coherent>\n"
+            "<card></card>")
+
+
+def _entailment(survives: bool) -> str:
+    return f"<survives>{'true' if survives else 'false'}</survives>"
 
 
 class World(_Base):
@@ -75,6 +102,10 @@ class World(_Base):
             shutil.copy(g, os.path.join(self.root, "glossary.md"))
         _git(self.root, "add", "-A"); _git(self.root, "commit", "-qm", "base")    # a HEAD for the fence to diff against
         self.thread = self.reply = self.node = None
+        self.caveat_node = self.caveat_result = None
+        self.dropped_reply = self.dropped_node = None
+        self.kept_reply = self.kept_node = None
+        self._caveat_nodes = []
 
     def _delta(self) -> str:
         return (f"## ADDED — {_CAP}\n### Requirement: {_REQ}\n"
@@ -116,6 +147,66 @@ class World(_Base):
         if args == ["flat-refusal", "verbatim"]:
             return self._integrate_flat_refusal()
         return False, f"unknown integrate assertion {' '.join(args)!r}"
+
+    def _v_contract_caveat(self, args: list[str]) -> tuple[bool, str]:
+        """contract-caveat — stage a worker hand-off whose contract carries a load-bearing caveat."""
+        self.caveat_node, self.caveat_result = self._stage_caveat_handoff()
+        return True, ""
+
+    def _v_drafts_without(self, args: list[str]) -> tuple[bool, str]:
+        """drafts-without — integrate a coherent architect draft that drops the contract's caveat,
+        with the scripted entailment oracle returning that it did not survive."""
+        if self.caveat_node is None or self.caveat_result is None:
+            self.caveat_node, self.caveat_result = self._stage_caveat_handoff()
+        self.dropped_node = self.caveat_node
+        self.dropped_reply = communication.integrate(
+            self.caveat_node, self.caveat_result,
+            _sequence(_coherence_reply(_WITHOUT_CAVEAT, _CAVEAT), _entailment(False)),
+            self.root)
+        return True, ""
+
+    def _v_caught(self, args: list[str]) -> tuple[bool, str]:
+        """caught — the dropped-caveat draft did not fold and raised a parented decision."""
+        if self.dropped_reply is None or self.dropped_node is None:
+            return False, "no dropped-caveat draft was integrated"
+        if self.dropped_reply.done:
+            return False, "the dropped-caveat draft folded"
+        if _WITHOUT_CAVEAT in self.dropped_reply.say:
+            return False, "the dropped-caveat operator-facing words crossed in the reply"
+        node = tree.find(self.dropped_node.id)
+        if node is None or node.folded:
+            return False, "the dropped-caveat draft archived the node"
+        decisions = [c for c in tree.cards() if c.parent == self.dropped_node.id]
+        if not decisions:
+            return False, "the dropped-caveat draft raised no parented decision"
+        if any(_WITHOUT_CAVEAT in c.text for c in decisions):
+            return False, "the dropped-caveat operator-facing words crossed on the decision card"
+        return ((True, "") if any("load-bearing caveat was dropped" in c.text for c in decisions)
+                else (False, "the decision did not name the dropped load-bearing caveat"))
+
+    def _v_drafts_with(self, args: list[str]) -> tuple[bool, str]:
+        """drafts-with — integrate a second coherent draft under the same caveated contract, this time
+        keeping the caveat and carrying a positive entailment verdict."""
+        self.kept_node, result = self._stage_caveat_handoff()
+        self.kept_reply = communication.integrate(
+            self.kept_node, result,
+            _sequence(_coherence_reply(_WITH_CAVEAT, _CAVEAT), _entailment(True)),
+            self.root)
+        return True, ""
+
+    def _v_crosses(self, args: list[str]) -> tuple[bool, str]:
+        """crosses — the caveat-surviving draft folded and its authored words crossed."""
+        if self.kept_reply is None or self.kept_node is None:
+            return False, "no caveat-surviving draft was integrated"
+        if not self.kept_reply.done:
+            return False, "the caveat-surviving draft did not fold"
+        if self.kept_reply.card is not None:
+            return False, "the caveat-surviving draft raised a decision"
+        if self.kept_reply.say != _WITH_CAVEAT:
+            return False, "the caveat-surviving words did not cross as authored"
+        node = tree.find(self.kept_node.id)
+        return ((True, "") if node is not None and node.folded
+                else (False, "the caveat-surviving draft did not archive the node"))
 
     # ── assertion verbs: the thread ─────────────────────────────────────────────
     def _v_closes(self, args: list[str]) -> tuple[bool, str]:
@@ -258,9 +349,21 @@ class World(_Base):
             return False, f"flat refusal was dressed up: expected {expected!r}, got {card.text!r}"
         return (True, "") if "Lean:" not in card.text and "Flip:" not in card.text else (False, "flat refusal became negotiable prose")
 
+    def _stage_caveat_handoff(self):
+        node = grill.propose(tree.file_intent("a caveated worker hand-off renders for the operator"),
+                             _CAVEAT_CONTRACT, _CAVEAT_DELTA)
+        worker.worktree(node, self.root)
+        tree.dispatch(node)
+        result = worker.apply(node, scripted(transport.emit(worker.WORKER_SCHEMA,
+            {"report": "machine-facing caveat fixture report", "delta": _CAVEAT_DELTA})), self.root)
+        self._caveat_nodes.append(node)
+        return node, result
+
     def teardown(self) -> None:
         if self.node is not None:
             worker.teardown(self.node, self.root)
+        for node in self._caveat_nodes:
+            worker.teardown(node, self.root)
         if self._prev_root is None:
             os.environ.pop("ENGINE_ROOT", None)
         else:
