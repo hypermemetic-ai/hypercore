@@ -232,9 +232,9 @@ old view conflated. The gap is the **open work** read through the tree's one rea
 in-flight units, never a second walk of the work folders. A decision awaiting the operator is a queue
 card, not gap. Whether a tree is folded is read from its location alone, never from a `state:` field a
 stale archive can contradict. That map renders the system's **depth**, not merely its length: length is a
-context-cost signal against the threshold, and the model-driven red-flag depth assessment is recorded as
-not-yet-built, never fabricated. Readiness, as-built, gap, and complexity debt are all derived; only the
-vision is authored.
+context-cost signal against the threshold, and the model-driven red-flag depth assessment is built as a
+watched judgment, its verdict traced, never fabricated. Readiness, as-built, gap, and complexity debt are
+all derived; only the vision is authored.
 
 #### Scenario: the view is read
 - WHEN the operator opens the view

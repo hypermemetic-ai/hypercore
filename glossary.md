@@ -204,8 +204,8 @@ against drift each time new words join the live corpus.
   debt**, read live. It surfaces god-files-in-the-making before they set and
   renders the operator view's upper levels — the structural map of as-built reality,
   debt marked — so the operator reads the system's shape without reading code. It
-  measures **length** (the built signal) and is meant to grow the model-driven
-  **red-flag depth scan**, recorded as not-yet-built.
+  measures **length** (the built signal) and now carries the model-driven
+  **red-flag depth scan**, built as a watched judgment.
 
 - **recommendation strength** — the weight a **complexity-debt** finding carries: **strong**
   (assess/deepen now) for a module past the length signal, **consider** for one nearing it.
@@ -244,8 +244,8 @@ against drift each time new words join the live corpus.
   the record (a shrink never lowers it), and the highest recorded length governs.
 
 - **module depth judgment** — the *watched* standard: the model's call on whether a module
-  is genuinely deep, not merely short. Not yet built; length raises a decision,
-  never a verdict.
+  is genuinely deep, not merely short. Built as a watched depth scan; length still raises the
+  gate's decision, never a depth verdict.
 
 - **exceeded acceptance** — a file past the length signal that *was* accepted at a lower length
   and has since outgrown it (the architecture review's `exceeded` status). The acceptance is

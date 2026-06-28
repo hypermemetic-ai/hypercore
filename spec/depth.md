@@ -15,11 +15,13 @@ forever while the implementation is paid once — so when something must be hard
 **Depth is a decision the gate raises, never a threshold it enforces.** Nothing in the system scores
 or certifies depth: the only mechanical facts are length (a context-cost signal that raises a
 decision) and the structural red flags a tool can read (dead symbols, circular dependencies). The
-model-driven verdict — is this module actually shallow? — is **not yet built**. So "the
-depth gate" is honest only as *length raises a decision the operator settles*; it is not a depth
-threshold a rebuild can pass by shipping short, shallow modules. The proactive defense is the worker
-building deep up front, not a backstop that measures depth — there is none to lean on. The spec says
-so plainly precisely so a regenerating author does not assume a gate that does not exist.
+model-driven verdict — is this module actually shallow? — is **built as a watched depth scan**
+(`architecture-review`, `engine/depth_scan.py`): it raises a finding for a judge, never a score and never
+a gate. So "the depth gate" is honest only as *length raises a decision the operator settles*; it is not
+a depth threshold a rebuild can pass by shipping short, shallow modules. The proactive defense is the
+worker building deep up front, not a backstop that measures depth — the watched scan judges, it does not
+certify, so there is no depth gate to lean on. The spec says so plainly precisely so a regenerating
+author does not assume a gate that does not exist.
 
 ### Requirement: modules are deep — much behavior behind a small interface
 A module MUST hide far more than it exposes — a powerful implementation under a simple interface,
@@ -75,8 +77,8 @@ The red flags MUST be carried as **judgment**, not numbers — shallow module, i
 temporal decomposition, overexposure, pass-through method, repetition, special-general mixture,
 conjoined methods, comment-repeats-code, vague or hard-to-pick name, nonobvious code — each a symptom
 a judge weighs, none a threshold a tool checks. The system keeps at most a **length** tripwire — a context-cost signal that raises a decision, not an
-auto-refusal. The model-driven red-flag scan lives in `architecture-review`, recorded as
-not-yet-built, never fabricated.
+auto-refusal. The model-driven red-flag scan lives in `architecture-review`, built as a watched scan,
+never fabricated.
 
 #### Scenario: depth is assessed
 - WHEN a module's depth is assessed at the gate or in the review

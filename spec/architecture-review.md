@@ -13,10 +13,11 @@ the fold, this standing whole-tree scan.
 Depth is **judgment, not a threshold the scan enforces**. The review raises a decision off the length
 signal and the mechanical red flags; it never scores or certifies depth, and a green scan means
 "length-clean, no dead symbols, no cycles," never "deep." The model-driven module depth judgment — the real
-shallow/leakage/deletion-test assessment — is the standing job this review exists to grow and is **not
-yet built**; until it is, the review names that absence rather than passing length off as
-depth. This honesty is the point: a regenerating author told the truth will not lean on a depth gate
-that does not exist.
+shallow/leakage/deletion-test assessment — is **built as a watched scan** (`engine/depth_scan.py`): it
+reads the standing review's already-computed map and raises a finding for a judge, its verdict watched
+because no fixture can certify whether a module is actually shallow. It still never scores depth and never
+fabricates a judgment from length. This honesty is the point: a regenerating author reads a depth signal
+raised for judgment, never a depth gate that ranks in its place.
 
 ### Requirement: the architecture review is a standing scan, read live
 The architecture review MUST scan the source tree live every time it is asked for, never
@@ -51,9 +52,10 @@ not length, and depth is **judgment**: the review surfaces the signal for a judg
 not score depth. The mechanical structural red flags a tool can read — dead module-level symbols and
 circular dependencies — are the only depth-adjacent facts the scan computes, and they are a
 narrow subset, not the judgment. The model-driven **red-flag module depth judgment** — the deletion test, the
-shallow-module and information-leakage judgments, testable-through-the-interface — is **not yet built**.
-The review records that absence honestly, as wanted-but-not-built gap rather than complexity debt, and
-never fabricates a module depth judgment from length or from the mechanical subset.
+shallow-module and information-leakage judgments, testable-through-the-interface — is **built as a watched
+scan** (`engine/depth_scan.py`), its verdict watched because no fixture certifies it. The review consults
+that scan rather than passing length off as depth, and never fabricates a module depth judgment from
+length or from the mechanical subset.
 
 #### Scenario: a god-file in the making
 - WHEN a source file crosses the length signal with no accepted-length record accepting it
@@ -104,9 +106,9 @@ module `x` it names, never the symbols it binds — depending on a name binds yo
 not to a sibling that merely shares the name — so a name clash never forges a cycle that is not there.
 It surfaces each in the complexity debt beside the length findings, computed live.
 These are the **mechanical subset** of the red flags; the model-driven *judgment* —
-shallow module, information leakage, the deletion test — stays judgment and is recorded as
-not-yet-built, never fabricated. A newly introduced instance of either rule returns the scan to
-red, so the standard bites by construction rather than by a reviewer remembering it.
+shallow module, information leakage, the deletion test — stays judgment, built as a watched depth scan
+whose verdict no fixture certifies, never fabricated. A newly introduced instance of either rule returns
+the scan to red, so the standard bites by construction rather than by a reviewer remembering it.
 
 #### Scenario: a dead module-level symbol
 - WHEN a module-level name is defined but used nowhere in the package
