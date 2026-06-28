@@ -22,10 +22,10 @@ this review is meant to grow, and it is **not yet built**. That
 shallowness is recorded here and in the operator's gap, never fabricated into a
 judgment. Length is the lens this slice ships; the red flags are the lens it will grow.
 
-The record it consults is the accepted-length record `folding-conditions` gates with
-(`conditions.accepted`) — one criterion at two scopes: the per-tree gate at the fold,
-and this standing whole-tree scan — so a file the gate would raise a decision on is the
-same file the review flags, by construction.
+The record it consults is the accepted-length ledger leaf the depth gate writes through and the
+provenance gate attests against — one criterion at two scopes: the per-tree gate at the fold, and this
+standing whole-tree scan — so a file the gate would raise a decision on is the same file the review
+flags, by construction.
 """
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ import ast
 import os
 from dataclasses import dataclass, field
 
-from . import conditions, tree
+from . import accepted_lengths, conditions, tree
 
 # A module within this margin of the length signal is a god-file in the making — flagged
 # early so deepening pressure is felt before a split is painful. A starting value to
@@ -150,8 +150,8 @@ def _module(rel: str, n: int, root: str | None) -> Module:
     canon = _canon(rel)
     if n <= conditions.SIGNAL:
         return Module(rel, n, "nearing" if n >= NEAR else "ok")
-    bar = conditions.accepted_at(canon, root)
-    if conditions.accepted(canon, n, root):
+    bar = accepted_lengths.accepted_at(canon, root)
+    if bar is not None and n <= bar + round(bar * conditions.SLACK):
         return Module(rel, n, "accepted", bar)
     return Module(rel, n, "exceeded", bar) if bar is not None else Module(rel, n, "over")
 
@@ -227,6 +227,24 @@ def red_flags(root: str | None = None) -> list[RedFlag]:
     review's to grow. One file walk feeds both rules."""
     files = _py_paths(os.path.join(root or tree._root(), "engine"))
     return _dead_symbols(files) + _import_cycles(files)
+
+
+def import_graph(root: str | None = None) -> dict[str, set[str]]:
+    """The engine package's module-scope sibling-import graph, read live from source."""
+    files = _py_paths(os.path.join(root or tree._root(), "engine"))
+    return {_modname(p): _sibling_imports(_read(p)) for p in files}
+
+
+def deferred_imports(module: str, root: str | None = None) -> set[str]:
+    """Sibling modules `module` imports below module scope.
+
+    The graph's layer signal is module-scope by definition. A load-bearing dependency hidden under a
+    function is therefore a source fact the architecture-review scenarios can assert against without
+    confusing it with a graph edge.
+    """
+    files = _py_paths(os.path.join(root or tree._root(), "engine"))
+    path = next((p for p in files if _modname(p) == module), "")
+    return _deferred_sibling_imports(_read(path)) if path else set()
 
 
 def _dead_symbols(files: list[str]) -> list[RedFlag]:
@@ -310,8 +328,9 @@ def _sibling_imports(text: str) -> set[str]:
     share the symbol's name. Only `from . import x, y` names *modules* directly, so its names are
     edges. Reading every imported name as an edge would forge a false cycle the moment a symbol's
     name matched another module's (e.g. `from .transport import render` against the `render` module)
-    — a preventable false positive, so it is prevented. Deferred (in-function) imports are left out:
-    they do not bind the module at load and are how a real cycle is usually broken."""
+    — a preventable false positive, so it is prevented. Deferred imports are intentionally absent from
+    this graph; layer-bearing modules that would hide dependencies there are asserted separately by the
+    architecture-review scenarios."""
     try:
         body = ast.parse(text).body
     except SyntaxError:
@@ -323,6 +342,23 @@ def _sibling_imports(text: str) -> set[str]:
                 out.add(node.module.split(".")[0])       # from .module import sym, … — the module is the edge
             else:
                 out.update(a.name for a in node.names)    # from . import module, … — each name is a sibling module
+    return out
+
+
+def _deferred_sibling_imports(text: str) -> set[str]:
+    """Relative imports below module scope, reduced to sibling module names."""
+    try:
+        parsed = ast.parse(text)
+    except SyntaxError:
+        return set()
+    top = set(parsed.body)
+    out: set[str] = set()
+    for node in ast.walk(parsed):
+        if isinstance(node, ast.ImportFrom) and node.level >= 1 and node not in top:
+            if node.module:
+                out.add(node.module.split(".")[0])
+            else:
+                out.update(a.name for a in node.names)
     return out
 
 

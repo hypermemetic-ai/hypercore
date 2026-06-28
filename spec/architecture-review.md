@@ -157,3 +157,31 @@ reads the current, honest shape of the system at a glance without reading code.
   view complexity-debt-derived
   view no-source
   ```
+
+### Requirement: a module declares its layer in the static graph, never behind a deferred import
+A module MUST declare its dependencies at module scope so the static import graph shows its true
+layer, and MUST NOT defer an import inside a function to dodge a circular dependency. A deferred
+import that hides a latent cycle hides the module's real layer from the graph, the one place a layer
+should be visible. Shared knowledge two modules both rest on MUST live in a lower leaf they each
+import downward, never duplicated and never reached by a back-edge a deferred import conceals, so the
+cycle scan is green **by construction** — the graph is acyclic because the seam points one way —
+and never by import timing. The accepted-length ledger the depth gate and the provenance gate both
+read is such a leaf: each imports it downward, neither defers an import to reach the other, and the
+provenance gate's real dependencies are visible at module scope rather than disguising it as a leaf.
+
+#### Scenario: the shared ledger is a lower leaf, each gate's layer visible
+- WHEN the engine's static import graph is read over its own source
+- THEN the accepted-length ledger is a lower leaf that imports neither the depth gate nor the
+  provenance gate
+- AND the depth gate and the provenance gate each import that ledger at module scope, downward
+- AND the provenance gate is not a static leaf — its real dependencies show at module scope, not
+  behind a deferred import
+- AND the cycle scan reports no dependency cycle between the depth gate and the provenance gate
+
+  ```check
+  layer ledger leaf
+  layer depth-gate rests-on-ledger
+  layer provenance-gate rests-on-ledger
+  layer provenance-gate declares-layer
+  layer no-cycle depth-gate provenance-gate
+  ```

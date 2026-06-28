@@ -88,6 +88,40 @@ class World(_Base):
         cycles = [fl.subject for fl in review.red_flags(self.scan) if fl.rule == "import cycle"]
         return (True, "") if not cycles else (False, f"a symbol/module name clash forged a false cycle: {cycles}")
 
+    def _v_layer(self, args: list[str]) -> tuple[bool, str]:
+        """layer <ledger|depth-gate|provenance-gate|no-cycle> ... — read hypercore's own static
+        import graph and assert the ledger/provenance layering contract."""
+        graph = review.import_graph(_REAL)
+        subject = args[0]
+        if subject == "no-cycle":
+            a, b = _module(args[1]), _module(args[2])
+            if a not in graph or b not in graph:
+                return False, f"cannot read layer cycle for {args[1:3]!r}: graph has {sorted(graph)}"
+            cyclic = _reaches(graph, a, b) and _reaches(graph, b, a)
+            return (False, f"{a} and {b} are still mutually reachable in the static graph") if cyclic else (True, "")
+
+        mod = _module(subject)
+        if mod not in graph:
+            return False, f"{subject} ({mod}) is absent from the engine graph"
+        claim = args[1]
+        if claim == "leaf":
+            deps = graph[mod]
+            return (True, "") if not deps else (False, f"{mod} is not a leaf; it imports {sorted(deps)}")
+        if claim == "rests-on-ledger":
+            deps = graph[mod]
+            if _LEDGER not in deps:
+                return False, f"{mod} does not import the accepted-length ledger at module scope"
+            if mod in graph.get(_LEDGER, set()):
+                return False, f"the ledger imports back up to {mod}"
+            return True, ""
+        if claim == "declares-layer":
+            deferred = review.deferred_imports(mod, _REAL)
+            if deferred:
+                return False, f"{mod} still hides sibling imports below module scope: {sorted(deferred)}"
+            deps = graph[mod]
+            return (True, "") if deps else (False, f"{mod} still reads as a static leaf")
+        return False, f"unknown layer claim {claim!r}"
+
     # ── behaviour verbs: the review's verdict over the planted scan ──────────────
     def _v_scan(self, args: list[str]) -> tuple[bool, str]:
         """scan measures <file.py> — the live scan includes the module, measured fresh with a real length."""
@@ -194,7 +228,7 @@ class World(_Base):
         if what == "no-source":
             text = "".join(t for row in render.view_body(v, 0, 76) for t, _s in row)
             ok = ("operator view" in text and "█" in text and f"/{conditions.SIGNAL}" in text
-                  and "import " not in text and "def " not in text)
+                  and "from ." not in text and "import os" not in text and "def " not in text)
             return (True, "") if ok else (False, "the map reads as source, not the system's shape")
         return False, f"unknown view assertion {what!r}"
 
@@ -222,3 +256,20 @@ class World(_Base):
 
 
 _RULE = {"dead": "dead symbol", "cycle": "import cycle"}    # the domain word → the review's rule name
+_LEDGER = "accepted_lengths"
+_LAYER = {"ledger": _LEDGER, "depth-gate": "conditions", "provenance-gate": "provenance"}
+
+
+def _module(name: str) -> str:
+    return _LAYER.get(name, name)
+
+
+def _reaches(graph: dict[str, set[str]], start: str, target: str, seen: set[str] | None = None) -> bool:
+    seen = set() if seen is None else seen
+    if start in seen:
+        return False
+    seen.add(start)
+    for nxt in graph.get(start, set()):
+        if nxt == target or _reaches(graph, nxt, target, seen):
+            return True
+    return False

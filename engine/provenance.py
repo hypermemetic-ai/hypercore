@@ -46,7 +46,14 @@ with **no** general operator-override, since waving the bar would re-open the ex
 """
 from __future__ import annotations
 
+import os
+import shutil
+import subprocess
+import tempfile
 from dataclasses import dataclass
+
+from . import accepted_lengths, scenario, tree
+from .record import _root
 
 # The genesis/bootstrap authored-trust roots — the one named, minimal exemption. These records
 # necessarily predate the gate (there was no gate to leave a trail for) and the system rests on them as
@@ -108,8 +115,7 @@ def _accepted_length(root: str | None) -> str | None:
     working tree is not, and is the short-circuit caught. A record already committed is **grandfathered**
     (it predates this fold) and a record naming a **genesis** root is exempt — nothing else folds new and
     uncommitted."""
-    from . import conditions
-    new = conditions.working_accepted(root) - conditions.committed_accepted(root)
+    new = accepted_lengths.working_records(root) - accepted_lengths.committed_records(root)
     forged = sorted(p for p, _n in new if p not in GENESIS)
     return NO_TRAIL if forged else None
 
@@ -119,7 +125,6 @@ def _design_decision(result, node, root: str | None) -> str | None:
     the N briefed candidates and the comparison a real `design.record` commits to `design-decision.md`. A
     decision recorded with no candidate set is a skipped contest with no trail (`run the contest`); only
     the structural reachability is gated, the pick's reason stays watched."""
-    import os
     path = _node_path(result, node)
     if not path:
         return None                                        # this fold carries no design decision
@@ -159,7 +164,6 @@ def watched_trace(node, mechanism: str, root: str | None = None) -> str | None:
     for content — so the one seam serves the vocabulary check, the depth scan, and every later watched
     standard, each naming its own mechanism. Presence only: the verdict's soundness is never claimed
     (`Attestation.adequacy` deferred, `residue` watched)."""
-    import os
     path = _node_path(None, node)
     if not path:
         return None                                        # no node to carry a trace — nothing to attest
@@ -173,7 +177,6 @@ def commit_verdict(node, mechanism: str, verdict: str, root: str | None = None) 
     act, so the trail is what survives the torn-down fence, never a working-tree scratch. Production's
     watched run (the vocabulary check, the depth scan) calls this; the gate later attests its presence,
     never re-derives the verdict. Returns the trace file's path."""
-    from . import tree
     path = _verdict_path(node.path, mechanism)
     tree.atomic_write(path, f"# {mechanism} — watched verdict [machine]\n\n{verdict.strip()}\n")
     tree.commit([path], f"{mechanism}: verdict committed on the node")
@@ -184,28 +187,23 @@ def verdict_present(node, mechanism: str) -> bool:
     """True when a mechanism's verdict trace is present in a node folder. This is the read side for
     live renders that need a trace's presence in the current tree, while `watched_trace` stays the fold
     gate's committed-presence attestation."""
-    import os
     path = _node_path(None, node)
     return bool(path and os.path.isfile(_verdict_path(path, mechanism)))
 
 
 def _verdict_path(node_path: str, mechanism: str) -> str:
-    import os
     return os.path.join(node_path, f"{mechanism}.verdict.md")
 
 
 def _committed(rel: str, root: str | None) -> bool:
     """True when `rel` is committed at HEAD — the trace durably survived, read through git so what counts
-    is what a commit left, the same discipline the accepted-length trail uses (`_committed_ledger`)."""
-    import os
-    import subprocess
+    is what a commit left, the same discipline the accepted-length ledger leaf uses."""
     r = subprocess.run(["git", "cat-file", "-e", f"HEAD:{rel.replace(os.sep, '/')}"],
                        cwd=_resolve_root(root), capture_output=True)
     return r.returncode == 0
 
 
 def _resolve_root(root: str | None) -> str:
-    from .record import _root
     return root or _root()
 
 
@@ -217,7 +215,6 @@ def derived(result, root: str | None = None) -> str | None:
     transition**, never a stored verdict — and reframes its absence as the flat provenance reason. A
     RESULT hand-authored without a fenced build leaves no red→green to re-derive, so it has no trail and
     is refused. This attests the build **ran**; whether its scenarios test the property is deferred."""
-    from . import scenario
     return NO_TRAIL if scenario.gate(result, root) else None
 
 
@@ -247,9 +244,6 @@ def forged_result(root: str | None, flag: bool = False) -> _Forged:
     has no trail. With `flag` it also carries a self-asserted `ran: true` the gate must **ignore** — a
     record that asserts its own provenance is no trail at all. (A design decision's negative space — the
     contest-skipped pick — is forged inline by the `design-it-twice` world, which holds the node.)"""
-    import os
-    import shutil
-    import tempfile
     d = tempfile.mkdtemp(prefix="forged-result-")
     src = os.path.join(root or "", "spec")
     if os.path.isdir(src):

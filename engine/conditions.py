@@ -1,9 +1,9 @@
 """The folding gate and its depth signal.
 
 The gate composes the condition modules that own their own knowledge: `delta.check`,
-`vocabulary.check`, and provenance's reachability / red→green verdicts. This module
-keeps the length/depth condition and the accepted-length ledger, because that is
-the one live authored state the depth signal reads and writes.
+`vocabulary.check`, and provenance's reachability / red→green verdicts. This module keeps the
+length/depth condition and the accepted-length writer. The ledger's durable read lives in the lower
+`accepted_lengths` leaf so provenance can attest it without reaching back into this gate.
 
 Length is not the criterion; a **deep module** is. Length is only a context-cost
 signal: a source file the tree created or grew past the signal raises a decision
@@ -18,7 +18,7 @@ import os
 import re
 import subprocess
 
-from . import delta, spec, vocabulary
+from . import accepted_lengths, delta, provenance, spec, vocabulary
 from .record import atomic_write, transact
 
 # The length signal. Past this many lines a touched source file raises a
@@ -46,7 +46,6 @@ def unmet(result, root: str | None = None, node=None) -> str | None:
     scenarios of the touched capabilities re-derived red→green in the fence (`provenance.derived` over
     the scenario gate). The depth condition returns a *decision* (re-cut / deepen / accept), which the
     architect raises on the operator's queue; the others refuse with a flat reason."""
-    from . import provenance                            # lazy: provenance reads conditions, so bind it at call time
     return material_unmet(result, root, node) or provenance.derived(result, root)
 
 
@@ -56,7 +55,6 @@ def material_unmet(result, root: str | None = None, node=None) -> str | None:
     re-derivation. This is the seam the scenario binding asserts against: a capability's `gate`/`spec`
     scenario reads the gate's verdict on planted material here, so a scenario can never recurse into the
     scenario gate that runs scenarios. `unmet` is this plus the derived (re-derivation) trail."""
-    from . import provenance
     d = delta.parse(result.delta)
     sp = spec.read_spec(root)
     return (_delta(d, sp) or _depth(result, root) or vocabulary.check(root)
@@ -134,7 +132,7 @@ def accepted(rel: str, lines: int, root: str | None) -> bool:
 
 def accepted_at(rel: str, root: str | None) -> int | None:
     """The length an accepted-length record records this file accepted at — the **ratchet
-    bar** — or None when none accepts it. The record is a line in the durable store (`_ledger`):
+    bar** — or None when none accepts it. The record is a line in the durable store:
 
         accepted: <repo-relative path> @<N> — <reason>
 
@@ -145,13 +143,7 @@ def accepted_at(rel: str, root: str | None) -> int | None:
     the exception is the decision *at a stated size*, not the spelling. When several records name
     the same file — each re-acceptance as the file grows writes a new one — the **highest** bar
     governs: the ratchet only rises, so the most permissive recorded acceptance is the live one."""
-    f = _ledger(root)
-    if not os.path.isfile(f):
-        return None
-    want = rel.replace(os.sep, "/")
-    bars = [rec[1] for line in open(f, encoding="utf-8", errors="ignore")
-            if (rec := _depth_record(line)) and rec[0] == want]
-    return max(bars) if bars else None
+    return accepted_lengths.accepted_at(rel, root)
 
 
 def accept(rel: str, n: int, reason: str, root: str | None = None) -> bool:
@@ -167,7 +159,7 @@ def accept(rel: str, n: int, reason: str, root: str | None = None) -> bool:
     bar = accepted_at(rel, root)
     if bar is not None and bar >= n:
         return False
-    f = _ledger(root)
+    f = accepted_lengths.path(root)
     line = f"accepted: {rel} @{n} — {reason.strip()}\n"
     def write() -> list[str]:
         prior = open(f, encoding="utf-8").read() if os.path.isfile(f) else ""
@@ -195,67 +187,3 @@ def accept_length(text: str, root: str | None = None) -> bool:
     rn = length_decision(text)
     return bool(rn) and accept(rn[0], rn[1], "accepted by the operator from the queue", root)
 
-
-def _ledger(root: str | None) -> str:
-    """The accepted-length record's durable home: `engine/accepted-lengths.md`, beside its only
-    reader (this gate) and the standing review that shares it. It is the system's one piece of
-    **authored, mutable** state — live gate-state that must outlive the work that grew a file past the
-    length signal, so it cannot ride a node (a node archives with its work, intent §50/§116) and is not
-    re-derived on fold like the channels. Reached only through `accepted_at` and `accept`, so the
-    location is a hidden decision the rest of the system never names."""
-    return os.path.join(os.path.dirname(spec.spec_dir(root)), "engine", "accepted-lengths.md")
-
-
-def working_accepted(root: str | None) -> set[tuple[str, int]]:
-    """Every `(path, @N)` accepted-length record in the **working-tree** ledger — what the depth gate
-    reads. The provenance gate diffs this against the committed ledger to find a record hand-appended
-    this fold (a working-tree line with no commit), the cooperating short-circuit it refuses."""
-    f = _ledger(root)
-    return _ledger_records(open(f, encoding="utf-8", errors="ignore").read()) if os.path.isfile(f) else set()
-
-
-def committed_accepted(root: str | None) -> set[tuple[str, int]]:
-    """Every `(path, @N)` accepted-length record **committed** to the ledger — the durable artifact the
-    one accept seam leaves (it writes and commits in one held act). A record present here either went
-    through the seam or was folded before the gate (grandfathered); a working-tree record absent here is
-    the un-committed forge with no trail."""
-    return _ledger_records(_committed_ledger(root))
-
-
-def _ledger_records(text: str) -> set[tuple[str, int]]:
-    return {rec for line in text.splitlines() if (rec := _depth_record(line))}
-
-
-def _committed_ledger(root: str | None) -> str:
-    """The committed ledger's text at HEAD, or empty when none is committed — read through git so the
-    durable record is what the seam's commit left, never the working tree the forge edits."""
-    base = os.path.dirname(spec.spec_dir(root))
-    r = subprocess.run(["git", "show", "HEAD:engine/accepted-lengths.md"], cwd=base,
-                       capture_output=True, text=True)
-    return r.stdout if r.returncode == 0 else ""
-
-
-def _depth_record(line: str) -> tuple[str, int] | None:
-    """Parse one `accepted: <path> @<N> — …` line to `(path, accepted-length)`, or
-    None. A line is an accepted-length record only with the exact `accepted:` prefix and an `@<N>`
-    token naming an integer length; a record with no `@<N>`, or prose, is not a
-    pass — the acceptance must name the length it is bounded to."""
-    text = line.strip()
-    if not text.lower().startswith("accepted:"):
-        return None
-    parts = text.split(":", 1)[1].split()
-    if len(parts) < 2:
-        return None
-    path = parts[0].rstrip(",").replace(os.sep, "/")
-    for tok in parts[1:]:
-        if (n := _accepted_length(tok)) is not None:
-            return (path, n)
-    return None
-
-
-def _accepted_length(token: str) -> int | None:
-    """`@<N>` → N (the bounded length); a token with no `@<N>` or anything else → None.
-    Tolerant of trailing punctuation (`@450,`) and case."""
-    t = token.strip(",.—-").lower()
-    digits = t[1:] if t.startswith("@") else ""
-    return int(digits) if digits.isdigit() else None
