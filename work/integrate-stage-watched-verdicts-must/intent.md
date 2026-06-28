@@ -22,3 +22,21 @@ To surface in grilling (residue, not pre-resolved):
 - **Scope.** Whether this folds the three landed integrate-family fixes (timeout, lost-card, unreadable) into the one shared seam, or only binds watched verdicts going forward and leaves the landed fixes as instances.
 
 Folding condition: a watched integrate-stage verdict, over a build whose deterministic gate is green, never discards the verified build — it retries an unobtainable verdict, and for an adverse one raises a decision with the build held for a no-rebuild fold; a red->green scenario proves that a flaky OR over-firing watched verdict no longer discards a gate-proven, re-verified build (covering both the unreadable and the caveat-survival shapes); the disposition-on-decided-against and the preservation seam are settled; `python3 -m engine --check` is green.
+
+---
+
+**Update — 2026-06-28 (dispatch grilling settled the design; revert re-grounded the ask). NOT built.**
+The hand-cranked dispatch grilled this node to a settled design before the approach was wound down; the
+crossing was not built. The settled contract, seam, scope, and disposition are recorded in
+`design-decision.md` beside this file. Two things the next build must read first:
+
+- **The design is settled.** Seam **B** (the verified `WorkerResult` held as material on the decision
+  node, re-folded at settle), scope **subsume**, and the decided-against disposition **offer modify
+  (both)** — operator-settled directly 2026-06-28, so this node builds the seed-fence-from-held-artifact
+  "modify" seam. No open forks remain.
+- **The ask re-grounded smaller.** `worker-run-is-not-total` was **reverted** as a manual-path-only
+  guarantee (and is a different shape — a raise, not an adverse verdict) and is **no longer an instance**
+  of this ask. The timeout and coherence-unreadable instances are each already individually folded. So
+  the genuinely-open core is the **adverse** watched verdict (caveat-survival, `survives: false`) still
+  discarding a gate-proven build — see `design-decision.md` for the full re-grounding. The "seen four
+  times" framing above is the original filing; the operator owns the narrowed scope when this is built.
