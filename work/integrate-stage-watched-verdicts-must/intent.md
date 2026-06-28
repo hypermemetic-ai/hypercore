@@ -61,3 +61,25 @@ crossing safe, so a fence would risk the very discard it cures; operator-settled
   timeout / coherence-unreadable fixes under the one shared seam. Seam B and "offer modify (both)" stay
   the settled design in `design-decision.md`. The folding condition is met for the core but not for the
   modify seam, so this node does not fold yet.
+
+---
+
+**Update — 2026-06-28 (two findings from dogfooding the core on interface slice 2).**
+The first fenced crossing since the core landed (interface slice 2) exercised preserve-and-decide
+end-to-end: the `caveat_survives` watched verdict over-fired on a gate-proven, coherence-passed build; the
+build was **held** (not discarded), the operator settled by **override**, and `settle_held` re-folded the
+same artifact with no rebuild (`177d34e`). The core worked as designed. Two residues surfaced for the
+modify slice to subsume:
+
+- **`caveat_survives` over-fires systematically — the verdict itself is miscalibrated, not just its
+  discard behavior.** It has now false-refused **3/3** gate-proven interface/engine builds it has seen (the
+  coherence-fix crossing, interface slice 1, interface slice 2). The core fix made each survivable (held +
+  override), but a watched check that is wrong every time it fires is noise the operator pays a decision
+  for. The modify slice (or a sibling) should narrow the `caveat_survives` entailment prompt/seam so it
+  stops firing on builds whose contract caveat is already carried — the held-build path is the safety net,
+  not the cure for a bad verdict.
+- **`settle_held` leaves the held-build.json in the archive (~92K of base+tip bytes per overridden
+  build).** A successful override-fold archives the node with its `held-build.json` intact — honest
+  provenance, but it grows the archive by the full size of the touched files on every override, against the
+  legible-minimal-tree bar. The modify seam should drop (or decline to archive) the held artifact once the
+  fold lands, keeping only the verdict record.
