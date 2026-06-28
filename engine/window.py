@@ -14,7 +14,6 @@ from . import communication, conditions, tree, grill, render, schedule, transpor
 from .communication import Thread
 
 ESC, ENTER, BACKSPACES = 27, (10, 13, curses.KEY_ENTER), (8, 127, curses.KEY_BACKSPACE)
-SPIN = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
 
 
 @dataclass
@@ -69,8 +68,8 @@ def _main(scr) -> None:
             nodes = tree.read_tree()
             _paint(scr, st, nodes, sched.live)
             ch = scr.getch()
+            st.tick += 1
             if st.pending is not None:
-                st.tick += 1
                 if st.pending.done:
                     _land(st, st.pending.result)
                     st.pending = None
@@ -237,7 +236,7 @@ def _paint(scr, st: State, nodes, live_loop: bool = True) -> None:
         node = view.resolve(view.operator_view(), st.view_path)
         rows = render.view_body(node, st.view_sel, w, st.polarity)
     else:
-        rows = render.main_body(nodes, st.sel, w, st.polarity)
+        rows = render.main_body(nodes, st.sel, w, tick=st.tick, polarity=st.polarity)
     _apply_frame_theme(rows)
     scr.bkgd(" ", _BG_ATTR)
     scr.erase()
@@ -247,7 +246,7 @@ def _paint(scr, st: State, nodes, live_loop: bool = True) -> None:
         _paint_row(scr, y, 2, row, w)
     status = ""
     if st.pending is not None:
-        status = SPIN[st.tick % len(SPIN)] + " the machine is thinking"
+        status = "thinking · the machine is thinking"
     foot = render.footer(transport.MODEL_LABEL, st.mode, st.buffer, status, w, live_loop=live_loop)
     _paint_row(scr, h - 1, 0, foot, w)
     scr.noutrefresh()

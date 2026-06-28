@@ -42,6 +42,8 @@ class World(_Base):
         self.rows = None
         self.footers: dict[str, render.Row] = {}
         self._loops: list[schedule.Scheduler] = []
+        self.arc_parent: tree.Node | None = None
+        self.arc_child: tree.Node | None = None
 
     # ── action verbs ──────────────────────────────────────────────────────────────
     def _v_card(self, args: list[str]) -> tuple[bool, str]:
@@ -67,6 +69,25 @@ class World(_Base):
                         else (False, "the lease holder footer is marked not-live"))
             return ((True, "") if "not live loop" in text
                     else (False, "the non-holding footer does not show it is not the live loop"))
+        self.frame = render.main_body(tree.read_tree(), 0)
+        self.rows = self.frame
+        return True, ""
+
+    def _v_arc(self, args: list[str]) -> tuple[bool, str]:
+        """arc — plant a concurrent work arc: a parent with nested open work, one hidden folded
+        result under it for scent, one running branch, and an awaiting card for state-glyph reads."""
+        parent = tree.file_intent("root arc that spawned child work")
+        child = tree._create("nested at-rest child work", "ask", tree.STANDING, "operator", False,
+                             parent=parent.id, message="plant nested child work")
+        running = tree._create("running child branch", "ask", tree.STANDING, "operator", False,
+                               parent=parent.id, message="plant running child work")
+        tree.dispatch(running)
+        folded = tree._create("passed folded child result", "ask", tree.STANDING, "operator", False,
+                              parent=parent.id, message="plant folded child result")
+        tree.archive_in_place(folded)
+        tree.raise_card("an awaiting decision the operator must settle", kind="decide")
+        self.arc_parent = parent
+        self.arc_child = child
         self.frame = render.main_body(tree.read_tree(), 0)
         self.rows = self.frame
         return True, ""
@@ -192,6 +213,73 @@ class World(_Base):
         return ((True, "") if needed <= seen
                 else (False, f"the state frame did not carry state hues for {sorted(needed - seen)}"))
 
+    def _v_nested(self, args: list[str]) -> tuple[bool, str]:
+        """nested — the work rows render parent before child, and the child is indented beneath it."""
+        if self.rows is None or self.arc_parent is None or self.arc_child is None:
+            return False, "no arc frame has been rendered"
+        parent_i = _row_index(self.rows, "root arc that spawned child work")
+        child_i = _row_index(self.rows, "nested at-rest child work")
+        if parent_i is None or child_i is None:
+            return False, "the parent or nested child is missing from the work view"
+        if parent_i > child_i:
+            return False, "the child rendered before the parent"
+        parent_indent = _indent(self.rows[parent_i])
+        child_indent = _indent(self.rows[child_i])
+        return ((True, "") if child_indent > parent_indent
+                else (False, "the child is not indented under its parent"))
+
+    def _v_scent(self, args: list[str]) -> tuple[bool, str]:
+        """scent — the folded branch is summarized on the parent row: child count, shape, and result."""
+        if self.rows is None:
+            return False, "no arc frame has been rendered"
+        row = _row_text(next((r for r in self.rows if "root arc that spawned child work" in _row_text(r)), []))
+        if not row:
+            return False, "the folded branch's parent row is missing"
+        for cue in ("scent", "3 children", "shape", "passed"):
+            if cue not in row:
+                return False, f"the folded branch scent is missing {cue!r}: {row!r}"
+        if "·" == row.strip()[:1]:
+            return False, "the folded branch is an opaque dot"
+        return True, ""
+
+    def _v_glyph_first(self, args: list[str]) -> tuple[bool, str]:
+        """glyph-first — each node state has a distinct leading glyph with color ignored."""
+        frame = self._frame()
+        if frame is None:
+            return False, "no state frame has been rendered"
+        glyphs: dict[str, str] = {}
+        for row in frame:
+            state = _node_state(frame, row)
+            if state:
+                glyphs.setdefault(state, _leading_glyph(row))
+        needed = {"awaiting", "running", "at-rest"}
+        missing = needed - set(glyphs)
+        if missing:
+            return False, f"the frame is missing state rows for {sorted(missing)}"
+        if any(not glyphs[state] for state in needed):
+            return False, f"a state row has no leading glyph: {glyphs}"
+        if len({glyphs[state] for state in needed}) != len(needed):
+            return False, f"state glyphs are not distinct: {glyphs}"
+        expected = {"awaiting": "?", "at-rest": "○"}
+        for state, glyph in expected.items():
+            if glyphs[state] != glyph:
+                return False, f"{state} reads from {glyphs[state]!r}, not the glyph {glyph!r}"
+        return ((True, "") if glyphs["running"] in render.PULSE_GLYPHS
+                else (False, f"running reads from {glyphs['running']!r}, not the pulse glyph"))
+
+    def _v_pulse(self, args: list[str]) -> tuple[bool, str]:
+        """pulse — exactly running rows carry the pulse marker."""
+        frame = self._frame()
+        if frame is None:
+            return False, "no state frame has been rendered"
+        for y, row in enumerate(frame):
+            text = _row_text(row)
+            has_pulse = any(g in text for g in render.PULSE_GLYPHS)
+            is_running = _node_state(frame, row) == "running"
+            if has_pulse != is_running:
+                return False, f"row {y} pulse={has_pulse} running={is_running}: {text!r}"
+        return True, ""
+
     def _v_footer_live(self, args: list[str]) -> tuple[bool, str]:
         """footer-live — the rendered footer does not mark the lease holder as non-live."""
         text = "".join(t for t, _s in self.footers.get("holder", []))
@@ -226,3 +314,33 @@ class World(_Base):
 def _rgb(value) -> bool:
     return (isinstance(value, tuple) and len(value) == 3
             and all(isinstance(c, int) and 0 <= c <= 255 for c in value))
+
+
+def _row_text(row) -> str:
+    return "".join(text for text, _style in row)
+
+
+def _row_index(rows, needle: str) -> int | None:
+    return next((i for i, row in enumerate(rows) if needle in _row_text(row)), None)
+
+
+def _indent(row) -> int:
+    text = _row_text(row)
+    return len(text) - len(text.lstrip(" "))
+
+
+def _leading_glyph(row) -> str:
+    text = _row_text(row).lstrip()
+    return text[:1]
+
+
+def _node_state(frame: render.Frame, row) -> str:
+    row_text = _row_text(row).lower()
+    states = {frame.styles.get(style, render.StyleSpec("ink")).state for _text, style in row}
+    if "running" in states:
+        return "running"
+    if "awaiting" in states and "awaiting" in row_text:
+        return "awaiting"
+    if "at-rest" in states and ("at rest" in row_text or "standing" in row_text):
+        return "at-rest"
+    return ""

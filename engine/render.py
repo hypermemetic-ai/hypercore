@@ -114,16 +114,22 @@ def styles() -> dict[str, StyleSpec]:
     }
 
 
+PULSE_GLYPHS = ("◉", "◎")
+STATE_GLYPHS = {
+    "awaiting": "?",
+    "running": PULSE_GLYPHS[0],
+    "at-rest": "○",
+}
 STATE_CUES = {
     "selected": ("▸",),
-    "awaiting": ("awaiting",),
-    "running": ("⟳", "running", "worker is on it"),
-    "at-rest": ("at rest", "standing"),
+    "awaiting": (STATE_GLYPHS["awaiting"], "awaiting"),
+    "running": (*PULSE_GLYPHS, "running", "worker is on it"),
+    "at-rest": (STATE_GLYPHS["at-rest"], "at rest", "standing"),
 }
 
 
 def main_body(nodes: list[tree.Node], sel: int, width: int = 76,
-              polarity: str = LIGHT) -> Frame:
+              polarity: str = LIGHT, tick: int = 0) -> Frame:
     """The resting face of the system: the queue over the work."""
     rows: list[Row] = [[("hypercore", TITLE)], []]
 
@@ -133,7 +139,8 @@ def main_body(nodes: list[tree.Node], sel: int, width: int = 76,
         rows.append([("  — nothing awaiting you —", DIM)])
     for i, c in enumerate(cards):
         chosen = i == sel
-        rows.append([("  " + ("▸ " if chosen else "· "), SEL if chosen else AWAIT),
+        rows.append([("  ? ", AWAIT),
+                     ("▸ " if chosen else "  ", SEL if chosen else DIM),
                      (_subject(c.text), SEL if chosen else CARD),
                      ("   awaiting · " + _card_label(c), AWAIT)])
         if chosen:
@@ -141,18 +148,103 @@ def main_body(nodes: list[tree.Node], sel: int, width: int = 76,
 
     rows.append([])
     rows.append([("work", HEAD)])
-    items = tree.work(nodes)
-    if not items:
+    work_rows = _work_rows(nodes, tick)
+    if not work_rows:
         rows.append([("  — no standing work; system at rest —", REST)])
-    for n in items:
-        if n.is_live:
-            rows.append([("  ⟳ ", LIVE), (_subject(n.text), CARD),
-                         ("   running · a worker is on it", LIVE)])
-        else:
-            rows.append([("  · ", REST), (_subject(n.text), CARD),
-                         ("   standing · at rest", REST)])
+    rows.extend(work_rows)
 
     return Frame(rows, polarity)
+
+
+def _work_rows(nodes: list[tree.Node], tick: int) -> list[Row]:
+    """Render open work as an indented tree; closed descendants become scent on the owner row."""
+    kids = _children_by_parent(nodes)
+    visible = [n for n in nodes if _visible_work(n)]
+    visible_ids = {n.id for n in visible}
+    roots = [n for n in visible if n.parent not in visible_ids]
+    rows: list[Row] = []
+
+    def walk(n: tree.Node, depth: int) -> None:
+        rows.append(_work_row(n, depth, tick, _scent(n, kids, visible_ids)))
+        for child in kids.get(n.id, []):
+            if child.id in visible_ids:
+                walk(child, depth + 1)
+
+    for n in sorted(roots, key=lambda x: (x.created, x.id)):
+        walk(n, 0)
+    return rows
+
+
+def _work_row(n: tree.Node, depth: int, tick: int, scent: str) -> Row:
+    state = "running" if n.is_live else "at-rest"
+    style = LIVE if n.is_live else REST
+    glyph = _running_glyph(tick) if n.is_live else STATE_GLYPHS[state]
+    meta = "running · worker is on it" if n.is_live else "standing · at rest"
+    if scent:
+        meta += " · " + scent
+    return [("  " + "  " * depth + glyph + " ", style),
+            (_subject(n.text), CARD),
+            ("   " + meta, style)]
+
+
+def _running_glyph(tick: int) -> str:
+    return PULSE_GLYPHS[(max(0, tick) // 8) % len(PULSE_GLYPHS)]
+
+
+def _visible_work(n: tree.Node) -> bool:
+    return n.state in (tree.STANDING, tree.IN_FLIGHT) and not n.folded
+
+
+def _children_by_parent(nodes: list[tree.Node]) -> dict[str, list[tree.Node]]:
+    kids: dict[str, list[tree.Node]] = {}
+    for n in nodes:
+        if n.parent:
+            kids.setdefault(n.parent, []).append(n)
+    for children in kids.values():
+        children.sort(key=lambda n: (n.created, n.id))
+    return kids
+
+
+def _scent(n: tree.Node, kids: dict[str, list[tree.Node]], visible_ids: set[str]) -> str:
+    hidden = [(d, level) for d, level in _descendants(n.id, kids) if d.id not in visible_ids]
+    if not hidden:
+        return ""
+    child_count = len(kids.get(n.id, []))
+    max_depth = max(level for _d, level in hidden)
+    leaves = sum(1 for d, _level in hidden if not kids.get(d.id))
+    return (f"scent · {_plural(child_count, 'child')} · "
+            f"shape {max_depth} deep / {_plural(leaves, 'leaf')} · {_rollup(d for d, _level in hidden)}")
+
+
+def _descendants(parent: str, kids: dict[str, list[tree.Node]]) -> list[tuple[tree.Node, int]]:
+    out: list[tuple[tree.Node, int]] = []
+
+    def walk(node_id: str, level: int) -> None:
+        for child in kids.get(node_id, []):
+            out.append((child, level))
+            walk(child.id, level + 1)
+
+    walk(parent, 1)
+    return out
+
+
+def _rollup(nodes) -> str:
+    found = list(nodes)
+    failed = any(n.state == tree.AWAITING or "fail" in n.state.lower() for n in found)
+    passed = any(n.folded or n.state in (tree.DONE, "settled", "endorsed") for n in found)
+    if failed and passed:
+        return "mixed"
+    if failed:
+        return "failed"
+    if passed:
+        return "passed"
+    return "open"
+
+
+def _plural(n: int, word: str) -> str:
+    irregular = {"child": "children", "leaf": "leaves"}
+    plural = irregular.get(word, word + "s")
+    return f"{n} {word if n == 1 else plural}"
 
 
 def _card_label(c: tree.Node) -> str:
