@@ -8,7 +8,7 @@ import re
 import subprocess
 from dataclasses import dataclass, field
 
-from . import communication, delta, tree, grill, methodology, spec
+from . import communication, delta, tree, grill, spec
 from .transport import Envelope, Tag, instruction, read, worker_transport
 
 # The salutation — who the worker is, in one line; the disciplines that follow are single-sourced from
@@ -25,9 +25,7 @@ GROUNDING = (
     "Two facts about the shared record you cannot infer from the spec, and must respect:\n"
     "- **The single-writer record.** The one git record is shared across concurrent fences. Stage the "
     "*exact* files your change touches — never `git add -A` over a shared parent, which can sweep a "
-    "sibling worker's uncommitted material into your commit. A repo-level lock spans write→commit, so "
-    "your write and your commit are one indivisible act on the record; do nothing that reaches outside "
-    "your own worktree between them.\n"
+    "sibling worker's uncommitted material into your commit.\n"
     "- **The scenario gate, and gated versus watched.** You do not author the check that judges you. A "
     "behavior change folds only when the **architect-authored scenarios** of the capabilities it "
     "touches go red→green — failing at the fork base (the behavior absent), passing at your tip. Build "
@@ -48,14 +46,6 @@ WORKER_SCHEMA = Envelope(
 )
 ENVELOPE = instruction(WORKER_SCHEMA)
 
-
-def _worker_disciplines(root: str | None = None) -> str:
-    """The worker's standing disciplines, rendered from `spec/worker.md`'s requirement statements through
-    the same `methodology` seam the skills use — single-sourced, so a sharpened slice reaches the next
-    worker with no second copy to drift (the retired `WORKER`-constant restatement). The depth standards
-    are foregrounded separately by `prompt`; these are the worker's own."""
-    text = methodology._read_slice("worker", root)
-    return methodology._bullets(methodology._disciplines(text))
 
 @dataclass
 class WorkerContext:
@@ -96,12 +86,11 @@ class WorkerResult:
 
 def context(node: tree.Node, root: str | None = None) -> WorkerContext:
     """Assemble the grounding for a node: the *whole* spec — every capability's text and the glossary —
-    with the ones the handed delta names marked as `touched` (the `depth` capability among them,
-    foregrounded every episode). `context` holds every full body; the economy falls in `prompt` — touched
-    capability bodies and touched glossary entries are inlined, the rest stay read just-in-time from the
-    checkout. Past-decision grounds are left out (greped from `work/archive/`, step 5). Not
-    slice-confined: the index spans the whole map, so the rescan verifies the handed delta against it,
-    not its list."""
+    with the ones the handed delta names marked as `touched`. `context` holds every full body; the
+    economy falls in `prompt` — touched capability bodies and touched glossary entries are inlined, the
+    rest stay indexed and read just-in-time from the checkout. Past-decision grounds are left out
+    (greped from `work/archive/`, step 5). Not slice-confined: the index spans the whole map, so the
+    rescan verifies the handed delta against it, not its list."""
     sp = spec.read_spec(root)
     handed = _handed_delta(node)
     touched = _touched(handed, sp)
@@ -111,12 +100,11 @@ def context(node: tree.Node, root: str | None = None) -> WorkerContext:
 
 def prompt(node: tree.Node, ctx: WorkerContext, root: str | None = None) -> str:
     """Render one worker prompt: touched bodies in full, untouched bodies indexed, named glossary terms
-    inlined, depth foregrounded, and the reply envelope last."""
+    inlined, standing skill-load routes hedged in brief, and the reply envelope last."""
     def _caps(items):
         return "\n\n".join(f"### capability: {n}\n{t.strip()}" for n, t in items)
-    depth_text = next((t.strip() for n, t in ctx.capabilities if n == "depth"), "")
-    grounding = _caps([(n, t) for n, t in ctx.capabilities if n in ctx.touched and n != "depth"])
-    index = _index([(n, t) for n, t in ctx.capabilities if n not in ctx.touched and n != "depth"])
+    grounding = _caps([(n, t) for n, t in ctx.capabilities if n in ctx.touched])
+    index = _index([(n, t) for n, t in ctx.capabilities if n not in ctx.touched])
     ask = grill.contract_of(node) or node.text
     glossary = _glossary(ask, ctx, root)
     handed = (ctx.delta if ctx.delta.strip()
@@ -132,11 +120,15 @@ def prompt(node: tree.Node, ctx: WorkerContext, root: str | None = None) -> str:
         f"The handed delta (verify and refine it against the WHOLE spec):\n"
         f"{handed}\n\n"
         f"How you are held:\n\n"
-        f"Your standing disciplines (single-sourced from spec/worker.md — what good looks like):\n"
-        f"{_worker_disciplines(root)}\n\n"
+        f"Your standing disciplines — load the `worker` skill from your checkout "
+        f"(`skills/worker/SKILL.md`) and the `writing-for-the-machine` skill "
+        f"(`skills/writing-for-the-machine/SKILL.md`); in brief, your audience is the architect and "
+        f"the spec, never the operator, and you refine the delta you were handed rather than author "
+        f"one.\n\n"
         f"{GROUNDING}\n\n"
-        f"The depth standards — you are held to these every episode; build deep up front:\n"
-        f"{depth_text}\n\n"
+        f"The depth standards — load the `depth` skill (`skills/depth/SKILL.md`); in brief, build "
+        f"deep up front: deep modules, much behavior behind a small interface, complexity pulled "
+        f"downward, strategic over tactical, away from the red flags (a shallow module above all).\n\n"
         f"Your grounding — the capabilities the delta names, in full:\n"
         f"{grounding or grounding_note}\n\n"
         f"The rest of the spec, indexed for your rescan — every other capability by its vision and "

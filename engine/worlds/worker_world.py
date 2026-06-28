@@ -14,7 +14,7 @@ import subprocess
 import tempfile
 import re
 
-from .. import communication, conditions, grill, machine_writing, render, spec, transport, tree, worker
+from .. import communication, conditions, grill, machine_writing, methodology, render, spec, transport, tree, worker
 from ..scenario import _GATE_GUARD, _git
 from . import World as _Base, scripted
 
@@ -80,8 +80,7 @@ class World(_Base):
         return True, ""
 
     def _v_sharpen(self, args: list[str]) -> tuple[bool, str]:
-        """sharpen — rewrite the depth slice with a world-owned sentinel, so the grounding rendering it
-        (`grounding renders`) proves the standards are read from `spec/depth.md`, not a frozen copy."""
+        """sharpen — plant a depth sentinel so `grounding renders` must read the loaded skill."""
         tree.atomic_write(spec.cap_path("depth", self.root),
             "# depth\n\n"
             "Build deep modules behind small interfaces; pull complexity downward; strategic over "
@@ -152,17 +151,13 @@ class World(_Base):
 
     # ── assertion verbs ──────────────────────────────────────────────────────
     def _v_grounding(self, args: list[str]) -> tuple[bool, str]:
-        """grounding <property> — read the worker's assembled prompt and context for the grounding
-        economy, depth render, code omission, and archive pointer."""
+        """grounding <property> — read the worker prompt/context assertions."""
         if self.ctx is None:
             return False, "grounding read before spawn/sharpen"
         prop = args[0]
         if prop == "whole-spec":
-            # The myopia-defense, read off the PROMPT (what the worker actually sees), not the context
-            # object: every capability surfaces — touched in full, the rest as an index head — so the
-            # rescan maps the whole spec even though the untouched bodies are a checkout read away.
             allcaps = {c.name for c in spec.read_spec(self.root).capabilities}
-            missing = [c for c in allcaps if c != "depth" and f"### capability: {c}" not in self.prompt]
+            missing = [c for c in allcaps if f"### capability: {c}" not in self.prompt]
             return ((True, "") if allcaps and not missing
                     else (False, f"the prompt does not map the whole spec; missing {sorted(missing)}"))
         if prop == "marks":
@@ -184,11 +179,16 @@ class World(_Base):
                     else (False, f"{cap} is not carried as an index "
                                  f"(header={header}, titled={titled}, body-inlined={body in self.prompt})"))
         if prop == "glossary-economical":
-            # Catches: a worker grounding regression that inlines the whole ratified glossary instead of
-            # only the entries whose terms appear in the ask, handed delta, or touched capability bodies.
             return self._glossary_economical()
         if prop == "carries-depth":
             return self._needs(_DEPTH_FRAMEWORK)
+        if prop == "loads-skills":
+            paths = ("skills/worker/SKILL.md", "skills/depth/SKILL.md", "skills/writing-for-the-machine/SKILL.md")
+            missing = [p for p in paths if p not in self.prompt]
+            if missing:
+                return False, f"the worker prompt does not route to these skill paths: {missing}"
+            return ((True, "") if "load" in self.prompt.lower()
+                    else (False, "the worker prompt names the skill paths but does not tell the worker to load them"))
         if prop == "holds-no-code":
             leaked = [t for t in _CODE_TOKENS if t in self.prompt]
             return (True, "") if not leaked else (False, f"the grounding carries code tokens {leaked}, not spec")
@@ -200,8 +200,8 @@ class World(_Base):
             return ((True, "") if "work/archive/" in p and "just-in-time" in p and "spec/decisions/" not in p
                     else (False, "the prompt does not point the worker at work/archive/ for a just-in-time grep"))
         if prop == "renders":
-            return ((True, "") if self.nonce in self.prompt
-                    else (False, "the sharpened depth slice did not render into the grounding — a frozen copy?"))
+            return ((True, "") if self.nonce in methodology.skill("depth", self.root)
+                    else (False, "the sharpened depth slice did not render into the loaded depth skill — a frozen copy?"))
         return False, f"unknown grounding property {prop!r}"
 
     def _v_envelope(self, args: list[str]) -> tuple[bool, str]:

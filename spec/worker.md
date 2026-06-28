@@ -92,27 +92,26 @@ pulls the body it implicates — catching a capability the handed delta mis-name
   ```
 
 ### Requirement: a worker is grounded in the depth standards, every episode
-A worker MUST be handed the **depth standards** as standing grounding in every episode — the
-deep-module framework (a lot of behavior behind a small interface; a simple interface matters
-more than a simple implementation; pull complexity downward), strategic over tactical
-programming, and the **red flags** of shallowness. This grounding makes it build **deep up front**
-rather than rely on the gate to catch shallowness after the fact. This is
-the *proactive* primary anti-complexity defense: a worker that shares the long-term-health
-concern produces deep modules, so the folding-conditions depth gate stays a rarely-tripped
-backstop, not an operator-load generator. The grounding is assembled into the worker's prompt
-by construction, like its spec slice — there is no path that runs a worker without it.
+A worker MUST be grounded in the **depth standards** every episode: the deep-module framework (much
+behavior behind a small interface; a simple interface matters more than a simple implementation; pull
+complexity downward), strategic / tactical programming, and the **red flags** of shallowness. This
+grounding makes it build **deep up front** rather than relying on the gate to catch shallowness after
+the fact. This is the *proactive* primary anti-complexity defense: a worker that shares the
+long-term-health concern produces deep modules, so the folding-conditions depth gate stays a
+rarely-tripped backstop.
 
-The disciplines MUST be **single-sourced**, not a frozen copy: depth is a capability like any other
-(`spec/depth.md`), carried in the worker's whole-spec grounding and foregrounded **in full** in its
-prompt every episode, so a sharpened slice reaches the next worker with no second copy to drift. The
-same slice renders the `depth` **skill** through the methodology seam, materialized on disk for the
-harness that loads skills natively — one source, the channels derived from it, the way the as-built
-is derived from the model and only the vision is authored.
+The standards reach the worker as the loaded `depth` skill the prompt routes it to
+(`skills/depth/SKILL.md` in its checkout), plus a minimal inline hedge that names the framework in
+brief. The full depth body is no longer inlined in the prompt. It is single-sourced through the
+methodology seam into the `depth` skill the worker loads and into the worker's whole-spec index, so a
+sharpened slice reaches the next worker through the skill it loads with no second inline copy to drift.
+The inline hedge is the watched-evidence backstop, kept because whether a live worker loads its skills
+in the fence is unproven, not a frozen second source of the standards.
 
 #### Scenario: the depth standards are in the grounding
 - WHEN a worker is assembled to run
-- THEN its prompt carries the deep-module framework and the red flags, foregrounded as
-  disciplines it is held to, so it builds deep up front
+- THEN its prompt routes it to load the `depth` skill and carries a minimal hedge naming the
+  deep-module framework and the red flags, so it builds deep up front
 
   ```check
   spawn worker
@@ -121,8 +120,8 @@ is derived from the model and only the vision is authored.
 
 #### Scenario: the disciplines are derived from their source
 - WHEN the depth capability (`spec/depth.md`) is sharpened
-- THEN the next worker's depth grounding renders the change with nothing hand-copied, and the
-  retired frozen constant cannot drift from the source because it no longer exists
+- THEN the `depth` skill the worker loads renders the change with nothing hand-copied, so the standards
+  the worker carries cannot drift from their source
 
   ```check
   spawn worker
@@ -349,4 +348,30 @@ positive ownership line, so the compound-negation construct is gone.
 
   ```check
   signal worker-prose-sharpened
+  ```
+
+### Requirement: a worker loads its standing skills, hedged inline while the load is unproven
+A worker MUST be routed to **load** its standing skills from its own checkout — the `worker` skill (its
+own disciplines), the `depth` skill (the depth standards), and the `writing-for-the-machine` skill (the
+standard for the delta and scenario prose it authors) — each at `skills/<name>/SKILL.md` in its working
+directory. The `worker` capability MUST be registered as a methodology skill, so the fold materializes
+`worker/SKILL.md` from `spec/worker.md` through `channels` into both skill locations, single-sourced and
+audited against the slice exactly like the other methodologies.
+
+The de-inlining is **gated on watched evidence** that a live worker loads its skills inside the fence,
+evidence the recorded fenced-run trace does not yet carry: a worker has been observed *running* in the
+fence, never *loading a skill* there. Until that evidence lands, the prompt MUST keep a **minimal inline
+hedge** — the depth framework in brief and the no-loop discipline — rather than trust an unproven load.
+The full inline re-send of the worker disciplines and the depth body is removed; the hedge is what
+remains, and it drops only once a worker is observed loading its skills.
+
+#### Scenario: the prompt routes the worker to load its skills
+- WHEN a worker prompt is assembled for a node
+- THEN it routes the worker to load its `worker`, `depth`, and `writing-for-the-machine` skills from
+  `skills/<name>/SKILL.md` in its checkout, and carries a minimal inline hedge of the depth framework
+  and the no-loop discipline in place of the full inline re-send
+
+  ```check
+  spawn worker
+  grounding loads-skills
   ```

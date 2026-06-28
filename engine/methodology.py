@@ -2,8 +2,8 @@
 
 An agent carries its specialization in **skills**: the disciplines it routes to when the
 work calls for them — the architect's `design-it-twice`, `architecture-review`, `grilling`,
-`coherence`, and `communication`, the worker's `depth`, and the shared `writing-for-the-machine` (the
-standard for the channels themselves) — each a clean standalone capability with its own
+`coherence`, and `communication`, the worker's `worker` and `depth`, and the shared
+`writing-for-the-machine` (the standard for the channels themselves) — each a clean standalone capability with its own
 `spec/<cap>.md`. This module renders each slice into a progressive-disclosure `SKILL.md`: the
 metadata names *when* to load it, the body is the slice's methodology overview (its preamble) and its
 disciplines (each requirement's statement), and the resource pointer is the slice itself for the full
@@ -60,6 +60,11 @@ METHODOLOGIES = {
         "hypercore's depth standards — build deep modules (a lot of behavior behind a small "
         "interface) and avoid the red flags of shallowness. Load when designing, building, or "
         "refining a module's interface or implementation.",
+    "worker":
+        "hypercore's worker discipline — the system-facing half of the split: build fenced in your "
+        "own git worktree, grounded in the spec slice, and hand the architect a complete "
+        "machine-facing result; refine the delta you were handed and author no loop. Load when "
+        "carrying out a spawned ask as the worker.",
     "communication":
         "hypercore's communication methodology — the clarity standard for the architect's "
         "operator-facing voice. Spend the reader's working memory on the decision; for the one expert "

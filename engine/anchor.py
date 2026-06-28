@@ -107,8 +107,8 @@ def bridge_materialize(root: str | None = None) -> str:
 
 def _skills_index() -> str:
     """The available skills as a derived list — the architect's methodologies and the worker's `depth`,
-    all pulled from the one skills registry the skills themselves render from (`methodology.METHODOLOGIES`),
-    so the index cannot drift from the set."""
+    plus the worker's own discipline, all pulled from the one skills registry the skills themselves
+    render from (`methodology.METHODOLOGIES`), so the index cannot drift from the set."""
     from . import methodology
     skills = list(methodology.METHODOLOGIES.items())
     return "\n".join(f"- `{name}` — {_first_sentence(desc)}" for name, desc in skills)
