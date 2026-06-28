@@ -40,3 +40,24 @@ crossing was not built. The settled contract, seam, scope, and disposition are r
   the genuinely-open core is the **adverse** watched verdict (caveat-survival, `survives: false`) still
   discarding a gate-proven build — see `design-decision.md` for the full re-grounding. The "seen four
   times" framing above is the original filing; the operator owns the narrowed scope when this is built.
+
+---
+
+**Update — 2026-06-28 (the CORE landed, architect-direct; this node stays open for the modify slice).**
+Built directly in the architect seat (not a fenced crossing — the fix IS the machinery that makes a
+crossing safe, so a fence would risk the very discard it cures; operator-settled). Landed in `f511b7b`,
+`--check` green:
+
+- **preserve-and-decide core (done).** An adverse watched verdict (incoherence / dropped-caveat) over a
+  gate-proven build now **holds** the verified `WorkerResult` as durable material on the node
+  (`communication.hold_build`), surviving the fence teardown; settling by **override**
+  (`communication.settle_held`) re-folds the **same** artifact through the unchanged `delta.fold` with
+  **no rebuild**. Gated red→green in `spec/coherence.md` ("a watched verdict never discards a gate-proven
+  build"), staged through real apply + integrate + teardown in `coherence_world`. The window wires the
+  operator's override (watched). This **removes the blocker** — a flaky/over-firing watched verdict can
+  no longer throw away a gate-proven build.
+- **still open (the second slice).** The **modify** disposition — `seed-fence-from-held-artifact` for a
+  targeted amend when the operator confirms the verdict was *right* — and **subsuming** the already-folded
+  timeout / coherence-unreadable fixes under the one shared seam. Seam B and "offer modify (both)" stay
+  the settled design in `design-decision.md`. The folding condition is met for the core but not for the
+  modify seam, so this node does not fold yet.
