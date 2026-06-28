@@ -7,20 +7,123 @@ of Spans; the window maps styles to curses attributes.
 from __future__ import annotations
 
 import textwrap
+from dataclasses import dataclass
 
 from . import grill, tree
 from .communication import Thread
 
 # styles (the window owns their colors)
-TITLE, HEAD, CARD, SEL, TAG, DIM, LIVE, HINT, MODEL, YOU, SAY = (
-    "title", "head", "card", "sel", "tag", "dim", "live",
+TITLE, HEAD, CARD, SEL, TAG, DIM, LIVE, REST, AWAIT, HINT, MODEL, YOU, SAY = (
+    "title", "head", "card", "sel", "tag", "dim", "live", "rest", "await",
     "hint", "model", "you", "say",
 )
 
 Row = list
+RGB = tuple[int, int, int]
+
+LIGHT = "light"
+SOFT_DARK = "soft-dark"
 
 
-def main_body(nodes: list[tree.Node], sel: int, width: int = 76) -> list[Row]:
+@dataclass(frozen=True)
+class Ground:
+    polarity: str
+    ink: RGB
+    paper: RGB
+
+
+@dataclass(frozen=True)
+class Hue:
+    name: str
+    meaning: str
+    light: RGB
+    dark: RGB
+    reserved: bool = False
+
+    def rgb(self, polarity: str) -> RGB:
+        return self.dark if _polarity(polarity) == SOFT_DARK else self.light
+
+
+@dataclass(frozen=True)
+class StyleSpec:
+    foreground: str
+    attrs: tuple[str, ...] = ()
+    state: str = ""
+
+
+class Frame(list):
+    """Rows plus the declared ground, palette, and style semantics they paint with.
+
+    It subclasses list to preserve the old pure-render interface: existing checks and callers still
+    see a list of rows of spans, while the frame carries the color data the window consumes.
+    """
+
+    def __init__(self, rows: list[Row], polarity: str = LIGHT):
+        super().__init__(rows)
+        self.polarity = _polarity(polarity)
+        self.ground = ground(self.polarity)
+        self.palette = palette()
+        self.styles = styles()
+
+    @property
+    def rows(self) -> "Frame":
+        return self
+
+    def with_polarity(self, polarity: str) -> "Frame":
+        return Frame(list(self), polarity)
+
+    def toggled(self) -> "Frame":
+        return self.with_polarity(SOFT_DARK if self.polarity == LIGHT else LIGHT)
+
+
+def ground(polarity: str = LIGHT) -> Ground:
+    pol = _polarity(polarity)
+    if pol == SOFT_DARK:
+        return Ground(pol, ink=(239, 231, 220), paper=(31, 29, 26))
+    return Ground(pol, ink=(36, 32, 27), paper=(248, 241, 231))
+
+
+def palette() -> dict[str, Hue]:
+    return {
+        "accent": Hue("accent", "section and label anchors", (121, 79, 13), (215, 179, 106)),
+        "selection": Hue("selection", "the selected row", (15, 111, 123), (110, 211, 222)),
+        "awaiting": Hue("awaiting", "awaiting operator decision", (138, 90, 0), (227, 182, 86)),
+        "running": Hue("running", "running work", (32, 122, 82), (105, 196, 154)),
+        "at-rest": Hue("at-rest", "standing work at rest", (91, 100, 108), (180, 184, 192)),
+        "operator": Hue("operator", "operator words", (36, 95, 182), (143, 184, 255)),
+        "muted": Hue("muted", "secondary text", (116, 112, 106), (172, 164, 155)),
+        "alarm": Hue("alarm", "reserved alarm", (180, 35, 24), (255, 138, 128), reserved=True),
+    }
+
+
+def styles() -> dict[str, StyleSpec]:
+    return {
+        TITLE: StyleSpec("ink", ("bold",)),
+        HEAD: StyleSpec("accent", ("bold",)),
+        CARD: StyleSpec("ink"),
+        SEL: StyleSpec("selection", ("bold",), "selected"),
+        TAG: StyleSpec("accent", ("dim",)),
+        DIM: StyleSpec("muted", ("dim",)),
+        LIVE: StyleSpec("running", ("bold",), "running"),
+        REST: StyleSpec("at-rest", (), "at-rest"),
+        AWAIT: StyleSpec("awaiting", (), "awaiting"),
+        HINT: StyleSpec("muted", ("dim",)),
+        MODEL: StyleSpec("muted", ("dim",)),
+        YOU: StyleSpec("operator", ("bold",)),
+        SAY: StyleSpec("ink"),
+    }
+
+
+STATE_CUES = {
+    "selected": ("▸",),
+    "awaiting": ("awaiting",),
+    "running": ("⟳", "running", "worker is on it"),
+    "at-rest": ("at rest", "standing"),
+}
+
+
+def main_body(nodes: list[tree.Node], sel: int, width: int = 76,
+              polarity: str = LIGHT) -> Frame:
     """The resting face of the system: the queue over the work."""
     rows: list[Row] = [[("hypercore", TITLE)], []]
 
@@ -30,10 +133,9 @@ def main_body(nodes: list[tree.Node], sel: int, width: int = 76) -> list[Row]:
         rows.append([("  — nothing awaiting you —", DIM)])
     for i, c in enumerate(cards):
         chosen = i == sel
-        style = SEL if chosen else CARD
-        rows.append([("  " + ("▸ " if chosen else "· "), style),
-                     (_subject(c.text), style),
-                     ("   " + _card_label(c), TAG)])
+        rows.append([("  " + ("▸ " if chosen else "· "), SEL if chosen else AWAIT),
+                     (_subject(c.text), SEL if chosen else CARD),
+                     ("   awaiting · " + _card_label(c), AWAIT)])
         if chosen:
             rows.extend(_card_detail(c, width))
 
@@ -41,15 +143,16 @@ def main_body(nodes: list[tree.Node], sel: int, width: int = 76) -> list[Row]:
     rows.append([("work", HEAD)])
     items = tree.work(nodes)
     if not items:
-        rows.append([("  — no standing work —", DIM)])
+        rows.append([("  — no standing work; system at rest —", REST)])
     for n in items:
         if n.is_live:
             rows.append([("  ⟳ ", LIVE), (_subject(n.text), CARD),
-                         ("   a worker is on it", LIVE)])
+                         ("   running · a worker is on it", LIVE)])
         else:
-            rows.append([("  · ", CARD), (_subject(n.text), CARD)])
+            rows.append([("  · ", REST), (_subject(n.text), CARD),
+                         ("   standing · at rest", REST)])
 
-    return rows
+    return Frame(rows, polarity)
 
 
 def _card_label(c: tree.Node) -> str:
@@ -77,7 +180,8 @@ def _card_detail(c: tree.Node, width: int) -> list[Row]:
     return [[("      [a] approve   [c] cut   [e] explain", DIM)]]
 
 
-def converse_body(thread: Thread, width: int, explain_text: str | None = None) -> list[Row]:
+def converse_body(thread: Thread, width: int, explain_text: str | None = None,
+                  polarity: str = LIGHT) -> Frame:
     """An open thread: the turns of one conversation."""
     rows: list[Row] = [[("hypercore  ·  thread", TITLE)], []]
     turns = list(thread.turns)
@@ -91,10 +195,10 @@ def converse_body(thread: Thread, width: int, explain_text: str | None = None) -
             for line in _wrap(text, width - 6):
                 rows.append([("       ", SAY), (line, SAY)])
         rows.append([])
-    return rows
+    return Frame(rows, polarity)
 
 
-def view_body(node, sel: int, width: int) -> list[Row]:
+def view_body(node, sel: int, width: int, polarity: str = LIGHT) -> Frame:
     """One node of the operator view: vision beside as-built, readiness, gap, and complexity debt,
     then the children to drill into. `node` is a view.ViewNode (duck-typed to stay decoupled)."""
     rows: list[Row] = [[(f"operator view  ·  {node.title}", TITLE)], []]
@@ -130,7 +234,7 @@ def view_body(node, sel: int, width: int) -> list[Row]:
             style = SEL if chosen else CARD
             rows.append([("  " + ("▸ " if chosen else "· "), style),
                          (child.title, style)])
-    return rows
+    return Frame(rows, polarity)
 
 
 def footer(model: str, mode: str, buffer: str, status: str, width: int, live_loop: bool = True) -> Row:
@@ -166,3 +270,7 @@ def _wrap(text: str, width: int) -> list[str]:
 
 def _len(s: str) -> int:
     return len(s)
+
+
+def _polarity(polarity: str) -> str:
+    return SOFT_DARK if polarity in (SOFT_DARK, "dark") else LIGHT

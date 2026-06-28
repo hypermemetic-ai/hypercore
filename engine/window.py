@@ -29,6 +29,7 @@ class State:
     view_path: list[int] = field(default_factory=list)  # drill-down into the view
     view_sel: int = 0
     answer_id: str = ""            # the grilling question being answered, if any
+    polarity: str = render.LIGHT
 
 
 class Async:
@@ -87,6 +88,9 @@ def _main(scr) -> None:
 def _dispatch(scr, st: State, ch: int, nodes) -> bool:
     if ch == 17:  # Ctrl-Q quits from anywhere
         return False
+    if ch == 20:  # Ctrl-T toggles the window's soft polarity from anywhere
+        st.polarity = render.SOFT_DARK if st.polarity == render.LIGHT else render.LIGHT
+        return True
     if st.mode == "view":
         return _view_keys(st, ch)
     if st.mode == "answer":
@@ -222,15 +226,17 @@ def _land(st: State, result) -> None:
 # ── painting ──────────────────────────────────────────────────────────────────
 
 def _paint(scr, st: State, nodes, live_loop: bool = True) -> None:
-    scr.erase()
     h, w = scr.getmaxyx()
     if st.mode == "converse":
-        rows = render.converse_body(st.thread or Thread(), w, st.explain_text)
+        rows = render.converse_body(st.thread or Thread(), w, st.explain_text, st.polarity)
     elif st.mode == "view":
         node = view.resolve(view.operator_view(), st.view_path)
-        rows = render.view_body(node, st.view_sel, w)
+        rows = render.view_body(node, st.view_sel, w, st.polarity)
     else:
-        rows = render.main_body(nodes, st.sel, w)
+        rows = render.main_body(nodes, st.sel, w, st.polarity)
+    _apply_frame_theme(rows)
+    scr.bkgd(" ", _BG_ATTR)
+    scr.erase()
     for y, row in enumerate(rows):
         if y >= h - 1:
             break
@@ -258,24 +264,98 @@ def _paint_row(scr, y: int, x: int, row, w: int) -> None:
 
 
 _ATTR: dict[str, int] = {}
+_BG_ATTR = curses.A_NORMAL
+_THEME_KEY = None
 
 
 def _init_colors() -> None:
-    curses.start_color()
-    curses.use_default_colors()  # keep the operator's terminal background
-    pairs = {
-        render.TITLE: (curses.COLOR_WHITE, curses.A_BOLD),
-        render.HEAD: (curses.COLOR_YELLOW, curses.A_BOLD),
-        render.CARD: (curses.COLOR_WHITE, curses.A_NORMAL),
-        render.SEL: (curses.COLOR_CYAN, curses.A_BOLD),
-        render.TAG: (curses.COLOR_MAGENTA, curses.A_DIM),
-        render.DIM: (-1, curses.A_DIM),
-        render.LIVE: (curses.COLOR_GREEN, curses.A_BOLD),
-        render.HINT: (-1, curses.A_DIM),
-        render.MODEL: (-1, curses.A_DIM),
-        render.YOU: (curses.COLOR_CYAN, curses.A_BOLD),
-        render.SAY: (curses.COLOR_WHITE, curses.A_NORMAL),
+    try:
+        curses.start_color()
+    except curses.error:
+        pass
+
+
+def _apply_frame_theme(frame: render.Frame) -> None:
+    """Map the frame's declared RGB theme to curses pairs; never use terminal-default -1 colors."""
+    global _ATTR, _BG_ATTR, _THEME_KEY
+    key = _theme_key(frame)
+    if key == _THEME_KEY:
+        return
+    try:
+        curses.start_color()
+        colors = _color_numbers(frame)
+        attrs: dict[str, int] = {}
+        for pair, (style, spec) in enumerate(frame.styles.items(), start=1):
+            fg = colors.get(spec.foreground, colors["ink"])
+            bg = colors["paper"]
+            attr = _attr_flags(spec)
+            try:
+                curses.init_pair(pair, fg, bg)
+                attrs[style] = curses.color_pair(pair) | attr
+            except curses.error:
+                attrs[style] = attr
+        _ATTR = attrs
+        _BG_ATTR = _ATTR.get(render.CARD, curses.A_NORMAL)
+    except curses.error:
+        _ATTR = {style: _attr_flags(spec) for style, spec in frame.styles.items()}
+        _BG_ATTR = curses.A_NORMAL
+    _THEME_KEY = key
+
+
+def _theme_key(frame: render.Frame):
+    return (frame.polarity, frame.ground, tuple((name, hue.rgb(frame.polarity), hue.reserved)
+                                               for name, hue in frame.palette.items()))
+
+
+def _color_numbers(frame: render.Frame) -> dict[str, int]:
+    rgb = {"paper": frame.ground.paper, "ink": frame.ground.ink}
+    rgb.update({name: hue.rgb(frame.polarity) for name, hue in frame.palette.items()})
+    names = list(rgb)
+    if _can_define(len(names)):
+        try:
+            out: dict[str, int] = {}
+            for i, name in enumerate(names):
+                slot = 16 + i
+                curses.init_color(slot, *_curses_rgb(rgb[name]))
+                out[name] = slot
+            return out
+        except curses.error:
+            pass
+    return {name: _nearest_basic(value) for name, value in rgb.items()}
+
+
+def _can_define(count: int) -> bool:
+    return bool(curses.has_colors()
+                and curses.can_change_color()
+                and getattr(curses, "COLORS", 0) >= 16 + count)
+
+
+def _curses_rgb(rgb: render.RGB) -> tuple[int, int, int]:
+    return tuple(round(channel * 1000 / 255) for channel in rgb)
+
+
+def _nearest_basic(rgb: render.RGB) -> int:
+    basics = {
+        curses.COLOR_BLACK: (0, 0, 0),
+        curses.COLOR_RED: (205, 49, 49),
+        curses.COLOR_GREEN: (13, 188, 121),
+        curses.COLOR_YELLOW: (229, 229, 16),
+        curses.COLOR_BLUE: (36, 114, 200),
+        curses.COLOR_MAGENTA: (188, 63, 188),
+        curses.COLOR_CYAN: (17, 168, 205),
+        curses.COLOR_WHITE: (229, 229, 229),
     }
-    for i, (style, (fg, attr)) in enumerate(pairs.items(), start=1):
-        curses.init_pair(i, fg, -1)
-        _ATTR[style] = curses.color_pair(i) | attr
+    return min(basics, key=lambda n: _distance(rgb, basics[n]))
+
+
+def _distance(a: render.RGB, b: render.RGB) -> int:
+    return sum((x - y) ** 2 for x, y in zip(a, b))
+
+
+def _attr_flags(spec: render.StyleSpec) -> int:
+    attr = curses.A_NORMAL
+    if "bold" in spec.attrs:
+        attr |= curses.A_BOLD
+    if "dim" in spec.attrs:
+        attr |= curses.A_DIM
+    return attr

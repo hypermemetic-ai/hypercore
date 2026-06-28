@@ -47,6 +47,39 @@ attributes.
   spans
   ```
 
+### Requirement: the window owns its ground and palette
+The frame MUST declare its own ground and palette as data: warm dark ink on an off-white ground by
+default, a small set of named load-bearing hues, and one alarm hue held in reserve. It MUST NOT inherit
+the operator's terminal colors. The soft-dark polarity is the operator's to toggle: the ground flips,
+and the palette's meaning does not.
+
+#### Scenario: the frame carries its own ground
+- WHEN a frame is built for a tree and a selection
+- THEN it exposes a declared ground (ink and paper) and a named palette, computed without reading any
+  terminal default; toggling the polarity returns the dark-ground variant with the same palette
+
+  ```check
+  render
+  ground
+  palette
+  polarity
+  ```
+
+### Requirement: color names a kind, never the only carrier
+Every state a frame shows MUST be carried by a glyph or word as well as its color. Color is a redundant,
+pre-attentive cue: a hue names a kind; glyphs or words carry state identity, and layout carries
+magnitude. The one alarm hue is spent only on the single state held in reserve for it.
+
+#### Scenario: no state rides on color alone
+- WHEN a frame is built carrying running, awaiting, and at-rest nodes
+- THEN every span that carries a state hue shares its row with a glyph or word naming that same state,
+  so stripping all color from the frame leaves every state still legible
+
+  ```check
+  states
+  redundant
+  ```
+
 ### Requirement: the resting face shows the queue over the work
 At rest the window MUST show the queue of decisions above the standing work; a
 fully-handled system shows an empty surface, which is the system at rest,

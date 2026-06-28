@@ -38,6 +38,7 @@ class World(_Base):
         for cmd in (("init", "-q"), ("config", "user.email", "scenario@hypercore"),
                     ("config", "user.name", "scenario")):
             _git(self.root, *cmd)
+        self.frame: render.Frame | None = None
         self.rows = None
         self.footers: dict[str, render.Row] = {}
         self._loops: list[schedule.Scheduler] = []
@@ -66,7 +67,8 @@ class World(_Base):
                         else (False, "the lease holder footer is marked not-live"))
             return ((True, "") if "not live loop" in text
                     else (False, "the non-holding footer does not show it is not the live loop"))
-        self.rows = render.main_body(tree.read_tree(), 0)
+        self.frame = render.main_body(tree.read_tree(), 0)
+        self.rows = self.frame
         return True, ""
 
     def _v_loops(self, args: list[str]) -> tuple[bool, str]:
@@ -78,6 +80,16 @@ class World(_Base):
         for sched in self._loops:
             sched.step()
         return (True, "") if self._holder() and self._peer() else (False, "the loops did not split live/non-live")
+
+    def _v_states(self, args: list[str]) -> tuple[bool, str]:
+        """states — build a frame carrying the node states that spend state hues."""
+        tree.raise_card("an awaiting decision the operator must settle", kind="decide")
+        running = tree.file_intent("a running worker slice")
+        tree.dispatch(running)
+        tree.file_intent("a standing at-rest slice")
+        self.frame = render.main_body(tree.read_tree(), 0)
+        self.rows = self.frame
+        return True, ""
 
     # ── assertion verbs ───────────────────────────────────────────────────────────
     def _v_spans(self, args: list[str]) -> tuple[bool, str]:
@@ -95,6 +107,52 @@ class World(_Base):
         return ((True, "") if self.rows[0][0][0] == "hypercore"
                 else (False, "the frame does not open on the system's resting face"))
 
+    def _v_ground(self, args: list[str]) -> tuple[bool, str]:
+        """ground — the frame carries explicit ink and paper RGB data, with no terminal default slot."""
+        frame = self._frame()
+        if frame is None:
+            return False, "no frame has been rendered"
+        if frame.polarity != render.LIGHT:
+            return False, f"the default frame polarity is {frame.polarity!r}, not light"
+        if not (_rgb(frame.ground.ink) and _rgb(frame.ground.paper)):
+            return False, f"the ground is not explicit RGB data: {frame.ground!r}"
+        if frame.ground.ink == frame.ground.paper:
+            return False, "the ground's ink and paper are the same color"
+        if frame.ground.ink != render.ground(render.LIGHT).ink or frame.ground.paper != render.ground(render.LIGHT).paper:
+            return False, "the frame ground is not the declared warm-ink/off-white default"
+        return True, ""
+
+    def _v_palette(self, args: list[str]) -> tuple[bool, str]:
+        """palette — the frame carries a small named palette with exactly one reserved alarm hue."""
+        frame = self._frame()
+        if frame is None:
+            return False, "no frame has been rendered"
+        if not frame.palette or len(frame.palette) > 8:
+            return False, f"the palette is not the small named set: {list(frame.palette)}"
+        bad = [name for name, hue in frame.palette.items()
+               if hue.name != name or not _rgb(hue.light) or not _rgb(hue.dark)]
+        if bad:
+            return False, f"the palette has unnamed or non-RGB hues: {bad}"
+        reserved = [name for name, hue in frame.palette.items() if hue.reserved]
+        if reserved != ["alarm"]:
+            return False, f"the reserved hue is {reserved}, not the single alarm hue"
+        spenders = [style for style, spec in frame.styles.items() if spec.foreground == "alarm"]
+        return ((True, "") if not spenders
+                else (False, f"the alarm hue is already spent by styles: {spenders}"))
+
+    def _v_polarity(self, args: list[str]) -> tuple[bool, str]:
+        """polarity — toggling returns the soft-dark ground and preserves palette meanings."""
+        frame = self._frame()
+        if frame is None:
+            return False, "no frame has been rendered"
+        dark = frame.toggled()
+        if dark.ground.polarity != render.SOFT_DARK:
+            return False, f"the toggled frame is {dark.ground.polarity!r}, not soft-dark"
+        if dark.ground == frame.ground:
+            return False, "the toggled frame did not flip its ground"
+        return ((True, "") if dark.palette == frame.palette
+                else (False, "toggling polarity changed the named palette"))
+
     def _v_empty(self, args: list[str]) -> tuple[bool, str]:
         """empty — at rest with nothing awaiting and no standing work, the queue reads its empty line
         and the work reads its empty line, with the queue shown above the work (queue over work)."""
@@ -109,6 +167,30 @@ class World(_Base):
             return False, "an empty queue does not read 'nothing awaiting you'"
         return ((True, "") if "no standing work" in text
                 else (False, "an empty work list does not read 'no standing work'"))
+
+    def _v_redundant(self, args: list[str]) -> tuple[bool, str]:
+        """redundant — every state-hued span shares its row with that state's glyph or word."""
+        frame = self._frame()
+        if frame is None:
+            return False, "no state frame has been rendered"
+        plain = "\n".join("".join(text for text, _style in row) for row in frame).lower()
+        for word in ("awaiting", "running", "at rest"):
+            if word not in plain:
+                return False, f"stripping color leaves {word!r} illegible"
+        seen: set[str] = set()
+        for y, row in enumerate(frame):
+            row_text = " ".join(text for text, _style in row).lower()
+            for _text, style in row:
+                state = frame.styles.get(style, render.StyleSpec("ink")).state
+                if not state:
+                    continue
+                seen.add(state)
+                cues = render.STATE_CUES.get(state, ())
+                if not any(cue.lower() in row_text for cue in cues):
+                    return False, f"row {y} carries {state!r} as color without a redundant cue"
+        needed = {"awaiting", "running", "at-rest"}
+        return ((True, "") if needed <= seen
+                else (False, f"the state frame did not carry state hues for {sorted(needed - seen)}"))
 
     def _v_footer_live(self, args: list[str]) -> tuple[bool, str]:
         """footer-live — the rendered footer does not mark the lease holder as non-live."""
@@ -128,6 +210,9 @@ class World(_Base):
     def _peer(self) -> schedule.Scheduler | None:
         return next((s for s in self._loops if not s.live), None)
 
+    def _frame(self) -> render.Frame | None:
+        return self.frame if isinstance(self.frame, render.Frame) else None
+
     def teardown(self) -> None:
         for sched in self._loops:
             sched.stop()
@@ -136,3 +221,8 @@ class World(_Base):
         else:
             os.environ["ENGINE_ROOT"] = self._prev_root
         shutil.rmtree(self.root, ignore_errors=True)
+
+
+def _rgb(value) -> bool:
+    return (isinstance(value, tuple) and len(value) == 3
+            and all(isinstance(c, int) and 0 <= c <= 255 for c in value))
