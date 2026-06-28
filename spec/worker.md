@@ -267,30 +267,6 @@ scenarios do not transition — so it has **no trail** and MUST NOT fold: it is 
   fold held because provenance
   ```
 
-### Requirement: a crossing is total at the worker boundary, whatever its caller
-`worker.run` MUST resolve every crossing to exactly one terminal on its own — its delta folds, or a
-decision card is raised on the operator's queue parented to the node — whether the autonomous scheduler
-wraps it or it is called bare, the documented hand-driven dispatch path (`worker.run(tree.find(id))`).
-When a build raises mid-crossing — a transport error, a model failure, a malformed seam — `worker.run`
-MUST raise that decision card itself, carrying the could-not-complete reason and the operator's fork
-(abandon / re-cut / change the ask), then recover the node, so the parented card blocks the node from
-re-entering the ready work; a bare crossing that raises therefore never recovers the node to a silently
-re-dispatchable standing state with no card and no reason. The totality logic MUST live in exactly one
-place — this boundary — so the scheduler carries no second copy that raises a redundant card, and a
-crossing under the scheduler still surfaces exactly one decision, the same one, on a failed worker.
-
-#### Scenario: a bare crossing that raises leaves one parented decision card and blocks the node
-- WHEN `worker.run` is called with no scheduler around it and its build raises mid-crossing
-- THEN a decision card carrying the could-not-complete reason is raised on the operator's queue parented
-  to the node, and the node is recovered out of flight but does not re-enter the ready work — it is
-  blocked on that card, not silently re-dispatchable — so the failure reason is never lost
-
-  ```check
-  fails bare
-  card parented
-  node not-ready
-  ```
-
 ### Requirement: a worker only ever applies an architect-proposed delta
 A worker MUST be handed a node that carries an **architect-proposed delta** — the propose stage is the
 architect's, never the worker's. `worker.run` MUST refuse, at the worker boundary before it dispatches
@@ -298,8 +274,8 @@ the node, any node that carries no resolved propose product (`grill.entry_of` is
 one parented decision card on the operator's queue naming the missing architect-proposed delta and the
 operator's fork (propose one, abandon, or change the ask), and builds nothing. The node stays standing
 and blocked on that card rather than going live or folding. This boundary is the one place the guarantee
-is enforced, so every door into a worker is covered alike: the autonomous scheduler and the bare
-hand-driven `worker.run(tree.find(id))` path.
+is enforced, so every caller into a worker is covered alike — refused at the boundary before any
+dispatch, whatever drove the node there.
 
 Because the boundary refuses a node with no proposed delta, the grounding assembly has no
 author-from-scratch path left. The former fallback is deleted, not guarded: `worker._touched` of an

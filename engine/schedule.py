@@ -130,8 +130,16 @@ class Scheduler:
         rather than stalling the loop or dropping the node."""
         try:
             worker.run(node, self.transport, self.root)
-        except Exception:
-            pass        # `worker.run` already raised the parented decision card and recovered the node
+        except Exception as e:
+            self._fail(node, e)
+
+    def _fail(self, node: tree.Node, err: Exception) -> None:
+        """A worker that could not complete returns as a decision — never a silent stall. The node is
+        in flight (it was taken); the card hands the operator the recovery the worker could not make."""
+        tree.raise_card(
+            f"the worker could not complete {tree._subject(node.text)!r}: {err} — "
+            "abandon it, re-cut the ask, or change it",
+            kind="decide", parent=node.id)
 
     def _reap(self) -> None:
         with self._lock:

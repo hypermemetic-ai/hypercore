@@ -64,7 +64,6 @@ class World(_Base):
             shutil.copy(g, os.path.join(self.root, "glossary.md"))
         _git(self.root, "add", "-A"); _git(self.root, "commit", "-qm", "base")
         self.node = self.ctx = self.prompt = self.reply = self.forged = None
-        self.failure = ""                                      # the bare-crossing error the card must preserve
         self.no_delta_called = False                           # proves the missing-proposal refusal built nothing
         # World-owned sentinels read against the prompt; none are named in check blocks.
         self.raw = "<<RAW-WORKER-PROSE-Rx4 — machine-facing, must reach no operator path>>"
@@ -111,27 +110,6 @@ class World(_Base):
         self.reply = communication.integrate(self.node, result, scripted(transport.emit(
             communication.COHERENCE_SCHEMA, {"coherent": True, "say": "it landed.", "card": None})), self.root)
         return True, ""
-
-    def _v_fails(self, args: list[str]) -> tuple[bool, str]:
-        """fails bare — call `worker.run` directly, with no scheduler wrapper, and make the build raise
-        before a hand-off exists. This is the documented hand-driven dispatch path:
-        `worker.run(tree.find(id))`, so the fixture must NOT route through `Scheduler._work` or any loop
-        helper. The raised exception is caught here only so the scenario can inspect the tree left behind;
-        the production boundary still re-raises, which lets a caller know the crossing failed while the
-        durable outcome lives on the node."""
-        if args != ["bare"]:
-            return False, f"unknown failure mode {' '.join(args)!r}"
-        self.node = self._stage(self._demo_delta())
-
-        def boom(_prompt: str) -> str:
-            raise RuntimeError("transport exploded mid-crossing")
-
-        try:
-            worker.run(self.node, boom, self.root)
-        except RuntimeError as e:
-            self.failure = str(e)
-            return True, ""
-        return False, "the bare worker.run did not re-raise the build failure"
 
     def _v_no_delta(self, args: list[str]) -> tuple[bool, str]:
         """no-delta dispatched — call the worker boundary on a standing node that carries no resolved
@@ -258,24 +236,6 @@ class World(_Base):
             return False, "a tagless hand-off did not surface as malformed"
         return False, f"unknown handoff assertion {args[0]!r}"
 
-    def _v_card(self, args: list[str]) -> tuple[bool, str]:
-        """card parented — after the bare failure, exactly one decision card is on the queue as a child
-        of the failed node, and it carries the lost-error payload plus the operator's three recovery
-        forks. This is deliberately asserted in the worker world rather than the schedule world: the
-        scheduler may observe and swallow the re-raise, but it no longer owns the card-raising copy."""
-        if args != ["parented"]:
-            return False, f"unknown card assertion {' '.join(args)!r}"
-        if self.node is None:
-            return False, "card checked before a failed crossing"
-        cards = [c for c in tree.cards()
-                 if c.parent == self.node.id and c.kind == "decide"]
-        if len(cards) != 1:
-            return False, f"expected exactly one parented decision card, saw {len(cards)}"
-        text = cards[0].text
-        needed = ("could not complete", self.failure, "abandon", "re-cut", "change")
-        missing = [token for token in needed if token and token not in text]
-        return (True, "") if not missing else (False, f"the decision card is missing {missing}")
-
     def _v_surfaces(self, args: list[str]) -> tuple[bool, str]:
         """surfaces decision — the missing-proposal refusal raises exactly one parented decision card
         that names the missing architect-proposed delta and the operator's fork."""
@@ -327,25 +287,6 @@ class World(_Base):
         banned = ("author it from the full scan", "author the delta from the full scan")
         found = [phrase for phrase in banned if phrase in prompt]
         return (True, "") if not found else (False, f"the prompt still carries deleted fallback text: {found}")
-
-    def _v_node(self, args: list[str]) -> tuple[bool, str]:
-        """node not-ready — the failed node was recovered out of `IN_FLIGHT`, but the parented decision
-        child blocks readiness, so the hand-driven path cannot silently offer the same work for another
-        blind dispatch. The node remains standing work, not folded and not live; `tree.ready` is the
-        decisive view because scheduling and hand dispatch both consume that predicate."""
-        if args != ["not-ready"]:
-            return False, f"unknown node assertion {' '.join(args)!r}"
-        if self.node is None:
-            return False, "node checked before a failed crossing"
-        current = tree.find(self.node.id)
-        if current is None:
-            return False, "the failed node disappeared"
-        if current.state != tree.STANDING:
-            return False, f"the failed node was not recovered to standing (state={current.state!r})"
-        ready_ids = {n.id for n in tree.ready()}
-        if current.id in ready_ids:
-            return False, "the recovered node re-entered ready work despite its parented card"
-        return True, ""
 
     def _v_fence(self, args: list[str]) -> tuple[bool, str]:
         """fence <off-main|binds-cwd|host-read-only|worktree-writable|commit-lands> — the worktree

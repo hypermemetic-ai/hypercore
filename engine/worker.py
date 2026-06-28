@@ -253,9 +253,11 @@ def run(node: tree.Node, transport=None, root: str | None = None):
     to coherence-check and archive, then tear the fence down — on *every* exit, not only the
     integrating one. The worker speaks only to the architect; what reaches the operator is its reply.
 
-    Refusal is the steady-state path, not an edge: a folding-condition block, failed coherence, a
-    malformed reply, or an error mid-build leaves one parented decision card blocking the node. The fence
-    tears down in `finally`; error raises the card here before recovery and re-raise."""
+    Refusal is the steady-state path, not an edge: a folding-condition block, failed coherence, or a
+    malformed reply returns not-done, and an error mid-build raises. On any of these the fence must not
+    leak and the node must not strand in flight with no live worker. So the fence is torn down in a
+    `finally`, a non-integrating crossing recovers the node to standing, and the error path recovers it
+    too, then re-raises so the scheduler raises its own decision card."""
     if not _has_proposed_delta(node):
         card = _raise_missing_delta(node)
         return communication.Reply(say="", card=card)
@@ -267,12 +269,9 @@ def run(node: tree.Node, transport=None, root: str | None = None):
         if not reply.done:                             # refused or judged incoherent — recover, don't strand
             tree.recover(node)
         return reply
-    except Exception as e:
-        msg = (f"the worker could not complete {tree._subject(node.text)!r}: {e} — "
-               "abandon it, re-cut the ask, or change it")
-        tree.raise_card(msg, kind="decide", parent=node.id)
-        tree.recover(node)                            # the parented card blocks this recovered node
-        raise                                          # the caller may observe failure; the card already exists
+    except Exception:
+        tree.recover(node)                            # an error mid-build must not leave the node in flight
+        raise                                          # the scheduler turns it into a decision card
     finally:
         teardown(node, root)                           # the fence never leaks, on any path out of the crossing
 
