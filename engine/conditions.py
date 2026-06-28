@@ -17,6 +17,7 @@ from __future__ import annotations
 import os
 import re
 import subprocess
+from dataclasses import dataclass
 
 from . import accepted_lengths, delta, provenance, spec, vocabulary
 from .record import atomic_write, transact
@@ -37,6 +38,21 @@ SIGNAL = 400
 SLACK = 0.1
 
 
+DEPTH = "depth"
+VOCABULARY = "vocabulary"
+DELTA = "delta"
+PROVENANCE = "provenance"
+
+
+@dataclass(frozen=True)
+class Verdict:
+    """A typed folding-condition outcome beside the long-standing string seam."""
+    reason: str
+    guard: str
+    escalating: bool
+    subjects: tuple[str, ...] = ()
+
+
 def unmet(result, root: str | None = None, node=None) -> str | None:
     """The first folding condition this tree's material fails to meet, or None when all are
     met. `result` is the worker's hand-off (its delta, its worktree); `node` is its tree (so an
@@ -44,9 +60,10 @@ def unmet(result, root: str | None = None, node=None) -> str | None:
     depth signal, and the **authored** provenance trails are the **material** conditions, judged
     in-process; the **derived** provenance trail is the behavioral proof — the architect-authored
     scenarios of the touched capabilities re-derived red→green in the fence (`provenance.derived` over
-    the scenario gate). The depth condition returns a *decision* (re-cut / deepen / accept), which the
-    architect raises on the operator's queue; the others refuse with a flat reason."""
-    return material_unmet(result, root, node) or provenance.derived(result, root)
+    the scenario gate). Depth and vocabulary are escalating decisions; delta and provenance are flat
+    refusals."""
+    v = verdict(result, root, node)
+    return v.reason if v else None
 
 
 def material_unmet(result, root: str | None = None, node=None) -> str | None:
@@ -55,10 +72,30 @@ def material_unmet(result, root: str | None = None, node=None) -> str | None:
     re-derivation. This is the seam the scenario binding asserts against: a capability's `gate`/`spec`
     scenario reads the gate's verdict on planted material here, so a scenario can never recurse into the
     scenario gate that runs scenarios. `unmet` is this plus the derived (re-derivation) trail."""
+    v = material_verdict(result, root, node)
+    return v.reason if v else None
+
+
+def verdict(result, root: str | None = None, node=None) -> Verdict | None:
+    """The first typed folding-condition outcome, or None when every condition is met."""
+    return material_verdict(result, root, node) or _flat(provenance.derived(result, root), PROVENANCE)
+
+
+def material_verdict(result, root: str | None = None, node=None) -> Verdict | None:
+    """The typed material folding conditions, keeping the same first-unmet order as `material_unmet`."""
     d = delta.parse(result.delta)
     sp = spec.read_spec(root)
-    return (_delta(d, sp) or _depth(result, root) or vocabulary.check(root)
-            or provenance.reachability(result, root, node))
+    return (_flat(_delta(d, sp), DELTA) or _depth(result, root)
+            or _escalating(vocabulary.check(root), VOCABULARY)
+            or _flat(provenance.reachability(result, root, node), PROVENANCE))
+
+
+def _flat(reason: str | None, guard: str) -> Verdict | None:
+    return Verdict(reason, guard, False) if reason else None
+
+
+def _escalating(reason: str | None, guard: str) -> Verdict | None:
+    return Verdict(reason, guard, True) if reason else None
 
 
 def _delta(d: delta.Delta, sp: spec.Spec) -> str | None:
@@ -66,7 +103,7 @@ def _delta(d: delta.Delta, sp: spec.Spec) -> str | None:
     return f"the spec delta does not apply: {reason}" if reason else None
 
 
-def _depth(result, root: str | None) -> str | None:
+def _depth(result, root: str | None) -> Verdict | None:
     """Depth is the criterion; length is its signal. A source file this tree created or
     grew past the length signal, with no accepted-length record clearing it *at a length it is still
     within*, raises a decision — re-cut / deepen / accept-with-reason — never a silent
@@ -83,7 +120,7 @@ def _depth(result, root: str | None) -> str | None:
             continue                        # removed by the tree — frees context, never spends it
         n = sum(1 for _ in open(path, encoding="utf-8", errors="ignore"))
         if n > SIGNAL and not accepted(rel, n, root):
-            return _depth_decision(rel, n, root)
+            return Verdict(_depth_decision(rel, n, root), DEPTH, True, (rel,))
     return None
 
 
@@ -186,4 +223,3 @@ def accept_length(text: str, root: str | None = None) -> bool:
     card named a length and the bar rose)."""
     rn = length_decision(text)
     return bool(rn) and accept(rn[0], rn[1], "accepted by the operator from the queue", root)
-

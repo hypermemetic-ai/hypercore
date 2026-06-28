@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from . import conditions, delta, provenance, tree, grill
+from . import conditions, delta, depth_scan, provenance, review, tree, grill
 from .transport import Envelope, Flag, Tag, call, instruction, read
 
 SYSTEM_SCHEMA = Envelope(
@@ -102,16 +102,15 @@ def integrate(node: tree.Node, result, transport=None, root: str | None = None) 
     delta into the spec — the work integrates and leaves the threads view in the same act. The
     worker's raw report is *input* to the architect's judgment, never output: every
     operator-facing word here is authored fresh, so the report crosses to the operator through
-    no path. A result that fails a non-negotiable condition (its capability's scenario did not go
-    red→green, a delta that will not apply), trips the **depth** condition (a module past the length
-    signal with no
-    accepted-length record — re-cut / deepen / accept-with-reason), or that the architect judges
-    incoherent raises a decision rather than folding. Depth surfaces to the operator as a
-    decision, never a silent veto and never a silent pass."""
+    no path. A typed flat refusal is raised verbatim. A typed depth guard raises a neighborhood-aware
+    assessment over the standing review map. A coherent result folds; an incoherent one raises a
+    decision rather than folding."""
     transport = transport or call
-    blocked = conditions.unmet(result, root, node)     # the folding conditions (incl. provenance), before the merge
+    blocked = conditions.verdict(result, root, node)   # the folding conditions (incl. provenance), before the merge
     if blocked:
-        card = tree.raise_card(blocked, kind="decide", parent=node.id)
+        text = (_depth_assessment(blocked, root, transport)
+                if blocked.guard == conditions.DEPTH else blocked.reason)
+        card = tree.raise_card(text, kind="decide", parent=node.id)
         return Reply(say="The result can't fold yet — a folding condition isn't met; "
                          "the reason is on your queue.", card=card)
     verdict = read(transport(
@@ -147,6 +146,24 @@ def _fenced_run_verdict(node: tree.Node) -> str:
     fenced worker crossing. It deliberately carries no worker report, so the machine-facing hand-off
     still has no path to the operator-facing tree."""
     return f"fenced worker crossing folded\n\nnode: {node.id}\nsubject: {tree._subject(node.text)}"
+
+
+def _depth_assessment(blocked: conditions.Verdict, root: str | None, transport) -> str:
+    """Render the advisory depth assessment raised in place of the bare length template."""
+    rv = review.review(root)
+    assessment = depth_scan.assess(blocked.subjects, rv, transport)
+    flagged = ", ".join(blocked.subjects) or "the flagged file"
+    findings = "\n".join(
+        f"- {f.subject}: {f.red_flag}; {f.evidence}"
+        for f in assessment.findings
+    ) or "- no model red flag was raised from the handed architecture-review map"
+    return (
+        f"decision — depth assessment for {flagged}\n\n"
+        f"{findings}\n\n"
+        f"Lean: {assessment.lean}\n\n"
+        f"Flip: {assessment.flip}\n\n"
+        "The depth guard already holds the fold; this assessment informs the settlement."
+    )
 
 
 EXPLAIN_SCHEMA = Envelope(Tag("say", "your explanation toward the decision"),

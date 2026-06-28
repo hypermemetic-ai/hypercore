@@ -149,3 +149,24 @@ architect-authored stake crosses to the operator, the same routing as a raw work
 - THEN it records the pick as a structured design decision and raises no card unless a
   stake-bearing difference surfaces, in which case the authored stake — not the raw designs —
   reaches the operator
+
+### Requirement: a depth-gate trip raises a neighborhood-aware assessment; a flat refusal stays verbatim
+When `integrate` meets a typed depth guard, the architect MUST raise a reasoned depth/length
+assessment of the flagged file read in its neighborhood: callers, siblings, and cross-module
+boundaries as seen through the standing architecture review's whole-tree read. It MUST consult the
+shared `depth_scan` seam with the standing `review.review(root)` result, never run a second scan. The
+assessment carries a lean and a flip in place of the bare re-cut / deepen / accept template; it informs
+the operator's settlement and does not gate the fold or leave an extra watched trace. Flat refusals,
+including a delta that does not apply and provenance no-trail, MUST be raised with their reason
+verbatim, never dressed as negotiable prose.
+
+#### Scenario: a depth-gate trip raises a neighborhood-aware assessment; a flat refusal stays verbatim
+- WHEN the architect integrates a worker hand-off that trips the depth gate, and one that trips a flat
+  refusal
+- THEN the depth trip raises a neighborhood-aware assessment carrying a lean and a flip instead of the
+  bare depth template, while the flat refusal's reason is raised verbatim
+
+  ```check
+  integrate depth-trip assessment-with-lean-flip
+  integrate flat-refusal verbatim
+  ```

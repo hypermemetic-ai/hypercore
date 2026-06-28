@@ -25,7 +25,7 @@ import os
 import shutil
 import tempfile
 
-from .. import communication, grill, render, transport, tree, worker
+from .. import communication, conditions, depth_scan, grill, render, transport, tree, worker
 from ..scenario import _git                                  # the worlds share the core's git helper
 from . import World as _Base, scripted
 
@@ -36,6 +36,9 @@ _AUTHORED = "It landed — the change is in."                  # the architect's
 _SENTINEL = "<<RAW WORKER REPORT — machine-facing only>>"    # planted in the worker's report; must never cross
 _CAP = "demo-communication"                                  # a throwaway capability, absent from the real spec, carrying no scenarios
 _REQ = "the operator-facing words are the architect's own"
+_DEPTH_FILE = "engine/depth_trip.py"
+_LEAN = "lean: accept this file as deep enough for this pass"
+_FLIP = "flip: finding a caller that only needs a split-out helper would change the call"
 
 # The architect's reply for each turn shape — one concrete consequence per turn (the three-consequences
 # requirement): a filed ask, a card raised, or a plain answer with nothing filed or carded.
@@ -105,6 +108,14 @@ class World(_Base):
         self.reply = communication.integrate(self.node, result, scripted(transport.emit(
             communication.COHERENCE_SCHEMA, {"coherent": True, "say": _AUTHORED, "card": None})), self.root)
         return True, ""
+
+    def _v_integrate(self, args: list[str]) -> tuple[bool, str]:
+        """integrate <depth-trip assessment-with-lean-flip | flat-refusal verbatim>."""
+        if args == ["depth-trip", "assessment-with-lean-flip"]:
+            return self._integrate_depth_trip()
+        if args == ["flat-refusal", "verbatim"]:
+            return self._integrate_flat_refusal()
+        return False, f"unknown integrate assertion {' '.join(args)!r}"
 
     # ── assertion verbs: the thread ─────────────────────────────────────────────
     def _v_closes(self, args: list[str]) -> tuple[bool, str]:
@@ -189,6 +200,63 @@ class World(_Base):
         if _SENTINEL in frame or _SENTINEL in cards_text or _SENTINEL in nodefiles:
             return False, "the raw worker report leaked to a card, render, or node"
         return True, ""
+
+    def _integrate_depth_trip(self) -> tuple[bool, str]:
+        node = tree.dispatch(tree.file_intent("a worker hands back a long file"))
+        fence = worker.worktree(node, self.root)
+        path = os.path.join(fence, _DEPTH_FILE)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write("# depth-trip fixture\n" + "x = 1\n" * conditions.SIGNAL)
+        worker.commit_tree(fence, "fixture: depth trip")
+        result = worker.WorkerResult("machine report", "# delta — depth trip\n", fence)
+        seen = {}
+        def assess(prompt: str) -> str:
+            seen["prompt"] = prompt
+            return transport.emit(depth_scan.ASSESSMENT_SCHEMA, {
+                "findings": [{"subject": _DEPTH_FILE, "red_flag": "neighborhood tension",
+                              "evidence": "callers and siblings stay coherent on the handed map",
+                              "lean": _LEAN, "flip": _FLIP}],
+                "lean": _LEAN, "flip": _FLIP})
+        try:
+            reply = communication.integrate(node, result, assess, self.root)
+        finally:
+            worker.teardown(node, self.root)
+        card = reply.card
+        if card is None:
+            return False, "the depth trip raised no decision card"
+        text = card.text
+        if _LEAN not in text or _FLIP not in text:
+            return False, f"the assessment lacks lean/flip: {text}"
+        if "re-cut" in text or "deepen it" in text or "accepted:" in text:
+            return False, "the bare depth template leaked into the assessment card"
+        prompt = seen.get("prompt", "")
+        if "Structural map already computed by architecture-review" not in prompt:
+            return False, "the depth scan was not fed the standing review map"
+        verdicts = [p for dp, _dirs, fs in os.walk(os.path.join(self.root, "work"))
+                    for p in (os.path.join(dp, fn) for fn in fs) if p.endswith(".verdict.md")]
+        return (True, "") if not verdicts else (False, f"unexpected watched trace(s): {verdicts}")
+
+    def _integrate_flat_refusal(self) -> tuple[bool, str]:
+        node = tree.dispatch(tree.file_intent("a worker hands back a bad delta"))
+        fence = worker.worktree(node, self.root)
+        with open(os.path.join(fence, "flat-refusal.txt"), "w", encoding="utf-8") as f:
+            f.write("fixture\n")
+        worker.commit_tree(fence, "fixture: flat refusal")
+        bad = ("## MODIFIED — communication\n### Requirement: missing fixture requirement\n"
+               "This requirement is absent.\n")
+        result = worker.WorkerResult("machine report", bad, fence)
+        expected = conditions.verdict(result, self.root, node).reason
+        try:
+            reply = communication.integrate(node, result, lambda _p: "", self.root)
+        finally:
+            worker.teardown(node, self.root)
+        card = reply.card
+        if card is None:
+            return False, "the flat refusal raised no card"
+        if card.text != expected:
+            return False, f"flat refusal was dressed up: expected {expected!r}, got {card.text!r}"
+        return (True, "") if "Lean:" not in card.text and "Flip:" not in card.text else (False, "flat refusal became negotiable prose")
 
     def teardown(self) -> None:
         if self.node is not None:

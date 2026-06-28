@@ -347,3 +347,26 @@ The gate module then coheres around the length/depth signal and its accepted-len
   vocabulary is-its-own-module
   gate held because vocabulary names widget
   ```
+
+### Requirement: the gate types its outcome — an escalating-guard decision is distinct from a flat refusal
+The fold gate MUST expose a typed verdict beside its long-standing string verdict: the first unmet
+reason, the guard that raised it, and whether that guard is an escalating-guard decision the operator
+settles or a flat refusal that is never waveable. The typing is additive: `conditions.unmet` and
+`conditions.material_unmet` still return the first unmet reason as a plain string, so existing callers
+stay unbroken. The typed verdict is computed where the gate already evaluates the conditions, so the
+route reads the guard instead of re-parsing the reason. The depth and vocabulary guards are
+escalating-guard decisions; the delta-does-not-apply and provenance-no-trail guards are flat refusals.
+
+#### Scenario: the gate types its outcome — escalating-guard versus flat refusal
+- WHEN the fold gate's typed verdict is read over material that trips the depth guard, the vocabulary
+  guard, the delta-does-not-apply guard, or the provenance-no-trail guard
+- THEN each verdict names its guard and marks depth and vocabulary as escalating, while delta and
+  provenance are flat, and the plain string seam still returns the same reason for existing callers
+
+  ```check
+  gate-type depth escalating
+  gate-type vocabulary escalating
+  gate-type delta flat
+  gate-type provenance flat
+  gate-type string-seam-intact
+  ```

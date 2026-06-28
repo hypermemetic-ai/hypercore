@@ -1,25 +1,9 @@
-"""The folding-conditions scenario world — the verbs `spec/folding-conditions.md`'s check blocks name,
-turned into a real verdict from the `conditions` gate (and, for the provenance gate, the real
-`provenance` seam) over planted material.
+"""The folding-conditions scenario world.
 
-The verbs name domain nouns, never engine symbols or paths-into-the-code, so a worker rewriting the
-engine has nothing in the scenario to tamper with to pass. The length verbs (`grow` / `accept` / `gate`
-/ `spec`) plant material and read the depth gate's verdict over it. The **provenance** verbs plant the
-two contrasts the trail gate turns on: a record produced by **running the mechanism** (an `accept`
-through the seam, a real `build` crossing, a real `contest`) versus the byte-indistinguishable record a
-role **hand-faked** without running it (`forge`), and read whether the gate folds the real one and
-refuses the fake. The root is seeded with the real spec and ambient (`ENGINE_ROOT`), so a worker
-crossing, a contest, and the accept seam's durable commit assemble exactly as in production.
-
-The **watched-evidence** verbs (`watched-run` / `provenance`) plant a watched mechanism's run on a node
-— a committed verdict vs a skipped run — and read the gate's capability-agnostic presence trail over it.
-The **vocabulary** verbs (`orphan` / `corpus` / `vocabulary` / `gate` / `spec`) plant a corpus the
-fold's vocab guard reads and assert that its verdict comes through the dedicated condition module.
-
-A capability with no world module fails honestly; this one carries folding-conditions' length,
-provenance, watched-evidence, and vocabulary vocabulary. New behavior that needs a brand-new `provenance`
-seam is lazily imported inside its verb — absent at the fork base, present at the tip — the
-watched-residue shape the self-model's new-verb hardening names.
+The verbs plant real fold material and read the real gates: length, accepted-lengths,
+provenance trails, watched-evidence traces, vocabulary, and now typed gate verdicts. New
+seams used by new verbs are imported inside the verb, so the fork-base run is red because
+the behavior is absent there.
 """
 from __future__ import annotations
 
@@ -111,10 +95,6 @@ class World(_Base):
 
     # ── provenance fixture verbs ─────────────────────────────────────────────────
     def _v_forge(self, args: list[str]) -> tuple[bool, str]:
-        """forge <accepted-length <path> @N | ran-flag> — a record hand-faked with no mechanism trail.
-        `accepted-length` hand-appends a ledger line the accept seam never wrote (working tree only, never
-        committed); `ran-flag` hand-authors a worker RESULT carrying a self-asserted `ran: true` the gate
-        must ignore — a record that asserts its own provenance is no trail at all."""
         kind = args[0]
         if kind == "accepted-length":
             self._forge_ledger(args[1], args[2])
@@ -126,26 +106,18 @@ class World(_Base):
         return False, f"unknown forge kind {kind!r}"
 
     def _v_grandfathered(self, args: list[str]) -> tuple[bool, str]:
-        """grandfathered pre-gate — a record already durable in the source of truth, folded before the
-        gate landed: an accepted-length line committed through the seam. Forward-only, the gate does not
-        retroactively refuse it — a retroactive bar could not tell a fake from a legitimately-swept trail."""
         if args != ["pre-gate"]:
             return False, f"unknown grandfathered assertion {' '.join(args)!r}"
         conditions.accept("engine/grandfathered.py", 460, "accepted before the provenance gate landed", self.root)
         return True, ""
 
     def _v_genesis(self, args: list[str]) -> tuple[bool, str]:
-        """genesis anchor trail-less — forge a trail-less record naming a genesis authored-trust root
-        (the minimal shared anchor), which necessarily predates the gate, so it folds under the one named
-        exemption where a non-genesis trail-less record does not."""
         if args != ["anchor", "trail-less"]:
             return False, f"unknown genesis assertion {' '.join(args)!r}"
         self._forge_ledger("AGENTS.md", "@460")            # the minimal shared anchor — a named genesis root
         return True, ""
 
     def _v_build(self, args: list[str]) -> tuple[bool, str]:
-        """build — a real worker crossing whose RESULT folds, the trail-bearing baseline a forge is
-        contrasted against. It touches a no-scenario demo capability, so its trail is present (watched)."""
         self.node = tree.file_intent("a provenance demo crossing")
         fence = worker.worktree(self.node, self.root)
         _write(os.path.join(fence, "demo.txt"), "demo")
@@ -154,17 +126,12 @@ class World(_Base):
         return True, ""
 
     def _v_contest(self, args: list[str]) -> tuple[bool, str]:
-        """contest <N> — a real design-it-twice contest of N candidates, each fenced, the pick recorded
-        with its candidate set durable on the node."""
         self.node = tree.file_intent("the shape of a load-bearing interface")
         self.selection = design.design_twice(self.node, _BRIEFS[:int(args[0])], _design_transport(), self.root)
         return True, ""
 
     # ── watched-evidence + vocabulary fixture verbs ──────────────────────────────
     def _v_watched_run(self, args: list[str]) -> tuple[bool, str]:
-        """watched-run <committed-verdict|no-verdict> — a watched mechanism's run on a node: it commits
-        its verdict trace (the present-trail baseline) or leaves none (the skipped run the gate catches).
-        Capability-agnostic — a generic `watched-demo` mechanism, never any one capability's content."""
         from .. import provenance
         self.vrun_node = tree.file_intent("a watched mechanism's run on its node")
         if args[:1] == ["committed-verdict"]:
@@ -176,8 +143,6 @@ class World(_Base):
         return False, f"unknown watched-run kind {' '.join(args)!r}"
 
     def _v_orphan(self, args: list[str]) -> tuple[bool, str]:
-        """orphan glossary-term <term> — plant a controlled minimal corpus whose glossary defines <term>
-        the corpus never uses, so the gated floor's set-difference names it; and a node to fold over."""
         if args[:1] != ["glossary-term"] or len(args) < 2:
             return False, f"unknown orphan assertion {' '.join(args)!r}"
         term = args[1]
@@ -186,8 +151,6 @@ class World(_Base):
         return True, ""
 
     def _v_corpus(self, args: list[str]) -> tuple[bool, str]:
-        """corpus consistent — a controlled minimal corpus whose glossary defines only a term the corpus
-        does use (the gated floor finds no orphan); and a node the vocabulary check guards."""
         if args[:1] != ["consistent"]:
             return False, f"unknown corpus assertion {' '.join(args)!r}"
         self._minimal_corpus("# glossary\n\n- **guard** — a folding condition the system evaluates\n")
@@ -195,8 +158,6 @@ class World(_Base):
         return True, ""
 
     def _v_vocabulary(self, args: list[str]) -> tuple[bool, str]:
-        """vocabulary is-its-own-module — the gate reaches the vocabulary verdict through
-        `engine.vocabulary.check(root)`, whose public signature is only the corpus root."""
         if args != ["is-its-own-module"]:
             return False, f"unknown vocabulary assertion {' '.join(args)!r}"
         import inspect
@@ -206,7 +167,8 @@ class World(_Base):
         src = inspect.getsource(conditions)
         if "def _vocabulary" in src or "_corpus_glossary" in src or "_orphan_term" in src:
             return False, "conditions.py still carries the vocabulary check body"
-        if "vocabulary.check(root)" not in inspect.getsource(conditions.material_unmet):
+        gate_body = inspect.getsource(getattr(conditions, "material_verdict", conditions.material_unmet))
+        if "vocabulary.check(root)" not in gate_body:
             return False, "material_unmet does not call the vocabulary condition module"
         self._finalize()
         prior = vocabulary.check
@@ -225,11 +187,26 @@ class World(_Base):
         return ((True, "") if reason == "decision — vocabulary: sentinel widget"
                 else (False, f"the gate did not return vocabulary.check's verdict: {reason!r}"))
 
+    def _v_gate_type(self, args: list[str]) -> tuple[bool, str]:
+        """gate-type <depth|vocabulary|delta|provenance> <escalating|flat> | string-seam-intact."""
+        from ..conditions import material_unmet, material_verdict, unmet, verdict
+        if args == ["string-seam-intact"]:
+            v, result, root = self._typed_case("depth", verdict)
+            mat, full = material_unmet(result, root), unmet(result, root)
+            ok = isinstance(mat, str) and isinstance(full, str) and mat == full == v.reason
+            return (True, "") if ok else (False, f"string seams drifted: material={mat!r}, full={full!r}, verdict={v!r}")
+        if len(args) != 2:
+            return False, f"unknown gate-type assertion {' '.join(args)!r}"
+        guard, kind = args
+        v, _result, _root = self._typed_case(guard, material_verdict)
+        if v.guard != guard:
+            return False, f"expected guard {guard!r}, got {v.guard!r}"
+        expected = kind == "escalating"
+        return ((True, "") if v.escalating is expected
+                else (False, f"expected escalating={expected}, got {v.escalating} for {v.reason!r}"))
+
     # ── provenance assertion verbs ───────────────────────────────────────────────
     def _v_gate(self, args: list[str]) -> tuple[bool, str]:
-        """gate <held|folds> [because <word|provenance> …] [names <path> …] — the real gate's verdict on
-        the planted material (in-process, via `material_unmet`): held (a folding condition refuses) or
-        folds (every condition met). `because provenance` matches the flat trail refusal."""
         reason = self._verdict()
         if args[0] in ("held", "holds"):
             return (self._reason(args[1:], reason) if reason is not None
@@ -239,8 +216,6 @@ class World(_Base):
         return False, f"unknown gate verdict {args[0]!r}"
 
     def _v_spec(self, args: list[str]) -> tuple[bool, str]:
-        """spec <untouched|folds> — the merge guarantee. `untouched`: a refused condition holds the
-        fold, so the delta never reaches the spec. `folds`: every condition met, the delta is free."""
         reason = self._verdict()
         if args[0] == "untouched":
             return (True, "") if reason is not None else (False, "expected the spec untouched, but the gate cleared")
@@ -249,16 +224,12 @@ class World(_Base):
         return False, f"unknown spec state {args[0]!r}"
 
     def _v_integrates(self, args: list[str]) -> tuple[bool, str]:
-        """integrates — the real crossing's folding conditions are met: its trail is present, it folds."""
         if self.result is None:
             return False, "integrates read before build"
         reason = self._fold_verdict()
         return (True, "") if reason is None else (False, f"the real crossing did not fold: {reason}")
 
     def _v_fold(self, args: list[str]) -> tuple[bool, str]:
-        """fold <held [because provenance] | folds> — the full fold's verdict over the forged record
-        (`conditions.unmet`, the derived trail included). The gate guard is cleared so the re-derivation
-        genuinely runs; the forge's dir is no fence, so clearing cannot recurse (as `_new_verb_fence`)."""
         reason = self._fold_verdict()
         if args[:1] == ["held"]:
             return (self._reason(args[1:], reason) if reason is not None
@@ -266,10 +237,6 @@ class World(_Base):
         return (True, "") if reason is None else (False, f"expected the fold, but: {reason}")
 
     def _v_provenance(self, args: list[str]) -> tuple[bool, str]:
-        """provenance <attests-presence | attests present | refuses no-trail> — the gate's structural
-        verdict. `attests-presence`: the real record's trail is present and a trail-less forge's absent.
-        `attests present` / `refuses no-trail`: the watched-evidence trail over the watched run's node —
-        a committed verdict is present, a skipped run's is refused with the flat `no trail`."""
         from .. import provenance
         if args == ["attests", "present"]:
             if self.vrun_node is None:
@@ -293,9 +260,6 @@ class World(_Base):
         return (True, "") if present and absent else (False, f"present={present}, forge-absent={absent}")
 
     def _v_adequacy(self, args: list[str]) -> tuple[bool, str]:
-        """adequacy deferred — the gate makes no check-adequacy claim; that layer is
-        `gate-vouches-for-the-new-verb`'s. A real red→green can still test nothing, so trail-presence is
-        all this attests."""
         if args != ["deferred"]:
             return False, f"unknown adequacy assertion {' '.join(args)!r}"
         from .. import provenance
@@ -304,8 +268,6 @@ class World(_Base):
                 else (False, f"the gate claimed adequacy={att.adequacy!r}, residue={att.residue!r}"))
 
     def _v_reason(self, args: list[str]) -> tuple[bool, str]:
-        """reason watched — a pick's reason is irreducibly creative, recorded watched, never pretend-
-        gated: the gate attests the structural trail and says the reasoning is outside its reach."""
         if args != ["watched"]:
             return False, f"unknown reason assertion {' '.join(args)!r}"
         from .. import provenance
@@ -315,7 +277,6 @@ class World(_Base):
                 else (False, "the pick's reason is not recorded watched"))
 
     def _v_recorded(self, args: list[str]) -> tuple[bool, str]:
-        """recorded — the pick is recorded on the node with its contest's candidate set reachable."""
         path = os.path.join(self.node.path, "design-decision.md")
         if not os.path.isfile(path):
             return False, "no design-decision recorded on the node"
@@ -357,6 +318,39 @@ class World(_Base):
         if os.path.isfile(intent):
             os.remove(intent)
 
+    def _typed_case(self, kind: str, read_verdict):
+        root, fence = tempfile.mkdtemp(prefix="typed-root-"), tempfile.mkdtemp(prefix="typed-fence-")
+        self._typed_roots = getattr(self, "_typed_roots", []) + [root, fence]
+        for d in (root, fence):
+            for cmd in (("init", "-q"), ("config", "user.email", "scenario@hypercore"),
+                        ("config", "user.name", "scenario")):
+                _git(d, *cmd)
+        _write(os.path.join(fence, ".keep"), "base\n")
+        _git(fence, "add", "-A"); _git(fence, "commit", "-qm", "base")
+        delta_text = "# delta — typed fixture\n"
+        node = None
+        if kind == "delta":
+            delta_text = "## MODIFIED — absent-capability\n### Requirement: absent\nx\n"
+        elif kind == "depth":
+            _write(os.path.join(fence, "engine", "typed_depth.py"),
+                   "# typed depth\n" + "x = 1\n" * conditions.SIGNAL)
+        elif kind == "vocabulary":
+            _write(os.path.join(root, "glossary.md"), "- **widget** — an orphan defined term\n")
+            _write(os.path.join(root, "spec", "folding-conditions.md"),
+                   "# folding-conditions\n\n### Requirement: guard\nThe guard holds.\n")
+        elif kind == "provenance":
+            _write(os.path.join(root, "engine", "accepted-lengths.md"),
+                   "accepted: engine/forged.py @460 — hand-authored\n")
+        else:
+            raise AssertionError(f"unknown gate type {kind!r}")
+        _write(os.path.join(fence, ".keep"), f"{kind}\n")
+        _git(fence, "add", "-A"); _git(fence, "commit", "-qm", "tip")
+        result = _Result("typed fixture", delta_text, fence)
+        v = read_verdict(result, root, node)
+        if v is None:
+            raise AssertionError(f"{kind!r} produced no typed verdict")
+        return v, result, root
+
     def _verdict(self) -> str | None:
         self._finalize()
         return conditions.material_unmet(_Result("scenario fixture", self._delta(), self.fence),
@@ -394,3 +388,5 @@ class World(_Base):
             os.environ["ENGINE_ROOT"] = self._prev_root
         shutil.rmtree(self.root, ignore_errors=True)
         shutil.rmtree(self.fence, ignore_errors=True)
+        for path in getattr(self, "_typed_roots", []):
+            shutil.rmtree(path, ignore_errors=True)
