@@ -16,5 +16,6 @@ Load the one the task in front of you routes to (`skills/<name>/SKILL.md`):
 - `grilling` — hypercore's grilling methodology — turn a filed ask into a ratified contract and spec delta by resolving what the spec and intent already settle and surfacing only the stake-bearing residue, one question at a time, each with a lean and a flip.
 - `coherence` — hypercore's coherence methodology — the archive-gate judgment over a worker's hand-off: check it against the contract at the operator's altitude (not a code review) and against the depth bar, folding on a pass and raising a decision otherwise.
 - `depth` — hypercore's depth standards — build deep modules (a lot of behavior behind a small interface) and avoid the red flags of shallowness.
+- `worker` — hypercore's worker discipline — the system-facing half of the split: build fenced in your own git worktree, grounded in the spec slice, and hand the architect a complete machine-facing result; refine the delta you were handed and author no loop.
 - `communication` — hypercore's communication methodology — the clarity standard for the architect's operator-facing voice.
 - `writing-for-the-machine` — hypercore's writing-for-the-machine methodology — the standard for the agent-facing channels (skills, anchor, prompts, hand-backs), written for the model that reads them in one pass.
