@@ -18,7 +18,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from . import conditions, delta, depth_scan, provenance, review, tree, grill
-from .transport import Envelope, Flag, Tag, call, instruction, read
+from .transport import Envelope, Flag, MalformedReply, Tag, call, instruction, read
 
 SYSTEM_SCHEMA = Envelope(
     Tag("say", "your words to the operator, short and plain"),
@@ -96,6 +96,8 @@ COHERENCE = (
     "MUST NOT reach the operator. Author every operator-facing word yourself."
 )
 
+COHERENCE_ATTEMPTS = 3
+
 
 ENTAILMENT_SCHEMA = Envelope(
     Flag("survives", "true if the operator-facing words entail the load-bearing caveat"),
@@ -146,10 +148,12 @@ def integrate(node: tree.Node, result, transport=None, root: str | None = None) 
         card = tree.raise_card(text, kind="decide", parent=node.id)
         return Reply(say="The result can't fold yet — a folding condition isn't met; "
                          "the reason is on your queue.", card=card)
-    verdict = read(transport(
-        f"{COHERENCE}\n\nThe contract:\n{grill.contract_of(node)}\n\n"
-        f"The worker's report (machine-facing — do not forward):\n{result.report}\n\n"
-        f"{instruction(COHERENCE_SCHEMA)}"), COHERENCE_SCHEMA)
+    verdict = _coherence_verdict(node, result, transport)
+    if verdict is None:
+        card = tree.raise_card(_unreadable_coherence(COHERENCE_ATTEMPTS),
+                               kind="decide", parent=node.id)
+        return Reply(say="The coherence reply was unreadable; the retryable decision is on your queue.",
+                     card=card)
     say = (verdict.get("say") or "").strip()
     if not verdict.get("coherent"):
         card = tree.raise_card(verdict.get("card") or say or
@@ -177,6 +181,41 @@ def integrate(node: tree.Node, result, transport=None, root: str | None = None) 
                          "queue as a decision.", card=card)
     provenance.commit_verdict(node, provenance.FENCED_RUN, _fenced_run_verdict(node), root)
     return Reply(say=say, done=True)
+
+
+def _coherence_verdict(node: tree.Node, result, transport) -> dict | None:
+    """Ask the watched coherence judgment until it returns a usable verdict or exhausts the bound."""
+    for attempt in range(COHERENCE_ATTEMPTS):
+        try:
+            raw = transport(_coherence_prompt(node, result, retry=attempt > 0))
+        except MalformedReply:
+            continue
+        verdict = read(raw, COHERENCE_SCHEMA)
+        if verdict.get("coherent") is None:
+            continue
+        return verdict
+    return None
+
+
+def _coherence_prompt(node: tree.Node, result, retry: bool = False) -> str:
+    retry_note = ("\n\nThe previous coherence reply carried no usable "
+                  "<coherent>true</coherent> or <coherent>false</coherent> verdict. "
+                  "Re-answer the same judgment with the full envelope."
+                  if retry else "")
+    return (
+        f"{COHERENCE}\n\nThe contract:\n{grill.contract_of(node)}\n\n"
+        f"The worker's report (machine-facing — do not forward):\n{result.report}"
+        f"{retry_note}\n\n"
+        f"{instruction(COHERENCE_SCHEMA)}"
+    )
+
+
+def _unreadable_coherence(attempts: int) -> str:
+    return (
+        f"decision — coherence reply unreadable after {attempts} attempts. Retry the coherence "
+        "judgment, re-cut the ask, or change the ask; the verified build is held live behind this "
+        "decision."
+    )
 
 
 def _fenced_run_verdict(node: tree.Node) -> str:

@@ -175,9 +175,9 @@ def _render_fields(fields: tuple, depth: int) -> list[str]:
 
 def read(raw: str, schema: Schema) -> dict:
     """Parse a model reply against its envelope — the one read the whole system shares. Each field's
-    inner text is taken verbatim (text stripped of outer whitespace, a flag coerced to bool, records
-    collected to a list of sub-records); every declared field is present in the result, at its
-    default when absent. A reply carrying **none** of the envelope's tags is malformed: a strict
+    inner text is taken verbatim (text stripped of outer whitespace, a flag read as True, False, or
+    None when unusable, records collected to a list of sub-records); every declared field is present
+    in the result, at its default when absent. A reply carrying **none** of the envelope's tags is malformed: a strict
     envelope raises `MalformedReply` (the H3 fix — the worker's hand-off never folds a no-op), a
     lenient one degrades to defaults, routing its whole text into the `fallback` field when one is
     named (the architect's prose answer)."""
@@ -220,14 +220,15 @@ def _read_fields(text: str, fields: tuple) -> dict:
                                 inner or "", re.DOTALL)
             out[f.name] = [_read_fields(b, f.fields) for b in blocks]
         elif f.kind == "flag":
-            out[f.name] = (inner or "").strip().lower() in ("true", "yes", "1")
+            value = (inner or "").strip().lower()
+            out[f.name] = True if value in ("true", "yes", "1") else False if value in ("false", "no", "0") else None
         else:
             out[f.name] = (inner or "").strip()
     return out
 
 
 def _defaults(fields: tuple) -> dict:
-    return {f.name: ([] if f.kind == "records" else (False if f.kind == "flag" else ""))
+    return {f.name: ([] if f.kind == "records" else (None if f.kind == "flag" else ""))
             for f in fields}
 
 

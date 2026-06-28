@@ -88,3 +88,33 @@ where it cannot — never a structural guarantee silently assumed.
   claimed as a structural gate guarantee and never the worker's to classify
 - watched — the attestation is a model judgment no fixture certifies, proven from outside at the archive
   gate the way `build_reaches_main` is, and the same honest home
+
+### Requirement: an unreadable coherence reply is a distinct outcome, never a false incoherence refusal
+The architect's coherence judgment at the archive gate MUST distinguish a reply that carries no usable
+`coherent` verdict — the flag absent or unparseable — from an explicit `coherent: false`. An unreadable
+reply is an envelope failure, not a contract judgment. The deterministic folding conditions run before
+the judgment can matter, and a code-bearing fold still re-verifies the merged tree before commit; an
+unreadable watched envelope MUST NOT masquerade as the model's veto over a gate-proven build. The
+architect MUST re-ask the coherence judgment a bounded number of times: a transient unreadable reply
+that resolves to `coherent: true` folds as normal, and a reply that stays unreadable across the retries
+raises a distinct retryable decision — the coherence reply was unreadable — that leaves the node live.
+The unreadable-reply decision MUST NOT use the "did not honor the contract" refusal. An explicit
+`coherent: false` still raises its incoherence card unchanged: the model keeps its veto on a genuine
+incoherence judgment, and only the unreadable reply is reclassified.
+
+#### Scenario: an unreadable coherence reply retries, then surfaces a distinct outcome
+- WHEN the architect integrates a gate-proven hand-off whose coherence reply omits the `coherent` flag
+  once before a usable verdict in one case, and on every attempt in another
+- THEN the transient case folds on retry, while the persistent case raises a distinct unreadable-reply
+  decision that leaves the node live; neither is raised as the incoherence refusal
+
+  ```check
+  hand unreadable-then-coherent
+  fold lands
+  spec folds
+  card none
+  hand unreadable-persistent
+  fold held
+  card unreadable
+  node live
+  ```

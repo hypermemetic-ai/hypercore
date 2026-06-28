@@ -1,10 +1,11 @@
-"""The coherence scenario world — the two branches of the architect's archive-gate judgment, driven
+"""The coherence scenario world — the branches of the architect's archive-gate judgment, driven
 through the real `communication.integrate` over a staged worker hand-off.
 
-`hand <coherent|incoherent>` files an ask, cuts its fence, runs a worker (a scripted hand-back), and
-runs the architect's integrate with a scripted verdict; the assertion verbs read what integrate did —
-`fold <lands|held>`, `spec <folds|untouched>`, `card <decide|none>`, `node <live>`. The fixture seeds
-a real spec into an isolated root (so the worker prompt and `read_spec` assemble exactly as in
+`hand <coherent|incoherent|unreadable-then-coherent|unreadable-persistent>` files an ask, cuts its
+fence, runs a worker (a scripted hand-back), and runs the architect's integrate with a scripted
+verdict; the assertion verbs read what integrate did — `fold <lands|held>`,
+`spec <folds|untouched>`, `card <decide|unreadable|none>`, `node <live>`. The fixture seeds a real
+spec into an isolated root (so the worker prompt and `read_spec` assemble exactly as in
 production) and the worker's delta touches a throwaway capability that carries no scenarios, so the
 **scenario gate stays inert** and the block isolates the coherence branch — the gate has its own
 red→green in the acceptance harness (`engine/check/scenarios.py`).
@@ -22,6 +23,14 @@ from . import World as _Base, scripted
 _REAL = tree._DEFAULT_ROOT                                  # the real spec, seeded so the worker assembles as in production
 _CAP = "demo-coherence"                                     # a throwaway capability, absent from the real spec, carrying no scenarios
 _REQ = "the archived result is judged at the operator's altitude"
+_UNREADABLE = "<say>format slipped</say>\n<card></card>"     # carries tags, but no usable coherent verdict
+
+
+def _sequence(*replies: str):
+    pending = list(replies)
+    def call(_prompt: str) -> str:
+        return pending.pop(0) if pending else replies[-1]
+    return call
 
 
 class World(_Base):
@@ -39,6 +48,7 @@ class World(_Base):
             shutil.copy(g, os.path.join(self.root, "glossary.md"))
         _git(self.root, "add", "-A"); _git(self.root, "commit", "-qm", "base")    # a HEAD for the fence to diff against
         self.node = self.reply = None
+        self._nodes = []
 
     def _delta(self) -> str:
         return (f"## ADDED — {_CAP}\n### Requirement: {_REQ}\n"
@@ -47,21 +57,33 @@ class World(_Base):
 
     # fixture verb ────────────────────────────────────────────────────────────
     def _v_hand(self, args: list[str]) -> tuple[bool, str]:
-        """hand <coherent|incoherent> — stage a node, run a worker (scripted hand-back), and run the
-        architect's integrate with a scripted coherent/incoherent verdict over the result."""
-        coherent = args[0] in ("coherent", "honors")
+        """hand <coherent|incoherent|unreadable-then-coherent|unreadable-persistent> — stage a node,
+        run a worker (scripted hand-back), and run the architect's integrate with a scripted verdict."""
+        mode = args[0] if args else ""
+        if mode not in ("coherent", "honors", "incoherent", "unreadable-then-coherent",
+                        "unreadable-persistent"):
+            return False, f"unknown hand mode {mode!r}"
         self.node = grill.propose(tree.file_intent("a worker hands a result back"), "contract.", self._delta())
+        self._nodes.append(self.node)
         worker.worktree(self.node, self.root)
         tree.dispatch(self.node)
         result = worker.apply(self.node, scripted(transport.emit(worker.WORKER_SCHEMA,
             {"report": "did the work — machine-facing", "delta": self._delta()})), self.root)
-        self.reply = communication.integrate(self.node, result, scripted(transport.emit(
-            communication.COHERENCE_SCHEMA,
-            {"coherent": coherent,
-             "say": "it landed." if coherent else "this doesn't honor the contract.",
-             "card": None if coherent else
-                     "the result did not honor the contract — re-cut, abandon, or change the ask"})),
-            self.root)
+        coherent = mode in ("coherent", "honors")
+        usable = transport.emit(communication.COHERENCE_SCHEMA, {
+            "coherent": coherent,
+            "say": "it landed." if coherent else "this doesn't honor the contract.",
+            "card": None if coherent else
+                    "the result did not honor the contract — re-cut, abandon, or change the ask"})
+        if mode == "unreadable-then-coherent":
+            coherence = _sequence(_UNREADABLE, transport.emit(
+                communication.COHERENCE_SCHEMA,
+                {"coherent": True, "say": "it landed after retry.", "card": None}))
+        elif mode == "unreadable-persistent":
+            coherence = _sequence(*([_UNREADABLE] * communication.COHERENCE_ATTEMPTS))
+        else:
+            coherence = scripted(usable)
+        self.reply = communication.integrate(self.node, result, coherence, self.root)
         return True, ""
 
     # assertion verbs ───────────────────────────────────────────────────────────
@@ -98,6 +120,18 @@ class World(_Base):
             if card.parent != self.node.id:
                 return False, "the decision card is not parented to the node"
             return True, ""
+        if args[0] == "unreadable":
+            if card is None:
+                return False, "expected an unreadable-reply decision card, but none was raised"
+            if card.kind != "decide":
+                return False, f"the unreadable-reply card is not a decision: kind={card.kind!r}"
+            if card.parent != self.node.id:
+                return False, "the unreadable-reply card is not parented to the node"
+            if "coherence reply unreadable" not in card.text:
+                return False, f"the decision did not name the unreadable coherence reply: {card.text}"
+            if "did not honor the contract" in card.text:
+                return False, "the unreadable reply was raised as the incoherence refusal"
+            return True, ""
         return False, f"unknown card kind {args[0]!r}"
 
     def _v_node(self, args: list[str]) -> tuple[bool, str]:
@@ -109,8 +143,8 @@ class World(_Base):
         return False, f"unknown node state {args[0]!r}"
 
     def teardown(self) -> None:
-        if self.node is not None:
-            worker.teardown(self.node, self.root)
+        for node in self._nodes:
+            worker.teardown(node, self.root)
         if self._prev_root is None:
             os.environ.pop("ENGINE_ROOT", None)
         else:
