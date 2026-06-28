@@ -236,9 +236,11 @@ def fold(delta: Delta | None, root: str | None = None, node=None, code=None) -> 
                     raise ResourceLimitReached(red.message)
                 raise CannotFold(red.message)
         # The render step: every fold re-derives the static channels (skills, the agents file) from
-        # the spec, so a committed artifact cannot drift from its source. Idempotent: an
-        # unchanged source re-renders identically and re-staging no-ops, so a retry is safe.
-        rendered = channels.materialize(root)
+        # the spec, so a committed artifact cannot drift from its source. A code-bearing fold renders
+        # in a fresh interpreter after replaying the verified code, so module-level registries are read
+        # from the merged tree rather than from this process's pre-replay imports. Spec-only folds keep
+        # the in-process render path and pay no subprocess cost.
+        rendered = channels.materialize_merged(base_dir) if code else channels.materialize(root)
         paths = [spec.cap_path(n, root) for n in touched] + code_paths + rendered
         if node is not None:
             paths += tree.archive_in_place(node)      # the node's DONE write + folder move, same act

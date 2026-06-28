@@ -51,7 +51,7 @@ def channel_drift(root: str) -> list[str]:
     try:
         shutil.copytree(os.path.join(root, "spec"), os.path.join(staging, "spec"))
         drift = []
-        for fresh_path in channels.materialize(staging):
+        for fresh_path in channels.materialize_fresh(root, staging):
             rel = os.path.relpath(fresh_path, staging)
             if _read(os.path.join(root, rel)) != _read(fresh_path):
                 drift.append(rel)

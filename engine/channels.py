@@ -24,6 +24,10 @@ place that knows the set.
 """
 from __future__ import annotations
 
+import json
+import os
+import subprocess
+
 from . import anchor, methodology
 
 # The static channels, in render order — each a `(root) -> path` render of one artifact from the spec.
@@ -40,3 +44,28 @@ def materialize(root: str | None = None) -> list[str]:
     render step — called by `delta.fold` so the derived artifacts follow the spec with no second
     step to remember and no window in which a committed artifact disagrees with its source."""
     return [render(root) for render in CHANNELS]
+
+
+def materialize_fresh(import_root: str, render_root: str) -> list[str]:
+    """Regenerate `render_root`'s static channels in a fresh interpreter imported from `import_root`.
+    This is the registry-agnostic seam: the subprocess imports the on-disk engine at `import_root`, so
+    every module-level registry is the one that tree defines, while `ENGINE_ROOT` names the tree whose
+    spec and artifacts are read and written."""
+    r = subprocess.run(["python3", "-m", "engine", "--materialize"], cwd=import_root,
+                       env={**os.environ, "ENGINE_ROOT": render_root},
+                       capture_output=True, text=True)
+    if r.returncode != 0:
+        detail = (r.stderr or r.stdout or "no subprocess detail").strip()
+        raise RuntimeError(f"channel materialization failed in the merged tree: {detail}")
+    try:
+        return json.loads(r.stdout)
+    except json.JSONDecodeError as e:
+        raise RuntimeError(f"channel materialization returned unreadable paths: {r.stdout!r}") from e
+
+
+def materialize_merged(root: str) -> list[str]:
+    """Regenerate the on-disk tree's static channels in a fresh interpreter and return the paths it
+    wrote. A code-bearing fold calls this after replaying verified engine bytes, so the render imports
+    the just-replayed modules and sees their module-level registries instead of this process's frozen
+    imports. Spec-only folds keep the cheaper in-process `materialize` path."""
+    return materialize_fresh(root, root)

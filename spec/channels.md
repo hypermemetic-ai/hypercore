@@ -92,3 +92,27 @@ loudly rather than ship silently.
   conforms
   resolves
   ```
+
+### Requirement: a fold materializes a methodology it registers in the same act
+A code-bearing fold whose replayed code registers a new methodology in a module-level registry MUST
+materialize that methodology's channels in the same fold act: its `SKILL.md` in both skill locations and
+its line in the anchor's derived skills index. The render MUST reflect the just-replayed registry, never
+the registry frozen in the folding process at import. The fold re-derives the channels from the merged
+tree in a fresh process that imports the replayed code, so any module-level registry the replayed code
+mutates is seen, not only the methodology registry. A spec-only fold carries no replayed code and renders
+in-process unchanged. A methodology-registering fold therefore leaves no post-fold drift: a fresh render
+of the merged tree matches every committed channel, with no manual re-materialize in a second process.
+
+#### Scenario: a methodology-registering fold materializes its skill in the same act
+- WHEN a code-bearing fold's replayed engine code registers a new methodology, and the same delta adds
+  the new methodology's slice
+- THEN the fold materializes that methodology's `SKILL.md` in both skill locations and its anchor
+  skills-index line in the same act, each a faithful render of the new registry, and a fresh-process
+  audit of the merged tree reports no channel drift
+
+  ```check
+  register-methodology
+  skill-materialized
+  index-lists-new
+  no-post-fold-drift
+  ```

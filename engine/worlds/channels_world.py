@@ -22,7 +22,7 @@ import re
 import shutil
 import tempfile
 
-from .. import anchor, channels, delta, methodology, spec, tree
+from .. import anchor, audit, channels, delta, methodology, spec, tree, worker
 from ..scenario import _git                                  # the worlds share the core's git helper
 from . import World as _Base
 
@@ -83,12 +83,16 @@ class World(_Base):
         for cmd in (("init", "-q"), ("config", "user.email", "scenario@hypercore"),
                     ("config", "user.name", "scenario")):
             _git(self.root, *cmd)
+        shutil.copytree(os.path.join(_REAL, "engine"), os.path.join(self.root, "engine"),
+                        ignore=shutil.ignore_patterns("__pycache__"))
         shutil.copytree(os.path.join(_REAL, "spec"), os.path.join(self.root, "spec"),
                         ignore=shutil.ignore_patterns("__pycache__"))
-        shutil.copyfile(os.path.join(_REAL, "glossary.md"), os.path.join(self.root, "glossary.md"))
+        for name in ("glossary.md", "intent.md"):
+            shutil.copyfile(os.path.join(_REAL, name), os.path.join(self.root, name))
         _git(self.root, "add", "-A"); _git(self.root, "commit", "-qm", "seed: hypercore's own spec")
         self._nonce = "ZQX-channel-sentinel"
         self._cap = "depth"                                 # the slice a plant overwrites
+        self._new_cap = "fold-born"
         self._art = None                                    # the planted capability's skill artifact
         self._anchor = None                                 # the rendered anchor text
 
@@ -118,6 +122,17 @@ class World(_Base):
         """materialize — run the live channel render (the fold's render step in isolation): every skill
         into both locations, the anchor, and the `CLAUDE.md` bridge."""
         channels.materialize(self.root)
+        return True, ""
+
+    def _v_register_methodology(self, args: list[str]) -> tuple[bool, str]:
+        """register-methodology — a code-bearing fold replays engine code that registers a new
+        methodology while its delta adds that methodology's spec slice."""
+        rel = os.path.join("engine", "methodology.py")
+        path = os.path.join(self.root, rel)
+        base = open(path, encoding="utf-8").read()
+        tip = _with_registered_methodology(base, self._new_cap)
+        d = delta.parse(_new_methodology_delta(self._new_cap))
+        delta.fold(d, self.root, code={rel: worker.CodeFile(base, tip)})
         return True, ""
 
     def _v_old_render(self, args: list[str]) -> tuple[bool, str]:
@@ -229,9 +244,55 @@ class World(_Base):
                   if not os.path.isfile(os.path.join(self.root, p))]
         return (True, "") if not broken else (False, f"a rendered pointer does not resolve: {broken}")
 
+    def _v_skill_materialized(self, args: list[str]) -> tuple[bool, str]:
+        """skill-materialized — the methodology registered by replayed code has both skill artifacts,
+        and they are the same render of the new spec slice."""
+        paths = [os.path.join(self.root, methodology.skill_path(self._new_cap, d))
+                 for d in methodology.SKILL_DIRS]
+        missing = [p for p in paths if not os.path.isfile(p)]
+        if missing:
+            return False, f"the fold did not materialize the new methodology skill: {missing}"
+        texts = [open(p, encoding="utf-8").read() for p in paths]
+        want = (f"name: {self._new_cap}", f"spec/{self._new_cap}.md",
+                f"{self._new_cap} discipline")
+        if texts[0] != texts[1] or not all(w in texts[0] for w in want):
+            return False, "the new methodology skills are not faithful mirrored renders"
+        return True, ""
+
+    def _v_index_lists_new(self, args: list[str]) -> tuple[bool, str]:
+        """index-lists-new — the anchor's derived skills index lists the methodology registered by the
+        replayed code, proving it read the merged registry."""
+        text = open(os.path.join(self.root, anchor.PATH), encoding="utf-8").read()
+        return ((True, "") if f"`{self._new_cap}`" in text
+                else (False, "the anchor's skills index does not list the registered methodology"))
+
+    def _v_no_post_fold_drift(self, args: list[str]) -> tuple[bool, str]:
+        """no-post-fold-drift — a fresh-process audit of the merged tree sees no channel drift."""
+        drift = audit.channel_drift(self.root)
+        return (True, "") if not drift else (False, f"post-fold channel drift remains: {drift}")
+
     def teardown(self) -> None:
         if self._prev_root is None:
             os.environ.pop("ENGINE_ROOT", None)
         else:
             os.environ["ENGINE_ROOT"] = self._prev_root
         shutil.rmtree(self.root, ignore_errors=True)
+
+
+def _with_registered_methodology(text: str, cap: str) -> str:
+    entry = (f'    "{cap}":\n'
+             f'        "{cap} methodology - load when testing same-act channel renders.",\n')
+    marker = "METHODOLOGIES = {\n"
+    if marker not in text:
+        raise AssertionError("methodology registry marker not found")
+    return text.replace(marker, marker + entry, 1)
+
+
+def _new_methodology_delta(cap: str) -> str:
+    return (f"# delta - register {cap}\n"
+            f"## ADDED {cap}\n"
+            f"### Requirement: {cap} discipline\n"
+            f"The {cap} methodology MUST render from the registry landed by the fold.\n"
+            f"#### Scenario: watched\n"
+            f"- WHEN the methodology is loaded\n"
+            f"- THEN the discipline applies\n")

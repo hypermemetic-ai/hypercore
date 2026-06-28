@@ -13,6 +13,11 @@ def main() -> int:
         i = sys.argv.index("--run-blocks")
         cap = sys.argv[sys.argv.index("--cap") + 1] if "--cap" in sys.argv else "carried"
         return scenario.run_blocks_file(sys.argv[i + 1], cap)
+    if "--materialize" in sys.argv:
+        import json
+        from . import channels, tree
+        print(json.dumps(channels.materialize(tree._root())))
+        return 0
     if "--frame" in sys.argv:
         from . import preview
         return preview.run()
