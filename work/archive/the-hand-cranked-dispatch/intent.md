@@ -1,8 +1,8 @@
 ---
 kind: ask
-state: standing
+state: done
 owner: operator
-created: 2026-06-27
+created: 1782536400
 ---
 # the-hand-cranked-dispatch — order the open work by hand, as a learning snapshot
 
