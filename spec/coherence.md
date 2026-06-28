@@ -118,3 +118,35 @@ incoherence judgment, and only the unreadable reply is reclassified.
   card unreadable
   node live
   ```
+
+### Requirement: a watched verdict never discards a gate-proven build — it holds it for a no-rebuild settle
+A watched integrate-stage verdict — an incoherence judgment, or a dropped-caveat verdict — over a build
+whose **deterministic** folding conditions are met MUST NOT discard the verified build. The deterministic
+gate is authoritative for **soundness**; the watched verdict MAY raise a decision (the operator-altitude
+contract miss the gate cannot mechanize), but the verified build — its refined delta and the captured
+engine bytes — MUST be **held** as durable material on the node, surviving the fence's teardown because it
+lands in the node's folder, not the fence. Settling the decision by **override** re-folds that **same**
+held artifact through the unchanged fold — its staleness pre-check and whole-system re-verify run over the
+held build, since main may have moved under it — with **no rebuild**. Only a genuine deterministic
+re-verify failure on merged main (stale, or red once merged) still discards; a watched verdict never does.
+This is the discipline that keeps a flaky or over-firing watched verdict from throwing away a ~20-minute
+gate-proven build, the live blocker between watched dispatch and hands-off autonomy.
+
+#### Scenario: an adverse watched verdict holds the build, and override re-folds it with no rebuild
+- WHEN a worker hands back a build whose folding conditions are met but a watched verdict judges it
+  adverse, and the fence is then torn down
+- THEN a decision is raised, the verified build is held as durable material on the node — surviving the
+  teardown, not discarded — the node stays live; and settling by override re-folds the same held artifact
+  into the spec with no rebuild
+
+  ```check
+  hand incoherent
+  card decide
+  build held
+  fold held
+  node live
+  teardown fence
+  build held
+  settle override
+  spec folds
+  ```

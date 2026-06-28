@@ -15,6 +15,9 @@ scripted fake in the acceptance check.
 """
 from __future__ import annotations
 
+import json
+import os
+from collections import namedtuple
 from dataclasses import dataclass, field
 
 from . import conditions, delta, depth_scan, provenance, review, tree, grill
@@ -131,6 +134,75 @@ def caveat_survives(say: str, caveat: str, transport=None) -> tuple[bool, str]:
                    "words; re-cut the render, change the ask, or abandon it")
 
 
+# ── the held build: preserve-and-decide (spec.coherence) ─────────────────────
+# A watched integrate verdict — an incoherence judgment, a dropped-caveat verdict — over a build whose
+# deterministic gate is green raises a decision but MUST NOT discard the verified build. The build (its
+# refined delta and the captured engine bytes) is held as durable material on the node, surviving the
+# fence's teardown because it lands in the node's folder, not the fence. Settling by override re-folds
+# the *same* artifact through the unchanged `delta.fold` — no rebuild. The deterministic gate stays
+# authoritative for soundness; only a genuine re-verify failure on merged main still discards.
+HELD_BUILD = "held-build.json"
+
+_HeldCode = namedtuple("_HeldCode", "base tip")   # the .base/.tip pair `delta.fold` content-replays
+
+
+@dataclass
+class _Held:
+    delta: str
+    base: str
+    code: dict                                    # {engine path: _HeldCode}
+    report: str
+
+
+def hold_build(node: tree.Node, result, root: str | None = None) -> None:
+    """Preserve a verified WorkerResult as durable material on the node — the *preserve* half. Duck-types
+    the result (delta / base / code), so it crosses no boundary into the worker; the bytes outlive the
+    fence's teardown because they land in the node's committed folder."""
+    code = {rel: {"base": cf.base, "tip": cf.tip}
+            for rel, cf in (getattr(result, "code", None) or {}).items()}
+    payload = {"delta": result.delta, "base": getattr(result, "base", ""),
+               "code": code, "report": getattr(result, "report", "")}
+    path = os.path.join(node.path, HELD_BUILD)
+    tree.transact(lambda: tree.atomic_write(path, json.dumps(payload, indent=2)),
+                  [path], f"hold build: {tree._subject(node.text)}")
+
+
+def has_held_build(node: tree.Node) -> bool:
+    return bool(node.path) and os.path.isfile(os.path.join(node.path, HELD_BUILD))
+
+
+def held_build(node: tree.Node) -> _Held | None:
+    path = os.path.join(node.path, HELD_BUILD) if node.path else ""
+    if not path or not os.path.isfile(path):
+        return None
+    d = json.loads(open(path).read())
+    code = {rel: _HeldCode(c["base"], c["tip"]) for rel, c in d.get("code", {}).items()}
+    return _Held(d.get("delta", ""), d.get("base", ""), code, d.get("report", ""))
+
+
+def settle_held(node: tree.Node, root: str | None = None) -> Reply:
+    """The *decide* half: the operator overrode the watched flake, so re-fold the held gate-proven build
+    with no rebuild. The same artifact folds through the unchanged `delta.fold` — its staleness pre-check
+    and whole-system re-verify run over the held build, since main may have moved under it. A genuine
+    deterministic failure (stale, or red once merged) still surfaces a decision rather than landing an
+    unsound build; it never silently discards the held work."""
+    held = held_build(node)
+    if held is None:
+        return Reply(say="", done=False)
+    try:
+        delta.fold(delta.parse(held.delta), root, node=node, code=held.code or None)
+    except delta.ResourceLimitReached as refusal:
+        card = tree.raise_card(str(refusal), kind="decide", parent=node.id)
+        return Reply(say="The held build's re-verify hit a resource limit — the retryable decision is on "
+                         "your queue.", card=card)
+    except delta.CannotFold as refusal:
+        card = tree.raise_card(str(refusal), kind="decide", parent=node.id)
+        return Reply(say="The held build no longer holds on current main — the reason is on your queue.",
+                     card=card)
+    provenance.commit_verdict(node, provenance.FENCED_RUN, _fenced_run_verdict(node), root)
+    return Reply(say="The held build folded with no rebuild.", done=True)
+
+
 def integrate(node: tree.Node, result, transport=None, root: str | None = None) -> Reply:
     """The archive stage, where the architect holds design judgment: take a worker's hand-off,
     hold it against the folding conditions and the contract, and on a pass fold its refined
@@ -156,12 +228,14 @@ def integrate(node: tree.Node, result, transport=None, root: str | None = None) 
                      card=card)
     say = (verdict.get("say") or "").strip()
     if not verdict.get("coherent"):
+        hold_build(node, result, root)                 # preserve-and-decide: never discard a gate-proven build
         card = tree.raise_card(verdict.get("card") or say or
                                 "the result did not honor the contract",
                                 kind="decide", parent=node.id)
         return Reply(say=say, card=card)
     survives, reason = caveat_survives(say, verdict.get("caveat") or "", transport)
     if not survives:
+        hold_build(node, result, root)                 # preserve-and-decide: the dropped-caveat verdict holds, never discards
         card = tree.raise_card(reason, kind="decide", parent=node.id)
         return Reply(say="The result can't fold yet — the load-bearing caveat was dropped; "
                          "the decision is on your queue.", card=card)

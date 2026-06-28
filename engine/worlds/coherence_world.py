@@ -142,6 +142,35 @@ class World(_Base):
                     else (False, "expected the node live, but it folded"))
         return False, f"unknown node state {args[0]!r}"
 
+    def _v_build(self, args: list[str]) -> tuple[bool, str]:
+        """build <held|discarded> — whether the verified build was preserved as durable material on the
+        node (preserve-and-decide), or thrown away."""
+        held = communication.has_held_build(tree.find(self.node.id) or self.node)
+        if args[0] in ("held", "holds"):
+            return (True, "") if held else (False, "the gate-proven build was discarded, not held on the node")
+        if args[0] == "discarded":
+            return (True, "") if not held else (False, "the build was held, expected discarded")
+        return False, f"unknown build state {args[0]!r}"
+
+    def _v_teardown(self, args: list[str]) -> tuple[bool, str]:
+        """teardown fence — tear down the worker fence, proving the held build does not depend on it: the
+        bytes live in the node's committed folder, not the worktree the fold tears down."""
+        if args and args[0] != "fence":
+            return False, f"unknown teardown target {args[0]!r}"
+        worker.teardown(self.node, self.root)
+        if os.path.isdir(worker._tree_path(self.node, self.root)):
+            return False, "the fence was not torn down"
+        return True, ""
+
+    def _v_settle(self, args: list[str]) -> tuple[bool, str]:
+        """settle override — the operator overrode the watched flake: re-fold the held build with no
+        rebuild (no worker transport is summoned), the same artifact landing through the unchanged fold."""
+        if args and args[0] != "override":
+            return False, f"unknown settle action {args[0]!r}"
+        reply = communication.settle_held(self.node, self.root)
+        return ((True, "") if reply.done
+                else (False, f"the held build did not re-fold with no rebuild: {reply.say or reply.card}"))
+
     def teardown(self) -> None:
         for node in self._nodes:
             worker.teardown(node, self.root)

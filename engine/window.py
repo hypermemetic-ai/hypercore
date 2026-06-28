@@ -144,8 +144,12 @@ def _browse(st: State, ch: int, nodes) -> bool:
         elif kind == "grilling question":             # accept the machine's lean
             st.pending = Async(lambda c=card: grill.advance(c, grill.lean_of(c)))
         else:
-            conditions.accept_length(card.text)        # a length decision records its length; else a no-op
-            tree.approve(card)
+            node = tree.find(card.parent) if card.parent else None
+            if node is not None and communication.has_held_build(node):
+                st.pending = Async(lambda n=node: communication.settle_held(n))   # override the watched flake: re-fold the held build, no rebuild
+            else:
+                conditions.accept_length(card.text)    # a length decision records its length; else a no-op
+                tree.approve(card)
         st.sel = 0
     elif cards and ch == ord("c"):
         tree.cut(cards[st.sel])
