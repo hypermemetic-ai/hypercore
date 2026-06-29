@@ -23,7 +23,7 @@ import tempfile
 
 from .. import render, schedule, transport, tree
 from ..scenario import _git                                  # the worlds share the core's git helper
-from . import World as _Base, decision_card_fixture as decision_fixture
+from . import World as _Base, decision_card_fixture as decision_fixture, reasoning_loop_fixture
 
 
 class World(_Base):
@@ -46,6 +46,7 @@ class World(_Base):
         self.arc_child: tree.Node | None = None
         self.decision: tree.Node | None = None
         self.confirm_rows = None
+        self.reasoning = reasoning_loop_fixture.Fixture()
 
     # ── action verbs ──────────────────────────────────────────────────────────────
     def _v_card(self, args: list[str]) -> tuple[bool, str]:
@@ -122,6 +123,12 @@ class World(_Base):
         self.rows = self.frame
         self.confirm_rows = render.main_body(tree.read_tree(), 0, confirm_card=self.decision.id)
         return True, ""
+    def _v_loop_thread(self, args: list[str]) -> tuple[bool, str]:
+        """loop-thread — open the architect's own thread as a reasoning loop."""
+        return self.reasoning.loop_thread()
+    def _v_loop_worker(self, args: list[str]) -> tuple[bool, str]:
+        """loop-worker — open a fenced worker's live trace as a reasoning loop."""
+        return self.reasoning.loop_worker()
 
     # ── assertion verbs ───────────────────────────────────────────────────────────
     def _v_spans(self, args: list[str]) -> tuple[bool, str]:
@@ -306,6 +313,26 @@ class World(_Base):
     def _v_confirm_below(self, args: list[str]) -> tuple[bool, str]:
         """confirm-below — one confirm keystroke unfolds detail beneath its line."""
         return decision_fixture.confirm_below(self.confirm_rows)
+
+    def _v_opens_on_working(self, args: list[str]) -> tuple[bool, str]:
+        """opens-on-working — thread and live worker open; an at-rest node opens none."""
+        return self.reasoning.opens_on_working()
+
+    def _v_one_surface(self, args: list[str]) -> tuple[bool, str]:
+        """one-surface — both sources are painted by the one reasoning-loop render, scoped per node."""
+        return self.reasoning.one_surface()
+
+    def _v_thread_steerable(self, args: list[str]) -> tuple[bool, str]:
+        """thread-steerable — the architect thread offers and performs step-grain steering."""
+        return self.reasoning.thread_steerable()
+
+    def _v_trace_read_only(self, args: list[str]) -> tuple[bool, str]:
+        """trace-read-only — worker traces expose no step editing and only node-grain acts."""
+        return self.reasoning.trace_read_only()
+
+    def _v_trust_from_acting(self, args: list[str]) -> tuple[bool, str]:
+        """trust-from-acting — the loop carries the confabulation caveat and anchors trust in acts."""
+        return self.reasoning.trust_from_acting()
 
     def _v_footer_live(self, args: list[str]) -> tuple[bool, str]:
         """footer-live — the rendered footer does not mark the lease holder as non-live."""

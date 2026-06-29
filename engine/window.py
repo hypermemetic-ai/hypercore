@@ -10,7 +10,7 @@ import curses
 import threading
 from dataclasses import dataclass, field
 
-from . import communication, conditions, tree, grill, render, schedule, transport, view
+from . import communication, conditions, tree, grill, reasoning, reasoning_input, render, schedule, transport, view
 from .communication import Thread
 
 ESC, ENTER, BACKSPACES = 27, (10, 13, curses.KEY_ENTER), (8, 127, curses.KEY_BACKSPACE)
@@ -18,10 +18,13 @@ ESC, ENTER, BACKSPACES = 27, (10, 13, curses.KEY_ENTER), (8, 127, curses.KEY_BAC
 
 @dataclass
 class State:
-    mode: str = "input"            # input | browse | converse | view | answer
+    mode: str = "input"            # input | browse | converse | view | answer | loop | loop-edit
     buffer: str = ""
     sel: int = 0
     thread: Thread | None = None
+    thread_node_id: str = reasoning.ARCHITECT_THREAD
+    loop: reasoning.ReasoningLoop | None = None
+    loop_return: str = "browse"
     explain_text: str | None = None
     pending: "Async | None" = None
     tick: int = 0
@@ -91,8 +94,14 @@ def _dispatch(scr, st: State, ch: int, nodes) -> bool:
     if ch == 20:  # Ctrl-T toggles the window's soft polarity from anywhere
         st.polarity = render.SOFT_DARK if st.polarity == render.LIGHT else render.LIGHT
         return True
+    if ch == reasoning_input.LOOP_KEY and st.mode not in ("loop", "loop-edit"):
+        return reasoning_input.open_loop(st, nodes)
     if st.mode == "view":
         return _view_keys(st, ch)
+    if st.mode == "loop":
+        return reasoning_input.loop_keys(st, ch)
+    if st.mode == "loop-edit":
+        return reasoning_input.loop_editing(st, ch)
     if st.mode == "answer":
         return _answering(st, ch)
     if st.mode == "browse":
@@ -239,7 +248,9 @@ def _land(st: State, result) -> None:
 
 def _paint(scr, st: State, nodes, live_loop: bool = True) -> None:
     h, w = scr.getmaxyx()
-    if st.mode == "converse":
+    if st.mode in ("loop", "loop-edit") and st.loop is not None:
+        rows = render.reasoning_loop_body(st.loop, w, st.polarity)
+    elif st.mode == "converse":
         rows = render.converse_body(st.thread or Thread(), w, st.explain_text, st.polarity)
     elif st.mode == "view":
         node = view.resolve(view.operator_view(), st.view_path)

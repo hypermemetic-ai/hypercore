@@ -9,7 +9,7 @@ from __future__ import annotations
 import textwrap
 from dataclasses import dataclass
 
-from . import card_render, tree
+from . import card_render, reasoning, tree
 from .communication import Thread
 
 # styles (the window owns their colors)
@@ -314,12 +314,50 @@ def view_body(node, sel: int, width: int, polarity: str = LIGHT) -> Frame:
     return Frame(rows, polarity)
 
 
+def reasoning_loop_body(loop: reasoning.ReasoningLoop, width: int,
+                        polarity: str = LIGHT) -> Frame:
+    """One surface over one model's working: steerable thread or read-only worker trace."""
+    source = "architect thread" if loop.source == reasoning.ARCHITECT_THREAD else "fenced worker trace"
+    rows: list[Row] = [[("reasoning loop", TITLE)], []]
+    rows.append([("scope", HEAD), (f"  node {loop.node_id} · {source} · {loop.subject}", CARD)])
+    rows.append([])
+    rows.append([("limit", HEAD)])
+    for line in _wrap(reasoning.CAVEAT, width - 8):
+        rows.append([("    ", HINT), (line, HINT)])
+    rows.append([])
+
+    rows.append([("account", HEAD)])
+    if loop.read_only:
+        rows.append([("    read-only trace · no step edit · no mid-run injection", MODEL)])
+    for i, step in enumerate(loop.steps, start=1):
+        chosen = i - 1 == loop.selected
+        style = SEL if chosen else CARD
+        prefix = f"  {i:02d} "
+        for j, line in enumerate(_wrap(step.text, width - len(prefix) - 2)):
+            rows.append([(prefix if j == 0 else "     ", style), (line, style)])
+    if not loop.steps:
+        rows.append([("    no steps remain; reset and rerun can rebuild the thread shape", HINT)])
+    rows.append([])
+
+    rows.append([("acts", HEAD)])
+    for action in loop.actions:
+        rows.append([("    ", TAG), (action, TAG)])
+    if loop.effect:
+        rows.append([])
+        rows.append([("changed", HEAD), (f"  {loop.effect}", CARD)])
+    return Frame(rows, polarity)
+
+
 def footer(model: str, mode: str, buffer: str, status: str, width: int, live_loop: bool = True) -> Row:
     """The bottom line: where the operator speaks, the model and loop status named at the right."""
     if status:
         left = status
     elif mode == "view":
         left = "view · ↑↓ select · →/enter drill · ←/esc up · type to speak"
+    elif mode == "loop":
+        left = "loop · ↑↓ step · p prune · e edit · r rerun · a re-ask · esc back"
+    elif mode == "loop-edit":
+        left = "edit step › " + buffer + "▖" + "   enter saves · esc cancels"
     elif mode == "browse":
         left = "browse · ↑↓ · enter detail · a/c/e · v view · esc/type speak"
     elif mode == "answer":
