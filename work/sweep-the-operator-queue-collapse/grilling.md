@@ -8,4 +8,20 @@ answer: Treat it as cuts on nodes: collapse a duplicate set by cutting the redun
 [Q] For the collapse: what marks two cards as "duplicates," and when collapsing a set, which one survives the cut? (Cut is destructive, and the view shows one card per awaiting node, so "duplicates" are distinct awaiting nodes.)
 lean: Duplicate = same recorded kind + same call (same verb against the same target node). Since work does not spawn until a card is ratified, the redundant ones are unspawned and cheap to cut; keep the earliest-filed node (or the one carrying provenance / resolved descendants) and cut the rest.
 flip: If a later duplicate carries more resolved state than the earliest — descendants, a partial verdict — keep the richer node and cut the earlier ones; "earliest survives" only holds when the duplicates are bare.
-answer:
+answer: Duplicate = same recorded kind + same call (same verb against the same target node). Since work does not spawn until a card is ratified, the redundant ones are unspawned and cheap to cut; keep the earliest-filed node (or the one carrying provenance / resolved descendants) and cut the rest.
+
+[CONTRACT]
+This ask becomes a one-time sweep of the operator's live queue, executed as cuts on awaiting nodes — no card object is edited and no dedup or liveness mechanism is added; the live view, recomputed off the tree, simply reflects the cuts. Every set of duplicate cards — distinct awaiting nodes recording the same kind and the same call (the same verb against the same target node) — is collapsed to a single survivor by cutting the redundant, still-unspawned siblings, keeping the earliest-filed node or the one carrying provenance or resolved descendants. The one stale card is cut only after re-deriving its node from the tree confirms it has genuinely resolved; a node still awaiting is left untouched, honoring "leave it if still live." The result is validated by re-deriving the live queue and seeing one card per distinct awaiting call, no card standing behind a resolved node, and every still-live card unchanged.
+
+[DELTA]
+This sweep realizes **no spec-capability delta** — nothing is ADDED, MODIFIED, REMOVED, or RENAMED. The resolved pass placed the change entirely in tree data, riding capabilities that already stand, so the self-model does not move:
+
+- **cut, the operator's endorsement** (`queue.md` — "the operator endorses with approve, cut, or explain"; scenario *cut*: "the node's words are removed and recoverable from the record"): each redundant awaiting node, and the stale node once confirmed resolved, leaves intent by `cut`. No new act and no card-edit verb is introduced.
+- **the computed, never-stored queue** (`tree.md` — "the queue and the standing work are computed, never stored"; `queue.md` — "the queue is a view of awaiting nodes"): the live view recomputes off the folders and reflects each cut with no list kept in sync and no stored card to delete.
+
+Two non-changes are deliberate, recorded here so a later reader sees why the delta is empty:
+
+- **No dedup/liveness requirement is specced.** "Duplicate" (same recorded kind + same call against the same target node) is a one-time sweep criterion, not a standing queue behavior; the resolution holds that the redundant cards are genuine distinct awaiting nodes, cheap to cut because work does not spawn until a card is ratified — not a defect in the view to fix. Adding a collapse-on-render mechanism was considered and rejected.
+- **The stale branch is a spec-predicted no-op.** `tree.md`'s computed view already drops a node the tree shows resolved, so re-deriving before the cut can only find the view already clear of it; the conditional cut therefore changes nothing in the live case, and a still-awaiting node is left as-is.
+
+**Gate** (the check the change is validated against — the existing computed view re-derived, not a new scenario): read the queue fresh off the tree and observe one card per distinct awaiting call, no card behind a resolved node, and every still-live card untouched.
