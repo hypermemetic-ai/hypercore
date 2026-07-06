@@ -19,14 +19,14 @@ set -euo pipefail
 HC=/home/qqp/projects/hypercore
 MR=/home/qqp/projects/meeting-reviewer
 say() { printf '\n\033[1m==> %s\033[0m\n' "$1"; }
-bak() { [ -f "$1" ] && cp -n "$1" "$1.hypercore.bak" 2>/dev/null || true; }
+bak() { if [ -f "$1" ]; then cp -n "$1" "$1.hypercore.bak" 2>/dev/null || true; fi; }
 
 # set a top-level TOML key: replace in place if present, else prepend above any [section]
 set_toml_top() {
   local k="$1" v="$2" f="$3"
   mkdir -p "$(dirname "$f")"; touch "$f"; bak "$f"
-  if grep -qE "^[[:space:]]*$k[[:space:]]*=" "$f"; then
-    sed -i -E "s|^[[:space:]]*$k[[:space:]]*=.*|$k = $v|" "$f"
+  if grep -qE "^[[:space:]]*${k}[[:space:]]*=" "$f"; then
+    sed -i -E "s|^[[:space:]]*${k}[[:space:]]*=.*|$k = $v|" "$f"
   else
     printf '%s = %s\n%s' "$k" "$v" "$(cat "$f")" > "$f.tmp" && mv "$f.tmp" "$f"
   fi
