@@ -18,7 +18,11 @@ Every part earns its place by being *invoked*, not by being *reported to*.
   its own git worktree; herdr's sidebar shows which agent is blocked / working /
   done / idle, so you see at a glance which one needs you.
 - **Externals** — Context7 (live, version-correct library docs), `gh` (GitHub),
-  `fd` / `eza` / `rg` (fast filesystem).
+  `fd` / `eza` / `rg` (fast filesystem), and **the gate** (`no-mistakes`, an
+  external MIT tool): real work is *pushed to it* — an independent pipeline
+  reviews the code, runs the checks, and opens a PR. It implements the
+  `blast-radius` / `human` merge gates below — capability you push to, not
+  process you maintain.
 
 ## Behavioral floor (always)
 1. **Think before coding** — surface assumptions, offer interpretations, ask
@@ -43,15 +47,18 @@ The one invariant: **`verification-before-completion` is never skipped.**
    before building.
 2. **Plan** — `writing-plans`: turn the agreed intent into an executable,
    step-by-step plan. Work it with `executing-plans`; land it with
-   `finishing-a-development-branch`.
+   `finishing-a-development-branch` — real work through the gate (`git push
+   no-mistakes`), trivial work straight to `main`.
 3. **Build** — implement per the plan, honoring the floor. Stuck on a bug? →
    `diagnosing-bugs`.
 4. **Verify (autonomous)** — `verification-before-completion`: run the real
    command, read the full output, and claim only with evidence.
 5. **Sign-off (human, gated)** — `uat-signoff`: for user-facing, irreversible, or
    ambiguous changes, walk the owner through observable tests. Seeded by step 4.
-6. **Review** — `code-review` (Standards + Intent) to produce the review;
-   `receiving-code-review` to weigh the feedback instead of rubber-stamping it.
+6. **Review** — `code-review` (Standards + Intent) is the *author-side design &
+   spec* review; the gate's pipeline is the *independent correctness* review
+   (bugs / security / perf) — complementary, not redundant. `receiving-code-review`
+   weighs either one's findings instead of rubber-stamping them.
 7. **Compound** — `ce-compound`: capture the solved problem to `docs/solutions/`
    and durable vocabulary to `CONCEPTS.md`, so the next session doesn't relearn it.
 
@@ -81,13 +88,21 @@ Support, any time: `research` (delegated, cited investigation → `research/`);
 **Merge gate is a per-project setting** — how green work reaches `main`:
 - `trunk` — commit on green straight to `main` and push; review is in-process
   (`code-review`) plus async audit. Fastest; fits a solo repo.
-- `blast-radius` — low-risk green work auto-merges; user-facing / irreversible /
-  ambiguous → a `gh` PR a human merges. The git gate mirrors the Sign-off routing.
-- `human` — every task lands via a human-approved PR; agents never touch `main`.
+- `blast-radius` — low-risk green work commits straight to `main`; real work
+  (user-facing / irreversible / ambiguous) is pushed through **the gate**
+  (`git push no-mistakes <branch>`) — an independent pipeline validates it and
+  opens a PR a human merges. The git gate mirrors the Sign-off routing.
+- `human` — every task lands via a human-approved PR (the same gate, every task
+  routed to a PR); agents never touch `main`.
 
-**This project: `trunk`** (solo). Autocommit-on-green is agent-driven —
-`orchestrate` and the escape hatch commit the moment verification passes, because
-"green" is a fact the agent knows, not a timer a hook can trip.
+**This project: `blast-radius` via the gate.** Trivial + local + reversible work
+still commits on green straight to `main` (the escape hatch — `orchestrate` and
+trivial fixes commit the moment the pre-push smoke test passes). **Real work**
+(multi-file / user-facing / irreversible) is pushed through the gate:
+`git push no-mistakes <branch>` → the pipeline reviews correctness, runs the
+checks, and opens a PR you merge with one click. For gated work, "green" is no
+longer a fact the agent *asserts* — it is a fact the gate *proves*, independently,
+with a committed evidence trail. (`/no-mistakes` drives the same gate headlessly.)
 
 ## Skill index
 | skill | reach for it when |
@@ -96,12 +111,13 @@ Support, any time: `research` (delegated, cited investigation → `research/`);
 | `grilling` / `grill-me` | starting non-trivial work — pin down intent first |
 | `writing-plans` | turning agreed intent into an executable plan |
 | `executing-plans` | working a plan task-by-task (stops on blockers; won't touch main without consent) |
-| `finishing-a-development-branch` | landing finished work — verify, then merge / PR / cleanup |
-| `verification-before-completion` | before ANY "done / passing / fixed" claim (never skipped) |
+| `finishing-a-development-branch` | landing finished work — for gated work the gate does rebase / push / PR, so this narrows to the merge decision |
+| `git push no-mistakes` (the gate) | landing *real* work — an external pipeline validates the diff and opens a PR; see "Git — how work lands" |
+| `verification-before-completion` | before ANY "done / passing / fixed" claim (never skipped) — and the pre-push smoke test before handing a branch to the gate |
 | `uat-signoff` | a user-facing / irreversible / ambiguous change needs human acceptance |
 | `diagnosing-bugs` | a bug, failing test, or unexpected behavior |
-| `code-review` | reviewing a diff — Standards + Intent axes |
-| `receiving-code-review` | weighing review feedback (verify, don't obey) |
+| `code-review` | reviewing a diff — author-side Standards + Intent (design & spec); the gate reviews correctness |
+| `receiving-code-review` | weighing review feedback — from `code-review` or the gate (verify, don't obey) |
 | `ce-compound` | you just solved something worth not relearning |
 | `research` | a task turns into reading legwork |
 | `handoff` | the context window is filling — hand off to a fresh agent |
