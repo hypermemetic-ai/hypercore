@@ -26,8 +26,8 @@ bak() { [ -f "$1" ] && cp -n "$1" "$1.qqac.bak" 2>/dev/null || true; }
 set_toml_top() {
   local k="$1" v="$2" f="$3"
   mkdir -p "$(dirname "$f")"; touch "$f"; bak "$f"
-  if grep -qE "^[[:space:]]*$k[[:space:]]*=" "$f"; then
-    sed -i -E "s|^[[:space:]]*$k[[:space:]]*=.*|$k = $v|" "$f"
+  if grep -qE "^[[:space:]]*${k}[[:space:]]*=" "$f"; then
+    sed -i -E "s|^[[:space:]]*${k}[[:space:]]*=.*|${k} = $v|" "$f"
   else
     printf '%s = %s\n%s' "$k" "$v" "$(cat "$f")" > "$f.tmp" && mv "$f.tmp" "$f"
   fi
