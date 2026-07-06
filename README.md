@@ -1,20 +1,21 @@
-# hypercore
+# qq-ac
 
-A lean engineering system for Claude Code. Sharp skills you invoke on demand, a
-knowledge layer that maps any codebase, a session layer for running many named
-agents in parallel, and a thin external surface. **Capability you reach for — not
-process you maintain.**
+My own agent core; bespoke because it only serves me. qq-ac is the command center
+I use to run agentic development: sharp skills, operating rules, code knowledge,
+parallel sessions, a tuned terminal cockpit, and only the external tools that earn
+their keep. **Capability I reach for — not process I maintain.**
 
 Operating rules live in [`AGENTS.md`](./AGENTS.md) (loaded every session;
 `CLAUDE.md` symlinks to it). This README is the map and the setup guide.
 
-## The five layers
+## The six layers
 | layer | what | where |
 |---|---|---|
 | **Rules** | behavioral floor + task routing | `AGENTS.md` |
 | **Actions** | curated, invocable skills | `skills/` |
 | **Knowledge** | auto-generated map of the code | `.understand-anything/knowledge-graph.json` |
 | **Sessions** | many named parallel agents, each in its own worktree, state-aware | herdr (`herdr`) |
+| **Cockpit** | human-driven terminal tools + tuned configs | `cockpit/` |
 | **Externals** | live docs · GitHub · fast filesystem | Context7 · `gh` · `fd`/`eza`/`rg` |
 
 ## The loop
@@ -25,36 +26,35 @@ whole loop end-to-end as one command — Claude conducts, Codex implements.
 
 ## Skills
 15 skills, curated from four MIT collections (mattpocock, superpowers,
-compound-engineering, gsd-core) plus four authored for hypercore — `research`,
+compound-engineering, gsd-core) plus four authored for qq-ac — `research`,
 `uat-signoff`, `writing-skills`, and `orchestrate`. The index is in `AGENTS.md`;
 full provenance in [`SKILLS-ATTRIBUTION.md`](./SKILLS-ATTRIBUTION.md).
 
 ## Setup
-1. **Preflight** — `bash bin/install.sh` checks `gh`/`fd`/`eza`/`herdr` and
-   prints the exact install step for anything missing.
-2. **Skills** — activate as a plugin:
+1. **Preflight** — `bash bin/install.sh` checks the external surface and cockpit
+   tools, then prints exact install hints for anything missing.
+2. **One-shot activation** — `bash bin/qqac-activate.sh` installs the guardrail
+   hook, wires the WIP savepoint, and symlinks cockpit configs from this repo into
+   `~/.config`.
+3. **Skills** — activate as a plugin:
    ```
-   /plugin marketplace add /home/qqp/projects/hypercore
-   /plugin install hypercore@hypercore
+   /plugin marketplace add /home/qqp/projects/qq-ac
+   /plugin install qq-ac@qq-ac
    ```
-   Skills become `/hypercore:grilling`, etc. (Or vendor them into a project's
-   `.claude/skills/`.)
-3. **Context7** (live library docs) — `.mcp.json` is set; approve the `context7`
+   Skills become `/qq-ac:grilling`, etc.
+4. **Cockpit** — `cockpit/` is the source of truth for yazi, glow, herdr, and
+   shell navigation. `herdr prefix+f` opens `qqy`; yazi starts at the repo root;
+   pressing Enter on `.md` renders in-pane via mdcat or the tuned Glow theme.
+5. **Context7** (live library docs) — `.mcp.json` is set; approve the `context7`
    server on next session start.
-4. **Knowledge layer** — `/plugin marketplace add Egonex-AI/Understand-Anything`
+6. **Knowledge layer** — `/plugin marketplace add Egonex-AI/Understand-Anything`
    → `/plugin install understand-anything` → `/understand`.
-5. **Sessions** — install herdr (`brew install herdr`), then
+7. **Sessions** — install herdr (`brew install herdr`), then
    `herdr integration install claude codex` so it tracks agent state. Fan out with
    `herdr worktree create --branch <name>` + `herdr agent start <name> --cwd <worktree> -- claude`.
 
-## Distribution vs. consumer
-This repo is the **distribution**. A working project becomes hypercore-powered by
-either installing the plugin or vendoring the skills into its `.claude/skills/`,
-alongside its own `AGENTS.md`, `.understand-anything/`, and the `docs/solutions/`
-+ `CONCEPTS.md` compounding surface.
-
 ## Provenance
-Curated from superpowers (obra), compound-engineering (EveryInc), gsd-core
-(open-gsd), agent skills (mattpocock), context-engineering (muratcankoylan), and
-Karpathy's guidelines — keeping the single best implementation of each capability,
-then authoring the three gaps. All sources MIT.
+Curated from MIT sources, kept only where they serve my workflow: superpowers
+(obra), compound-engineering (EveryInc), gsd-core (open-gsd), agent skills
+(mattpocock), context-engineering (muratcankoylan), and Karpathy's guidelines.
+The authored pieces fill the gaps I actually use. All sources MIT.

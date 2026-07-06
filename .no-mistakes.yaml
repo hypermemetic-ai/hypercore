@@ -1,4 +1,4 @@
-# hypercore's blast-radius merge gate — externally owned (MIT: kunchenguid/no-mistakes).
+# qq-ac's blast-radius merge gate — externally owned (MIT: kunchenguid/no-mistakes).
 # Real work is pushed through the gate (`git push no-mistakes <branch>`), validated by an
 # independent pipeline (review/test/lint/docs), and lands as a PR; trivial work still
 # commits straight to main.
@@ -8,7 +8,7 @@
 # Ref: https://kunchenguid.github.io/no-mistakes/reference/repo-config/
 agent: claude
 commands:
-  lint: "shellcheck bin/qq-wip bin/qq-wip-snapshot.sh bin/hypercore-activate.sh bin/install.sh"
+  lint: "shellcheck bin/qq-wip bin/qq-wip-snapshot.sh bin/qqac-activate.sh bin/install.sh"
   format: ""            # no formatter wired (shfmt optional, not required)
   test: ""              # no formal suite; the gate's agent validates behavior against --intent
 intent:

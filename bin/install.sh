@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# hypercore preflight — checks the external surface and prints exact setup steps.
+# qq-ac preflight — checks the external surface and prints exact setup steps.
 # Safe by design: it inspects and instructs; it does not install system packages
 # or use sudo on your behalf. Re-run any time; it is idempotent.
 set -euo pipefail
@@ -17,7 +17,7 @@ pkg_hint() {
   else echo "see $1 install docs"; fi
 }
 
-bold "hypercore preflight"
+bold "qq-ac preflight"
 echo
 
 bold "Externals (fast filesystem + GitHub)"
@@ -40,6 +40,19 @@ if have herdr; then ok "herdr"; else
 fi
 echo
 
+bold "Cockpit — terminal surface"
+for t in yazi broot glow mdcat; do
+  if have "$t"; then ok "$t"; else
+    case "$t" in
+      yazi)  miss "yazi   →  $(pkg_hint yazi yazi -)";;
+      broot) miss "broot  →  $(pkg_hint broot broot -)";;
+      glow)  miss "glow   →  $(pkg_hint glow glow -)";;
+      mdcat) miss "mdcat  →  $(pkg_hint mdcat mdcat -)";;
+    esac
+  fi
+done
+echo
+
 bold "Knowledge — Understand-Anything (documentation layer)"
 if [ -f .understand-anything/knowledge-graph.json ]; then ok "knowledge graph present"; else
   miss "not built yet. In a Claude Code session:"
@@ -60,10 +73,10 @@ bold "Skills"
 if [ -d skills ]; then
   n=$(find skills -maxdepth 2 -name SKILL.md 2>/dev/null | wc -l | tr -d ' ')
   ok "$n skills in ./skills/"
-  miss "activate in a project: /plugin marketplace add \"$(pwd)\"  then  /plugin install hypercore"
+  miss "activate in a project: /plugin marketplace add \"$(pwd)\"  then  /plugin install qq-ac@qq-ac"
   miss "or vendor into a project: cp -R skills/* <project>/.claude/skills/"
 else
-  miss "skills/ not found — run from the hypercore repo root"
+  miss "skills/ not found — run from the qq-ac repo root"
 fi
 echo
 bold "Done. Address any '•' items above."

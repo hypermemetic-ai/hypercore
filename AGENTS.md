@@ -1,11 +1,11 @@
-# hypercore — agent operating rules
+# qq-ac — agent operating rules
 
-hypercore is a lean engineering system: sharp skills you invoke on demand, a
-knowledge layer that maps the code, a session layer for parallel agents, and a
-thin external surface. It is capability you reach for — not process you maintain.
-Every part earns its place by being *invoked*, not by being *reported to*.
+qq-ac is surlej's bespoke agentic-dev command center — capability I reach for,
+tuned to one operator: me. Sharp skills, a knowledge layer, named agent sessions,
+a tuned terminal cockpit, and a thin external surface all earn their place by
+being *invoked*, not by being *reported to*.
 
-## The five layers
+## The six layers
 - **Rules** — this file: the behavioral floor and how work is routed.
 - **Actions** — `skills/`: atomic capabilities, invoked by name (indexed below).
 - **Knowledge** — `.understand-anything/knowledge-graph.json`: the map of what the
@@ -17,6 +17,13 @@ Every part earns its place by being *invoked*, not by being *reported to*.
 - **Sessions** — herdr (`herdr`): many named agents in parallel, each isolated in
   its own git worktree; herdr's sidebar shows which agent is blocked / working /
   done / idle, so you see at a glance which one needs you.
+- **Cockpit** — `cockpit/`: the human-driven terminal surface and its tuned
+  configs — **herdr** (multiplexer; tokyo-night; `prefix+f`→`qqy`,
+  `prefix+shift+f`→`qqbr`), **yazi** (file pane; `.md` opens in-pane via
+  mdcat/glow, preview pane dropped), **broot** (tree nav via `qqbr`),
+  **glow**/**mdcat** (pane-width markdown rendering; `glow/tuned.json` theme).
+  Symlinked from `~/.config` so the repo is the live source of truth. Installed
+  by `bin/qqac-activate.sh`.
 - **Externals** — Context7 (live, version-correct library docs), `gh` (GitHub),
   `fd` / `eza` / `rg` (fast filesystem), and **the gate** (`no-mistakes`, an
   external MIT tool): real work is *pushed to it* — an independent pipeline
@@ -121,10 +128,10 @@ with a committed evidence trail. (`/no-mistakes` drives the same gate headlessly
 | `ce-compound` | you just solved something worth not relearning |
 | `research` | a task turns into reading legwork |
 | `handoff` | the context window is filling — hand off to a fresh agent |
-| `writing-skills` | authoring or editing a hypercore skill (eval-first) |
+| `writing-skills` | authoring or editing a qq-ac skill (eval-first) |
 | `git-guardrails-claude-code` | (safety rail) blocks destructive git — installed as always-on hooks |
 
-Skills are vendored from MIT sources or authored for hypercore; see
+Skills are vendored from MIT sources or authored for qq-ac; see
 `SKILLS-ATTRIBUTION.md`. The git rail is not invoked during work — it runs as a
 Claude Code hook that blocks force-push, `reset --hard`, `clean -fd`, and history
 rewrites before they execute.
