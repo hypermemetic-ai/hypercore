@@ -14,8 +14,9 @@ Every part earns its place by being *invoked*, not by being *reported to*.
   default for every project) so the plugin's post-commit and session-start hooks
   keep the graph current with no manual refresh. The graph dir is committed to
   the repo (only `intermediate/`, `tmp/`, and `.trash-*/` scratch are gitignored).
-- **Sessions** — NTM (`ntm`): many named agents in parallel, coordinated by file
-  locks so they don't clobber each other.
+- **Sessions** — herdr (`herdr`): many named agents in parallel, each isolated in
+  its own git worktree; herdr's sidebar shows which agent is blocked / working /
+  done / idle, so you see at a glance which one needs you.
 - **Externals** — Context7 (live, version-correct library docs), `gh` (GitHub),
   `fd` / `eza` / `rg` (fast filesystem).
 
@@ -72,8 +73,10 @@ Support, any time: `research` (delegated, cited investigation → `research/`);
   and non-destructive (never touches HEAD, the index, or `main`). Recover with
   `hc-wip list | diff | branch <name>`.
 - **Isolation on demand** — serial work runs in the main tree on a branch; fan out
-  parallel agents and each gets its own `ntm worktree` (stronger than file locks for
-  independent tasks; keep `ntm lock` for the shared-file case).
+  parallel agents and each gets its own worktree: `herdr worktree create --branch
+  <name>`, then `herdr agent start <name> --cwd <worktree> -- claude`. Isolation *is*
+  the coordination model — no file locks. True shared-file work stays serial in the
+  main tree, one agent at a time.
 
 **Merge gate is a per-project setting** — how green work reaches `main`:
 - `trunk` — commit on green straight to `main` and push; review is in-process

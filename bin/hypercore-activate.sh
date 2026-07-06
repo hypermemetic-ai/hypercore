@@ -4,7 +4,7 @@
 #   Run ONCE:  bash /home/qqp/projects/hypercore/bin/hypercore-activate.sh
 #
 # What it does (idempotent; backs up every file it edits to *.hypercore.bak):
-#   1. NTM   : projects_base -> /home/qqp/projects        (~/.config/ntm/config.toml)
+#   1. herdr : install claude + codex integrations so herdr tracks agent state
 #   2. Hooks : git rail (block destructive git) + wip savepoint (Stop) (~/.claude/hooks + settings.json)
 #   3. Claude: yolo — permissions.defaultMode="bypassPermissions"  (~/.claude/settings.json)
 #   4. Codex : yolo — approval_policy="never", sandbox_mode="danger-full-access" (~/.codex/config.toml)
@@ -32,9 +32,13 @@ set_toml_top() {
   fi
 }
 
-say "1/5  NTM projects_base -> /home/qqp/projects"
-set_toml_top projects_base '"/home/qqp/projects"' "$HOME/.config/ntm/config.toml"
-echo "     set in ~/.config/ntm/config.toml"
+say "1/5  herdr agent-state integrations (claude + codex)"
+if command -v herdr >/dev/null 2>&1; then
+  herdr integration install claude >/dev/null 2>&1 && echo "     herdr integration: claude" || echo "     herdr integration claude: skipped"
+  herdr integration install codex  >/dev/null 2>&1 && echo "     herdr integration: codex"  || echo "     herdr integration codex: skipped"
+else
+  echo "     herdr not installed — run: brew install herdr"
+fi
 
 say "2/5  global hooks (git rail + wip savepoint)"
 mkdir -p "$HOME/.claude/hooks"

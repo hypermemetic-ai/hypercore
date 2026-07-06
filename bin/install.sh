@@ -21,23 +21,22 @@ bold "hypercore preflight"
 echo
 
 bold "Externals (fast filesystem + GitHub)"
-for t in rg fd eza gh tmux; do
+for t in rg fd eza gh; do
   if have "$t"; then ok "$t"; else
     case "$t" in
       rg)  miss "rg (ripgrep)  →  $(pkg_hint ripgrep ripgrep ripgrep)";;
       fd)  miss "fd            →  $(pkg_hint fd fd fd-find)";;
       eza) miss "eza           →  $(pkg_hint eza eza -)";;
       gh)  miss "gh (GitHub)   →  $(pkg_hint gh gh gh)";;
-      tmux) miss "tmux         →  $(pkg_hint tmux tmux tmux)";;
     esac
   fi
 done
 echo
 
-bold "Sessions — NTM (Named Tmux Manager)"
-if have ntm; then ok "ntm"; else
-  miss "ntm  →  brew install dicklesworthstone/tap/ntm"
-  miss "      (or: curl -fsSL https://raw.githubusercontent.com/Dicklesworthstone/ntm/main/install.sh | bash -s -- --easy-mode)"
+bold "Sessions — herdr (agent multiplexer)"
+if have herdr; then ok "herdr"; else
+  miss "herdr  →  brew install herdr"
+  miss "        (or: curl -fsSL https://herdr.dev/install.sh | sh)"
 fi
 echo
 

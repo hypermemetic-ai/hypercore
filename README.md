@@ -14,7 +14,7 @@ Operating rules live in [`AGENTS.md`](./AGENTS.md) (loaded every session;
 | **Rules** | behavioral floor + task routing | `AGENTS.md` |
 | **Actions** | curated, invocable skills | `skills/` |
 | **Knowledge** | auto-generated map of the code | `.understand-anything/knowledge-graph.json` |
-| **Sessions** | many named parallel agents, coordinated by file locks | NTM (`ntm`) |
+| **Sessions** | many named parallel agents, each in its own worktree, state-aware | herdr (`herdr`) |
 | **Externals** | live docs · GitHub · fast filesystem | Context7 · `gh` · `fd`/`eza`/`rg` |
 
 ## The loop
@@ -30,7 +30,7 @@ compound-engineering, gsd-core) plus four authored for hypercore — `research`,
 full provenance in [`SKILLS-ATTRIBUTION.md`](./SKILLS-ATTRIBUTION.md).
 
 ## Setup
-1. **Preflight** — `bash bin/install.sh` checks `gh`/`fd`/`eza`/`tmux`/`ntm` and
+1. **Preflight** — `bash bin/install.sh` checks `gh`/`fd`/`eza`/`herdr` and
    prints the exact install step for anything missing.
 2. **Skills** — activate as a plugin:
    ```
@@ -43,8 +43,9 @@ full provenance in [`SKILLS-ATTRIBUTION.md`](./SKILLS-ATTRIBUTION.md).
    server on next session start.
 4. **Knowledge layer** — `/plugin marketplace add Egonex-AI/Understand-Anything`
    → `/plugin install understand-anything` → `/understand`.
-5. **Sessions** — install NTM (`brew install dicklesworthstone/tap/ntm`), then
-   `ntm spawn <name> --cc=N` to fan out named Claude panes.
+5. **Sessions** — install herdr (`brew install herdr`), then
+   `herdr integration install claude codex` so it tracks agent state. Fan out with
+   `herdr worktree create --branch <name>` + `herdr agent start <name> --cwd <worktree> -- claude`.
 
 ## Distribution vs. consumer
 This repo is the **distribution**. A working project becomes hypercore-powered by
