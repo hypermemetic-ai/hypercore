@@ -1,0 +1,2 @@
+# no-mistakes gate — ignore local scratch/evidence; keep .no-mistakes.yaml tracked
+.no-mistakes/
