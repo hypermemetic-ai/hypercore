@@ -118,7 +118,8 @@ done
 
 gate_id=""
 if [ "$gate" = "1" ]; then
-  gate_id=$( { no-mistakes axi status 2>/dev/null || true; } | grep -oE '[0-9A-Z]{26}' | head -1 || true)
+  # same short timeout as render: a wedged/absent daemon must never hang a phase stamp
+  gate_id=$( { timeout 2 no-mistakes axi status 2>/dev/null || true; } | grep -oE '[0-9A-Z]{26}' | head -1 || true)
 fi
 
 mkdir -p "$dir"
@@ -149,10 +150,15 @@ else:
 if not st.get("started_at") or st.get("status") == "done":
     st = {"started_at": int(os.environ["NOW"])}
 
-# detail is phase-scoped: a phase change drops it unless this call re-supplies one
+# detail and status verdicts are phase-scoped: a phase change clears each unless
+# this call re-supplies it — green/red belong to the phase that was judged, so a
+# red Verify must not bleed its icon onto the repair phase that follows
 prev_phase = st.get("phase")
-if phase != prev_phase and not os.environ.get("DETAIL"):
-    st.pop("detail", None)
+if phase != prev_phase:
+    if not os.environ.get("DETAIL"):
+        st.pop("detail", None)
+    if not os.environ.get("STATUS"):
+        st["status"] = "working"
 
 st["phase"] = phase
 st["index"] = idx.get(phase.lower())
