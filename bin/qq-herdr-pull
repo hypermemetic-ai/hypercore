@@ -37,6 +37,11 @@ fi
 note() { "$HERDR" notification show "qq-pull" --body "$1" >/dev/null 2>&1 || true; }
 die()  { note "$1"; exit 0; }
 
+# jq drives every selection path below. Under `set -e` a missing jq would abort
+# the command substitution before die() could toast, so the binding would fail
+# silently — guard it up front instead.
+command -v jq >/dev/null 2>&1 || die "jq not found — required by qq-herdr-pull"
+
 sel="${1:-}"
 [ -n "$sel" ] || die "usage: qq-herdr-pull <N|next>"
 
@@ -67,6 +72,12 @@ case "$sel" in
     die "usage: qq-herdr-pull <N|next>"
     ;;
   *)
+    # Reject 0 (and any non-positive): jq reads index -1 as the LAST agent, so a
+    # bare `0` would silently pull the wrong pane instead of being an invalid
+    # 1-based number.
+    if [ "$sel" -lt 1 ]; then
+      die "agent number must be 1 or higher (got '$sel')"
+    fi
     source="$(jq -r --argjson n "$sel" '.result.agents[$n-1].pane_id // empty' <<<"$agents")"
     ;;
 esac
