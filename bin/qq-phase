@@ -37,6 +37,8 @@ try:                                    # never error: a malformed state file re
     st = json.load(open(os.environ["FILE"]))   # same as the missing-file / not-a-repo cases
 except Exception:
     raise SystemExit(0)
+if not isinstance(st, dict):            # valid but non-object JSON (null/[]/…) → treat as no state
+    raise SystemExit(0)
 branch = os.environ.get("BRANCH") or st.get("branch") or ""
 phase  = st.get("phase", "idle")
 status = st.get("status", "working")
@@ -133,6 +135,8 @@ file = os.environ["FILE"]
 try:
     with open(file) as f: st = json.load(f)
 except Exception:
+    st = {}
+if not isinstance(st, dict):    # non-object JSON (null/[]/…) → start clean, don't crash on .get()
     st = {}
 
 names = ["Triage", "Align", "Plan", "Build", "Verify", "Sign-off", "Review", "Compound"]

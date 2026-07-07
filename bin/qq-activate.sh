@@ -97,10 +97,16 @@ if not any(any("qq-wip-snapshot" in x.get("command", "") for x in e.get("hooks",
     stop.append({"hooks": [{"type": "command", "command": wip}]})
 # refreshInterval (seconds) re-runs render on a timer, not just on UI events — so
 # background qq-phase transitions stay visible while the coordinator sits idle
-# waiting on a subagent / the gate (the exact case the CC statusline docs call out)
-d["statusLine"] = {"type": "command", "command": os.environ["QQ_STATUSLINE"], "padding": 0, "refreshInterval": 3}
+# waiting on a subagent / the gate (the exact case the CC statusline docs call out).
+# Install/replace only a qq-owned status line — never silently discard a foreign one.
+_sl = d.get("statusLine")
+if not isinstance(_sl, dict) or "qq-phase" in _sl.get("command", ""):
+    d["statusLine"] = {"type": "command", "command": os.environ["QQ_STATUSLINE"], "padding": 0, "refreshInterval": 3}
+    _sl_msg = "status line wired"
+else:
+    _sl_msg = "kept existing non-qq statusLine (set it to `qq-phase render` for the qq widget)"
 json.dump(d, open(p, "w"), indent=2)
-print("     bypassPermissions + PreToolUse rail + Stop wip savepoint + status line wired")
+print("     bypassPermissions + PreToolUse rail + Stop wip savepoint + " + _sl_msg)
 PY
 
 say "6/7  Codex yolo -> ~/.codex/config.toml"
