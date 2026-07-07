@@ -116,8 +116,9 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>" && echo " 
 git -C "$QQ" push origin main && echo "     qq pushed" || echo "     qq push FAILED — pull/rebase then retry"
 
 # meeting-reviewer: stage ONLY the qq link artifacts; your src/tests WIP is left untouched
+# (.gitignore is now a qq artifact too — qq-link.sh repo adds the .qq/ ignore rule)
 bash "$QQ/bin/qq-link.sh" repo "$MR"
-git -C "$MR" add AGENTS.md .claude/qq-methodology.md .mcp.json CONCEPTS.md
+git -C "$MR" add AGENTS.md .claude/qq-methodology.md .mcp.json CONCEPTS.md .gitignore
 git -C "$MR" commit -q -m "adopt qq linked rules, skills and Context7
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>" && echo "     meeting-reviewer committed (qq layer only)" || echo "     meeting-reviewer: nothing to commit"
