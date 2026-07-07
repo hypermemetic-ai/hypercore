@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+# qq-herdr-pull — pull an agent into the focused herdr pane, replacing it.
+#
+# The mirror of focus_agent (prefix+alt+N, "go to agent N"): instead of jumping
+# you to the agent, this brings the agent to you. The agent's pane is moved into
+# your tab and the pane you were in is closed, so the agent takes its place.
+#
+# herdr's `pane swap` is within-tab only (it refuses cross-tab with reason
+# "cross_tab"), so this uses `pane move` + `pane close` to cross tabs.
+#
+# Bound in cockpit/herdr/config.toml as detached (type = "shell") custom keys, so
+# there is no visible command pane. herdr injects $HERDR_PANE_ID = the pane the
+# key was pressed in, which is what gets replaced; a query fallback covers the
+# case where the env is absent.
+#
+#   qq-herdr-pull <N>     pull the Nth agent in sidebar order (same N as prefix+alt+N)
+#   qq-herdr-pull next    pull the agent that most needs you (blocked > working > idle)
+#
+# Selection order follows `herdr agent list`, which is the order the sidebar
+# renders. Number N is 1-based and counts every agent including your own pane;
+# pulling yourself is a safe no-op (it will not close your own pane).
+set -euo pipefail
+
+# Resolve the herdr binary: env hint, PATH, then the known Homebrew location.
+if [ -n "${HERDR_BIN_PATH:-}" ] && [ -x "${HERDR_BIN_PATH}" ]; then
+  HERDR="${HERDR_BIN_PATH}"
+elif command -v herdr >/dev/null 2>&1; then
+  HERDR="herdr"
+elif [ -x /home/linuxbrew/.linuxbrew/bin/herdr ]; then
+  HERDR="/home/linuxbrew/.linuxbrew/bin/herdr"
+else
+  echo "qq-herdr-pull: herdr not found" >&2
+  exit 0
+fi
+
+# Detached from any pane, so surface problems as a herdr toast, never a hard fail.
+note() { "$HERDR" notification show "qq-pull" --body "$1" >/dev/null 2>&1 || true; }
+die()  { note "$1"; exit 0; }
+
+sel="${1:-}"
+[ -n "$sel" ] || die "usage: qq-herdr-pull <N|next>"
+
+# Target = the pane the key was pressed in. Prefer the injected env; fall back to
+# whatever herdr currently reports as focused (the detached shell does not steal it).
+target="${HERDR_PANE_ID:-}"
+if [ -z "$target" ]; then
+  target="$("$HERDR" pane current --current 2>/dev/null \
+    | jq -r '.result.pane.pane_id // empty')" || true
+fi
+[ -n "$target" ] || die "cannot resolve focused pane"
+
+agents="$("$HERDR" agent list 2>/dev/null)" || die "herdr agent list failed"
+
+case "$sel" in
+  next)
+    # Whoever most needs attention, excluding your own pane.
+    source="$(jq -r --arg me "$target" '
+      [.result.agents[] | select(.pane_id != $me)]
+      | sort_by(
+          if   .agent_status == "blocked" then 0
+          elif .agent_status == "working" then 1
+          elif .agent_status == "idle"    then 2
+          else 3 end)
+      | .[0].pane_id // empty' <<<"$agents")"
+    ;;
+  *[!0-9]* | "")
+    die "usage: qq-herdr-pull <N|next>"
+    ;;
+  *)
+    source="$(jq -r --argjson n "$sel" '.result.agents[$n-1].pane_id // empty' <<<"$agents")"
+    ;;
+esac
+
+[ -n "$source" ] || die "no agent for '$sel'"
+
+# Dry run for testing: report the resolved pair and stop before mutating layout.
+if [ -n "${QQ_HERDR_PULL_DRY:-}" ]; then
+  printf 'target=%s source=%s\n' "$target" "$source"
+  exit 0
+fi
+
+# Pulling your own pane would mean closing it — refuse.
+if [ "$source" = "$target" ]; then
+  note "#$sel is already your pane"
+  exit 0
+fi
+
+# The tab to move the agent into = the focused pane's tab.
+target_tab="$("$HERDR" pane get "$target" 2>/dev/null | jq -r '.result.pane.tab_id // empty')"
+[ -n "$target_tab" ] || die "cannot resolve focused tab"
+
+# Move the agent in beside the focused pane and grab focus, then close the pane
+# you were in so the agent takes its place. Only close if the move succeeded —
+# never destroy your pane for nothing.
+"$HERDR" pane move "$source" --tab "$target_tab" --target-pane "$target" --split right --focus >/dev/null 2>&1 \
+  || die "move failed ($source -> $target_tab)"
+
+"$HERDR" pane close "$target" >/dev/null 2>&1 \
+  || note "agent moved in, but could not close old pane $target"
