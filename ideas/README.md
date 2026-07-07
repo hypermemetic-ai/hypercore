@@ -25,3 +25,7 @@ it its own `NN-slug.md` file in this folder and leave a one-line pointer here.
   `codex exec` blocks forever on `Reading additional input from stdin...` unless you
   close stdin — pass `< /dev/null`. One-line fix; wire it into `orchestrate`'s Build
   handoff so it never recurs. _(2026-07-06)_
+- **Gate stuck after a rename** → [`04-gate-stale-path-after-rename.md`](04-gate-stale-path-after-rename.md).
+  `git push no-mistakes` "succeeds" but no PR opens — the gate's stored repo path is
+  the pre-rename `/home/qqp/projects/hypercore`; `no-mistakes init` repairs it. Add
+  gate-refresh to the rename checklist. _(2026-07-06)_
