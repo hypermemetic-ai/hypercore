@@ -21,3 +21,7 @@ it its own `NN-slug.md` file in this folder and leave a one-line pointer here.
   `qq-phase` stamps the loop's current phase to `.orchestrate/state.json` for a
   status widget. Built but unmerged — salvaged (with a re-appliable patch) from
   the pruned `qq-ac/orchestrate-progress` branch; promote or drop. _(2026-07-06)_
+- **`codex exec` stdin-hang** → [`03-codex-exec-stdin-hang.md`](03-codex-exec-stdin-hang.md).
+  `codex exec` blocks forever on `Reading additional input from stdin...` unless you
+  close stdin — pass `< /dev/null`. One-line fix; wire it into `orchestrate`'s Build
+  handoff so it never recurs. _(2026-07-06)_

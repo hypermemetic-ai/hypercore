@@ -73,8 +73,8 @@ bold "Skills"
 if [ -d skills ]; then
   n=$(find skills -maxdepth 2 -name SKILL.md 2>/dev/null | wc -l | tr -d ' ')
   ok "$n skills in ./skills/"
-  miss "activate in a project: /plugin marketplace add \"$(pwd)\"  then  /plugin install qq@qq"
-  miss "or vendor into a project: cp -R skills/* <project>/.claude/skills/"
+  miss "link skills live: bash bin/qq-link.sh skills"
+  miss "link a repo: bash bin/qq-link.sh repo <path>"
 else
   miss "skills/ not found — run from the qq repo root"
 fi

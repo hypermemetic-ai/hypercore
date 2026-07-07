@@ -1,8 +1,0 @@
-{
-  "name": "qq",
-  "description": "surlej's bespoke agentic-dev command center: skills, rules, knowledge, sessions, and a tuned terminal cockpit.",
-  "version": "0.1.0",
-  "author": { "name": "surlej" },
-  "license": "MIT",
-  "keywords": ["qq", "skills", "workflow", "engineering"]
-}
