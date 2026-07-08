@@ -43,10 +43,14 @@ check block 'cd /repo && git reset --hard'
 check block 'echo hi; git clean -fd'
 check block 'git status
 git reset --hard'
+check block '>/tmp/log git reset --hard'
+check block 'git reset 2>/tmp/log --hard'
 check block 'bash -c "git push --force"'
 check block "sh -lc 'git reset --hard'"
 check block "sh -c'git reset --hard'"
 check block "bash -lc'git push --delete origin x'"
+check block "bash <<< 'git reset --hard'"
+check block "sh -s <<< 'git clean -fd'"
 check block "sudo sh -c 'git reset --hard'"
 check block "env bash -c 'git push --force'"
 check block "env -S 'git reset --hard'"
@@ -108,6 +112,7 @@ git reset --hard'
 # --- benign: must allow (incl. observed false positives) ---------------------
 check allow 'git push'
 check allow 'git push origin main'
+check allow 'git push origin main > push.log 2>&1'
 check allow 'git push no-mistakes feature'
 check allow 'git push -u origin my-branch'
 check allow 'git -c user.name=x commit --allow-empty -m ok'
@@ -128,6 +133,7 @@ check allow 'git restore --staged file.txt'
 check allow 'git reflog'
 check allow 'git update-ref refs/wip/b abc123 def456'
 check allow 'echo "git push --force"'
+check allow "cat <<< 'git reset --hard'"
 check allow 'sudo echo "git reset --hard"'
 check allow "env -S 'echo git reset --hard'"
 check allow "xargs echo git reset --hard"

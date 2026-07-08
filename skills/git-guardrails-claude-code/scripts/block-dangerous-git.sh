@@ -44,18 +44,40 @@ def tokenize(text):
     lex.whitespace_split = True
     return list(lex)
 
+REDIRECTION_OPS = {"<", ">", ">>", "<>", ">|", "<&", ">&", "<<", "<<<",
+                   "&>", "&>>"}
+
+def is_redirection_op(tok):
+    return tok in REDIRECTION_OPS
+
+def is_shell_separator(tok):
+    return tok and all(c in PUNCT for c in tok) and not is_redirection_op(tok)
+
 def simple_commands(tokens):
-    """Split a token stream into simple commands at shell operators."""
-    seg = []
-    for t in tokens:
-        if t and all(c in PUNCT for c in t):
+    """Split a token stream into simple commands while stripping redirections."""
+    seg, here_strings, i = [], [], 0
+    while i < len(tokens):
+        t = tokens[i]
+        if t.isdigit() and i + 1 < len(tokens) and is_redirection_op(tokens[i + 1]):
+            op = tokens[i + 1]
+            if op == "<<<" and i + 2 < len(tokens):
+                here_strings.append(tokens[i + 2])
+            i += 3 if i + 2 < len(tokens) else 2
+            continue
+        if is_redirection_op(t):
+            if t == "<<<" and i + 1 < len(tokens):
+                here_strings.append(tokens[i + 1])
+            i += 2 if i + 1 < len(tokens) else 1
+            continue
+        if is_shell_separator(t):
             if seg:
-                yield seg
-            seg = []
+                yield seg, here_strings
+            seg, here_strings = [], []
         else:
             seg.append(t)
+        i += 1
     if seg:
-        yield seg
+        yield seg, here_strings
 
 def read_word(text, i):
     buf, quoted = [], False
@@ -663,7 +685,10 @@ def analyze_string(text, depth=0):
     scan_command_substitutions(expandable_heredocs, depth, single_quotes_protect=False)
     if shell_heredocs:
         analyze_string(shell_heredocs, depth + 1)
-    for seg in simple_commands(tokenize(bodyless)):
+    for seg, here_strings in simple_commands(tokenize(bodyless)):
+        if here_strings and segment_stdin_shell(seg):
+            for here_string in here_strings:
+                analyze_string(here_string, depth + 1)
         analyze(seg, depth)
 
 # ------------------------------------------------- conservative fallback
