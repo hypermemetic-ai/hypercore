@@ -65,6 +65,9 @@ composition is synthesis]
 > graph, not a spec corpus, and it changes the candidate class. New pick:
 > **beads** — see the addendum at the end of this file. The gate-as-enforcer
 > conclusion is unchanged; only the substrate moves.
+>
+> **RE-SUPERSEDED next day (07-08):** the substrate moved once more, beads →
+> **Backlog.md** — see Addendum 2 at the end of this file.
 
 **Layer B — adopt `OpenWiki` (langchain-ai, MIT), gate-triggered.** [high on
 the load-bearing facts — verified in-run against the repo and re-spot-checked
@@ -239,3 +242,32 @@ export) — cross-machine sync is `bd dolt push/pull`, and upgrades can carry
 schema migrations that exactly one clone should run. `bd init` auto-commits its
 wiring files, so adopt on the gated branch, not mid-flight. OpenSpec drops out
 of layer 2 entirely.
+
+## Addendum 2 (07-08, operator) — layer 2 re-picked: **Backlog.md**
+
+Settled the next day: **beads is dropped; the layer-2 substrate is
+`Backlog.md`** (MrLesk/Backlog.md), covering **intent + work status** in one
+surface. Verified against the repo 07-08: MIT, "Markdown-native Task Manager &
+Kanban visualizer for any Git repository", ~6k stars, v1.47.1 (2026-06-17);
+tasks are plain per-item markdown files in an in-repo `backlog/` directory;
+CLI (`backlog task create/edit/list`, `backlog board`, `backlog search`),
+terminal kanban + local web board (`backlog browser`); built for AI-assisted
+development (spec/plan/code review checkpoints; MCP integration for Claude
+Code and Codex). The gate-as-enforcer conclusion is unchanged — landing must
+reconcile the backlog; only the substrate moves (again).
+
+Trade against beads, stated honestly: Backlog.md's tasks are plain tracked
+markdown — human-legible, diffable, exit-friendly, no binary Dolt store, no
+schema migrations. But they live **in the branch dimension** (beads' one
+verified superpower was living outside it), so cross-worktree task visibility
+and merge behavior need the same smoke test beads got **before** the gate
+check is wired. No smoke test has been run yet; details above are
+repo-README-grade, not exercised.
+
+The full settled document stack as of 07-08 (operator): structure =
+codebase-memory-mcp (an efficient, different way for agents to look at the
+codebase) · intent + work status = Backlog.md · durable descriptive docs =
+OpenWiki · opportunistic/episodic docs = compound · enforcement = the gate at
+landing. Adjacent same-day decisions (agent-to-agent comms over herdr
+primitives; Codex workers become first-class herdr panes) are banked in
+`ideas/README.md` (#8, #9).

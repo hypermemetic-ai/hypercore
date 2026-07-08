@@ -231,6 +231,15 @@ escape hatch bypassing registry enforcement for ungated commits.
   ones. OpenSpec drops out of layer 2. See the addendum in
   [`research/2026-07-07-intent-and-business-logic-layers.md`](../research/2026-07-07-intent-and-business-logic-layers.md).
 
+  **Update (07-08, operator): beads dropped — layer 2 is `Backlog.md`**
+  (MrLesk/Backlog.md, MIT, ~6k★: per-task markdown files in an in-repo
+  `backlog/` dir, CLI + terminal/web kanban, agent-oriented). Intent + work
+  status in one plain-markdown surface; the gate stays the enforcer with the
+  same wiring idea. Open before wiring: Backlog.md has had none of beads'
+  verification — tasks live *in the branch dimension* (the thing beads' Dolt
+  store avoided), so cross-worktree visibility/merge behavior needs its own
+  smoke test. See Addendum 2 in the research file above.
+
 - **Layer 3 scope widened: OpenWiki takes *all* descriptive docs**, not just
   business logic — anything that documents what the system *is* consolidates
   under `openwiki/`. Layer 2 stays out of it by design: the registry records

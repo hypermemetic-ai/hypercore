@@ -75,13 +75,36 @@ it its own `NN-slug.md` file in this folder and leave a one-line pointer here.
   (layer 2 stays separate — intent isn't derivable from code, and OpenWiki's
   code-is-truth refresh would rewrite "want" into "is"); **escape hatch
   dropped** — everything lands through the gate, single workflow, single
-  registry-enforcement point; **layer 2 = `beads`** (MIT, agent-native nestable
-  issue graph, Dolt-backed — issues live outside the branch dimension, so
-  worktrees share one workspace; ✅ smoke-tested) with the gate enforcing
-  "landing maps to claimed/closed issues" — OpenSpec drops out.
+  registry-enforcement point; ~~layer 2 = `beads`~~ **superseded 07-08: layer 2
+  = `Backlog.md`** (MrLesk/Backlog.md, MIT — intent + work status as per-task
+  markdown files in an in-repo `backlog/` dir, CLI + terminal/web kanban,
+  agent-oriented) with the gate enforcing "landing maps to backlog tasks" —
+  beads and OpenSpec both drop out.
+  **Settled stack (07-08):** structure = codebase-memory-mcp (an efficient,
+  different way for agents to look at the codebase) · intent + work status =
+  Backlog.md · durable descriptive docs = OpenWiki · opportunistic/episodic
+  docs = compound · enforcement = the gate at landing.
   **Remaining (gated branch):** author the thin
   `code-graph` routing skill via `writing-skills`; retire the
   Understand-Anything plugin, its hooks, and `.understand-anything/` tracking;
   rewrite the Routing/merge-gate methodology sections (escape-hatch removal);
-  `bd init` + gate issue-check wiring; OpenWiki adoption + gate-triggered
-  refresh. _(2026-07-07)_
+  Backlog.md adoption (cross-worktree smoke test first, then `backlog init` +
+  gate task-check wiring); OpenWiki adoption + gate-triggered
+  refresh. _(2026-07-07 → 08)_
+- **#8 · Agent-to-agent comms = plain herdr** _(decided 07-08)._ When agents need
+  to talk to each other, they use herdr's own primitives — `herdr agent list` /
+  `send <target> <text>` / `read <target>` / `wait <target> --status …` (verified
+  present in the installed CLI) — no new infrastructure; much simpler than an MCP
+  agent-mail server. Deliberately unformalized: *teach* the agents the primitives
+  and watch what they do with them before designing any protocol. Next step: a
+  short "talking to other agents" note in the methodology / worker prompts.
+  _(2026-07-08)_
+- **#9 · Codex workers get their own herdr pane** _(decided 07-08)._ Codex is
+  about to become the main driver, so its workers stop being second-class
+  (today: headless `codex exec` inside the conductor's session while Claude
+  workers get panes). Run Codex workers as herdr agents (`herdr agent start
+  <name> -- codex …`) — one approach for every worker: own pane, sidebar
+  visibility, reachable via #8's send/read/wait. Touches `orchestrate`'s Build
+  handoff (the `codex exec` + `< /dev/null` model, and the `resume --last`
+  cross-worktree hazard in #6 Part 2.3) — a gated branch of its own.
+  _(2026-07-08)_
