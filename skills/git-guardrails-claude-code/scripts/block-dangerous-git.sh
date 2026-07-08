@@ -45,6 +45,31 @@ def block(reason):
 # ---------------------------------------------------------------- tokenizing
 PUNCT = "();<>|&`\n"
 
+def mask_shell_comments(text):
+    chars = list(text)
+    i, in_single, in_double = 0, False, False
+    while i < len(chars):
+        c = chars[i]
+        if c == "\\" and not in_single:
+            i += 2
+            continue
+        if c == "'" and not in_double:
+            in_single = not in_single
+            i += 1
+            continue
+        if c == '"' and not in_single:
+            in_double = not in_double
+            i += 1
+            continue
+        if (not in_single and not in_double and c == "#" and
+                (i == 0 or text[i - 1] in " \t\r\n;&|()")):
+            while i < len(chars) and chars[i] != "\n":
+                chars[i] = " "
+                i += 1
+            continue
+        i += 1
+    return "".join(chars)
+
 def split_closing_punct(tokens):
     out = []
     for tok in tokens:
@@ -65,7 +90,9 @@ def split_closing_punct(tokens):
     return out
 
 def tokenize(text):
-    lex = shlex.shlex(text, posix=True, punctuation_chars=PUNCT)
+    lex = shlex.shlex(mask_shell_comments(text), posix=True,
+                      punctuation_chars=PUNCT)
+    lex.commenters = ""
     lex.whitespace = " \t\r"        # newline separates commands, not words
     lex.whitespace_split = True
     return split_closing_punct(list(lex))
@@ -167,7 +194,49 @@ def read_word(text, i):
             i += 1
     return "".join(buf), quoted, i
 
+def mask_heredoc_ignored_contexts(line):
+    chars = list(line)
+    i, in_single, in_double = 0, False, False
+
+    def erase(start, end):
+        for k in range(start, min(end, len(chars))):
+            if chars[k] != "\n":
+                chars[k] = " "
+
+    while i < len(chars):
+        c = chars[i]
+        if c == "\\" and not in_single:
+            i += 2
+            continue
+        if c == "'" and not in_double:
+            in_single = not in_single
+            i += 1
+            continue
+        if c == '"' and not in_single:
+            in_double = not in_double
+            i += 1
+            continue
+        if in_single or in_double:
+            i += 1
+            continue
+        if c == "#" and (i == 0 or line[i - 1] in " \t\r\n;&|()"):
+            erase(i, len(chars))
+            break
+        if line.startswith("$((", i) or line.startswith("((", i):
+            start = i
+            j = i + (3 if line.startswith("$((", i) else 2)
+            end = line.find("))", j)
+            if end == -1:
+                erase(start, len(chars))
+                break
+            erase(start, end + 2)
+            i = end + 2
+            continue
+        i += 1
+    return "".join(chars)
+
 def heredocs_in_line(line):
+    line = mask_heredoc_ignored_contexts(line)
     docs = []
     i, in_single, in_double = 0, False, False
     while i < len(line):
@@ -225,7 +294,7 @@ def segment_stdin_shell(seg):
 
 def shell_heredoc_indexes(line):
     try:
-        tokens = tokenize(line)
+        tokens = tokenize(mask_heredoc_ignored_contexts(line))
     except Exception:
         return set()
     shell_docs, pipeline, words, docs = set(), [], [], []
@@ -541,10 +610,14 @@ def wrapped_command_start(cmd, seg, j):
     if cmd == "stdbuf":
         return skip_options(seg, j, STDBUF_VALUE_OPTS)
     if cmd == "nice":
+        if j < len(seg) and seg[j] == "--":
+            return j + 1
         if j < len(seg) and seg[j] == "-n":
             j += 2
         elif j < len(seg) and re.match(r"^-\d+$", seg[j]):
             j += 1
+        if j < len(seg) and seg[j] == "--":
+            return j + 1
         return j
     if cmd == "time":
         return skip_options(seg, j, TIME_VALUE_OPTS)
@@ -561,6 +634,8 @@ def wrapped_command_start(cmd, seg, j):
                 lookup_only = True
             j += 1
         return None if lookup_only else j
+    if j < len(seg) and seg[j] == "--":
+        return j + 1
     return j
 
 def exec_command_start(seg, j):
@@ -858,12 +933,13 @@ def analyze(seg, depth):
 
 def analyze_string(text, depth=0):
     bodyless, expandable_heredocs, shell_heredocs = without_heredoc_bodies(text)
-    scan_command_substitutions(bodyless, depth)
-    scan_process_substitutions(bodyless, depth)
+    executable_body = mask_shell_comments(bodyless)
+    scan_command_substitutions(executable_body, depth)
+    scan_process_substitutions(executable_body, depth)
     scan_command_substitutions(expandable_heredocs, depth, single_quotes_protect=False)
     if shell_heredocs:
         analyze_string(shell_heredocs, depth + 1)
-    for seg, here_strings in simple_commands(tokenize(bodyless)):
+    for seg, here_strings in simple_commands(tokenize(executable_body)):
         if here_strings and segment_stdin_shell(seg):
             for here_string in here_strings:
                 analyze_string(here_string, depth + 1)

@@ -48,6 +48,10 @@ check block 'cd /repo && git reset --hard'
 check block 'echo hi; git clean -fd'
 check block 'git status
 git reset --hard'
+check block 'echo $((1 << 2))
+git reset --hard'
+check block 'true # <<EOF
+git reset --hard'
 check block '>/tmp/log git reset --hard'
 check block 'git reset 2>/tmp/log --hard'
 check block 'cat < <(git reset --hard)'
@@ -68,6 +72,8 @@ check block "env -S 'FOO=bar git reset' --hard"
 check block 'timeout 5 git reset --hard'
 check block "timeout 5 bash -c 'git push --delete origin feature-x'"
 check block 'sudo git clean -fd'
+check block 'nohup -- git reset --hard'
+check block 'nice -- git clean -fd'
 check block 'xargs git branch -D < branches.txt'
 check block "xargs sh -c 'git update-ref -d refs/wip/main'"
 check block 'find . -exec git reset --hard \;'
@@ -144,6 +150,7 @@ check allow 'git clean -n'
 check allow 'git restore --staged file.txt'
 check allow 'git reflog'
 check allow 'git update-ref refs/wip/b abc123 def456'
+check allow 'echo $((1 << 2))'
 check allow 'echo "git push --force"'
 check allow 'echo "<(git reset --hard)"'
 check allow "cat <<< 'git reset --hard'"

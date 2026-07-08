@@ -43,13 +43,27 @@ fi
 # Record the snapshot: commit-tree with HEAD (+ previous snapshot) as parents, move ref.
 head=$(git rev-parse --quiet --verify HEAD 2>/dev/null || echo "")
 msg="wip: ${head:0:9}+uncommitted @ $(date -u +%FT%TZ) on ${branch}"
-parents=()
-[ -n "$head" ] && parents+=(-p "$head")
-[ -n "$prev" ] && parents+=(-p "$prev")
-commit=$(printf '%s\n' "$msg" | git commit-tree "$tree" "${parents[@]}")
+make_commit() {
+  local snapshot_parent="$1"
+  local parents=()
+  [ -n "$head" ] && parents+=(-p "$head")
+  [ -n "$snapshot_parent" ] && parents+=(-p "$snapshot_parent")
+  printf '%s\n' "$msg" | git commit-tree "$tree" "${parents[@]}"
+}
+
+commit=$(make_commit "$prev") || exit 0
 # Compare-and-swap: only move the ref if it still points where we read it
-# (zero-oid = "must not exist"). Two sessions in one tree can race this hook;
-# the loser's snapshot is superseded moments later and must never fail a Stop.
+# (zero-oid = "must not exist"). Two sessions in one tree can race this hook.
 zero=$(printf "%${#commit}s" "" | tr ' ' '0')
-git update-ref "$ref" "$commit" "${prev:-$zero}" 2>/dev/null || true
+if ! git update-ref "$ref" "$commit" "${prev:-$zero}" 2>/dev/null; then
+  current=$(git rev-parse --quiet --verify "$ref" 2>/dev/null || echo "")
+  current_tree=""
+  if [ -n "$current" ]; then
+    current_tree=$(git rev-parse "${current}^{tree}" 2>/dev/null || echo "")
+  fi
+  if [ "$tree" != "$current_tree" ]; then
+    retry_commit=$(make_commit "$current") || exit 0
+    git update-ref "$ref" "$retry_commit" "${current:-$zero}" 2>/dev/null || true
+  fi
+fi
 exit 0
