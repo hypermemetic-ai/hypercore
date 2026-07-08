@@ -4,8 +4,9 @@ title: 'Orchestrate rework: Codex workers as first-class herdr panes'
 status: To Do
 assignee: []
 created_date: '2026-07-08 14:41'
-updated_date: '2026-07-08 17:13'
-labels: []
+updated_date: '2026-07-08 21:02'
+labels:
+  - parallel-ok
 dependencies: []
 priority: high
 ordinal: 8000
@@ -30,3 +31,9 @@ Idea #9, decided 07-08: replace headless codex exec with herdr agent start <name
 <!-- SECTION:PLAN:BEGIN -->
 Design doc: docs/plans/2026-07-08-orchestrate-codex-panes.md (written 07-08, rides the rework branch). Lifecycle: agent start cx-<branch> per tree; brief/report via .qq/handoffs/<n>-{brief,report}.md; wait --status idle; repair in-pane (resume --last deleted).
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Surface overlap with TASK-11 (both reshape herdr panes/layout around the orchestrate/gate view). Parallel-ok, but if run in the same wave, the two agents should talk via herdr send/read before touching cockpit/herdr config; otherwise sequence 8 → 11.
+<!-- SECTION:NOTES:END -->

@@ -5,9 +5,11 @@
 # (verified work is committed; in-flight work between green points is not).
 #
 # Non-destructive by construction: it builds the snapshot in a temporary index and
-# only ever writes new git objects + moves refs/wip/<branch>. It is invisible to
-# normal git operations. No-op when the tree is clean, outside a repo, or when
-# nothing changed since the last snapshot.
+# only ever writes new git objects + moves refs/wip/<branch>. The ref update is
+# compare-and-swap so same-tree Stop hooks do not clobber each other, and hook
+# races never fail the caller. It is invisible to normal git operations. No-op
+# when the tree is clean, outside a repo, or when nothing changed since the last
+# snapshot.
 #
 # Recover with:  qq-wip list | diff | branch <name>
 set -euo pipefail
@@ -43,9 +45,27 @@ fi
 # Record the snapshot: commit-tree with HEAD (+ previous snapshot) as parents, move ref.
 head=$(git rev-parse --quiet --verify HEAD 2>/dev/null || echo "")
 msg="wip: ${head:0:9}+uncommitted @ $(date -u +%FT%TZ) on ${branch}"
-parents=()
-[ -n "$head" ] && parents+=(-p "$head")
-[ -n "$prev" ] && parents+=(-p "$prev")
-commit=$(printf '%s\n' "$msg" | git commit-tree "$tree" "${parents[@]}")
-git update-ref "$ref" "$commit"
+make_commit() {
+  local snapshot_parent="$1"
+  local parents=()
+  [ -n "$head" ] && parents+=(-p "$head")
+  [ -n "$snapshot_parent" ] && parents+=(-p "$snapshot_parent")
+  printf '%s\n' "$msg" | git commit-tree "$tree" "${parents[@]}"
+}
+
+commit=$(make_commit "$prev") || exit 0
+# Compare-and-swap: only move the ref if it still points where we read it
+# (zero-oid = "must not exist"). Two sessions in one tree can race this hook.
+zero=$(printf "%${#commit}s" "" | tr ' ' '0')
+if ! git update-ref "$ref" "$commit" "${prev:-$zero}" 2>/dev/null; then
+  current=$(git rev-parse --quiet --verify "$ref" 2>/dev/null || echo "")
+  current_tree=""
+  if [ -n "$current" ]; then
+    current_tree=$(git rev-parse "${current}^{tree}" 2>/dev/null || echo "")
+  fi
+  if [ "$tree" != "$current_tree" ]; then
+    retry_commit=$(make_commit "$current") || exit 0
+    git update-ref "$ref" "$retry_commit" "${current:-$zero}" 2>/dev/null || true
+  fi
+fi
 exit 0

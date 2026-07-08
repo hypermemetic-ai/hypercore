@@ -4,9 +4,10 @@ title: Generate the initial openwiki/ wiki
 status: To Do
 assignee: []
 created_date: '2026-07-08 14:41'
-updated_date: '2026-07-08 18:06'
+updated_date: '2026-07-08 21:02'
 labels:
   - research
+  - parallel-ok
 dependencies: []
 priority: medium
 ordinal: 7000

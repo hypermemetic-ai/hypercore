@@ -4,8 +4,9 @@ title: 'Backlog board: compact card labels — kill the TASK- prefix noise'
 status: To Do
 assignee: []
 created_date: '2026-07-08 17:30'
-updated_date: '2026-07-08 17:37'
-labels: []
+updated_date: '2026-07-08 21:02'
+labels:
+  - parallel-ok
 dependencies: []
 priority: low
 ordinal: 12000

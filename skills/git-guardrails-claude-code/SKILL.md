@@ -9,17 +9,24 @@ Sets up a PreToolUse hook that intercepts and blocks dangerous git commands befo
 
 ## What Gets Blocked
 
-- `git push --force` / `git push -f` / `git push --mirror`
+- force-push: `git push --force` / `-f` / `--force-with-lease` / `--mirror` / `+refspec`
+  (plain `git push` is allowed — qq's modification; upstream blocked all pushes)
+- remote branch deletion: `git push --delete` / `-d` / `--prune` / `:branch`
 - `git reset --hard`
 - `git clean -f` / `git clean -fd`
 - `git branch -D`
 - `git checkout .` / `git restore .`
+- `git reflog expire`, `git update-ref -d`
+- history rewrites: `filter-branch`, `filter-repo`
+
+Matching is argv-aware: the command line is tokenized and only actual git
+invocations are inspected (including through wrappers like `sudo`/`timeout`/
+`xargs`, `sh -c` strings, compound commands, and `git -C <path>`), so a command
+that merely *mentions* a dangerous phrase in quoted prose — a commit message, a
+search pattern, an `--instructions` argument — is not blocked. Unparseable lines
+fall back to conservative whole-line matching, failing safe.
 
 When blocked, Claude sees a message telling it that it does not have authority to access these commands.
-
-Plain `git push` is allowed; remote branch deletion forms (`git push --delete`,
-`git push origin :branch`) are not mechanically blocked yet and follow qq's
-verified-supersession + owner-confirmation convention.
 
 ## Steps
 
@@ -90,10 +97,17 @@ Ask if user wants to add or remove any patterns from the blocked list. Edit the 
 
 ### 5. Verify
 
-Run a quick test:
+Run the bundled case table (57 block/allow cases):
 
 ```bash
-echo '{"tool_input":{"command":"git push --force origin main"}}' | <path-to-script>
+bash scripts/test-block-dangerous-git.sh
 ```
 
-Should exit with code 2 and print a BLOCKED message to stderr.
+Or a quick manual check:
+
+```bash
+echo '{"tool_input":{"command":"git reset --hard"}}' | <path-to-script>
+```
+
+Should exit with code 2 and print a BLOCKED message to stderr, while
+`git push origin main` should exit 0 (allowed).

@@ -99,7 +99,11 @@ per-repo, never an LLM call. The Claude Code status line reads it (`qq-phase
 render`, merging the gate's own `no-mistakes axi status` steps), so loop position
 and pipeline position show as one. Orchestrate's loop is the first producer; any
 background skill can stamp the same surface with free-form phases (e.g.
-`capturing`, `researching`) and mark completion with `qq-phase done`.
+`capturing`, `researching`) and mark completion with `qq-phase done --producer
+<id>`. Producers stamp concurrently without clobbering: each writes its own slot
+(`--producer <id>`, default `main`) and `render` shows every active slot — one
+producer finishing never resets another's state. Bare `qq-phase clear` wipes all
+state; `qq-phase clear --producer <id>` removes one slot.
 
 ## Git — how work lands
 - **Commit on green.** A commit is a claim: commit only what
@@ -124,10 +128,10 @@ background skill can stamp the same surface with free-form phases (e.g.
   automatically. A superseded-but-unmerged branch is deleted only after verified
   content supersession (`git cherry` / diff against `main`) and explicit owner
   confirmation; the git rail mechanically blocks local force-deletes
-  (`git branch -D`), while remote delete forms (`git push --delete`,
-  `git push origin :branch`) remain backlog task-3 work. Until then, remote
-  deletion follows the same verified-supersession + explicit owner confirmation
-  procedure by convention rather than by hook. Unlanded work is never deleted in
+  (`git branch -D`) and remote delete forms (`git push --delete`,
+  `git push --prune`, `git push origin :branch`). Unmerged remote deletion
+  therefore requires the same verified-supersession + explicit owner
+  confirmation procedure and owner action. Unlanded work is never deleted in
   cleanup — it lands through the gate or stays.
 
 **Merge gate: all-gated — one landing path.** Green work accumulates on its
@@ -177,5 +181,7 @@ blocked in herdr; the `qq-phase` status line shows the gate step.
 
 Skills are linked from qq, vendored from MIT sources or authored for qq; see qq's
 `SKILLS-ATTRIBUTION.md`. The git rail runs as an always-on hook that blocks
-force-push, `reset --hard`, `clean -fd`, `git branch -D`, and history rewrites
-before they execute.
+force-push, `reset --hard`, `clean -fd`, `git branch -D`, remote branch deletion,
+`reflog expire`, `update-ref -d`, and history rewrites before they execute —
+argv-aware, so a command that merely mentions a dangerous phrase in quoted prose
+is not blocked.

@@ -6,8 +6,9 @@ title: >-
 status: To Do
 assignee: []
 created_date: '2026-07-08 15:53'
-updated_date: '2026-07-08 18:02'
-labels: []
+updated_date: '2026-07-08 21:02'
+labels:
+  - parallel-ok
 dependencies:
   - TASK-10
 priority: high
@@ -29,5 +30,5 @@ Operator (07-08): runs 'take forever while being completely invisible - drives m
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
-Root cause found for the 'stuck at ci' impression (07-08, run 01KX132C): the qq repo has NO .github/workflows at all, so the gate's ci step waits on PR checks that will never report ('no checks reported' per gh pr checks). Everything before ci was green and PR #4 was already open+mergeable while ci sat 'running'. Fix candidates: skip/short-circuit ci when the repo has no workflows, or add a trivial workflow, or bound the ci step with a visible timeout.
+Surface overlap with TASK-8 — see its notes; coordinate via herdr or sequence after it.
 <!-- SECTION:NOTES:END -->

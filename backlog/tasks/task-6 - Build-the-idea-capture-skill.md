@@ -4,8 +4,9 @@ title: Build the /idea capture skill
 status: To Do
 assignee: []
 created_date: '2026-07-08 14:41'
-updated_date: '2026-07-08 14:41'
-labels: []
+updated_date: '2026-07-08 21:02'
+labels:
+  - parallel-ok
 dependencies:
   - TASK-3
 priority: medium
