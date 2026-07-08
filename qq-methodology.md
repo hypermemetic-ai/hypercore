@@ -20,8 +20,9 @@ repo via a symlinked `@`-import — do not edit a copy; edit it in qq.
     session that owns the main tree and **commit the new task file immediately**
     — IDs are minted from committed branch state, so uncommitted tasks in
     parallel worktrees can mint duplicates. Workers only edit tasks they claim.
-    The gate enforces the trust condition: a landing that doesn't touch the
-    registry is refused (see Git below).
+    The gate enforces the mechanical trust prerequisite: a landing that doesn't
+    touch the registry is refused; semantic correctness is still reviewed in
+    the PR (see Git below).
   - *Durable descriptive docs* — `openwiki/` (OpenWiki): agent-written docs of
     what the system *is*, refreshed inside the gate transaction at landing —
     never pointed at the registry (it would rewrite "want" into "is").
@@ -40,9 +41,9 @@ repo via a symlinked `@`-import — do not edit a copy; edit it in qq.
 - **Externals** — Context7 (live, version-correct library docs), `gh` (GitHub),
   `fd` / `eza` / `rg` (fast filesystem), and **the gate** (`no-mistakes`, an
   external MIT tool): every landing is *pushed to it* — an independent pipeline
-  reviews the diff, runs the checks, reconciles the registry contract, refreshes
-  adopted descriptive docs, and opens a PR. It is capability you push to, not
-  process you maintain.
+  reviews the diff, runs the checks, requires a registry touch once `backlog/` is
+  adopted, refreshes adopted descriptive docs, and opens a PR. It is capability
+  you push to, not process you maintain.
 
 ## Behavioral floor (always)
 1. **Think before coding** — surface assumptions, offer interpretations, ask
@@ -122,10 +123,10 @@ background skill can stamp the same surface with free-form phases (e.g.
 **Merge gate: all-gated — one landing path.** Green work accumulates on its
 branch; landing is always `git push no-mistakes <branch>` — the independent
 pipeline reviews the diff, runs the checks (including the registry check: a
-diff that doesn't reconcile `backlog/` is refused), refreshes `openwiki/`
-inside the same transaction once configured, and opens a PR a human merges
-with one click. The former `trunk` / `blast-radius` modes are retired
-(operator decision, 2026-07-07): a second landing path would be a second —
+diff that doesn't touch `backlog/` is refused once the registry exists),
+refreshes `openwiki/` inside the same transaction once configured, and opens a
+PR a human merges with one click. The former `trunk` / `blast-radius` modes are
+retired (operator decision, 2026-07-07): a second landing path would be a second —
 unenforced — registry producer, and partial coverage cannot serve as truth.
 Agents never touch `main`.
 

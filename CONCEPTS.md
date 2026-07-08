@@ -21,8 +21,8 @@ gate-refreshed) · episodic docs (`docs/solutions/` + `CONCEPTS.md`, compound).
 
 **intent registry** — `backlog/` (Backlog.md): what the operator wants and where
 work stands, one markdown file per task. Trustworthy only because it is total —
-the gate refuses any landing that doesn't reconcile it
-(`bin/qq-registry-check.sh`).
+the gate refuses any landing that doesn't touch it once adopted
+(`bin/qq-registry-check.sh`); PR review checks whether that touch is truthful.
 
 **one landing path** — The all-gated merge rule: every change reaches `main` via
 `git push no-mistakes <branch>` → validated PR. Triage scales ceremony, never the

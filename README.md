@@ -36,8 +36,9 @@ as `/grilling`, `/executing-plans`, and so on. The index is in `AGENTS.md`; full
 provenance is in [`SKILLS-ATTRIBUTION.md`](./SKILLS-ATTRIBUTION.md).
 
 ## Setup
-1. **Preflight** — `bash bin/install.sh` checks the external surface and cockpit
-   tools, then prints exact install hints for anything missing.
+1. **Preflight** — `bash bin/install.sh` checks the external surface, document
+   stack, and cockpit tools, then prints exact install hints for anything
+   missing.
 2. **One-shot activation** — `bash bin/qq-activate.sh` installs the guardrail
    hook, wires the WIP savepoint and `qq-phase` status line, symlinks cockpit
    configs from this repo into `~/.config`, and links skills into
@@ -51,9 +52,11 @@ provenance is in [`SKILLS-ATTRIBUTION.md`](./SKILLS-ATTRIBUTION.md).
    ```
    bash bin/qq-link.sh repo <path>
    ```
-   This adds the live methodology symlink, ensures the repo imports it, merges
+   This adds the live methodology symlink, ensures the repo imports it, records
+   the all-gated landing path in newly scaffolded `AGENTS.md` files, merges
    Context7 into `.mcp.json`, seeds `CONCEPTS.md` only when missing, and ignores
-   the transient `.qq/` status directory.
+   the transient `.qq/` status directory. Retired gate values
+   (`trunk` / `blast-radius` / `human`) are rejected.
 5. **Cockpit** — `cockpit/` is the source of truth for yazi, glow, herdr, and
    shell navigation. `herdr prefix+f` opens `qqy`; yazi starts at the repo root;
    pressing Enter on `.md` renders in-pane via mdcat or the tuned Glow theme.

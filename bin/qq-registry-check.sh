@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # qq registry check — the gate's `commands.test`. Enforces the intent-registry
-# trust condition: a landing whose diff doesn't reconcile `backlog/` is refused.
-# One landing path + this check = the registry stays exhaustive ("EVERYTHING,
-# updated at landing"), which is what lets it serve as truth.
+# prerequisite the script can prove: a landing whose diff doesn't touch
+# `backlog/` is refused. One landing path + this mechanical check + PR review is
+# what lets the registry stay exhaustive ("EVERYTHING, updated at landing").
 # Runs inside the no-mistakes pipeline checkout; also runnable locally.
 set -euo pipefail
 

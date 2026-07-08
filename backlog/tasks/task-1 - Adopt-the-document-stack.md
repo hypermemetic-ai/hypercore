@@ -4,6 +4,7 @@ title: Adopt the document stack
 status: In Progress
 assignee: []
 created_date: '2026-07-08 14:41'
+updated_date: '2026-07-08 14:41'
 labels: []
 dependencies: []
 priority: high
@@ -18,7 +19,7 @@ Retire Understand-Anything (untrack .understand-anything/, drop plugin refs), re
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 No tracked .understand-anything/ and no plugin references in README/methodology/install
+- [x] #1 No tracked .understand-anything/ and no plugin references in README/methodology/install
 - [ ] #2 Gate refuses a landing that does not touch backlog/ (once config is on main)
-- [ ] #3 Methodology documents the four-document stack and the herdr agent-comms primitives
+- [x] #3 Methodology documents the four-document stack and the herdr agent-comms primitives
 <!-- AC:END -->
