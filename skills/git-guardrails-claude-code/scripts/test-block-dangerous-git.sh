@@ -123,6 +123,11 @@ check block 'cat <<EOF |
 bash
 git reset --hard
 EOF'
+check block "cat <<'EOF' | (
+bash
+)
+git reset --hard
+EOF"
 check block "env -S 'bash' <<'EOF'
 git reset --hard
 EOF"
@@ -198,6 +203,12 @@ EOF'
 check allow "cat <<'EOF'
 \$(git reset --hard)
 EOF"
+# Known conservative case: composed double-heredoc pipelines are not precisely attributed.
+check block "cat <<'DATA' | bash <<'SCRIPT'
+git reset --hard
+DATA
+echo ok
+SCRIPT"
 # unparseable line, no dangerous substring → fallback allows
 check allow 'echo "unclosed quote'
 # unparseable line WITH dangerous substring → fallback blocks (fails safe)

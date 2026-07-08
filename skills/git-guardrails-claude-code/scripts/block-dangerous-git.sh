@@ -415,6 +415,15 @@ def shell_heredoc_indexes(line):
     finish_pipeline()
     return shell_docs
 
+def conservative_heredoc_indexes(line, doc_count):
+    try:
+        tokens = tokenize(mask_heredoc_ignored_contexts(line))
+    except Exception:
+        return set(range(doc_count))
+    if any(t in {"(", ")"} for t in tokens) and any(t in {"|", "|&"} for t in tokens):
+        return set(range(doc_count))
+    return None
+
 def shell_header_continues(text):
     tail = text[:-1] if text.endswith("\n") else text
     backslashes = 0
@@ -455,7 +464,9 @@ def without_heredoc_bodies(text):
         if docs and shell_header_continues(header):
             continue
         kept.append(header)
-        shell_docs = shell_heredoc_indexes(header)
+        shell_docs = conservative_heredoc_indexes(header, len(docs))
+        if shell_docs is None:
+            shell_docs = shell_heredoc_indexes(header)
         for i, (delim, expands, strip_tabs) in enumerate(docs):
             pending.append([delim, expands, strip_tabs, i in shell_docs, []])
         header_lines = []
