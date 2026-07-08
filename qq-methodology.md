@@ -177,4 +177,5 @@ blocked in herdr; the `qq-phase` status line shows the gate step.
 
 Skills are linked from qq, vendored from MIT sources or authored for qq; see qq's
 `SKILLS-ATTRIBUTION.md`. The git rail runs as an always-on hook that blocks
-force-push, `reset --hard`, `clean -fd`, and history rewrites before they execute.
+force-push, `reset --hard`, `clean -fd`, `git branch -D`, and history rewrites
+before they execute.
