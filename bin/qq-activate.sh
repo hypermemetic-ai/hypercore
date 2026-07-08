@@ -8,8 +8,8 @@
 #   1. herdr : install claude + codex integrations so herdr tracks agent state
 #   2. Cockpit: symlink tuned terminal configs into ~/.config
 #   3. Skills : symlink qq skills into ~/.claude/skills
-#   4. Hooks : git rail (block destructive git) + wip savepoint (Stop) (~/.claude/hooks + settings.json)
-#   5. Claude: yolo — permissions.defaultMode="bypassPermissions"  (~/.claude/settings.json)
+#   4. Hooks : git rail + WIP savepoint + qq-phase on PATH (~/.claude/hooks + ~/.local/bin)
+#   5. Claude: yolo + qq-phase status line (`qq-phase render`) (~/.claude/settings.json)
 #   6. Codex : yolo — approval_policy="never", sandbox_mode="danger-full-access" (~/.codex/config.toml)
 #   7. Commit + push both repos (meeting-reviewer: qq link artifacts ONLY; your src/tests stay uncommitted)
 #
@@ -71,12 +71,14 @@ echo "     installed ~/.claude/hooks/block-dangerous-git.sh"
 ln -sfn "$QQ/bin/qq-wip-snapshot.sh" "$HOME/.claude/hooks/qq-wip-snapshot.sh"
 mkdir -p "$HOME/.local/bin"; ln -sfn "$QQ/bin/qq-wip" "$HOME/.local/bin/qq-wip"
 ln -sfn "$QQ/bin/qq-herdr-pull" "$HOME/.local/bin/qq-herdr-pull"
+ln -sfn "$QQ/bin/qq-phase" "$HOME/.local/bin/qq-phase"
 echo "     linked wip savepoint + qq-wip (recover: qq-wip list|diff|branch <name>)"
 echo "     linked qq-herdr-pull (prefix+F<N> pulls agent N into the focused pane)"
+echo "     linked qq-phase on PATH (so 'qq-phase <Phase>' producers resolve, not just the status line)"
 
-say "5/7  Claude Code yolo + wire the rail into ~/.claude/settings.json"
+say "5/7  Claude Code yolo + wire the rail + status line into ~/.claude/settings.json"
 bak "$HOME/.claude/settings.json"
-python3 - <<'PY'
+QQ_STATUSLINE="$QQ/bin/qq-phase render" python3 - <<'PY'
 import json, os
 p = os.path.expanduser("~/.claude/settings.json")
 d = {}
@@ -93,8 +95,18 @@ wip = os.path.expanduser("~/.claude/hooks/qq-wip-snapshot.sh")
 stop = d.setdefault("hooks", {}).setdefault("Stop", [])
 if not any(any("qq-wip-snapshot" in x.get("command", "") for x in e.get("hooks", [])) for e in stop):
     stop.append({"hooks": [{"type": "command", "command": wip}]})
+# refreshInterval (seconds) re-runs render on a timer, not just on UI events — so
+# background qq-phase transitions stay visible while the coordinator sits idle
+# waiting on a subagent / the gate (the exact case the CC statusline docs call out).
+# Install/replace only a qq-owned status line — never silently discard a foreign one.
+_sl = d.get("statusLine")
+if not isinstance(_sl, dict) or "qq-phase" in _sl.get("command", ""):
+    d["statusLine"] = {"type": "command", "command": os.environ["QQ_STATUSLINE"], "padding": 0, "refreshInterval": 3}
+    _sl_msg = "status line wired"
+else:
+    _sl_msg = "kept existing non-qq statusLine (set it to `qq-phase render` for the qq widget)"
 json.dump(d, open(p, "w"), indent=2)
-print("     bypassPermissions + PreToolUse rail + Stop wip savepoint wired")
+print("     bypassPermissions + PreToolUse rail + Stop wip savepoint + " + _sl_msg)
 PY
 
 say "6/7  Codex yolo -> ~/.codex/config.toml"
@@ -110,8 +122,9 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>" && echo " 
 git -C "$QQ" push origin main && echo "     qq pushed" || echo "     qq push FAILED — pull/rebase then retry"
 
 # meeting-reviewer: stage ONLY the qq link artifacts; your src/tests WIP is left untouched
+# (.gitignore is now a qq artifact too — qq-link.sh repo adds the .qq/ ignore rule)
 bash "$QQ/bin/qq-link.sh" repo "$MR"
-git -C "$MR" add AGENTS.md .claude/qq-methodology.md .mcp.json CONCEPTS.md
+git -C "$MR" add AGENTS.md .claude/qq-methodology.md .mcp.json CONCEPTS.md .gitignore
 git -C "$MR" commit -q -m "adopt qq linked rules, skills and Context7
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>" && echo "     meeting-reviewer committed (qq layer only)" || echo "     meeting-reviewer: nothing to commit"

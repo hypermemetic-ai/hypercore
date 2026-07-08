@@ -155,6 +155,22 @@ EOF
   printf 'seeded: %s\n' "$concepts"
 }
 
+ensure_gitignore() {
+  local repo="$1"
+  local gitignore="$repo/.gitignore"
+
+  # qq-phase stamps .qq/state.json in whatever repo it runs in; every linked repo
+  # needs to ignore it or the first phase stamp leaves untracked transient state.
+  if [ -f "$gitignore" ] && grep -qxF '.qq/' "$gitignore"; then
+    printf 'ok: %s ignores .qq/\n' "$gitignore"
+    return
+  fi
+
+  if [ -s "$gitignore" ]; then printf '\n' >> "$gitignore"; fi
+  printf '# qq background-work progress — transient per-repo state a status widget reads\n.qq/\n' >> "$gitignore"
+  printf 'updated: %s ignores .qq/\n' "$gitignore"
+}
+
 link_repo() {
   local repo
   local gate="blast-radius"
@@ -192,6 +208,7 @@ link_repo() {
   ensure_agents_import "$repo" "$gate"
   merge_context7 "$repo/.mcp.json"
   seed_concepts "$repo/CONCEPTS.md"
+  ensure_gitignore "$repo"
 }
 
 main() {

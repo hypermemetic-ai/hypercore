@@ -16,7 +16,7 @@ repo via a symlinked `@`-import — do not edit a copy; edit it in qq.
   its own git worktree; herdr's sidebar shows which agent is blocked / working /
   done / idle, so you see at a glance which one needs you.
 - **Cockpit** — the operator's tuned terminal surface, linked from the qq repo:
-  herdr, yazi, broot, glow, mdcat, and shell navigation.
+  herdr, yazi, broot, glow, mdcat, shell navigation, and the `qq-phase` status line.
 - **Externals** — Context7 (live, version-correct library docs), `gh` (GitHub),
   `fd` / `eza` / `rg` (fast filesystem), and **the gate** (`no-mistakes`, an
   external MIT tool): real work is *pushed to it* — an independent pipeline
@@ -65,6 +65,14 @@ The one invariant: **`verification-before-completion` is never skipped.**
 Support, any time: `research` (delegated, cited investigation → `research/`);
 `handoff` (compact state for a fresh agent when context runs low); `writing-skills`
 (author or edit a skill, eval-first).
+
+**Progress is stamped.** Long-running work records its current phase to
+`.qq/state.json` via `qq-phase <Phase>` at each boundary — cheap, token-free,
+per-repo, never an LLM call. The Claude Code status line reads it (`qq-phase
+render`, merging the gate's own `no-mistakes axi status` steps), so loop position
+and pipeline position show as one. Orchestrate's loop is the first producer; any
+background skill can stamp the same surface with free-form phases (e.g.
+`capturing`, `researching`) and mark completion with `qq-phase done`.
 
 ## Git — how work lands
 - **Commit on green.** A commit is a claim: commit only what
