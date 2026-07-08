@@ -39,6 +39,7 @@ check block 'git branch --delete -f feature'
 check block 'git checkout .'
 check block 'git checkout -- .'
 check block 'git restore .'
+check block 'git restore --staged --worktree .'
 check block "git filter-branch --tree-filter 'rm -f secrets' HEAD"
 check block 'git filter-repo --path x'
 check block 'git reflog expire --expire=now --all'
@@ -74,9 +75,12 @@ check block "timeout 5 bash -c 'git push --delete origin feature-x'"
 check block 'sudo git clean -fd'
 check block 'nohup -- git reset --hard'
 check block 'nice -- git clean -fd'
+check block 'nice --adjustment=5 git reset --hard'
+check block 'nice --adjustment 5 git clean -fd'
 check block 'xargs git branch -D < branches.txt'
 check block "xargs sh -c 'git update-ref -d refs/wip/main'"
 check block 'find . -exec git reset --hard \;'
+check block 'find . \( -name x -exec git reset --hard \; \)'
 check block 'git -C /some/repo reset --hard'
 check block "git -c alias.nuke='!git reset --hard' nuke"
 check block "git -c alias.nuke='reset --hard' nuke"
@@ -111,6 +115,10 @@ check block 'sh -s <<EOF
 git clean -fd
 EOF'
 check block 'cat <<EOF | bash
+git reset --hard
+EOF'
+check block 'cat <<EOF |
+bash
 git reset --hard
 EOF'
 check block "env -S 'bash' <<'EOF'
@@ -148,6 +156,7 @@ check allow 'git checkout -b new-branch'
 check allow 'git checkout ./specific-file.txt'
 check allow 'git clean -n'
 check allow 'git restore --staged file.txt'
+check allow 'git restore --staged .'
 check allow 'git reflog'
 check allow 'git update-ref refs/wip/b abc123 def456'
 check allow 'echo $((1 << 2))'
@@ -163,6 +172,7 @@ check allow "git -c alias.note='!echo git reset --hard' note"
 check allow "printf 'git reset --hard\\n' > notes.md"
 check allow 'diff <(git show main:f) <(git show dev:f)'
 check allow "find . -name '*.md' -exec grep -l 'reset --hard' {} \;"
+check allow "find . \( -name '*.md' \) -exec grep -l 'reset --hard' {} \;"
 check allow "rg '\$(git reset --hard)' docs/"
 check allow "rg '\`git reset --hard\`' docs/"
 check allow "git log --grep 'filter-branch'"

@@ -44,6 +44,52 @@ def block(reason):
 
 # ---------------------------------------------------------------- tokenizing
 PUNCT = "();<>|&`\n"
+LITERAL_PUNCT = {
+    "(": "\x1fQQ_LITERAL_LPAREN\x1f",
+    ")": "\x1fQQ_LITERAL_RPAREN\x1f",
+    ";": "\x1fQQ_LITERAL_SEMI\x1f",
+}
+LITERAL_SEMI = LITERAL_PUNCT[";"]
+
+def protect_literal_punct(text):
+    out, i = [], 0
+    while i < len(text):
+        c = text[i]
+        if c == "\\":
+            if i + 1 < len(text) and text[i + 1] in LITERAL_PUNCT:
+                out.append(LITERAL_PUNCT[text[i + 1]])
+                i += 2
+            else:
+                out.append(c)
+                i += 1
+            continue
+        if c in ("'", '"'):
+            quote, j, buf = c, i + 1, []
+            while j < len(text):
+                if text[j] == "\\" and quote == '"' and j + 1 < len(text):
+                    buf.append(text[j])
+                    buf.append(text[j + 1])
+                    j += 2
+                    continue
+                if text[j] == quote:
+                    content = "".join(buf)
+                    if content in LITERAL_PUNCT:
+                        out.append(LITERAL_PUNCT[content])
+                    else:
+                        out.append(quote)
+                        out.append(content)
+                        out.append(quote)
+                    i = j + 1
+                    break
+                buf.append(text[j])
+                j += 1
+            else:
+                out.append(text[i:])
+                return "".join(out)
+            continue
+        out.append(c)
+        i += 1
+    return "".join(out)
 
 def mask_shell_comments(text):
     chars = list(text)
@@ -73,10 +119,10 @@ def mask_shell_comments(text):
 def split_closing_punct(tokens):
     out = []
     for tok in tokens:
-        if tok and all(c in PUNCT for c in tok) and ")" in tok and tok != ")":
+        if tok and all(c in PUNCT for c in tok) and any(c in tok for c in "()\n"):
             buf = []
             for c in tok:
-                if c == ")":
+                if c in "()\n":
                     if buf:
                         out.append("".join(buf))
                         buf = []
@@ -90,7 +136,7 @@ def split_closing_punct(tokens):
     return out
 
 def tokenize(text):
-    lex = shlex.shlex(mask_shell_comments(text), posix=True,
+    lex = shlex.shlex(mask_shell_comments(protect_literal_punct(text)), posix=True,
                       punctuation_chars=PUNCT)
     lex.commenters = ""
     lex.whitespace = " \t\r"        # newline separates commands, not words
@@ -298,6 +344,7 @@ def shell_heredoc_indexes(line):
     except Exception:
         return set()
     shell_docs, pipeline, words, docs = set(), [], [], []
+    after_pipe = False
     doc_i, i = 0, 0
 
     def finish_command():
@@ -316,12 +363,17 @@ def shell_heredoc_indexes(line):
 
     while i < len(tokens):
         t = tokens[i]
+        if t == "\n" and after_pipe:
+            i += 1
+            continue
         if t in {";", ";;", ";&", ";;&", "&", "&&", "||", "\n", "(", ")"}:
             finish_pipeline()
+            after_pipe = False
             i += 1
             continue
         if t in {"|", "|&"}:
             finish_command()
+            after_pipe = True
             i += 1
             continue
         if t == "<<":
@@ -337,12 +389,29 @@ def shell_heredoc_indexes(line):
             i += 2 if t in {"<", ">", ">>", "<>", ">|", "<&", ">&"} else 1
             continue
         words.append(t)
+        after_pipe = False
         i += 1
     finish_pipeline()
     return shell_docs
 
+def shell_header_continues(text):
+    tail = text[:-1] if text.endswith("\n") else text
+    backslashes = 0
+    for c in reversed(tail):
+        if c == "\\":
+            backslashes += 1
+        else:
+            break
+    if backslashes % 2 == 1:
+        return True
+    try:
+        tokens = [t for t in tokenize(mask_heredoc_ignored_contexts(text)) if t != "\n"]
+    except Exception:
+        return False
+    return bool(tokens) and tokens[-1] in {"|", "|&", "&&", "||"}
+
 def without_heredoc_bodies(text):
-    kept, expandable, shell_inputs, pending = [], [], [], []
+    kept, expandable, shell_inputs, pending, header_lines = [], [], [], [], []
     for line in text.splitlines(True):
         if pending:
             delim, expands, strip_tabs, shell_input, body_lines = pending[0]
@@ -359,10 +428,18 @@ def without_heredoc_bodies(text):
             elif shell_input:
                 body_lines.append(line)
             continue
-        kept.append(line)
-        shell_docs = shell_heredoc_indexes(line)
-        for i, (delim, expands, strip_tabs) in enumerate(heredocs_in_line(line)):
+        header_lines.append(line)
+        header = "".join(header_lines)
+        docs = heredocs_in_line(header)
+        if docs and shell_header_continues(header):
+            continue
+        kept.append(header)
+        shell_docs = shell_heredoc_indexes(header)
+        for i, (delim, expands, strip_tabs) in enumerate(docs):
             pending.append([delim, expands, strip_tabs, i in shell_docs, []])
+        header_lines = []
+    if header_lines:
+        kept.append("".join(header_lines))
     for _, _, _, shell_input, body_lines in pending:
         if shell_input:
             shell_inputs.append("".join(body_lines))
@@ -610,14 +687,19 @@ def wrapped_command_start(cmd, seg, j):
     if cmd == "stdbuf":
         return skip_options(seg, j, STDBUF_VALUE_OPTS)
     if cmd == "nice":
-        if j < len(seg) and seg[j] == "--":
-            return j + 1
-        if j < len(seg) and seg[j] == "-n":
-            j += 2
-        elif j < len(seg) and re.match(r"^-\d+$", seg[j]):
-            j += 1
-        if j < len(seg) and seg[j] == "--":
-            return j + 1
+        while j < len(seg):
+            if seg[j] == "--":
+                return j + 1
+            if seg[j] in ("-n", "--adjustment"):
+                j += 2
+                continue
+            if seg[j].startswith("--adjustment="):
+                j += 1
+                continue
+            if re.match(r"^-n.+$", seg[j]) or re.match(r"^-[+-]?\d+$", seg[j]):
+                j += 1
+                continue
+            break
         return j
     if cmd == "time":
         return skip_options(seg, j, TIME_VALUE_OPTS)
@@ -767,7 +849,7 @@ def analyze_find(args, depth):
         i += 1
         cmd, terminated = [], False
         while i < len(args):
-            if args[i] in {";", "+"}:
+            if args[i] in {";", LITERAL_SEMI, "+"}:
                 terminated = True
                 break
             cmd.append(args[i])
@@ -841,8 +923,13 @@ def analyze_git(args, depth):
          (short_flag(rest, "f") or long_flag(rest, "--force")))
     ):
         block("'git branch -D' (force branch deletion)")
-    elif sub in ("checkout", "restore") and any(t in (".", "./") for t in rest):
-        block("'git %s .' (discards all working-tree changes)" % sub)
+    elif sub == "checkout" and any(t in (".", "./") for t in rest):
+        block("'git checkout .' (discards all working-tree changes)")
+    elif sub == "restore" and any(t in (".", "./") for t in rest):
+        staged = long_flag(rest, "--staged") or short_flag(rest, "S")
+        worktree = long_flag(rest, "--worktree") or short_flag(rest, "W")
+        if worktree or not staged:
+            block("'git restore .' (discards all working-tree changes)")
     elif sub in ("filter-branch", "filter-repo"):
         block("'git %s' (history rewrite)" % sub)
     elif sub == "reflog" and rest[:1] == ["expire"]:
