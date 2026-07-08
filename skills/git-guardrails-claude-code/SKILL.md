@@ -11,7 +11,7 @@ Sets up a PreToolUse hook that intercepts and blocks dangerous git commands befo
 
 - force-push: `git push --force` / `-f` / `--force-with-lease` / `--mirror` / `+refspec`
   (plain `git push` is allowed — qq's modification; upstream blocked all pushes)
-- remote branch deletion: `git push --delete` / `-d` / `:branch`
+- remote branch deletion: `git push --delete` / `-d` / `--prune` / `:branch`
 - `git reset --hard`
 - `git clean -f` / `git clean -fd`
 - `git branch -D`

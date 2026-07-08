@@ -4,7 +4,7 @@
 # qq rail: allows normal `git push` so agents can ship, but blocks the
 # genuinely destructive operations — force-push, reset --hard, clean -f,
 # branch -D, `checkout .` / `restore .`, remote branch deletion
-# (push --delete / push :branch), reflog expire, update-ref -d, and
+# (push --delete / push --prune / push :branch), reflog expire, update-ref -d, and
 # history rewrites.
 #
 # Argv-aware (task-3): the command line is tokenized shell-style and only
@@ -38,11 +38,30 @@ def block(reason):
 # ---------------------------------------------------------------- tokenizing
 PUNCT = "();<>|&`\n"
 
+def split_closing_punct(tokens):
+    out = []
+    for tok in tokens:
+        if tok and all(c in PUNCT for c in tok) and ")" in tok and tok != ")":
+            buf = []
+            for c in tok:
+                if c == ")":
+                    if buf:
+                        out.append("".join(buf))
+                        buf = []
+                    out.append(c)
+                else:
+                    buf.append(c)
+            if buf:
+                out.append("".join(buf))
+        else:
+            out.append(tok)
+    return out
+
 def tokenize(text):
     lex = shlex.shlex(text, posix=True, punctuation_chars=PUNCT)
     lex.whitespace = " \t\r"        # newline separates commands, not words
     lex.whitespace_split = True
-    return list(lex)
+    return split_closing_punct(list(lex))
 
 REDIRECTION_OPS = {"<", ">", ">>", "<>", ">|", "<&", ">&", "<<", "<<<",
                    "&>", "&>>"}
@@ -53,6 +72,24 @@ def is_redirection_op(tok):
 def is_shell_separator(tok):
     return tok and all(c in PUNCT for c in tok) and not is_redirection_op(tok)
 
+def is_process_substitution_start(tok):
+    return tok in {"<(", ">("}
+
+def skip_process_substitution(tokens, i):
+    depth, j = 1, i + 1
+    while j < len(tokens):
+        t = tokens[j]
+        if is_process_substitution_start(t):
+            depth += 1
+        elif t == "(":
+            depth += 1
+        elif t == ")":
+            depth -= 1
+            if depth == 0:
+                return j + 1
+        j += 1
+    return len(tokens)
+
 def simple_commands(tokens):
     """Split a token stream into simple commands while stripping redirections."""
     seg, here_strings, i = [], [], 0
@@ -60,14 +97,23 @@ def simple_commands(tokens):
         t = tokens[i]
         if t.isdigit() and i + 1 < len(tokens) and is_redirection_op(tokens[i + 1]):
             op = tokens[i + 1]
+            if i + 2 < len(tokens) and is_process_substitution_start(tokens[i + 2]):
+                i = skip_process_substitution(tokens, i + 2)
+                continue
             if op == "<<<" and i + 2 < len(tokens):
                 here_strings.append(tokens[i + 2])
             i += 3 if i + 2 < len(tokens) else 2
             continue
         if is_redirection_op(t):
+            if i + 1 < len(tokens) and is_process_substitution_start(tokens[i + 1]):
+                i = skip_process_substitution(tokens, i + 1)
+                continue
             if t == "<<<" and i + 1 < len(tokens):
                 here_strings.append(tokens[i + 1])
             i += 2 if i + 1 < len(tokens) else 1
+            continue
+        if is_process_substitution_start(t):
+            i = skip_process_substitution(tokens, i)
             continue
         if is_shell_separator(t):
             if seg:
@@ -322,6 +368,63 @@ def scan_command_substitutions(text, depth, single_quotes_protect=True):
             continue
         i += 1
 
+def extract_process_substitution(text, start):
+    i, level = start + 2, 1
+    in_single, in_double = False, False
+    while i < len(text):
+        c = text[i]
+        if c == "\\" and not in_single:
+            i += 2
+            continue
+        if c == "'" and not in_double:
+            in_single = not in_single
+            i += 1
+            continue
+        if c == '"' and not in_single:
+            in_double = not in_double
+            i += 1
+            continue
+        if (not in_single and not in_double and
+                (text.startswith("<(", i) or text.startswith(">(", i))):
+            level += 1
+            i += 2
+            continue
+        if not in_single and not in_double and c == "(":
+            level += 1
+            i += 1
+            continue
+        if not in_single and not in_double and c == ")":
+            level -= 1
+            if level == 0:
+                return text[start + 2:i], i + 1
+        i += 1
+    return text[start + 2:], len(text)
+
+def scan_process_substitutions(text, depth):
+    if depth > 8:
+        return
+    i, in_single, in_double = 0, False, False
+    while i < len(text):
+        c = text[i]
+        if c == "\\" and not in_single:
+            i += 2
+            continue
+        if c == "'" and not in_double:
+            in_single = not in_single
+            i += 1
+            continue
+        if c == '"' and not in_single:
+            in_double = not in_double
+            i += 1
+            continue
+        if (not in_single and not in_double and
+                (text.startswith("<(", i) or text.startswith(">(", i))):
+            inner, end = extract_process_substitution(text, i)
+            analyze_string(inner, depth + 1)
+            i = end
+            continue
+        i += 1
+
 # ------------------------------------------------------------------ analysis
 WRAPPERS = {"sudo", "doas", "env", "command", "nohup", "nice", "time",
             "timeout", "stdbuf", "xargs"}
@@ -460,6 +563,14 @@ def long_flag(args, name):
             return True
     return False
 
+def long_value_flag(args, name):
+    for t in args:
+        if t == "--":
+            break
+        if t == name or t.startswith(name + "="):
+            return True
+    return False
+
 def short_flag(args, ch):
     for t in args:
         if t == "--":
@@ -587,7 +698,7 @@ def analyze_git(args, depth):
             block("'git push --force' (force-push)")
         if long_flag(rest, "--mirror"):
             block("'git push --mirror' (force-push)")
-        if long_flag(rest, "--delete") or short_flag(rest, "d"):
+        if long_flag(rest, "--delete") or short_flag(rest, "d") or long_value_flag(rest, "--prune"):
             block("'git push --delete' (remote branch deletion)")
         for t in rest:
             if t.startswith(":") and len(t) > 1:
@@ -598,8 +709,11 @@ def analyze_git(args, depth):
         block("'git reset --hard' (destroys uncommitted work)")
     elif sub == "clean" and (long_flag(rest, "--force") or short_flag(rest, "f")):
         block("'git clean -f' (deletes untracked files)")
-    elif sub == "branch" and (short_flag(rest, "D") or
-                              (long_flag(rest, "--delete") and long_flag(rest, "--force"))):
+    elif sub == "branch" and (
+        short_flag(rest, "D") or
+        ((short_flag(rest, "d") or long_flag(rest, "--delete")) and
+         (short_flag(rest, "f") or long_flag(rest, "--force")))
+    ):
         block("'git branch -D' (force branch deletion)")
     elif sub in ("checkout", "restore") and any(t in (".", "./") for t in rest):
         block("'git %s .' (discards all working-tree changes)" % sub)
@@ -682,6 +796,7 @@ def analyze(seg, depth):
 def analyze_string(text, depth=0):
     bodyless, expandable_heredocs, shell_heredocs = without_heredoc_bodies(text)
     scan_command_substitutions(bodyless, depth)
+    scan_process_substitutions(bodyless, depth)
     scan_command_substitutions(expandable_heredocs, depth, single_quotes_protect=False)
     if shell_heredocs:
         analyze_string(shell_heredocs, depth + 1)
@@ -696,8 +811,10 @@ def analyze_string(text, depth=0):
 # the pre-task-3 whole-line patterns plus the task-3 additions.
 FALLBACK = [
     r"push\s.*--force", r"push\s([^&|;]*\s)?-f(\s|$)", r"push\s.*--mirror",
-    r"push\s.*--delete", r"reset --hard", r"git clean\s.*-f",
-    r"git branch -D", r"git checkout\s+\.", r"git restore\s+\.",
+    r"push\s.*--delete", r"push\s.*--prune(=|\s|$)", r"reset --hard",
+    r"git clean\s.*-f",
+    r"git branch\s.*(-D|-[A-Za-z]*d[A-Za-z]*f|-[A-Za-z]*f[A-Za-z]*d|--delete.*(-f|--force)|(-f|--force).*--delete|-d.*(-f|--force)|(-f|--force).*-d)",
+    r"git checkout\s+\.", r"git restore\s+\.",
     r"filter-branch", r"filter-repo", r"reflog expire", r"update-ref -d",
 ]
 

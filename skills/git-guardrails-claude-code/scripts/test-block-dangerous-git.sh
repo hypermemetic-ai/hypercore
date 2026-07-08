@@ -26,11 +26,16 @@ check block 'git push --mirror backup'
 check block 'git push origin --delete feature-x'
 check block 'git push origin :feature-x'
 check block 'git push -d origin feature-x'
+check block 'git push --prune origin'
+check block 'git push --prune=origin'
 check block 'git reset --hard HEAD~1'
 check block 'git reset --hard'
 check block 'git clean -fd'
 check block 'git clean --force'
 check block 'git branch -D feature'
+check block 'git branch -d -f feature'
+check block 'git branch -df feature'
+check block 'git branch --delete -f feature'
 check block 'git checkout .'
 check block 'git checkout -- .'
 check block 'git restore .'
@@ -45,6 +50,8 @@ check block 'git status
 git reset --hard'
 check block '>/tmp/log git reset --hard'
 check block 'git reset 2>/tmp/log --hard'
+check block 'cat < <(git reset --hard)'
+check block 'printf x > >(git clean -fd)'
 check block 'bash -c "git push --force"'
 check block "sh -lc 'git reset --hard'"
 check block "sh -c'git reset --hard'"
@@ -133,6 +140,7 @@ check allow 'git restore --staged file.txt'
 check allow 'git reflog'
 check allow 'git update-ref refs/wip/b abc123 def456'
 check allow 'echo "git push --force"'
+check allow 'echo "<(git reset --hard)"'
 check allow "cat <<< 'git reset --hard'"
 check allow 'sudo echo "git reset --hard"'
 check allow "env -S 'echo git reset --hard'"
@@ -140,6 +148,7 @@ check allow "xargs echo git reset --hard"
 check allow 'command -v git reset --hard'
 check allow "git -c alias.note='!echo git reset --hard' note"
 check allow "printf 'git reset --hard\\n' > notes.md"
+check allow 'diff <(git show main:f) <(git show dev:f)'
 check allow "rg '\$(git reset --hard)' docs/"
 check allow "rg '\`git reset --hard\`' docs/"
 check allow "git log --grep 'filter-branch'"

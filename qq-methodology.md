@@ -128,10 +128,10 @@ finishing never resets another's state.
   content supersession (`git cherry` / diff against `main`) and explicit owner
   confirmation; the git rail mechanically blocks local force-deletes
   (`git branch -D`) and remote delete forms (`git push --delete`,
-  `git push origin :branch`). Unmerged remote deletion therefore requires the
-  same verified-supersession + explicit owner confirmation procedure and owner
-  action. Unlanded work is never deleted in cleanup — it lands through the gate
-  or stays.
+  `git push --prune`, `git push origin :branch`). Unmerged remote deletion
+  therefore requires the same verified-supersession + explicit owner
+  confirmation procedure and owner action. Unlanded work is never deleted in
+  cleanup — it lands through the gate or stays.
 
 **Merge gate: all-gated — one landing path.** Green work accumulates on its
 branch; landing is always through the gate — the independent pipeline reviews
