@@ -118,6 +118,17 @@ background skill can stamp the same surface with free-form phases (e.g.
   <name>`, then `herdr agent start <name> --cwd <worktree> -- claude`. Isolation *is*
   the coordination model — no file locks. True shared-file work stays serial in the
   main tree, one agent at a time.
+- **Branches die at merge.** Every GitHub repo sets delete-branch-on-merge
+  (`gh repo edit --delete-branch-on-merge`) — set it when a repo is created or
+  linked (operator decision, 2026-07-08), so merged branches are pruned
+  automatically. A superseded-but-unmerged branch is deleted only after verified
+  content supersession (`git cherry` / diff against `main`) and explicit owner
+  confirmation; the git rail mechanically blocks local force-deletes
+  (`git branch -D`), while remote delete forms (`git push --delete`,
+  `git push origin :branch`) remain backlog task-3 work. Until then, remote
+  deletion follows the same verified-supersession + explicit owner confirmation
+  procedure by convention rather than by hook. Unlanded work is never deleted in
+  cleanup — it lands through the gate or stays.
 
 **Merge gate: all-gated — one landing path.** Green work accumulates on its
 branch; landing is always through the gate — the independent pipeline reviews
@@ -166,4 +177,5 @@ blocked in herdr; the `qq-phase` status line shows the gate step.
 
 Skills are linked from qq, vendored from MIT sources or authored for qq; see qq's
 `SKILLS-ATTRIBUTION.md`. The git rail runs as an always-on hook that blocks
-force-push, `reset --hard`, `clean -fd`, and history rewrites before they execute.
+force-push, `reset --hard`, `clean -fd`, `git branch -D`, and history rewrites
+before they execute.

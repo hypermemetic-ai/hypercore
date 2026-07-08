@@ -57,8 +57,10 @@ provenance is in [`SKILLS-ATTRIBUTION.md`](./SKILLS-ATTRIBUTION.md).
    This adds the live methodology symlink, ensures the repo imports it, records
    the all-gated landing path in newly scaffolded `AGENTS.md` files, merges
    Context7 into `.mcp.json`, seeds `CONCEPTS.md` only when missing, and ignores
-   the transient `.qq/` status directory. Retired gate values
-   (`trunk` / `blast-radius` / `human`) are rejected.
+   the transient `.qq/` status directory. For GitHub repos, also set
+   delete-branch-on-merge (`gh repo edit --delete-branch-on-merge`) until task-9
+   folds that into the linker. Retired gate values (`trunk` / `blast-radius` /
+   `human`) are rejected.
 5. **Cockpit** — `cockpit/` is the source of truth for yazi, glow, herdr, and
    shell navigation. `herdr prefix+f` opens `qqy`; yazi starts at the repo root;
    pressing Enter on `.md` renders in-pane via mdcat or the tuned Glow theme.
