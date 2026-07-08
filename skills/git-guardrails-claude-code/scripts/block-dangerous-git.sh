@@ -127,21 +127,96 @@ def heredocs_in_line(line):
         i += 1
     return docs
 
+def segment_stdin_shell(seg):
+    if not seg:
+        return False
+    i = command_index(seg)
+    if i is None:
+        return False
+    cmd = base(seg[i])
+    if cmd in STDIN_PRESERVING_WRAPPERS:
+        j = wrapped_command_start(cmd, seg, i + 1)
+        return j is not None and segment_stdin_shell(seg[j:])
+    if cmd == "exec":
+        j = exec_command_start(seg, i + 1)
+        return j is not None and segment_stdin_shell(seg[j:])
+    if cmd not in SHELLS:
+        return False
+    command_string, reads_stdin = shell_command(seg, i + 1)
+    return command_string is None and reads_stdin
+
+def shell_heredoc_indexes(line):
+    try:
+        tokens = tokenize(line)
+    except Exception:
+        return set()
+    shell_docs, pipeline, words, docs = set(), [], [], []
+    doc_i, i = 0, 0
+
+    def finish_command():
+        nonlocal words, docs
+        if words or docs:
+            pipeline.append((words, docs))
+        words, docs = [], []
+
+    def finish_pipeline():
+        nonlocal pipeline
+        finish_command()
+        if any(d for _, d in pipeline) and any(segment_stdin_shell(w) for w, _ in pipeline):
+            for _, d in pipeline:
+                shell_docs.update(d)
+        pipeline = []
+
+    while i < len(tokens):
+        t = tokens[i]
+        if t in {";", ";;", ";&", ";;&", "&", "&&", "||", "\n", "(", ")"}:
+            finish_pipeline()
+            i += 1
+            continue
+        if t in {"|", "|&"}:
+            finish_command()
+            i += 1
+            continue
+        if t == "<<":
+            if words and words[-1].isdigit():
+                words.pop()
+            docs.append(doc_i)
+            doc_i += 1
+            i += 2 if t == "<<" else 1
+            continue
+        if t.startswith("<") or t.startswith(">"):
+            if words and words[-1].isdigit():
+                words.pop()
+            i += 2 if t in {"<", ">", ">>", "<>", ">|", "<&", ">&"} else 1
+            continue
+        words.append(t)
+        i += 1
+    finish_pipeline()
+    return shell_docs
+
 def without_heredoc_bodies(text):
-    kept, expandable, pending = [], [], []
+    kept, expandable, shell_inputs, pending = [], [], [], []
     for line in text.splitlines(True):
         if pending:
-            delim, expands, strip_tabs = pending[0]
+            delim, expands, strip_tabs, shell_input, body_lines = pending[0]
             body = line[:-1] if line.endswith("\n") else line
             marker = body.lstrip("\t") if strip_tabs else body
             if marker == delim:
+                if shell_input:
+                    shell_inputs.append("".join(body_lines))
                 pending.pop(0)
             elif expands:
                 expandable.append(line)
+                if shell_input:
+                    body_lines.append(line)
+            elif shell_input:
+                body_lines.append(line)
             continue
         kept.append(line)
-        pending.extend(heredocs_in_line(line))
-    return "".join(kept), "".join(expandable)
+        shell_docs = shell_heredoc_indexes(line)
+        for i, (delim, expands, strip_tabs) in enumerate(heredocs_in_line(line)):
+            pending.append([delim, expands, strip_tabs, i in shell_docs, []])
+    return "".join(kept), "".join(expandable), "".join(shell_inputs)
 
 def extract_dollar_paren(text, start):
     i, level = start + 2, 1
@@ -225,7 +300,10 @@ def scan_command_substitutions(text, depth, single_quotes_protect=True):
 # ------------------------------------------------------------------ analysis
 WRAPPERS = {"sudo", "doas", "env", "command", "nohup", "nice", "time",
             "timeout", "stdbuf", "xargs"}
+STDIN_PRESERVING_WRAPPERS = WRAPPERS - {"xargs"}
 SHELLS = {"sh", "bash", "zsh", "dash", "ksh"}
+CONTROL_PREFIXES = {"if", "then", "else", "elif", "do", "while", "until",
+                    "for", "select", "case", "in", "{", "}", "!"}
 GIT_VALUE_OPTS = {"-C", "-c", "--git-dir", "--work-tree", "--namespace",
                   "--exec-path", "--super-prefix"}
 ASSIGNMENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
@@ -242,6 +320,7 @@ XARGS_VALUE_OPTS = {"-a", "--arg-file", "-d", "--delimiter", "-E", "--eof",
 STDBUF_VALUE_OPTS = {"-i", "--input", "-o", "--output", "-e", "--error"}
 TIME_VALUE_OPTS = {"-f", "--format", "-o", "--output"}
 SHELL_VALUE_OPTS = {"-o", "+o", "-O", "+O", "--rcfile", "--init-file"}
+EXEC_VALUE_OPTS = {"-a"}
 
 def base(tok):
     return tok.rsplit("/", 1)[-1]
@@ -304,6 +383,9 @@ def wrapped_command_start(cmd, seg, j):
         return None if lookup_only else j
     return j
 
+def exec_command_start(seg, j):
+    return skip_options(seg, j, EXEC_VALUE_OPTS)
+
 def long_flag(args, name):
     for t in args:
         if t == "--":
@@ -320,21 +402,31 @@ def short_flag(args, ch):
             return True
     return False
 
-def shell_c_string(seg, j):
+def shell_command(seg, j):
+    reads_stdin = False
     while j < len(seg):
         t = seg[j]
         if t == "--":
-            return None
+            j += 1
+            break
         if t == "-c" or re.match(r"^-[A-Za-z]*c[A-Za-z]*$", t):
-            return seg[j + 1] if j + 1 < len(seg) else None
+            return (seg[j + 1] if j + 1 < len(seg) else None), False
+        if t == "-s" or re.match(r"^-[A-Za-z]*s[A-Za-z]*$", t):
+            reads_stdin = True
+            j += 1
+            continue
         if option_matches(t, SHELL_VALUE_OPTS):
             j += 1 if "=" in t else 2
             continue
         if t.startswith("-") and t != "-":
             j += 1
             continue
-        return None
-    return None
+        return None, reads_stdin
+    return None, True if j >= len(seg) else reads_stdin
+
+def shell_c_string(seg, j):
+    command_string, _ = shell_command(seg, j)
+    return command_string
 
 def analyze_submodule(args, depth):
     i = 0
@@ -406,16 +498,47 @@ def analyze_git(args, depth):
     elif sub == "submodule":
         analyze_submodule(rest, depth)
 
+def command_index(seg):
+    i = 0
+    while i < len(seg):
+        while i < len(seg) and is_assignment(seg[i]):
+            i += 1
+        if i >= len(seg):
+            return None
+        cmd = base(seg[i])
+        if cmd in CONTROL_PREFIXES:
+            i += 1
+            continue
+        return i
+    return None
+
+def function_body_start(seg, i):
+    cmd = base(seg[i])
+    if cmd == "function":
+        j = i + 1
+        if j < len(seg):
+            j += 1
+        if j < len(seg) and seg[j] == "()":
+            j += 1
+    elif i + 1 < len(seg) and seg[i + 1] == "()":
+        j = i + 2
+    else:
+        return None
+    if j < len(seg) and seg[j] == "{":
+        j += 1
+    return j if j < len(seg) else None
+
 def analyze(seg, depth):
     if depth > 8 or not seg:
         return
-    i = 0
-    while i < len(seg) and is_assignment(seg[i]):
-        i += 1                           # skip VAR=val prefixes
-    if i >= len(seg):
+    i = command_index(seg)
+    if i is None:
         return
     cmd = base(seg[i])
-    if cmd == "git":
+    body = function_body_start(seg, i)
+    if body is not None:
+        analyze(seg[body:], depth + 1)
+    elif cmd == "git":
         analyze_git(seg[i + 1:], depth)
     elif cmd in ("git-filter-branch", "git-filter-repo"):
         block("'%s' (history rewrite)" % cmd)
@@ -423,15 +546,24 @@ def analyze(seg, depth):
         command_string = shell_c_string(seg, i + 1)
         if command_string is not None:
             analyze_string(command_string, depth + 1)
+    elif cmd == "exec":
+        j = exec_command_start(seg, i + 1)
+        if j is not None and j < len(seg):
+            analyze(seg[j:], depth + 1)
+    elif cmd == "eval":
+        if i + 1 < len(seg):
+            analyze_string(" ".join(seg[i + 1:]), depth + 1)
     elif cmd in WRAPPERS:
         j = wrapped_command_start(cmd, seg, i + 1)
         if j is not None and j < len(seg):
             analyze(seg[j:], depth + 1)
 
 def analyze_string(text, depth=0):
-    bodyless, expandable_heredocs = without_heredoc_bodies(text)
+    bodyless, expandable_heredocs, shell_heredocs = without_heredoc_bodies(text)
     scan_command_substitutions(bodyless, depth)
     scan_command_substitutions(expandable_heredocs, depth, single_quotes_protect=False)
+    if shell_heredocs:
+        analyze_string(shell_heredocs, depth + 1)
     for seg in simple_commands(tokenize(bodyless)):
         analyze(seg, depth)
 

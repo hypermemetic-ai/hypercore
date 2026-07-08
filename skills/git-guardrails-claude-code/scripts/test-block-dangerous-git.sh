@@ -54,18 +54,37 @@ check block 'xargs git branch -D < branches.txt'
 check block "xargs sh -c 'git update-ref -d refs/wip/main'"
 check block 'git -C /some/repo reset --hard'
 check block 'GIT_DIR=/x/.git git reset --hard'
-check block 'echo $(git reset --hard)'
-check block 'echo "$(git reset --hard)"'
-check block 'git commit -m "$(git clean -fd)"'
-check block 'echo "`git reset --hard`"'
+check block "echo \$(git reset --hard)"
+check block "echo \"\$(git reset --hard)\""
+check block "git commit -m \"\$(git clean -fd)\""
+check block "echo \"\`git reset --hard\`\""
 check block "bash -o pipefail -c 'git reset --hard'"
 check block "bash -O extglob -c 'git reset --hard'"
 check block "git submodule foreach 'git reset --hard'"
 check block "git submodule foreach --recursive 'git clean -fd'"
 check block "git submodule foreach git reset --hard"
-check block 'cat <<EOF
-$(git reset --hard)
+check block "sh -c 'if true; then git reset --hard; fi'"
+check block '{ git clean -fd; }'
+check block '! git reset --hard'
+check block 'exec git reset --hard'
+check block "eval 'git reset --hard'"
+check block "sh -c 'function f { git reset --hard; }; f'"
+check block "sh -c 'f() { git clean -fd; }; f'"
+check block "bash <<'EOF'
+git reset --hard
+EOF"
+check block 'sh -s <<EOF
+git clean -fd
 EOF'
+check block 'cat <<EOF | bash
+git reset --hard
+EOF'
+check block 'echo "<<EOF"; bash <<EOF
+git reset --hard
+EOF'
+check block "cat <<EOF
+\$(git reset --hard)
+EOF"
 check block 'cat <<EOF
 git status
 EOF
@@ -107,6 +126,12 @@ check allow "cat <<'EOF'
 git reset --hard
 EOF"
 check allow 'cat <<EOF
+git reset --hard
+EOF'
+check allow "cat <<EOF; bash -c 'true'
+git reset --hard
+EOF"
+check allow 'echo "<<EOF"; cat <<EOF
 git reset --hard
 EOF'
 check allow "cat <<'EOF'
