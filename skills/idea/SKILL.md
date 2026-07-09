@@ -61,12 +61,20 @@ Resolve the repo root before choosing a route:
 
 Use the same `$root` resolved above for every path in this section.
 
-1. Pick NN — the next free two-digit number in `$root/ideas/` — then stamp
-   `qq-phase capturing --producer idea-NN`. Choose NN before the first stamp
-   because it is also the producer id. Always use `--producer idea-NN`: a bare
-   stamp clobbers the main slot's loop position, and a shared `idea` slot would
-   let one researcher's `done` falsely clear another's. `qq-phase render` shows
-   each active slot, so concurrent researchers appear as separate segments.
+1. Pick NN — the next free two-digit number in `$root/ideas/` — reap any finished
+   idea slots from earlier captures, then stamp `qq-phase capturing --producer
+   idea-NN`. Choose NN before the first stamp because it is also the producer id.
+
+   ```bash
+   qq-phase status | python3 -c 'import json,sys; [print(n) for n,s in json.load(sys.stdin).get("producers",{}).items() if n.startswith("idea-") and s.get("status")=="done"]' | while read p; do qq-phase clear --producer "$p"; done
+   ```
+
+   A finished researcher's slot stays on the status line until the next `/idea`
+   reaps it, so a completion the operator has not looked at yet is never erased.
+   Always use `--producer idea-NN`: a bare stamp clobbers the main slot's loop
+   position, and a shared `idea` slot would let one researcher's `done` falsely
+   clear another's. `qq-phase render` shows each active slot, so concurrent
+   researchers appear as separate segments.
 2. Bank the verbatim: create `$root/ideas/NN-slug.md` containing only the first two
    blocks of the template below — the `_Captured…_` header (status
    `capturing`) and the Original section, using the same NN. Take the slug and
