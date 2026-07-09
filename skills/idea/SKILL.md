@@ -241,86 +241,91 @@ Use the same `$root` resolved above for every path in this section.
    scratch=$(mktemp -d "$scratch_parent/idea-$NN-XXXXXX") || { printf 'failed to create scratch directory under: %s\n' "$scratch_parent" > "$log"; timeout 5 qq-phase researching --producer "$producer" --status red --detail "failed -- see $log_rel" >/dev/null 2>&1 || true; exit 1; }
    target_hash="$(sha256sum "$target")" || { printf 'failed to hash target: %s\n' "$target_rel" > "$log"; timeout 5 qq-phase researching --producer "$producer" --status red --detail "failed -- see $log_rel" >/dev/null 2>&1 || true; rm -rf "$scratch"; exit 1; }
    target_hash="${target_hash%% *}"
-   setsid bash -c '
-     root="$1"; brief="$2"; producer="$3"; log_rel="$4"; scratch="$5"; target="$6"; target_rel="$7"; target_hash="$8"
-     cd "$root" || exit 1
-     timeout 5 qq-phase researching --producer "$producer" --detail "$target_rel" >/dev/null 2>&1 || true
-     prompt="$(cat "$brief")"
+   wrapper="$root/.qq/idea-spawn-$NN.sh"
+   cat > "$wrapper" <<'WRAPPER' || { printf 'failed to write wrapper: %s\n' "$wrapper" > "$log"; timeout 5 qq-phase researching --producer "$producer" --status red --detail "failed -- see $log_rel" >/dev/null 2>&1 || true; rm -rf "$scratch"; exit 1; }
+   root="$1"; brief="$2"; producer="$3"; log_rel="$4"; scratch="$5"; target="$6"; target_hash="$7"
+   target_rel="${target#"$root"/}"
+   # This one-shot wrapper deletes itself; the durable trace is the log.
+   trap 'rm -f "$0"' EXIT
+   cd "$root" || exit 1
+   timeout 5 qq-phase researching --producer "$producer" --detail "$target_rel" >/dev/null 2>&1 || true
+   prompt="$(cat "$brief")"
+   rc=$?
+   if [ "$rc" -eq 0 ]; then
+     (
+       cd "$scratch" || exit 1
+       SCRATCH="$scratch" claude -p "$prompt" --permission-mode bypassPermissions \
+         --add-dir "$root" \
+         --tools "Read,Glob,Grep,WebFetch,WebSearch" \
+         > "$scratch/enriched.md"
+     )
      rc=$?
-     if [ "$rc" -eq 0 ]; then
-       (
-         cd "$scratch" || exit 1
-         SCRATCH="$scratch" claude -p "$prompt" --permission-mode bypassPermissions \
-           --add-dir "$root" \
-           --tools "Read,Glob,Grep,WebFetch,WebSearch" \
-           > "$scratch/enriched.md"
-       )
-       rc=$?
-     fi
-     if [ "$rc" -eq 0 ] && [ -s "$scratch/enriched.md" ]; then
-       original_tmp=$(mktemp "$scratch/original.XXXXXX") &&
-         enriched_original_tmp=$(mktemp "$scratch/enriched-original.XXXXXX") &&
-         install_tmp=$(mktemp "$target.tmp.XXXXXX") &&
-         [ -f "$target" ] &&
-         sed -n "/^## Original/,/^## Sharpened/{/^## Sharpened/!p;}" "$target" > "$original_tmp" &&
-         sed -n "/^## Original/,/^## Sharpened/{/^## Sharpened/!p;}" "$scratch/enriched.md" > "$enriched_original_tmp" &&
-         [ -s "$original_tmp" ] &&
-         cmp -s "$original_tmp" "$enriched_original_tmp" &&
-         cp "$scratch/enriched.md" "$install_tmp"
-       rc=$?
-       if [ "$rc" -ne 0 ] && [ -f "$target" ]; then
-         current_hash="$(sha256sum "$target")" || current_hash=""
-         current_hash="${current_hash%% *}"
-         if [ "$current_hash" != "$target_hash" ]; then
-           printf 'target changed during research; preserved %s\n' "$scratch/enriched.md"
-           red_detail="target changed -- preserved $scratch/enriched.md"
-           preserve_scratch=1
-           rm -f "${install_tmp:-}"
-           rc=1
-         fi
-       fi
-       if [ "$rc" -eq 0 ]; then
-         # Baseline is passed by value; anything in scratch is researcher-controlled input.
-         # Rename is atomic, but a write between this compare and rename can still lose; use flock if that risk ever matters more.
-         if [ -f "$target" ]; then
-           current_hash="$(sha256sum "$target")" || current_hash=""
-           current_hash="${current_hash%% *}"
-         else
-           current_hash=""
-         fi
-         if [ "$current_hash" != "$target_hash" ]; then
-           printf 'target changed during research; preserved %s\n' "$scratch/enriched.md"
-           red_detail="target changed -- preserved $scratch/enriched.md"
-           preserve_scratch=1
-           rm -f "${install_tmp:-}"
-           rc=1
-         else
-           mv "$install_tmp" "$target"
-           rc=$?
-         fi
-       elif [ ! -f "$target" ]; then
+   fi
+   if [ "$rc" -eq 0 ] && [ -s "$scratch/enriched.md" ]; then
+     original_tmp=$(mktemp "$scratch/original.XXXXXX") &&
+       enriched_original_tmp=$(mktemp "$scratch/enriched-original.XXXXXX") &&
+       install_tmp=$(mktemp "$target.tmp.XXXXXX") &&
+       [ -f "$target" ] &&
+       sed -n "/^## Original/,/^## Sharpened/{/^## Sharpened/!p;}" "$target" > "$original_tmp" &&
+       sed -n "/^## Original/,/^## Sharpened/{/^## Sharpened/!p;}" "$scratch/enriched.md" > "$enriched_original_tmp" &&
+       [ -s "$original_tmp" ] &&
+       cmp -s "$original_tmp" "$enriched_original_tmp" &&
+       cp "$scratch/enriched.md" "$install_tmp"
+     rc=$?
+     if [ "$rc" -ne 0 ] && [ -f "$target" ]; then
+       current_hash="$(sha256sum "$target")" || current_hash=""
+       current_hash="${current_hash%% *}"
+       if [ "$current_hash" != "$target_hash" ]; then
          printf 'target changed during research; preserved %s\n' "$scratch/enriched.md"
          red_detail="target changed -- preserved $scratch/enriched.md"
          preserve_scratch=1
          rm -f "${install_tmp:-}"
          rc=1
        fi
-       rm -f "${original_tmp:-}" "${enriched_original_tmp:-}"
-       [ "$rc" -eq 0 ] || rm -f "${install_tmp:-}"
-     elif [ "$rc" -eq 0 ]; then
-       rc=1
      fi
      if [ "$rc" -eq 0 ]; then
-       timeout 5 qq-phase done --producer "$producer" --detail "$target_rel" >/dev/null 2>&1 || true
+       # Baseline is passed by value; anything in scratch is researcher-controlled input.
+       # Rename is atomic, but a write between this compare and rename can still lose; use flock if that risk ever matters more.
+       if [ -f "$target" ]; then
+         current_hash="$(sha256sum "$target")" || current_hash=""
+         current_hash="${current_hash%% *}"
+       else
+         current_hash=""
+       fi
+       if [ "$current_hash" != "$target_hash" ]; then
+         printf 'target changed during research; preserved %s\n' "$scratch/enriched.md"
+         red_detail="target changed -- preserved $scratch/enriched.md"
+         preserve_scratch=1
+         rm -f "${install_tmp:-}"
+         rc=1
+       else
+         mv "$install_tmp" "$target"
+         rc=$?
+       fi
+     elif [ ! -f "$target" ]; then
+       printf 'target changed during research; preserved %s\n' "$scratch/enriched.md"
+       red_detail="target changed -- preserved $scratch/enriched.md"
+       preserve_scratch=1
+       rm -f "${install_tmp:-}"
+       rc=1
      fi
-     if [ "$rc" -ne 0 ]; then
-       timeout 5 qq-phase researching --producer "$producer" --status red --detail "${red_detail:-failed -- see $log_rel}" >/dev/null 2>&1 || true
-     fi
-     if [ "$rc" -eq 0 ] || [ -z "${preserve_scratch:-}" ]; then
-       rm -rf "$scratch"
-     fi
-     exit "$rc"
-   ' bash "$root" "$brief" "$producer" "$log_rel" "$scratch" "$target" "$target_rel" "$target_hash" < /dev/null > "$log" 2>&1 &
+     rm -f "${original_tmp:-}" "${enriched_original_tmp:-}"
+     [ "$rc" -eq 0 ] || rm -f "${install_tmp:-}"
+   elif [ "$rc" -eq 0 ]; then
+     rc=1
+   fi
+   if [ "$rc" -eq 0 ]; then
+     timeout 5 qq-phase done --producer "$producer" --detail "$target_rel" >/dev/null 2>&1 || true
+   fi
+   if [ "$rc" -ne 0 ]; then
+     timeout 5 qq-phase researching --producer "$producer" --status red --detail "${red_detail:-failed -- see $log_rel}" >/dev/null 2>&1 || true
+   fi
+   if [ "$rc" -eq 0 ] || [ -z "${preserve_scratch:-}" ]; then
+     rm -rf "$scratch"
+   fi
+   exit "$rc"
+   WRAPPER
+   setsid bash "$wrapper" "$root" "$brief" "$producer" "$log_rel" "$scratch" "$target" "$target_hash" < /dev/null > "$log" 2>&1 &
    ```
 
    From a Codex cockpit:
@@ -337,83 +342,88 @@ Use the same `$root` resolved above for every path in this section.
    scratch=$(mktemp -d "$scratch_parent/idea-$NN-XXXXXX") || { printf 'failed to create scratch directory under: %s\n' "$scratch_parent" > "$log"; timeout 5 qq-phase researching --producer "$producer" --status red --detail "failed -- see $log_rel" >/dev/null 2>&1 || true; exit 1; }
    target_hash="$(sha256sum "$target")" || { printf 'failed to hash target: %s\n' "$target_rel" > "$log"; timeout 5 qq-phase researching --producer "$producer" --status red --detail "failed -- see $log_rel" >/dev/null 2>&1 || true; rm -rf "$scratch"; exit 1; }
    target_hash="${target_hash%% *}"
-   setsid bash -c '
-     root="$1"; brief="$2"; producer="$3"; log_rel="$4"; scratch="$5"; target="$6"; target_rel="$7"; target_hash="$8"
-     cd "$root" || exit 1
-     timeout 5 qq-phase researching --producer "$producer" --detail "$target_rel" >/dev/null 2>&1 || true
-     prompt="$(cat "$brief")"
+   wrapper="$root/.qq/idea-spawn-$NN.sh"
+   cat > "$wrapper" <<'WRAPPER' || { printf 'failed to write wrapper: %s\n' "$wrapper" > "$log"; timeout 5 qq-phase researching --producer "$producer" --status red --detail "failed -- see $log_rel" >/dev/null 2>&1 || true; rm -rf "$scratch"; exit 1; }
+   root="$1"; brief="$2"; producer="$3"; log_rel="$4"; scratch="$5"; target="$6"; target_hash="$7"
+   target_rel="${target#"$root"/}"
+   # This one-shot wrapper deletes itself; the durable trace is the log.
+   trap 'rm -f "$0"' EXIT
+   cd "$root" || exit 1
+   timeout 5 qq-phase researching --producer "$producer" --detail "$target_rel" >/dev/null 2>&1 || true
+   prompt="$(cat "$brief")"
+   rc=$?
+   if [ "$rc" -eq 0 ]; then
+     (
+       cd "$scratch" || exit 1
+       SCRATCH="$scratch" codex exec --cd "$scratch" --skip-git-repo-check --sandbox workspace-write "$prompt"
+     )
      rc=$?
-     if [ "$rc" -eq 0 ]; then
-       (
-         cd "$scratch" || exit 1
-         SCRATCH="$scratch" codex exec --cd "$scratch" --skip-git-repo-check --sandbox workspace-write "$prompt"
-       )
-       rc=$?
-     fi
-     if [ "$rc" -eq 0 ] && [ -s "$scratch/enriched.md" ]; then
-       original_tmp=$(mktemp "$scratch/original.XXXXXX") &&
-         enriched_original_tmp=$(mktemp "$scratch/enriched-original.XXXXXX") &&
-         install_tmp=$(mktemp "$target.tmp.XXXXXX") &&
-         [ -f "$target" ] &&
-         sed -n "/^## Original/,/^## Sharpened/{/^## Sharpened/!p;}" "$target" > "$original_tmp" &&
-         sed -n "/^## Original/,/^## Sharpened/{/^## Sharpened/!p;}" "$scratch/enriched.md" > "$enriched_original_tmp" &&
-         [ -s "$original_tmp" ] &&
-         cmp -s "$original_tmp" "$enriched_original_tmp" &&
-         cp "$scratch/enriched.md" "$install_tmp"
-       rc=$?
-       if [ "$rc" -ne 0 ] && [ -f "$target" ]; then
-         current_hash="$(sha256sum "$target")" || current_hash=""
-         current_hash="${current_hash%% *}"
-         if [ "$current_hash" != "$target_hash" ]; then
-           printf 'target changed during research; preserved %s\n' "$scratch/enriched.md"
-           red_detail="target changed -- preserved $scratch/enriched.md"
-           preserve_scratch=1
-           rm -f "${install_tmp:-}"
-           rc=1
-         fi
-       fi
-       if [ "$rc" -eq 0 ]; then
-         # Baseline is passed by value; anything in scratch is researcher-controlled input.
-         # Rename is atomic, but a write between this compare and rename can still lose; use flock if that risk ever matters more.
-         if [ -f "$target" ]; then
-           current_hash="$(sha256sum "$target")" || current_hash=""
-           current_hash="${current_hash%% *}"
-         else
-           current_hash=""
-         fi
-         if [ "$current_hash" != "$target_hash" ]; then
-           printf 'target changed during research; preserved %s\n' "$scratch/enriched.md"
-           red_detail="target changed -- preserved $scratch/enriched.md"
-           preserve_scratch=1
-           rm -f "${install_tmp:-}"
-           rc=1
-         else
-           mv "$install_tmp" "$target"
-           rc=$?
-         fi
-       elif [ ! -f "$target" ]; then
+   fi
+   if [ "$rc" -eq 0 ] && [ -s "$scratch/enriched.md" ]; then
+     original_tmp=$(mktemp "$scratch/original.XXXXXX") &&
+       enriched_original_tmp=$(mktemp "$scratch/enriched-original.XXXXXX") &&
+       install_tmp=$(mktemp "$target.tmp.XXXXXX") &&
+       [ -f "$target" ] &&
+       sed -n "/^## Original/,/^## Sharpened/{/^## Sharpened/!p;}" "$target" > "$original_tmp" &&
+       sed -n "/^## Original/,/^## Sharpened/{/^## Sharpened/!p;}" "$scratch/enriched.md" > "$enriched_original_tmp" &&
+       [ -s "$original_tmp" ] &&
+       cmp -s "$original_tmp" "$enriched_original_tmp" &&
+       cp "$scratch/enriched.md" "$install_tmp"
+     rc=$?
+     if [ "$rc" -ne 0 ] && [ -f "$target" ]; then
+       current_hash="$(sha256sum "$target")" || current_hash=""
+       current_hash="${current_hash%% *}"
+       if [ "$current_hash" != "$target_hash" ]; then
          printf 'target changed during research; preserved %s\n' "$scratch/enriched.md"
          red_detail="target changed -- preserved $scratch/enriched.md"
          preserve_scratch=1
          rm -f "${install_tmp:-}"
          rc=1
        fi
-       rm -f "${original_tmp:-}" "${enriched_original_tmp:-}"
-       [ "$rc" -eq 0 ] || rm -f "${install_tmp:-}"
-     elif [ "$rc" -eq 0 ]; then
-       rc=1
      fi
      if [ "$rc" -eq 0 ]; then
-       timeout 5 qq-phase done --producer "$producer" --detail "$target_rel" >/dev/null 2>&1 || true
+       # Baseline is passed by value; anything in scratch is researcher-controlled input.
+       # Rename is atomic, but a write between this compare and rename can still lose; use flock if that risk ever matters more.
+       if [ -f "$target" ]; then
+         current_hash="$(sha256sum "$target")" || current_hash=""
+         current_hash="${current_hash%% *}"
+       else
+         current_hash=""
+       fi
+       if [ "$current_hash" != "$target_hash" ]; then
+         printf 'target changed during research; preserved %s\n' "$scratch/enriched.md"
+         red_detail="target changed -- preserved $scratch/enriched.md"
+         preserve_scratch=1
+         rm -f "${install_tmp:-}"
+         rc=1
+       else
+         mv "$install_tmp" "$target"
+         rc=$?
+       fi
+     elif [ ! -f "$target" ]; then
+       printf 'target changed during research; preserved %s\n' "$scratch/enriched.md"
+       red_detail="target changed -- preserved $scratch/enriched.md"
+       preserve_scratch=1
+       rm -f "${install_tmp:-}"
+       rc=1
      fi
-     if [ "$rc" -ne 0 ]; then
-       timeout 5 qq-phase researching --producer "$producer" --status red --detail "${red_detail:-failed -- see $log_rel}" >/dev/null 2>&1 || true
-     fi
-     if [ "$rc" -eq 0 ] || [ -z "${preserve_scratch:-}" ]; then
-       rm -rf "$scratch"
-     fi
-     exit "$rc"
-   ' bash "$root" "$brief" "$producer" "$log_rel" "$scratch" "$target" "$target_rel" "$target_hash" < /dev/null > "$log" 2>&1 &
+     rm -f "${original_tmp:-}" "${enriched_original_tmp:-}"
+     [ "$rc" -eq 0 ] || rm -f "${install_tmp:-}"
+   elif [ "$rc" -eq 0 ]; then
+     rc=1
+   fi
+   if [ "$rc" -eq 0 ]; then
+     timeout 5 qq-phase done --producer "$producer" --detail "$target_rel" >/dev/null 2>&1 || true
+   fi
+   if [ "$rc" -ne 0 ]; then
+     timeout 5 qq-phase researching --producer "$producer" --status red --detail "${red_detail:-failed -- see $log_rel}" >/dev/null 2>&1 || true
+   fi
+   if [ "$rc" -eq 0 ] || [ -z "${preserve_scratch:-}" ]; then
+     rm -rf "$scratch"
+   fi
+   exit "$rc"
+   WRAPPER
+   setsid bash "$wrapper" "$root" "$brief" "$producer" "$log_rel" "$scratch" "$target" "$target_hash" < /dev/null > "$log" 2>&1 &
    ```
 
    This is the researcher-spawn form for a Codex driver; invoking `/idea` from Codex also needs
