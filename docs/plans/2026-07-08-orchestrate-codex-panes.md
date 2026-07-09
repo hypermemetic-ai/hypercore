@@ -22,7 +22,8 @@ sidebar, addressable via send/read/wait, isolated per worktree.
 run lives in one herdr tab: the conductor pane comes first, and delegation
 spawns worker panes *into the same tab*, so the operator reads one tab as one
 task. The conductor finds its own tab with `herdr pane current` → `tab_id`,
-then passes `--tab <tab_id> --split right|down` on `agent start`. (herdr 0.7.2
+then passes `--tab <tab_id> --split right` on `agent start` — extra panes are
+**right splits**, side-by-side, never `down` (operator decision 07-08). (herdr 0.7.2
 fixed `pane split --current` to resolve to the calling pane, so split-from-self
 is reliable.) Cap **~3 panes per tab** — beyond that, readability dies; a run
 that genuinely needs more workers fans the extras into a fresh tab. Worktree
@@ -41,7 +42,7 @@ of record (that stays file-based, below).
 
 **Worker lifecycle (per orchestrate run):**
 1. Start: `herdr agent start cx-<branch> --cwd <tree> --tab <conductor-tab>
-   --split down --no-focus -- codex`
+   --split right --no-focus -- codex`
    (same workspace as the run's tree; `herdr worktree create` first when
    fanning out). One worker per working tree, honoring tree ownership.
 2. Trust prompt: after start, `herdr agent read cx-<branch> --source visible`;

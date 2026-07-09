@@ -11,8 +11,8 @@ it its own `NN-slug.md` file in this folder and leave a one-line pointer here.
 ## Backlog
 
 > **Session 2026-07-07 worked this folder; statuses below are current. #5 is now
-> built (writer + status-line reader) and landing via the gate — remaining build
-> order: #2 (`compound`) → #1 (`/idea`). Design is locked — no more design
+> built (writer + status-line reader), and #2 is built as `compound` — remaining
+> build order: #1 (`/idea`). Design is locked — no more design
 > questions, just build.**
 
 - **#1 · The `/idea` capture skill** → [`01-btw-ideas-skill.md`](01-btw-ideas-skill.md).
@@ -21,7 +21,8 @@ it its own `NN-slug.md` file in this folder and leave a one-line pointer here.
   capture verbatim in-turn → detached researcher writes `ideas/NN-slug.md` → completion
   shows as **ambient status on #5's surface, never a reply in the transcript**. Rides #5;
   build last. _(2026-07-06 → 07)_
-- **#2 · Auto-compound + rename to `compound`** _(decided 07-07)._ Drop the `ce` prefix —
+- **#2 · Auto-compound + rename to `compound`** ✅ **Done (TASK-5, 2026-07-09).**
+  Drop the `ce` prefix —
   we own it, call it **`compound`** (rename `skills/ce-compound/` + all refs + the
   `~/.claude/skills` link). And stop asking: it **auto-fires when appropriate**, with the
   appropriateness judgment living *inside* the skill, not a yes/no prompt. _(2026-07-06 → 07)_
@@ -47,11 +48,12 @@ it its own `NN-slug.md` file in this folder and leave a one-line pointer here.
   only), and resolve parked questions through `no-mistakes axi respond`. A
   14h-orphaned run still sits parked (its work is already on main — safe to
   dismiss). _(2026-07-06 → 08)_
-- **Agents should self-wrap-up on context pressure** _(new, 07-07)._ Make agents
+- **Agents should self-wrap-up on context pressure** _(new, 07-07)._
+  ✅ **Registered as TASK-17 (07-08).** Make agents
   context-aware: as they approach ~200–250k tokens they should proactively start wrapping
   up / handing off on their own, rather than *beginning* fresh work deep in a window ("you
   shouldn't start here"). Relates to `handoff` (the transfer) and the Stop-hook WIP snapshot
-  — this is the *trigger* that should fire the wrap-up. Could grow its own `NN-slug.md`. _(2026-07-07)_
+  — this is the *trigger* that should fire the wrap-up. _(2026-07-07 → 08)_
 - **#6 · Methodology audit → parallel-safety plan** →
   [`05-methodology-audit-parallel-safety.md`](05-methodology-audit-parallel-safety.md).
   Full audit (07-07): the vendored loop skills contradict the gate model (finishing
@@ -69,6 +71,10 @@ it its own `NN-slug.md` file in this folder and leave a one-line pointer here.
   **`codebase-memory-mcp`** (MIT) chosen and installed — worktree smoke test
   passed, wired as **on-demand MCP tools only** (no search-intercepting hooks;
   Claude Code user scope + Codex config), `auto_index`/`auto_watch` on.
+  ⚠️ **Operationalization gap registered as TASK-18 (07-08):** qq's main tree
+  had no index while throwaway gate worktrees were auto-indexing; task covers a
+  real main-tree query smoke, gate-worktree exclusion or accept decision,
+  multi-worktree verification, and the disconnect diagnosis.
   **OKF: format direction adopted, dependency deferred** (pre-ecosystem; keep
   compound's outputs OKF-compatible markdown, plug in a conformant toolchain when
   one exists). **Round 2 (07-07): layers 2+3 researched** →
