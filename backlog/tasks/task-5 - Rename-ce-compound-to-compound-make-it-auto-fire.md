@@ -1,10 +1,11 @@
 ---
 id: TASK-5
 title: Rename ce-compound to compound; make it auto-fire
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - task-5-compound-rename
 created_date: '2026-07-08 14:41'
-updated_date: '2026-07-08 21:02'
+updated_date: '2026-07-09 00:02'
 labels:
   - parallel-ok
 dependencies: []
