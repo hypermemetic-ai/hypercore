@@ -124,9 +124,46 @@ toon_field() {
   '
 }
 
+compact_output() {
+  sed -n '1,4p' | tr '\n' ' ' | sed 's/[[:space:]][[:space:]]*/ /g; s/^ //; s/ $//' | cut -c1-500
+}
+
+gate_view_error() {
+  local label="$1" rc="$2" output="$3" detail
+  detail=$(printf '%s' "$output" | compact_output)
+  printf 'gate_view_error: %s failed (exit %s)%s\n' "$label" "$rc" "${detail:+: $detail}"
+}
+
+axi_failed() {
+  local rc="$1" output="$2"
+  [ "$rc" -ne 0 ] && return 0
+  grep -q '^error:' <<<"$output"
+}
+
+axi_home() {
+  local out rc
+  out=$(no-mistakes axi 2>&1)
+  rc=$?
+  if axi_failed "$rc" "$out"; then
+    gate_view_error "no-mistakes axi" "$rc" "$out"
+    return 1
+  fi
+  printf '%s' "$out"
+}
+
+axi_status() {
+  local label="$1" out rc
+  shift
+  out=$(no-mistakes axi status "$@" 2>&1)
+  rc=$?
+  if axi_failed "$rc" "$out"; then
+    gate_view_error "$label" "$rc" "$out"
+    return 1
+  fi
+  printf '%s' "$out"
+}
+
 branch_run_id() {
-  local home
-  home=$(no-mistakes axi 2>/dev/null || true)
   awk -v branch="$branch" '
     function clean(value) {
       sub(/^[[:space:]]+/, "", value)
@@ -167,38 +204,59 @@ branch_run_id() {
     END {
       if (in_active && !found) emit()
     }
-  ' <<<"$home"
+  '
 }
 
 branch_status() { # echo the axi status block only if it describes this branch
-  local run out reported
-  run=$(branch_run_id)
+  local home run out reported
+  if ! home=$(axi_home); then
+    printf '%s' "$home"
+    return 0
+  fi
+  run=$(branch_run_id <<<"$home")
   [ -n "$run" ] || return 0
-  out=$(no-mistakes axi status --run "$run" 2>/dev/null || true)
+  if ! out=$(axi_status "no-mistakes axi status --run $run" --run "$run"); then
+    printf '%s' "$out"
+    return 0
+  fi
   reported=$(toon_field branch <<<"$out")
   [ "$reported" = "$branch" ] && printf '%s' "$out"
 }
 
 repo_run_id() { # id of whatever run the repo is driving, on any branch
-  no-mistakes axi 2>/dev/null |
-    awk '/^(active_run|other_branch_active_run):[[:space:]]*$/ { want = 1; next }
-         want && /^[[:space:]]+id:[[:space:]]*/ {
-           line = $0
-           sub(/^[[:space:]]+id:[[:space:]]*/, "", line)
-           gsub(/"/, "", line)
-           print line
-           exit
-         }
-         want && /^[^[:space:]]/ { want = 0 }'
+  awk '/^(active_run|other_branch_active_run):[[:space:]]*$/ { want = 1; next }
+       want && /^[[:space:]]+id:[[:space:]]*/ {
+         line = $0
+         sub(/^[[:space:]]+id:[[:space:]]*/, "", line)
+         gsub(/"/, "", line)
+         print line
+         exit
+       }
+       want && /^[^[:space:]]/ { want = 0 }'
 }
 
 repo_status() { # a finished run must not mask a live one
-  local run
-  run=$(repo_run_id)
+  local home run out
+  if ! home=$(axi_home); then
+    printf '%s' "$home"
+    return 0
+  fi
+  run=$(repo_run_id <<<"$home")
   if [ -n "$run" ]; then
-    no-mistakes axi status --run "$run" 2>/dev/null || true
+    if ! out=$(axi_status "no-mistakes axi status --run $run" --run "$run"); then
+      printf '%s' "$out"
+      return 0
+    fi
+    printf '%s' "$out"
   else
-    no-mistakes axi status 2>/dev/null || true
+    if ! out=$(axi_status "no-mistakes axi status"); then
+      if grep -Eiq 'no (gate )?run|no active .*run|no run (yet|found)|no matching run|start a run' <<<"$out"; then
+        return 0
+      fi
+      printf '%s' "$out"
+      return 0
+    fi
+    printf '%s' "$out"
   fi
 }
 
@@ -206,7 +264,11 @@ current_status() {
   if [ "$repo_scope" = 1 ]; then repo_status; else branch_status; fi
 }
 
-run_status_of() { no-mistakes axi status --run "$1" 2>/dev/null | toon_field status; }
+run_status_of() {
+  local out
+  out=$(no-mistakes axi status --run "$1" 2>/dev/null) || return 1
+  toon_field status <<<"$out"
+}
 
 # `attach` parks on an end-screen when its run finishes, is cancelled, or is
 # superseded — waiting for a keypress a viewer pane never gets. Supervise it:
@@ -218,7 +280,10 @@ attach_supervised() {
   no-mistakes attach --run "$run" &
   tui=$!
   while kill -0 "$tui" 2>/dev/null; do
-    st=$(run_status_of "$run")
+    if ! st=$(run_status_of "$run"); then
+      sleep 3
+      continue
+    fi
     if ! is_live_status "$st"; then
       sleep 2                        # let the end-screen render, then reap
       kill "$tui" 2>/dev/null || true
@@ -232,6 +297,14 @@ attach_supervised() {
 
 while true; do
   out=$(current_status)
+  error=$(toon_field gate_view_error <<<"$out")
+  if [ -n "$error" ]; then
+    note "$error
+
+fix no-mistakes setup, then this viewer will retry."
+    sleep "$interval"
+    continue
+  fi
   run=$(toon_field id <<<"$out")
   status=$(toon_field status <<<"$out")
 
@@ -252,7 +325,13 @@ hand work to the gate with:  no-mistakes axi run --skip ci --intent \"...\""
     attach_supervised "$run"
     attach_status=$?
     # attach returned: either the run ended, or the operator pressed q.
-    out=$(no-mistakes axi status --run "$run" 2>/dev/null || true)
+    if ! out=$(axi_status "no-mistakes axi status --run $run" --run "$run"); then
+      note "$(toon_field gate_view_error <<<"$out")
+
+fix no-mistakes setup, then this viewer will retry."
+      sleep "$interval"
+      continue
+    fi
     if [ "$repo_scope" != 1 ] && [ "$(toon_field branch <<<"$out")" != "$branch" ]; then out=""; fi
     status=$(toon_field status <<<"$out")
     if is_live_status "$status"; then

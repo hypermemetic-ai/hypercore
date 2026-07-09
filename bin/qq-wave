@@ -165,16 +165,16 @@ for id in "${ids[@]}"; do
         claude "$PREAMBLE Your task: TASK-$id. Your branch: $branch.")
   pane=$(jq -r '.result.agent.pane_id // empty' <<<"$out")
   [ -n "$pane" ] || { echo "qq-wave: agent start failed for TASK-$id" >&2; exit 1; }
-  rollback_claim=0
-
-  # a fresh worktree path raises Claude Code's trust prompt; accept it or the
-  # worker sits silently blocked
-  sleep 5; herdr pane send-keys "$pane" Enter >/dev/null 2>&1 || true
 
   if ! viewer=$(qq-gate-view --spawn "$pane" --cwd "$path"); then
     echo "qq-wave: gate viewer spawn failed for TASK-$id" >&2
     exit 1
   fi
   [ -n "$viewer" ] || { echo "qq-wave: gate viewer spawn returned no pane for TASK-$id" >&2; exit 1; }
+
+  # a fresh worktree path raises Claude Code's trust prompt; accept it or the
+  # worker sits silently blocked
+  sleep 5; herdr pane send-keys "$pane" Enter >/dev/null 2>&1 || true
+  rollback_claim=0
   echo "TASK-$id → $branch  (tab ${tab:-?}, worker $pane, viewer ${viewer:-none})"
 done
