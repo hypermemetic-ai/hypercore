@@ -46,12 +46,12 @@ root=$(git rev-parse --show-toplevel) || exit 1
 # branch dispatch a task whose file the worker's checkout does not contain
 # (gate finding RV-002, 2026-07-08). One commit, one source of truth — which is
 # why no "is this tree stale?" guard is needed: the tree is never consulted.
-origin_main=refs/remotes/origin/main
-if ! git -C "$root" fetch -q origin "+refs/heads/main:$origin_main"; then
+origin_main_ref=refs/remotes/origin/main
+if ! git -C "$root" fetch -q origin "+refs/heads/main:$origin_main_ref"; then
   echo "qq-wave: could not refresh origin/main; refusing to dispatch with stale frontier data." >&2
   exit 1
 fi
-if ! git -C "$root" rev-parse -q --verify "$origin_main" >/dev/null 2>&1; then
+if ! origin_main=$(git -C "$root" rev-parse -q --verify "$origin_main_ref^{commit}"); then
   echo "qq-wave: origin/main is unavailable; refusing to dispatch with stale frontier data." >&2
   exit 1
 fi
