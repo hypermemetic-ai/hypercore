@@ -83,12 +83,50 @@ slug() { # title -> short branch slug
   tr '[:upper:]' '[:lower:]' <<<"$1" | sed 's/[^a-z0-9]\+/-/g; s/^-//; s/-$//' | cut -c1-28 | sed 's/-$//'
 }
 
+rollback_claim=0
+rollback_id=""
+rollback_branch=""
+rollback_path=""
+rollback_tab=""
+rollback_workspace=""
+
+worktree_path_for_branch() {
+  git -C "$root" worktree list --porcelain |
+    awk -v branch="refs/heads/$1" '
+      /^worktree / { path = substr($0, 10); next }
+      /^branch / && substr($0, 8) == branch { print path; exit }
+    '
+}
+
+rollback_unconfirmed_claim() {
+  local rc=$? path
+  [ "$rollback_claim" = 1 ] || exit "$rc"
+  echo "qq-wave: setup failed before TASK-$rollback_id had a worker; removing $rollback_branch claim" >&2
+  if [ -n "$rollback_tab" ]; then
+    herdr tab close "$rollback_tab" >/dev/null 2>&1 || true
+  fi
+  if [ -n "$rollback_workspace" ]; then
+    herdr worktree remove --workspace "$rollback_workspace" --force >/dev/null 2>&1 || true
+  fi
+  path="$rollback_path"
+  [ -n "$path" ] || path=$(worktree_path_for_branch "$rollback_branch" 2>/dev/null || true)
+  if [ -n "$path" ] && [ "$path" != "$root" ]; then
+    git -C "$root" worktree remove --force "$path" >/dev/null 2>&1 || true
+  fi
+  git -C "$root" branch -D "$rollback_branch" >/dev/null 2>&1 || true
+  exit "$rc"
+}
+trap rollback_unconfirmed_claim EXIT
+
 # the worker protocol. Workers enter the loop at Plan: Align is the dispatcher's
 # job, already resolved in the task file (see §Parallel operation).
 PREAMBLE='You are the dedicated worker for one qq backlog task, in your own git worktree on your own branch. You own this tree; never touch main, the main checkout, or another task. Protocol: (1) read your task with `backlog task view <ID> --plain` — the task file is the source of truth for scope and acceptance criteria; (2) claim it: `backlog task edit <ID> -s "In Progress" -a <your-branch>`, commit the claim immediately; (3) work it per the qq methodology — Align is already done unless you find REAL ambiguity, in which case stop and ask rather than guessing; verification-before-completion is never skipped; (4) check ACs with evidence, flip the task Done, commit, push; (5) land through the gate: `no-mistakes axi run --skip ci --intent "<task + acceptance criteria + decisions>"`. You own the run: objective findings you fix; ask-user findings you RELAY to the conductor (`herdr agent list`, then `herdr send`) and keep the run parked — never self-approve a finding about your own work. When driving stacked branches always use `no-mistakes axi status --run <id>`: bare `axi status` silently falls back to the repo active run when your branch has none. Never end a turn on an announcement — if you say you will do something, do it in the same turn. Stamp phases with `qq-phase <Phase> --task task-<ID>`.'
 
 ws=$(herdr worktree list --cwd "$root" | jq -r '.result.source.source_workspace_id')
-[ -n "$ws" ] && [ "$ws" != null ] || { echo "qq-wave: cannot resolve the qq workspace id" >&2; exit 1; }
+if [ -z "$ws" ] || [ "$ws" = null ]; then
+  echo "qq-wave: cannot resolve the qq workspace id" >&2
+  exit 1
+fi
 
 for id in "${ids[@]}"; do
   title=$(title_of "$id")
@@ -99,20 +137,31 @@ for id in "${ids[@]}"; do
     continue
   fi
 
+  rollback_claim=1
+  rollback_id="$id"
+  rollback_branch="$branch"
+  rollback_path=""
+  rollback_tab=""
+  rollback_workspace=""
   out=$(herdr worktree create --cwd "$root" --branch "$branch" --base "$origin_main" \
         --label "task-$id" --no-focus --json)
   path=$(jq -r '.. | .path? // empty' <<<"$out" | head -1)
+  rollback_path="$path"
+  rollback_workspace=$(jq -r '.. | .workspace_id? // empty' <<<"$out" | head -1)
   [ -n "$path" ] || { echo "qq-wave: worktree create failed for TASK-$id" >&2; exit 1; }
 
   # explicit placement: a tab per task in the qq workspace, never the stray
   # workspace that `worktree create` opens
   tab=$(herdr tab create --workspace "$ws" --cwd "$path" --label "task-$id" --no-focus \
         | jq -r '.. | .tab_id? // empty' | head -1)
+  rollback_tab="$tab"
+  [ -n "$tab" ] || { echo "qq-wave: tab create failed for TASK-$id" >&2; exit 1; }
 
   out=$(herdr agent start "task-$id" ${tab:+--tab "$tab"} --cwd "$path" --no-focus -- \
         claude "$PREAMBLE Your task: TASK-$id. Your branch: $branch.")
   pane=$(jq -r '.result.agent.pane_id // empty' <<<"$out")
   [ -n "$pane" ] || { echo "qq-wave: agent start failed for TASK-$id" >&2; exit 1; }
+  rollback_claim=0
 
   # a fresh worktree path raises Claude Code's trust prompt; accept it or the
   # worker sits silently blocked
