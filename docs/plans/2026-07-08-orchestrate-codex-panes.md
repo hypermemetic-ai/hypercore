@@ -161,8 +161,8 @@ branch after the previous slice reaches `main`. `writing-plans` /
 - ~~Codex resume-by-id flag name for dead panes~~ — confirmed 07-08:
   `codex resume [SESSION_ID]` / `codex exec resume [SESSION_ID]`.
 - ~~Stacked slice branches self-correct at merge~~ — **wrong, and it was the
-  pilot's real trap.** Each gate run rebases its slice onto `main`
-  independently, so the stack delinearizes and a hand-built stack is not a
-  stack. Slices land **serially**: one green PR at a time, re-drive the next
-  slice's run after its predecessor merges. See `ideas/06-slicing-pilot-lessons.md`
-  friction #1.
+  pilot's real trap.** Each gate run is main-relative and does not update
+  successor branches, so a hand-built stack is not a stack. Slices land
+  **serially**: one green PR at a time, merge `origin/main` into the next slice
+  branch after its predecessor merges, then re-drive that run. See
+  `ideas/06-slicing-pilot-lessons.md` friction #1.

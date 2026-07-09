@@ -39,10 +39,10 @@ itself (design-doc substrate + minted sub-tasks) landed as its own first run.
 
 ## Friction to design around
 
-1. **The gate rebases each slice onto `main`, so a hand-built stack does not
-   stay a stack.** This is the pilot's biggest structural lesson. Each `axi run`
-   independently rebases + force-pushes its branch onto `main` — it has no idea
-   the branch was stacked on a sibling. After four runs the stack had
+1. **Main-relative gate runs mean a hand-built stack does not stay a stack.**
+   This is the pilot's biggest structural lesson. Each `axi run` validates and
+   lands its own branch against the `main` it saw; it does not preserve sibling
+   stack ancestry or update successor branches. After four runs the stack had
    **delinearized**: `slice0` was still an ancestor of `slice1`, but `slice1`
    was no longer an ancestor of `slice2`, nor `slice2` of `slice3` (verified
    with `git merge-base --is-ancestor`). One PR was already CONFLICTING against
@@ -50,16 +50,17 @@ itself (design-doc substrate + minted sub-tasks) landed as its own first run.
    any "just merge them in order" plan, because each merge invalidates the next.
 
    Don't fight it: **treat slices as serially landed, never as a live stack.**
-   Land slice N, wait for it to hit `main`, then re-drive slice N+1's gate run
-   (its rebase step re-parents it onto the new `main` and updates the PR — the
-   landing agent never force-pushes, and the git rail wouldn't allow it anyway).
-   Only one slice PR should be open-and-green at a time. Merging out of order,
-   or merging a green PR whose predecessor just landed, is how you get a
-   cumulative or conflicted diff. This is the rule `executing-plans` should
-   encode.
-2. **Corollary: a green PR is only green against the `main` it was rebased on.**
+   Land slice N, wait for it to hit `main`, then merge `origin/main` into slice
+   N+1's branch and re-drive that gate run. The landing path must not depend on
+   rebase + force-push repair: the git rail blocks force-push, and the gate's
+   push target rejects non-fast-forward updates. Only one slice PR should be
+   open-and-green at a time. Merging out of order, or merging a green PR whose
+   predecessor just landed, is how you get a cumulative or conflicted diff.
+   This is the rule `executing-plans` should encode.
+2. **Corollary: a green PR is only green against the `main` it was checked on.**
    Re-check `gh pr view <n> --json mergeable` after every merge; expect the
-   successors to flip to CONFLICTING and need a fresh run, not a hand-fix.
+   successors to flip to CONFLICTING and need an `origin/main` merge plus a
+   fresh run, not a hand-fix.
 3. **Review redundancy on stacks.** Each stacked run re-reviews unmerged
    predecessor content. Fine at three small slices; on long stacks either
    tolerate it or wait for merges between slices.
@@ -80,10 +81,10 @@ itself (design-doc substrate + minted sub-tasks) landed as its own first run.
 6. **Gate auto-fixes on a mid-stack branch collide with fix-forward commits
    on the successor.** The slice-2 run's review fixes rewrote the same skill
    hunk slice 3 had already fix-forwarded (both encoding the same lesson,
-   different words). Don't leave that to the next run's rebase-fix:
+   different words). Don't leave that to the next run's conflict repair:
    **merge the gate-fixed predecessor branch into the successor and resolve
    by hand** before submitting the successor's run — deterministic, and the
-   merge also absorbs main drift early. (Caught live: settled-submit wording,
+   merge also absorbs `main` drift early. (Caught live: settled-submit wording,
    slice 2 → slice 3.)
 
 ## Worker-pane lessons (fed back into the skill in slice 3)
@@ -108,8 +109,9 @@ itself (design-doc substrate + minted sub-tasks) landed as its own first run.
   criteria checked in its own landing.
 - Executing-plans should own the serial landing loop: claim slice → build →
   verify → Done-flip → gate run → **wait for merge to `main`** → re-drive the
-  next slice's run so its rebase re-parents it onto the new `main`. One green
-  slice PR open at a time (friction #1). Abandoned-landing repair = revert the
-  Done flip first.
-- Neither skill should teach hand-built branch stacks: the gate's rebase step
-  owns branch parentage, and the landing agent never force-pushes.
+  next slice only after merging `origin/main` into its branch. One green slice
+  PR open at a time (friction #1). Abandoned-landing repair = revert the Done
+  flip first.
+- Neither skill should teach hand-built branch stacks: the gate should not be
+  treated as branch repair, and the landing agent never rewrites branch
+  history.
