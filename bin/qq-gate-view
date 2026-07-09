@@ -84,7 +84,10 @@ fi
 command -v no-mistakes >/dev/null || { echo "qq-gate-view: no-mistakes not on PATH" >&2; exit 1; }
 branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null) || { echo "qq-gate-view: not in a git repo" >&2; exit 1; }
 
-trap 'printf "\nqq-gate-view: exit\n"; exit 0' INT
+# the backgrounded `attach` TUI, if one is running. Ctrl-C must take it with us:
+# a targeted SIGINT (or an attach that ignores it) would otherwise orphan the TUI.
+attach_pid=""
+trap 'printf "\nqq-gate-view: exit\n"; [ -n "$attach_pid" ] && kill "$attach_pid" 2>/dev/null; exit 0' INT
 
 detached_run=""
 last_note=""
@@ -189,6 +192,13 @@ branch_run_id() {
       emit()
       in_active = 0
     }
+    # a nested tabular block (steps[..], findings[..]) ends the scalar fields;
+    # its rows must never be mistaken for the run id itself (cf. toon_field)
+    in_active && /^[[:space:]]*(steps\[|active_steps\[|findings\[|help\[|gate:)/ {
+      emit()
+      in_active = 0
+      next
+    }
     in_active && /^[[:space:]]+id:[[:space:]]*/ {
       line = $0
       sub(/^[[:space:]]+id:[[:space:]]*/, "", line)
@@ -276,14 +286,26 @@ run_status_of() {
 # Without this the pane freezes on a dead run (observed 2026-07-08: a superseded
 # run left the conductor's viewer on "Pipeline cancelled" while 3 runs were live).
 attach_supervised() {
-  local run="$1" st tui rc
+  local run="$1" st tui rc blind=0
+  # A status query that ERRORS must not be read as "still live". `attach` never
+  # self-exits on a dead run, so an unqueryable run (pruned, backend hiccup)
+  # would loop here forever and freeze the pane — the very bug this supervises
+  # against. Tolerate a few transient failures, then assume the run is gone.
+  local blind_limit=5
   no-mistakes attach --run "$run" &
   tui=$!
+  attach_pid="$tui"
   while kill -0 "$tui" 2>/dev/null; do
     if ! st=$(run_status_of "$run"); then
+      blind=$((blind + 1))
+      if [ "$blind" -ge "$blind_limit" ]; then
+        kill "$tui" 2>/dev/null || true
+        break
+      fi
       sleep 3
       continue
     fi
+    blind=0
     if ! is_live_status "$st"; then
       sleep 2                        # let the end-screen render, then reap
       kill "$tui" 2>/dev/null || true
@@ -292,6 +314,7 @@ attach_supervised() {
     sleep 3
   done
   wait "$tui" 2>/dev/null; rc=$?
+  attach_pid=""
   return "$rc"
 }
 

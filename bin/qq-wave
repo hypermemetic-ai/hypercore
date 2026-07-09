@@ -166,15 +166,20 @@ for id in "${ids[@]}"; do
   pane=$(jq -r '.result.agent.pane_id // empty' <<<"$out")
   [ -n "$pane" ] || { echo "qq-wave: agent start failed for TASK-$id" >&2; exit 1; }
 
-  if ! viewer=$(qq-gate-view --spawn "$pane" --cwd "$path"); then
-    echo "qq-wave: gate viewer spawn failed for TASK-$id" >&2
-    exit 1
-  fi
-  [ -n "$viewer" ] || { echo "qq-wave: gate viewer spawn returned no pane for TASK-$id" >&2; exit 1; }
+  # The worker is alive from here on, so disarm the rollback before anything else
+  # can fail. Everything below is monitoring and convenience; none of it is worth
+  # tearing down a running worker, its worktree, and its claim branch.
+  rollback_claim=0
 
   # a fresh worktree path raises Claude Code's trust prompt; accept it or the
   # worker sits silently blocked
   sleep 5; herdr pane send-keys "$pane" Enter >/dev/null 2>&1 || true
-  rollback_claim=0
+
+  # the viewer is a monitoring pane: losing it degrades visibility, never the run
+  if ! viewer=$(qq-gate-view --spawn "$pane" --cwd "$path") || [ -z "$viewer" ]; then
+    viewer=""
+    echo "qq-wave: WARNING — gate viewer spawn failed for TASK-$id; the worker is running without one." >&2
+    echo "         attach one later with: qq-gate-view --spawn $pane --cwd $path" >&2
+  fi
   echo "TASK-$id → $branch  (tab ${tab:-?}, worker $pane, viewer ${viewer:-none})"
 done
