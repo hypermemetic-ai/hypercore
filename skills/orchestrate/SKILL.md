@@ -1,6 +1,6 @@
 ---
 name: orchestrate
-description: Conducts a non-trivial engineering task through qq's full loop as a two-model split — Claude conducts and judges in the main session while Codex does the implementation — so interactive work and noisy reads never pollute the conductor's context and the reviewer is never the author. Use to take a real build task from intent to a landed, verified change end-to-end; not for questions, lookups, or trivial one-liners, which use the small-change shortcut.
+description: Conducts a non-trivial engineering task through qq's full loop as a two-model split — Claude conducts and judges in the main session while Codex implements in a named herdr worker pane — so interactive work and noisy reads never pollute the conductor's context and the reviewer is never the author. Use to take a real build task from intent to a landed, verified change end-to-end; not for questions, lookups, or trivial one-liners, which use the small-change shortcut.
 ---
 
 # Orchestrate
@@ -85,15 +85,17 @@ here once; every step below refers to it.
    (tab-per-task: one tab reads as one task; cap ~3 panes per tab). Find your
    tab with `herdr pane current` → `tab_id`, then:
    `herdr agent start cx-<branch> --cwd <tree> --tab <tab_id> --split right
-   --no-focus -- codex`. Fanning out? `herdr worktree create --branch <name>`
-   first — worktree affinity is per-pane via `--cwd`.
+   --no-focus -- codex`. Resolve the pane id from the start output or
+   `herdr agent get cx-<branch>` → `pane_id` before any `pane send-keys`.
+   Fanning out? `herdr worktree create --branch <name>` first — worktree
+   affinity is per-pane via `--cwd`.
 2. **Trust prompt** — `herdr agent read cx-<branch> --source visible`; if the
    directory-trust prompt is showing, `herdr pane send-keys <pane> Enter`
    (option 1 is preselected). Long-term: pre-trust project roots in
    `~/.codex/config.toml`.
 3. **Handoff** — write the plan task(s) + the acceptance check to
-   `.qq/handoffs/<n>-brief.md` (multi-line text must not ride `agent send` — a
-   newline submits early). Then:
+   `.qq/handoffs/<n>-brief.md` (multi-line text must not ride
+   `herdr agent send` — a newline submits early). Then:
    `herdr agent send cx-<branch> "Execute .qq/handoffs/<n>-brief.md; when done
    write .qq/handoffs/<n>-report.md (what changed, files touched, how to
    verify)."` followed by `herdr pane send-keys <pane> Enter`. The worker edits

@@ -45,7 +45,9 @@ of record (that stays file-based, below).
 1. Start: `herdr agent start cx-<branch> --cwd <tree> --tab <conductor-tab>
    --split right --no-focus -- codex`
    (same workspace as the run's tree; `herdr worktree create` first when
-   fanning out). One worker per working tree, honoring tree ownership.
+   fanning out). Resolve the pane id from the start output or
+   `herdr agent get cx-<branch>` → `pane_id`; one worker per working tree,
+   honoring tree ownership.
 2. Trust prompt: after start, `herdr agent read cx-<branch> --source visible`;
    if the directory trust prompt is showing, `herdr pane send-keys <pane> Enter`
    (option 1 is preselected). Long-term: pre-trust project roots in
@@ -55,18 +57,20 @@ of record (that stays file-based, below).
    `herdr agent send cx-<branch> "Execute .qq/handoffs/<n>-brief.md; when done
    write .qq/handoffs/<n>-report.md (what changed, files touched, how to
    verify)."` followed by `herdr pane send-keys <pane> Enter`.
-4. Wait: `herdr agent wait cx-<branch> --status idle --timeout <generous>`;
-   on timeout, `herdr agent read cx-<branch>` for signs of life before declaring
-   it stuck. A worker parked on an approval prompt surfaces as blocked → read
-   the pane, answer or escalate to the owner.
+4. Wait: `herdr agent wait cx-<branch> --status idle --timeout <generous,
+   ms>`; if idle flickers mid-turn, wait for idle twice a few seconds apart
+   before trusting it. On timeout, `herdr agent read cx-<branch>` for signs of
+   life before declaring it stuck. A worker parked on an approval prompt
+   surfaces as blocked → read the pane, answer or escalate to the owner.
 5. Report-back is **file-based**: the conductor reads
    `.qq/handoffs/<n>-report.md`. Scrollback
-   (`herdr agent read cx-<branch>`) is debug/fallback only — never parse it as
-   the result of record.
+   (`herdr agent read cx-<branch>`) and the live stream (`herdr terminal session
+   observe cx-<branch>`) are debug/watch only — never parse them as the result
+   of record.
 6. Repair loop: the pane session is alive — send the failing evidence as a
-   follow-up message in the same pane. `codex exec resume --last` semantics
-   (and its cross-worktree bleed hazard, audit Part 2.3) are deleted, not
-   scoped. If a pane dies, herdr holds the codex session id
+   follow-up handoff in the same pane, using the next `<n>`. `codex exec resume
+   --last` semantics (and its cross-worktree bleed hazard, audit Part 2.3) are
+   deleted, not scoped. If a pane dies, herdr holds the codex session id
    (`herdr agent get cx-<branch>` → `agent_session.value`); restart with
    `herdr agent start cx-<branch> … -- codex resume <session-id>` (flag
    confirmed 07-08: `codex resume [SESSION_ID]`; bare `--last` is banned in
