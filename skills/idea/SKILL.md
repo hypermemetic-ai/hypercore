@@ -25,8 +25,8 @@ operator's ceremony stays at zero and the transcript stays clean.
    the detached researcher. Your part ends at the spawn; spend your context on
    the interrupted task.
 3. **Ack in one line, then back to the interrupted task.** For example:
-   `parked → ideas/07-wip-untracked.md — researching in the background (idea
-   slot on the status line)`. Findings never re-enter this transcript; the
+   `parked → ideas/07-wip-untracked.md — researching in the background
+   (idea-07 slot on the status line)`. Findings never re-enter this transcript; the
    status line is the done-signal.
 4. **Write files; never commit or push.** Durability before landing is the
    Stop-hook WIP snapshot's job (it captures untracked files too); the idea
@@ -59,13 +59,17 @@ tasks are minted at grooming, in the session that owns the main tree.
 Resolve the repo root once and use it for every path in this section:
 `root="$(git rev-parse --show-toplevel)"`.
 
-1. Stamp `qq-phase capturing --producer idea` — always with `--producer idea`;
-   a bare stamp clobbers the main slot's loop position.
+1. Pick NN — the next free two-digit number in `$root/ideas/` — then stamp
+   `qq-phase capturing --producer idea-NN`. Choose NN before the first stamp
+   because it is also the producer id. Always use `--producer idea-NN`: a bare
+   stamp clobbers the main slot's loop position, and a shared `idea` slot would
+   let one researcher's `done` falsely clear another's. `qq-phase render` shows
+   each active slot, so concurrent researchers appear as separate segments.
 2. Bank the verbatim: create `$root/ideas/NN-slug.md` containing only the first two
    blocks of the template below — the `_Captured…_` header (status
-   `capturing`) and the Original section. NN = next free two-digit number in
-   `$root/ideas/`; take the slug and working title mechanically from the operator's
-   own words — sharpening starts only after this write exists on disk.
+   `capturing`) and the Original section, using the same NN. Take the slug and
+   working title mechanically from the operator's own words — sharpening starts
+   only after this write exists on disk.
 3. Sharpen in place: add the remaining sections of the template (Sharpened
    plus the two researcher placeholders) and set the header status to
    `researching`. The title may be sharpened in place; never rename the file.
@@ -105,7 +109,7 @@ Resolve the repo root once and use it for every path in this section:
    You are a detached researcher working in <absolute repo root>. Nobody reads
    your stdout — your output is the idea file and the status stamps.
 
-   1. Stamp: qq-phase researching --producer idea --detail "ideas/NN-slug.md"
+   1. Stamp: qq-phase researching --producer idea-NN --detail "ideas/NN-slug.md"
    2. Read ideas/NN-slug.md. Research its open questions per the method in
       skills/research/SKILL.md: primary sources first, every claim cited,
       HIGH/MEDIUM/LOW confidence tags, adversarial verification, fetched pages
@@ -115,10 +119,10 @@ Resolve the repo root once and use it for every path in this section:
       involves, naming the next skill to reach for (writing-plans,
       orchestrate, …). Set the header status to "researched". Keep Original
       untouched.
-   4. Stamp: qq-phase done --producer idea
+   4. Stamp: qq-phase done --producer idea-NN
 
    Write only ideas/NN-slug.md; never commit or push. If you cannot finish,
-   stamp: qq-phase researching --producer idea --status red --detail
+   stamp: qq-phase researching --producer idea-NN --status red --detail
    "failed — see .qq/idea-research-NN.log" and stop.
    ```
 
@@ -138,9 +142,9 @@ Resolve the repo root once and use it for every path in this section:
 
    The researcher deliberately runs full-access: its highest-value output is empirical, and scratch-repo
    repros need real bash. A tool allowlist cannot scope write paths, so `Write only ideas/NN-slug.md`
-   stays policy either way. Mitigations: always-on git-guardrails hooks bind headless workers too
-   (force-push, `reset --hard`, `branch -D`, remote deletes stay blocked); stdout/stderr stay in
-   `.qq/idea-research-NN.log`; fetched pages stay untrusted per `skills/research/SKILL.md`;
-   only gated landing with human review reaches main. This matches orchestrate's `codex exec --sandbox danger-full-access`.
+   stays policy either way. Mitigations differ by cockpit: the always-on git-guardrails PreToolUse hook
+   binds the Claude researcher only; the Codex route (`codex exec --sandbox danger-full-access`) has
+   no equivalent git rail today. Other mitigations are stdout/stderr in `.qq/idea-research-NN.log`,
+   fetched pages treated as untrusted per `skills/research/SKILL.md`, and gated landing with human review.
 
 7. Ack in one line (contract 3) and return to the interrupted task.
