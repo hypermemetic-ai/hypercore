@@ -34,15 +34,19 @@ visible spent an hour displaying a superseded run as if it were current.
 
 **Provisional rule.** Treat "produced output" as orthogonal to "succeeded." In
 particular: no-output is never evidence of success; a status command that can
-fall back to a *different subject* must be pinned (`axi status --run <id>`,
-`qq-frontier --ref <rev>`); and a verification command must fail loudly — if it
-cannot fail, it is not verification.
+fall back to a *different subject* must be pinned (`axi status --run <id>`), a
+frontier read needs the TASK-19 `qq-frontier --ref <rev>` pin, and a
+verification command must fail loudly — if it cannot fail, it is not
+verification.
 
-Where this is already enforced: `qq-gate-view` guards every status read on the
-reported branch and supervises `attach`; `qq-frontier` reads a pinned rev;
-`qq-wave` reads the frontier from the same commit its workers branch from
-(gate finding RV-002). Where it is *not* yet enforced: the `qq-activate.sh`
-install list is still hand-maintained, and nothing stops the next `${var:+}`.
+Where this is already enforced on main today: `qq-frontier` exists, reads the
+current tree's committed `HEAD`, and accepts only `--afk` / `--json`. What lands
+with TASK-19, not main yet: the pinned-rev `qq-frontier --ref <rev>` flag;
+`qq-gate-view`, which guards every status read on the reported branch and
+supervises `attach`; and `qq-wave`, which reads the frontier from the same
+commit its workers branch from (gate finding RV-002). Where it is *not* yet
+enforced: the `qq-activate.sh` install list is still hand-maintained, and
+nothing stops the next `${var:+}`.
 
 ## Reading 2 — the gate's branch contract (rebase cannot land)
 
@@ -75,8 +79,10 @@ while three branches held `To Do` copies.
 Consequences, both real:
 - **Do not audit registry discoverability mid-stack.** A gate reviewer did, and
   filed a finding whose premise dissolved in a single-branch reproduction.
-- **Tools that must be right should not go through the CLI.** `qq-frontier`
-  reads committed task files from a pinned revision precisely to sidestep this.
+- **Tools that must be right should not go through the CLI.** On main today,
+  `qq-frontier` reads committed task files from the current checkout's `HEAD`;
+  the TASK-19 `qq-frontier --ref <rev>` extension pins that read to a
+  dispatcher-chosen revision precisely to sidestep this.
 
 Unresolved: whether cross-branch resolution earns its keep at all. It buys
 visibility into others' claims; it costs a board that cannot be trusted while
@@ -102,10 +108,11 @@ self-approved `ask-user` findings about their own work. Workers exited leaving
 conflicted PRs behind. None of this was malice; the protocol simply did not say
 otherwise, and a worker biased toward proceeding will proceed.
 
-`bin/qq-wave`'s preamble now says: relay `ask-user` findings, keep the run
-parked, never end a turn on an announcement, and use `axi status --run <id>` when
-driving stacked branches. Whether a preamble is *sufficient* is untested —
-TASK-17's context-pressure trigger and TASK-11's lifecycle view both bear on it.
+The TASK-19 `bin/qq-wave` branch's preamble says: relay `ask-user` findings,
+keep the run parked, never end a turn on an announcement, and use `axi status
+--run <id>` when driving stacked branches. Whether a preamble is *sufficient* is
+untested — TASK-17's context-pressure trigger and TASK-11's lifecycle view both
+bear on it.
 
 ## What to reconsider next session
 

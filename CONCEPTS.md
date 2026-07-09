@@ -60,11 +60,15 @@ pushes; the rail blocks `--force`. Therefore a rebased branch can never land —
 reconciliation with the gate (or with a moved `main`) must be a **merge**, with
 your changes re-applied on top of the gate's files so its hardening survives.
 
-**frontier ref** — The revision a dispatcher reads the registry from. It must be
-the same commit its workers are created from (`origin/main`), or the wave can
-hand out a task whose file the worker's checkout does not contain.
+**frontier ref** — The revision a dispatcher reads the registry from. The
+requirement exists now, but explicit `qq-frontier --ref <rev>` support lands
+with TASK-19; on main today `qq-frontier` has only `--afk` / `--json` and reads
+the current committed `HEAD`. The ref must be the same commit workers are
+created from (`origin/main`), or the wave can hand out a task whose file the
+worker's checkout does not contain.
 
-**gate viewer** — `qq-gate-view`: a pane-local wrapper around `no-mistakes
-attach` that pins the run id, guards it against the branch, and supervises the
-TUI so a finished or superseded run cannot freeze the pane. Branch-scoped for
-workers; `--repo` for the conductor, whose pane drives no run of its own.
+**gate viewer** — The planned TASK-19 `qq-gate-view` tool, not on main yet: a
+pane-local wrapper around `no-mistakes attach` that pins the run id, guards it
+against the branch, and supervises the TUI so a finished or superseded run
+cannot freeze the pane. Branch-scoped for workers; `--repo` for the conductor,
+whose pane drives no run of its own.
