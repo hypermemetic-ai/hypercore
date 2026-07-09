@@ -26,9 +26,11 @@ If you haven't run the verification command in this message, you cannot claim it
 ```
 BEFORE claiming any status or expressing satisfaction:
 
-1. IDENTIFY: What command proves this claim?
+1. IDENTIFY: What command proves this claim, and what exact ref/run/path/subject
+   must it be pinned to?
 2. RUN: Execute the FULL command (fresh, complete)
-3. READ: Full output, check exit code, count failures
+3. READ: Full output, check exit code, count failures, and confirm it answered
+   the intended subject
 4. VERIFY: Does output confirm the claim?
    - If NO: State actual status with evidence
    - If YES: State claim WITH evidence
@@ -56,6 +58,8 @@ Skip any step = lying, not verifying
 - About to commit/push/PR without verification
 - Trusting agent success reports
 - Relying on partial verification
+- Treating output, exit 0, or no output as proof without checking the command
+  answered the intended question
 - Thinking "just this once"
 - Tired and wanting work over
 - **ANY wording implying success without having run verification**

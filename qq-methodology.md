@@ -39,8 +39,9 @@ repo via a symlinked `@`-import — do not edit a copy; edit it in qq.
   its own git worktree; herdr's sidebar shows which agent is blocked / working /
   done / idle, so you see at a glance which one needs you. Agents can also talk
   to each other directly through herdr — `herdr agent list`, `send <target>
-  <text>` (follow with `herdr pane send-keys <pane> Enter` to submit), `read
-  <target>`, `wait <target> --status idle|working|blocked` — use it when
+  <text>` (then `read <target>` until the text is visible before
+  `herdr pane send-keys <pane> Enter` submits it), `read <target>`,
+  `wait <target> --status idle|working|blocked` — use it when
   coordination helps; there is deliberately no protocol beyond these primitives
   yet.
 - **Cockpit** — the operator's tuned terminal surface, linked from the qq repo:
@@ -79,7 +80,8 @@ task gets its `parallel-ok` label (or explicit dependencies) and its
 exempt — see §Parallel operation). When the operator asks for the next task and
 the queue is deep, don't default to serial: run `bin/qq-frontier` and propose a
 wave of independent frontier tasks fanned out via herdr worktrees (see
-§Parallel operation).
+§Parallel operation). Today the tool reads the current committed `HEAD`, so run
+it from the same clean commit workers will branch from.
 
 Two invariants: **`verification-before-completion` is never skipped**, and
 **no change reaches `main` except through the gate** — the second is what makes
@@ -130,6 +132,10 @@ state; `qq-phase clear --producer <id>` removes one slot.
   batch. History stays bisectable. Un-green WIP never reaches a shared branch.
 - **Push the branch after each green commit** — always fast-forward-safe; durability
   plus live visibility for your partner.
+- **Reconcile by merge, not rebase.** A gate run rebases your commits onto its
+  own head and can append review-fix commits there; the push target rejects
+  non-fast-forward updates and the rail blocks force. If your branch must absorb
+  gate or `main` movement, merge those heads and keep the gate's files/fixes.
 - **Undo is `git revert`** to the last green commit — forward and clean, never
   `reset --hard` (the rail blocks it). Commit-on-green is what makes revert cheap.
 - **In-flight work is never lost.** A `Stop` hook snapshots the working tree to
@@ -188,9 +194,11 @@ These are the rules that make that safe.
 - **The frontier** — the set of claimable tasks: status `To Do`, every
   dependency `Done`, unassigned, **and no `task-<id>` branch anywhere** (local
   or remote). `bin/qq-frontier` computes it mechanically (`--afk` filters to
-  unattended-safe work, `--json` for tooling). Background agents and wave
-  dispatchers pick only from the frontier — never from the raw To Do column,
-  which under-reports claims (see below) and over-reports readiness.
+  unattended-safe work, `--json` for tooling) from the current committed `HEAD`.
+  Until explicit ref pinning lands, wave dispatchers run it from the clean commit
+  they will create worker branches from. Background agents and wave dispatchers
+  pick only from the frontier — never from the raw To Do column, which
+  under-reports claims (see below) and over-reports readiness.
 - **Claim-by-assignment** — claiming a task is three moves, atomically on your
   own branch: create `task-<id>-<slug>`, set the task's assignee to that branch
   name, commit the claim immediately. Because claims land on `main` only at

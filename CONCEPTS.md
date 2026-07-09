@@ -46,3 +46,29 @@ assignee field on the worker's own branch.
 
 **attendance label** — The triage label that says whether an unclaimed To Do
 task is `afk` for unattended execution or `hitl` because it needs operator input.
+
+**silent failure** — A command that returns output and exit 0 while answering a
+different question than the one asked: `axi status` falling back to another
+branch's run, `git grep` eating `--split` as a flag, `${var:+}` firing on `0`.
+The session of 2026-07-08 lost most of its time to seven of these. Working
+assumption: producing output is orthogonal to succeeding, and no-output is never
+evidence of success.
+
+**gate branch contract** — A gate run rebases your commits onto its own head and
+appends review-fix commits there; its push target refuses non-fast-forward
+pushes; the rail blocks `--force`. Therefore a rebased branch can never land —
+reconciliation with the gate (or with a moved `main`) must be a **merge**, with
+your changes re-applied on top of the gate's files so its hardening survives.
+
+**frontier ref** — The revision a dispatcher reads the registry from. The
+requirement exists now, but explicit `qq-frontier --ref <rev>` support lands
+with TASK-19; on main today `qq-frontier` has only `--afk` / `--json` and reads
+the current committed `HEAD`. The ref must be the same commit workers are
+created from (`origin/main`), or the wave can hand out a task whose file the
+worker's checkout does not contain.
+
+**gate viewer** — The planned TASK-19 `qq-gate-view` tool, not on main yet: a
+pane-local wrapper around `no-mistakes attach` that pins the run id, guards it
+against the branch, and supervises the TUI so a finished or superseded run
+cannot freeze the pane. Branch-scoped for workers; `--repo` for the conductor,
+whose pane drives no run of its own.
