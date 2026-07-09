@@ -8,8 +8,8 @@ model**. Mechanics smoke-tested 07-08 (scratch workspace): `herdr agent start �
 `herdr agent send cx-<branch>` + `herdr pane send-keys <pane> Enter` delivers
 prompts after a brief read/settle before Enter; `herdr agent wait
 cx-<branch> --status idle` unblocks when Codex surfaces `done` at turn end;
-herdr captures the codex session id. This plan lands as its own gated branch **after**
-`feat/document-stack` merges._
+herdr captures the codex session id. This doc is slice 0 of the gated TASK-8
+slicing pilot; the later slices land as their own gated runs, serially._
 
 ## Goal
 
@@ -159,6 +159,9 @@ only from this pilot's lessons (captured in slice 3).
   N s apart).
 - ~~Codex resume-by-id flag name for dead panes~~ — confirmed 07-08:
   `codex resume [SESSION_ID]` / `codex exec resume [SESSION_ID]`.
-- Stacked slice branches: a later slice's PR shows the cumulative diff until
-  its predecessor merges (merge commits preserve SHAs, so it self-corrects).
-  Pilot lesson to watch, not a blocker.
+- ~~Stacked slice branches self-correct at merge~~ — **wrong, and it was the
+  pilot's real trap.** Each gate run rebases its slice onto `main`
+  independently, so the stack delinearizes and a hand-built stack is not a
+  stack. Slices land **serially**: one green PR at a time, re-drive the next
+  slice's run after its predecessor merges. See `ideas/06-slicing-pilot-lessons.md`
+  friction #1.
