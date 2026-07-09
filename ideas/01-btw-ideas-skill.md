@@ -1,8 +1,8 @@
 # The `/idea` capture skill
 
-_Banked 2026-07-06. Status: design locked as `/idea`; harness-extensibility
-question researched (2026-07-07, section below); not yet built. It rides the
-background-status substrate built by #5._
+_Banked 2026-07-06. Status: ✅ built 2026-07-08 (task-6) as `skills/idea/SKILL.md`,
+eval-first per `writing-skills`; harness-extensibility question researched
+(2026-07-07, section below). It rides the background-status substrate built by #5._
 
 ## Original (verbatim — surlej)
 

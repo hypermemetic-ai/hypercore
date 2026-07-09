@@ -1,8 +1,8 @@
 # Skills — attribution
 
 qq's skill set is curated from four excellent MIT-licensed collections, plus
-four skills authored for qq — three synthesizing the best ideas across them,
-and `orchestrate`, original to qq. All upstream sources are MIT; their
+five skills authored for qq — three synthesizing the best ideas across them,
+and `orchestrate` and `idea`, original to qq. All upstream sources are MIT; their
 copyright notices are retained inside each vendored skill directory.
 
 ## Vendored (unmodified except where noted)
@@ -49,3 +49,4 @@ noted above. To re-check after an upstream release: fetch each skill's
 | `uat-signoff` | the human-UAT pattern of gsd `gsd-verify-work` ([open-gsd/gsd-core](https://github.com/open-gsd/gsd-core)), distilled runtime-free | MIT |
 | `writing-skills` | Anthropic skill-authoring best-practices + mattpocock `writing-great-skills` + superpowers `writing-skills` (eval-first) | MIT |
 | `orchestrate` | original to qq — conducts the `AGENTS.md` loop as a Claude-conducts / Codex-implements split | MIT |
+| `idea` | original to qq — mid-session thought capture riding the `qq-phase` producer-slot substrate; delegates to `research`'s method and borrows `handoff`'s compaction discipline (design: `ideas/01-btw-ideas-skill.md`) | MIT |

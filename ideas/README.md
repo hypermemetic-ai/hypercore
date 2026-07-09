@@ -8,19 +8,23 @@ it into `AGENTS.md`, or just delete it.
 Quick thoughts go as bullets under **Backlog**. When an idea outgrows a line, give
 it its own `NN-slug.md` file in this folder and leave a one-line pointer here.
 
+This folder is the output surface of the `/idea` skill (`skills/idea/SKILL.md`):
+mid-session it captures a bare todo as a verbatim bullet, and anything
+researchable as an `NN-slug.md` a detached researcher then enriches in place.
+
 ## Backlog
 
-> **Session 2026-07-07 worked this folder; statuses below are current. #5 is now
-> built (writer + status-line reader), and #2 is built as `compound` — remaining
-> build order: #1 (`/idea`). Design is locked — no more design
-> questions, just build.**
+> **Session 2026-07-07 worked this folder; statuses below are current. #5 is
+> built and landed, #1 (`/idea`) is now built on it (07-08), and #2 is built as
+> `compound` (TASK-5, 2026-07-09).**
 
 - **#1 · The `/idea` capture skill** → [`01-btw-ideas-skill.md`](01-btw-ideas-skill.md).
-  _Design locked (07-07)._ Renamed off `/btw` — that's a **built-in Claude Code command**
-  (ephemeral, read-only side-question) — to **`/idea`**. A thin durable-capture skill:
-  capture verbatim in-turn → detached researcher writes `ideas/NN-slug.md` → completion
-  shows as **ambient status on #5's surface, never a reply in the transcript**. Rides #5;
-  build last. _(2026-07-06 → 07)_
+  ✅ **Built + eval-verified (07-08, task-6)** — `skills/idea/SKILL.md`, authored via
+  `writing-skills`: RED baselines failed without it (inline research before capture,
+  four-paragraph transcript replies, a mid-task commit+push); GREEN runs complied on
+  all three routes. Capture verbatim in-turn → detached researcher enriches
+  `ideas/NN-slug.md` → completion shows as **ambient status on #5's surface, never a
+  reply in the transcript**. _(2026-07-06 → 08)_
 - **#2 · Auto-compound + rename to `compound`** ✅ **Done (TASK-5, 2026-07-09).**
   Drop the `ce` prefix —
   we own it, call it **`compound`** (rename `skills/ce-compound/` + all refs + the
@@ -140,3 +144,12 @@ it its own `NN-slug.md` file in this folder and leave a one-line pointer here.
   batches, contract the old form away. Deliberately not folded into
   `writing-plans` yet — nothing speculative; reach for it when a real wide
   refactor shows up. _(2026-07-08)_
+- **#11 · Harden `qq-phase` against malformed `.qq/state.json`** →
+  [`06-qq-phase-malformed-state.md`](06-qq-phase-malformed-state.md).
+  Contract: `render` never errors (it feeds the status line — garbage renders as
+  a blank cockpit), the writer never crashes (starts clean). Structural garbage
+  already handled; two confirmed breaks (mixed-type `started_at` sort in
+  `render`; `os.replace` onto a `state.json` directory in the writer) and an
+  open design choice (outer never-error guard + `QQ_PHASE_DEBUG` vs per-field
+  validation). Parked mid-thread from the task-6 session; no code edits yet.
+  _(2026-07-08)_
