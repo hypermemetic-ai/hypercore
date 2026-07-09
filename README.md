@@ -16,7 +16,7 @@ Operating rules live in [`AGENTS.md`](./AGENTS.md) (loaded every session;
 | **Actions** | curated, invocable skills linked live | `skills/` → `~/.claude/skills/` |
 | **Knowledge** | the document stack: code graph · intent + work status · durable docs · episodic docs | codebase-memory MCP (out-of-repo) · `backlog/` · `openwiki/` · `docs/solutions/` + `CONCEPTS.md` |
 | **Sessions** | many named parallel agents, each in its own worktree, state-aware | herdr (`herdr`) |
-| **Cockpit** | human-driven terminal tools + status line + tuned configs | `cockpit/`, `bin/qq-phase` |
+| **Cockpit** | human-driven terminal tools + status line + compact board + tuned configs | `cockpit/`, `bin/qq-phase`, `bin/qq-board` |
 | **Externals** | live docs · GitHub · fast filesystem · gate | Context7 · `gh` · `fd`/`eza`/`rg` · `no-mistakes` |
 
 ## The loop
@@ -43,9 +43,9 @@ provenance is in [`SKILLS-ATTRIBUTION.md`](./SKILLS-ATTRIBUTION.md).
    stack, and cockpit tools, then prints exact install hints for anything
    missing.
 2. **One-shot activation** — `bash bin/qq-activate.sh` installs the guardrail
-   hook, wires the WIP savepoint and `qq-phase` status line, symlinks cockpit
-   configs from this repo into `~/.config`, and links skills into
-   `~/.claude/skills`.
+   hook, wires the WIP savepoint and `qq-phase` status line, links `qq-phase` /
+   `qq-board` helpers onto `PATH`, symlinks cockpit configs from this repo into
+   `~/.config`, and links skills into `~/.claude/skills`.
 3. **Skills** — link them live:
    ```
    bash bin/qq-link.sh skills
@@ -63,8 +63,10 @@ provenance is in [`SKILLS-ATTRIBUTION.md`](./SKILLS-ATTRIBUTION.md).
    folds that into the linker. Retired gate values (`trunk` / `blast-radius` /
    `human`) are rejected.
 5. **Cockpit** — `cockpit/` is the source of truth for yazi, glow, herdr, and
-   shell navigation. `herdr prefix+f` opens `qqy`; yazi starts at the repo root;
-   pressing Enter on `.md` renders in-pane via mdcat or the tuned Glow theme.
+   shell navigation. `qq-board` renders a compact read-only Backlog.md kanban;
+   `qq-board pane` opens it as a non-agent herdr utility pane. `herdr prefix+f`
+   opens `qqy`; yazi starts at the repo root; pressing Enter on `.md` renders
+   in-pane via mdcat or the tuned Glow theme.
 6. **Context7** (live library docs) — `.mcp.json` is set; approve the `context7`
    server on next session start.
 7. **Knowledge layer** — install

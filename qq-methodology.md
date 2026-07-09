@@ -16,7 +16,8 @@ repo via a symlinked `@`-import — do not edit a copy; edit it in qq.
     plain file reading is still the default.
   - *Intent + work status* — `backlog/` (Backlog.md): the registry of what the
     operator wants and where work stands, one markdown file per task
-    (`backlog task create/edit/list`, `backlog board`). Create tasks in the
+    (`backlog task create/edit/list`, `backlog board`; `qq-board` is the compact
+    read-only cockpit view). Create tasks in the
     session that owns the main tree and **commit the new task file immediately**
     — IDs are minted from committed branch state, so uncommitted tasks in
     parallel worktrees can mint duplicates. Workers only edit tasks they claim.
@@ -37,7 +38,8 @@ repo via a symlinked `@`-import — do not edit a copy; edit it in qq.
   coordination helps; there is deliberately no protocol beyond these primitives
   yet.
 - **Cockpit** — the operator's tuned terminal surface, linked from the qq repo:
-  herdr, yazi, broot, glow, mdcat, shell navigation, and the `qq-phase` status line.
+  herdr, yazi, broot, glow, mdcat, shell navigation, the `qq-phase` status line,
+  and the compact `qq-board` utility pane.
 - **Externals** — Context7 (live, version-correct library docs), `gh` (GitHub),
   `fd` / `eza` / `rg` (fast filesystem), and **the gate** (`no-mistakes`, an
   external MIT tool): every landing is *driven through it* — an independent

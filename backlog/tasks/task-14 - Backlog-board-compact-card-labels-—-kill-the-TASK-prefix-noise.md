@@ -16,14 +16,14 @@ ordinal: 12000
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
-Operator (07-08): the board makes poor use of horizontal space — 'TASK-x' eats most of a card while the prefix adds no information when task is the only type. Want a dense scheme that keeps cards real small: bare id plus a super-shortened label (single word, consonant-skeleton, aggressive abbreviation — survey prior art: tracker key schemes, tmux window naming, abbreviation algorithms). Avenues to evaluate: Backlog.md config (custom/empty id prefix?), board rendering options, an upstream feature request/PR to MrLesk/Backlog.md, or a thin qq-side board wrapper. ALSO (07-08, same cockpit-surface concern): backlog-board was launched via 'herdr agent start', so it shows up in herdr's agents list and eats sidebar space although it is not an agent — find the non-agent way to run a utility pane (plain pane launch, an exclude flag, or a herdr feature request) so the sidebar stays reserved for actual agents. Capture only — not addressed yet.
+Operator (07-08): the board makes poor use of horizontal space — 'TASK-x' eats most of a card while the prefix adds no information when task is the only type. Want a dense scheme that keeps cards real small: bare id plus a super-shortened label (single word, consonant-skeleton, aggressive abbreviation — survey prior art: tracker key schemes, tmux window naming, abbreviation algorithms). Avenues to evaluate: Backlog.md config (custom/empty id prefix?), board rendering options, an upstream feature request/PR to MrLesk/Backlog.md, or a thin qq-side board wrapper. ALSO (07-08, same cockpit-surface concern): backlog-board was launched via 'herdr agent start', so it shows up in herdr's agents list and eats sidebar space although it is not an agent — find the non-agent way to run a utility pane (plain pane launch, an exclude flag, or a herdr feature request) so the sidebar stays reserved for actual agents. Originally capture-only; implementation and verification notes are below.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
 - [x] #1 qq-board renders a compact kanban from the backlog: one row per task, bare numeric id (no TASK- prefix) plus a single-word consonant-skeleton abbreviation of the title; a card is ~12 chars
 - [x] #2 qq-board --watch auto-refreshes for use as a persistent cockpit pane
-- [x] #3 qq-board pane opens the board as a herdr utility pane that does NOT register in herdr agent list (the non-agent pane pattern: pane split + pane run)
+- [x] #3 qq-board pane opens the board as a herdr utility pane that does NOT register in herdr agent list (the non-agent pane pattern: pane split + send-text + Enter)
 - [x] #4 qq-activate.sh links qq-board onto PATH like qq-phase/qq-wip
 - [x] #5 All four avenues from the description are evaluated and the findings recorded in the task (config prefix, board render options, upstream FR, qq-side wrapper)
 <!-- AC:END -->
@@ -31,7 +31,7 @@ Operator (07-08): the board makes poor use of horizontal space — 'TASK-x' eats
 ## Implementation Plan
 
 <!-- SECTION:PLAN:BEGIN -->
-1. Evaluate avenues: backlog config (task_prefix read-only/permanent after init — dead), board render options (layout only; card format hardcoded at src/ui/board.ts formatTaskListItem), upstream FR (optional follow-up; wrapper makes it non-blocking), qq-side wrapper (chosen). 2. Build bin/qq-board: parse 'backlog task list --plain', render status columns side by side, card = bare id + consonant-skeleton word, priority colors; --watch loop; pane subcommand via herdr pane split+run+rename. 3. Wire symlink in qq-activate.sh. 4. Verify: render output, agent-list non-registration. Prior art for the abbreviation: tracker keys (Jira short project keys / GitHub bare #N), tmux automatic-rename+truncation, disemvoweling (keep first letter, drop vowels, collapse repeats, truncate).
+1. Evaluate avenues: backlog config (task_prefix read-only/permanent after init — dead), board render options (layout only; card format hardcoded at src/ui/board.ts formatTaskListItem), upstream FR (optional follow-up; wrapper makes it non-blocking), qq-side wrapper (chosen). 2. Build bin/qq-board: parse 'backlog task list --plain', render status columns side by side, card = bare id + consonant-skeleton word, priority colors; --watch loop; pane subcommand via herdr pane split+rename+send-text+Enter. 3. Wire symlink in qq-activate.sh. 4. Verify: render output, agent-list non-registration. Prior art for the abbreviation: tracker keys (Jira short project keys / GitHub bare #N), tmux automatic-rename+truncation, disemvoweling (keep first letter, drop vowels, collapse repeats, truncate).
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes

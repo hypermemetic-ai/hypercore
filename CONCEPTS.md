@@ -10,6 +10,10 @@ agents to speak the same language across sessions.
 Claude Code status-line reader that lets long-running qq work show ambient phase
 and gate progress without transcript chatter.
 
+**qq-board** — The `bin/qq-board` command that renders a compact read-only
+Backlog.md kanban with bare numeric ids and consonant-skeleton labels; `qq-board
+pane` opens it as a non-agent herdr utility pane.
+
 **qq-phase** — The `bin/qq-phase` command that writes producer-scoped
 background-work phase state, renders the one-line status widget, and optionally
 attaches the active `no-mistakes` gate run.
