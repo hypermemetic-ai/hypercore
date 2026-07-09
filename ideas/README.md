@@ -70,6 +70,10 @@ it its own `NN-slug.md` file in this folder and leave a one-line pointer here.
   **`codebase-memory-mcp`** (MIT) chosen and installed — worktree smoke test
   passed, wired as **on-demand MCP tools only** (no search-intercepting hooks;
   Claude Code user scope + Codex config), `auto_index`/`auto_watch` on.
+  ⚠️ **Operationalization gap registered as TASK-18 (07-08):** qq's main tree
+  had no index while throwaway gate worktrees were auto-indexing; task covers a
+  real main-tree query smoke, gate-worktree exclusion or accept decision,
+  multi-worktree verification, and the disconnect diagnosis.
   **OKF: format direction adopted, dependency deferred** (pre-ecosystem; keep
   compound's outputs OKF-compatible markdown, plug in a conformant toolchain when
   one exists). **Round 2 (07-07): layers 2+3 researched** →
