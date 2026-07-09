@@ -41,21 +41,26 @@ done
 
 root=$(git rev-parse --show-toplevel) || exit 1
 
-# dispatch reads the registry from THIS tree's HEAD, so a stale tree would
-# mis-evaluate the frontier (a merged task still looks claimable). Refuse.
+# Workers are created from origin/main, so the frontier MUST be read from
+# origin/main too. Reading it from this tree's HEAD would let a conductor on a
+# branch dispatch a task whose file the worker's checkout does not contain
+# (gate finding RV-002, 2026-07-08). One commit, one source of truth — which is
+# also why no "is this tree stale?" guard is needed: the tree is not consulted.
 git -C "$root" fetch -q origin main 2>/dev/null || true
-if git -C "$root" rev-parse -q --verify origin/main >/dev/null 2>&1 &&
-   ! git -C "$root" merge-base --is-ancestor origin/main HEAD; then
-  echo "qq-wave: this tree's HEAD is behind origin/main — the frontier would be stale." >&2
-  echo "         launch waves from the main checkout, up to date with origin/main." >&2
-  exit 1
-fi
+base=origin/main
+git -C "$root" rev-parse -q --verify "$base" >/dev/null 2>&1 || {
+  echo "qq-wave: cannot resolve $base — fetch origin first" >&2; exit 1; }
 
 # the frontier is the only dispatchable set — status To Do, deps Done,
 # unassigned, unclaimed by any task-<id> branch
-frontier_args=(--json)
-[ "$afk" = 1 ] && frontier_args=(--afk --json)
-mapfile -t claimable < <(qq-frontier "${frontier_args[@]}" | jq -r '.[].id | sub("^TASK-";"")')
+frontier_args=(--json --ref "$base")
+[ "$afk" = 1 ] && frontier_args=(--afk --json --ref "$base")
+frontier_json=$(qq-frontier "${frontier_args[@]}")
+mapfile -t claimable < <(jq -r '.[].id | sub("^TASK-";"")' <<<"$frontier_json")
+
+title_of() { # titles come from the same commit as the frontier, never the worktree
+  jq -r --arg id "TASK-$1" '.[] | select(.id == $id) | .title' <<<"$frontier_json"
+}
 if [ "$frontier" = 1 ]; then
   ids=("${claimable[@]}")
 fi
@@ -81,15 +86,15 @@ ws=$(herdr worktree list --cwd "$root" | jq -r '.result.source.source_workspace_
 [ -n "$ws" ] && [ "$ws" != null ] || { echo "qq-wave: cannot resolve the qq workspace id" >&2; exit 1; }
 
 for id in "${ids[@]}"; do
-  title=$(backlog task view "$id" --plain | sed -n 's/^Task TASK-[0-9.]* - //p' | head -1)
+  title=$(title_of "$id")
   branch="task-$id-$(slug "$title")"
 
   if [ "$dry" = 1 ]; then
-    echo "would launch TASK-$id on $branch (tab in $ws, worker + gate viewer)"
+    echo "would launch TASK-$id on $branch from $base (tab in $ws, worker + gate viewer)"
     continue
   fi
 
-  out=$(herdr worktree create --cwd "$root" --branch "$branch" --base origin/main \
+  out=$(herdr worktree create --cwd "$root" --branch "$branch" --base "$base" \
         --label "task-$id" --no-focus --json)
   path=$(jq -r '.. | .path? // empty' <<<"$out" | head -1)
   [ -n "$path" ] || { echo "qq-wave: worktree create failed for TASK-$id" >&2; continue; }

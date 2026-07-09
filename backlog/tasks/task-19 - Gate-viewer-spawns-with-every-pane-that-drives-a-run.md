@@ -5,7 +5,7 @@ status: Done
 assignee:
   - task-19-gate-viewer-panes
 created_date: '2026-07-09 01:13'
-updated_date: '2026-07-09 01:40'
+updated_date: '2026-07-09 02:09'
 labels:
   - cockpit
 dependencies: []
@@ -25,7 +25,12 @@ Operator direction (2026-07-08): 'any pane that needs one should spawn with one.
 - [x] #2 A viewer pane spawned before any run exists waits, then attaches when the branch's run starts
 - [x] #3 qq-activate.sh puts qq-gate-view (and qq-frontier) on PATH — typing the command works without an absolute path
 - [x] #4 bin/qq-wave spawns a viewer right-split beside every worker it launches (the in-repo call site), and refuses to dispatch a task that is not on the frontier
+- [x] #5 qq-wave reads the frontier from the same commit its workers are created from (origin/main), so dispatch state and worker checkout can never disagree
 <!-- AC:END -->
+
+
+
+
 
 ## Implementation Notes
 
