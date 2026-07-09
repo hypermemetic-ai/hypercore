@@ -104,8 +104,9 @@ Codex wrote the code and Claude reviews it, so this is a genuine second pair of 
 Weigh the feedback with `receiving-code-review` — don't rubber-stamp it.
 
 ### 7 — Compound (sub-agent)
-Solved something worth not relearning? → dispatch `compound` to capture it to
-`docs/solutions/` + `CONCEPTS.md`. Returns the files for a glance.
+After verified work, dispatch `compound`; it decides whether the solve earned a
+capture. If it writes, it returns the `docs/solutions/` + `CONCEPTS.md` files for
+a glance; if not, it exits quietly.
 
 ## Done means
 Report to the owner only when the plan's tasks are implemented by Codex,
