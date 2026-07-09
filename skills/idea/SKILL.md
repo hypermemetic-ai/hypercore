@@ -258,32 +258,55 @@ Use the same `$root` resolved above for every path in this section.
        rc=$?
      fi
      if [ "$rc" -eq 0 ] && [ -s "$scratch/enriched.md" ]; then
-       # Baseline is passed by value; anything in scratch is researcher-controlled input.
-       if [ -f "$target" ]; then
+       original_tmp=$(mktemp "$scratch/original.XXXXXX") &&
+         enriched_original_tmp=$(mktemp "$scratch/enriched-original.XXXXXX") &&
+         install_tmp=$(mktemp "$target.tmp.XXXXXX") &&
+         [ -f "$target" ] &&
+         sed -n "/^## Original/,/^## Sharpened/{/^## Sharpened/!p;}" "$target" > "$original_tmp" &&
+         sed -n "/^## Original/,/^## Sharpened/{/^## Sharpened/!p;}" "$scratch/enriched.md" > "$enriched_original_tmp" &&
+         [ -s "$original_tmp" ] &&
+         cmp -s "$original_tmp" "$enriched_original_tmp" &&
+         cp "$scratch/enriched.md" "$install_tmp"
+       rc=$?
+       if [ "$rc" -ne 0 ] && [ -f "$target" ]; then
          current_hash="$(sha256sum "$target")" || current_hash=""
          current_hash="${current_hash%% *}"
-       else
-         current_hash=""
+         if [ "$current_hash" != "$target_hash" ]; then
+           printf 'target changed during research; preserved %s\n' "$scratch/enriched.md"
+           red_detail="target changed -- preserved $scratch/enriched.md"
+           preserve_scratch=1
+           rm -f "${install_tmp:-}"
+           rc=1
+         fi
        fi
-       if [ "$current_hash" != "$target_hash" ]; then
+       if [ "$rc" -eq 0 ]; then
+         # Baseline is passed by value; anything in scratch is researcher-controlled input.
+         # Rename is atomic, but a write between this compare and rename can still lose; use flock if that risk ever matters more.
+         if [ -f "$target" ]; then
+           current_hash="$(sha256sum "$target")" || current_hash=""
+           current_hash="${current_hash%% *}"
+         else
+           current_hash=""
+         fi
+         if [ "$current_hash" != "$target_hash" ]; then
+           printf 'target changed during research; preserved %s\n' "$scratch/enriched.md"
+           red_detail="target changed -- preserved $scratch/enriched.md"
+           preserve_scratch=1
+           rm -f "${install_tmp:-}"
+           rc=1
+         else
+           mv "$install_tmp" "$target"
+           rc=$?
+         fi
+       elif [ ! -f "$target" ]; then
          printf 'target changed during research; preserved %s\n' "$scratch/enriched.md"
          red_detail="target changed -- preserved $scratch/enriched.md"
          preserve_scratch=1
+         rm -f "${install_tmp:-}"
          rc=1
-       else
-         original_tmp=$(mktemp "$scratch/original.XXXXXX") &&
-           enriched_original_tmp=$(mktemp "$scratch/enriched-original.XXXXXX") &&
-           sed -n "/^## Original/,/^## Sharpened/{/^## Sharpened/!p;}" "$target" > "$original_tmp" &&
-           sed -n "/^## Original/,/^## Sharpened/{/^## Sharpened/!p;}" "$scratch/enriched.md" > "$enriched_original_tmp" &&
-           [ -s "$original_tmp" ] &&
-           cmp -s "$original_tmp" "$enriched_original_tmp" &&
-           install_tmp=$(mktemp "$target.tmp.XXXXXX") &&
-           cp "$scratch/enriched.md" "$install_tmp" &&
-           mv "$install_tmp" "$target"
-         rc=$?
-         rm -f "${original_tmp:-}" "${enriched_original_tmp:-}"
-         [ "$rc" -eq 0 ] || rm -f "${install_tmp:-}"
        fi
+       rm -f "${original_tmp:-}" "${enriched_original_tmp:-}"
+       [ "$rc" -eq 0 ] || rm -f "${install_tmp:-}"
      elif [ "$rc" -eq 0 ]; then
        rc=1
      fi
@@ -328,32 +351,55 @@ Use the same `$root` resolved above for every path in this section.
        rc=$?
      fi
      if [ "$rc" -eq 0 ] && [ -s "$scratch/enriched.md" ]; then
-       # Baseline is passed by value; anything in scratch is researcher-controlled input.
-       if [ -f "$target" ]; then
+       original_tmp=$(mktemp "$scratch/original.XXXXXX") &&
+         enriched_original_tmp=$(mktemp "$scratch/enriched-original.XXXXXX") &&
+         install_tmp=$(mktemp "$target.tmp.XXXXXX") &&
+         [ -f "$target" ] &&
+         sed -n "/^## Original/,/^## Sharpened/{/^## Sharpened/!p;}" "$target" > "$original_tmp" &&
+         sed -n "/^## Original/,/^## Sharpened/{/^## Sharpened/!p;}" "$scratch/enriched.md" > "$enriched_original_tmp" &&
+         [ -s "$original_tmp" ] &&
+         cmp -s "$original_tmp" "$enriched_original_tmp" &&
+         cp "$scratch/enriched.md" "$install_tmp"
+       rc=$?
+       if [ "$rc" -ne 0 ] && [ -f "$target" ]; then
          current_hash="$(sha256sum "$target")" || current_hash=""
          current_hash="${current_hash%% *}"
-       else
-         current_hash=""
+         if [ "$current_hash" != "$target_hash" ]; then
+           printf 'target changed during research; preserved %s\n' "$scratch/enriched.md"
+           red_detail="target changed -- preserved $scratch/enriched.md"
+           preserve_scratch=1
+           rm -f "${install_tmp:-}"
+           rc=1
+         fi
        fi
-       if [ "$current_hash" != "$target_hash" ]; then
+       if [ "$rc" -eq 0 ]; then
+         # Baseline is passed by value; anything in scratch is researcher-controlled input.
+         # Rename is atomic, but a write between this compare and rename can still lose; use flock if that risk ever matters more.
+         if [ -f "$target" ]; then
+           current_hash="$(sha256sum "$target")" || current_hash=""
+           current_hash="${current_hash%% *}"
+         else
+           current_hash=""
+         fi
+         if [ "$current_hash" != "$target_hash" ]; then
+           printf 'target changed during research; preserved %s\n' "$scratch/enriched.md"
+           red_detail="target changed -- preserved $scratch/enriched.md"
+           preserve_scratch=1
+           rm -f "${install_tmp:-}"
+           rc=1
+         else
+           mv "$install_tmp" "$target"
+           rc=$?
+         fi
+       elif [ ! -f "$target" ]; then
          printf 'target changed during research; preserved %s\n' "$scratch/enriched.md"
          red_detail="target changed -- preserved $scratch/enriched.md"
          preserve_scratch=1
+         rm -f "${install_tmp:-}"
          rc=1
-       else
-         original_tmp=$(mktemp "$scratch/original.XXXXXX") &&
-           enriched_original_tmp=$(mktemp "$scratch/enriched-original.XXXXXX") &&
-           sed -n "/^## Original/,/^## Sharpened/{/^## Sharpened/!p;}" "$target" > "$original_tmp" &&
-           sed -n "/^## Original/,/^## Sharpened/{/^## Sharpened/!p;}" "$scratch/enriched.md" > "$enriched_original_tmp" &&
-           [ -s "$original_tmp" ] &&
-           cmp -s "$original_tmp" "$enriched_original_tmp" &&
-           install_tmp=$(mktemp "$target.tmp.XXXXXX") &&
-           cp "$scratch/enriched.md" "$install_tmp" &&
-           mv "$install_tmp" "$target"
-         rc=$?
-         rm -f "${original_tmp:-}" "${enriched_original_tmp:-}"
-         [ "$rc" -eq 0 ] || rm -f "${install_tmp:-}"
        fi
+       rm -f "${original_tmp:-}" "${enriched_original_tmp:-}"
+       [ "$rc" -eq 0 ] || rm -f "${install_tmp:-}"
      elif [ "$rc" -eq 0 ]; then
        rc=1
      fi
