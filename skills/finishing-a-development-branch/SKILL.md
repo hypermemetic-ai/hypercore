@@ -43,6 +43,11 @@ slice). Agents never land changes directly on `main`.
 If there are unrelated uncommitted changes, preserve them. Commit only the
 verified work that belongs to this task.
 
+If the branch must absorb changes from the gate or from a moved `main`, merge
+those heads instead of rebasing. The gate may have rebased onto its own head and
+appended review-fix commits; non-fast-forward pushes are refused and force is
+blocked, so preserving the gate's files is the only landing path.
+
 ### Step 3: Confirm Registry Touch
 
 If this repo has adopted `backlog/`, make sure the landing includes a Backlog.md
