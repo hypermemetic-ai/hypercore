@@ -165,8 +165,8 @@ freeze it existed to prevent. Neither was visible to `shellcheck`.
 
 A related scope gap fell out of the same review: the git rail blocks
 `git branch -D` when an agent types it, but the rail is a `PreToolUse` hook and
-never sees git invoked from inside a script. `bin/qq-wave` force-deletes branches
-in its rollback trap. Registered as TASK-23.
+never sees git invoked from inside a script. `bin/qq-wave` force-removes
+worktrees and force-deletes branches in its rollback trap. Registered as TASK-23.
 
 ## What to reconsider next session
 
@@ -182,5 +182,5 @@ in its rollback trap. Registered as TASK-23.
   evidence trail, and an enforcement point nobody can skip — none of which is the
   review itself. Worth stating plainly before the substitution becomes habit.
 - Should an unlanded-branch delete be an operator action forever? It is today,
-  because the rail blocks the agent — but `bin/qq-wave` force-deletes from inside
-  a script, where the rail cannot see it (TASK-23).
+  because the rail blocks the agent's direct branch deletion — but `bin/qq-wave`
+  force-deletes from inside a script, where the rail cannot see it (TASK-23).
