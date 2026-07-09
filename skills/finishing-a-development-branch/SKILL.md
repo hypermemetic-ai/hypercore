@@ -138,6 +138,12 @@ Type 'discard' to confirm.
 Wait for exact confirmation. If confirmed, use the repo's normal non-destructive
 cleanup path. Do not force-delete branches or remove worktrees unless the owner
 explicitly asked for that exact cleanup and the workspace is known to be yours.
+If the remaining cleanup is reserved for the operator because the git rail blocks
+it, hand back one non-interactive script using the methodology's operator-handoff
+rules: unique `mktemp /tmp/qq-<verb>-XXXX.sh` path, dry run by default,
+destructive action only with `--yes`, run-time precondition checks, explicit
+exclusions, final state, and in-script guards because the rail will not see the
+operator's shell or git run inside the script.
 
 ## Red Flags
 

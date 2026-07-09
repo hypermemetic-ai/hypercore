@@ -183,6 +183,40 @@ when the answer asks the gate to fix. The operator's only touchpoints are a
 relayed judgment call and the PR merge click. A parked landing agent shows as
 blocked in herdr; the `qq-phase` status line shows the gate step.
 
+## Handing a step back to the operator
+The standing default is to do the work, not hand it back. But some steps are
+*reserved* for the operator — the git rail deliberately blocks unmerged-branch
+deletion, the gate parks `ask-user` findings, a PR merge is a human click. When
+you must hand one back, the operator's part is a single paste and everything
+around it is yours. These rules are the encoded cost of getting it wrong twice
+(2026-07-09):
+
+- **One line, short unique path.** Stage with `script=$(mktemp
+  /tmp/qq-<verb>-XXXX.sh)` and write the script there. `mktemp` creates with
+  `O_EXCL`, so it never overwrites or reuses a name; the resulting path (for
+  example `/tmp/qq-cleanup-a3f9.sh`) is still short enough not to wrap. Never a
+  fixed, predictable path in a shared directory: the operator may paste and run
+  it under `--yes` without re-reviewing the current contents, and a stale file
+  from an earlier session or one written by a concurrent session executes just
+  as readily. Never the session scratchpad: that path is ~90 characters,
+  terminals wrap it, and a wrapped path is a broken path.
+- **Never interactive.** The operator's `!` shell has no tty. `read` sees EOF
+  instantly, and under `set -e` the script then exits *after* printing its
+  verification — output that reads like success while nothing happened. Gate the
+  destructive action behind an explicit `--yes`; make the bare invocation a dry
+  run that verifies and reports.
+- **Re-verify at run time.** Recheck every precondition when the operator runs
+  it, not when you staged it, and **refuse on anything unrecognized** — hours can
+  pass in between. Print the verdict per item.
+- **The rail does not protect the operator's shell.** A `!` command is the
+  operator's own action; `PreToolUse` hooks never see it, and neither do they see
+  git run from inside any script (TASK-23). Whatever the rail would block from an
+  agent must carry its own guard in the script.
+- **Name what is deliberately excluded.** "`task-14-board-labels` is KEPT on
+  purpose: declined, unlanded work." An unexplained omission reads as an
+  oversight.
+- **Print the resulting state** on exit, so the operator never has to go looking.
+
 ## Parallel operation
 Working the backlog serially wastes the isolation model. When the queue is
 deep, the default posture is a **wave**: independent tasks fanned out to

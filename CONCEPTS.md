@@ -91,3 +91,15 @@ rewrites is indistinguishable, at the call site, from the clamp that validated.
 the unfixed code. A harness that passes both before and after has tested nothing;
 it is the same "plausible answer, exit 0" shape as the silent failures it was
 written to catch.
+
+**operator handoff** — A step the operator must perform because it is *reserved*,
+not because it was inconvenient: the rail blocks unmerged-branch deletion, the
+gate parks `ask-user` findings, a PR merge is a human click. The agent stages
+everything around it so the operator's part is one paste at a short,
+per-handoff path created with `mktemp /tmp/qq-<verb>-XXXX.sh`, for example
+`/tmp/qq-cleanup-a3f9.sh`. The script is non-interactive (no `read` — the `!`
+shell has no tty), dry-run by default, destructive only under `--yes`,
+re-verifies preconditions at run time, refuses on anything it does not
+recognise, carries its own guards because the rail never sees the operator's
+shell or git run inside a script, names deliberate exclusions, and prints the
+resulting state.
