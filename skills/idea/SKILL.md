@@ -38,41 +38,54 @@ operator's ceremony stays at zero and the transcript stays clean.
 
 Capture lands on `ideas/` — the informal holding pen — not `backlog/`; backlog
 tasks are minted at grooming, in the session that owns the main tree.
-Resolve the repo root and run common setup before choosing a route:
+Resolve the repo root and bootstrap the ideas surface under the README lock
+before choosing a route:
 
 ```bash
 root="$(git rev-parse --show-toplevel)"
 cd "$root" || exit 1
 mkdir -p ideas .qq
+flock .qq/ideas-readme.lock bash <<'SETUP'
 if [ ! -f ideas/README.md ]; then
-  cat > ideas/README.md <<'EOF'
+  cat > ideas/README.md <<'README'
 # Ideas
 
 Informal holding pen for thoughts parked mid-session before they are groomed into backlog tasks.
 
 ## Backlog
-EOF
+README
 fi
 if ! grep -q '^## Backlog[[:space:]]*$' ideas/README.md; then
   printf '\n## Backlog\n' >> ideas/README.md
 fi
+SETUP
 ```
 
-Before choosing any route, reap finished idea slots from earlier captures; this
-runs on every `/idea`, including bare todos and bare snapshots:
+Cleanup never gates capture: the thought lands first, then the status line
+tidies itself. After each route has made its durable write — after the bare
+todo's locked README append, after a file-backed capture's Original-only or
+parked file write — run this bounded, silent reaper:
 
 ```bash
-qq-phase status 2>/dev/null | python3 -c 'import json,sys; [print(n) for n,s in json.load(sys.stdin).get("producers",{}).items() if n.startswith("idea-") and s.get("status")=="done"]' 2>/dev/null | while read p; do qq-phase clear --producer "$p" >/dev/null 2>&1; rm -f ".qq/$p.claim"; done
+{ timeout 5 qq-phase status 2>/dev/null || true; } | python3 -c 'import json,sys; [print(n) for n,s in json.load(sys.stdin).get("producers",{}).items() if n.startswith("idea-") and s.get("status")=="done"]' 2>/dev/null | while read p; do timeout 5 qq-phase clear --producer "$p" >/dev/null 2>&1 || true; rm -f ".qq/$p.claim"; done || true
 ```
 
 A finished researcher's slot stays on the status line until the next `/idea`
-reaps it, so a completion the operator has not looked at yet is never erased;
-the reaper stays silent to preserve the one-line ack.
+reaps it after banking its own thought; the reaper stays silent to preserve the
+one-line ack.
 
 - **Bare todo** (nothing researchable in it): append one unnumbered dated bullet under
-  `$root/ideas/README.md` **Backlog** — verbatim, plus a half-line of session
-  context if a "this/that" needs resolving. No file, no stamps, no researcher.
-  Done.
+  `$root/ideas/README.md` **Backlog** with one locked append — verbatim, plus a
+  half-line of session context if a "this/that" needs resolving. `Backlog` is
+  the last section, so append is the shared-edit form:
+
+  ```bash
+  todo="<verbatim idea plus needed session context>"
+  today="$(date +%F)"
+  flock .qq/ideas-readme.lock bash -c 'printf -- "- %s _(%s)_\n" "$1" "$2" >> ideas/README.md' bash "$todo" "$today"
+  ```
+
+  Then run the bounded reaper above. No file, no stamps, no researcher. Done.
 - **Researchable idea** (an open question, a checkable premise, a design
   surface): full path below.
 - **Bare `/idea`** (no text): the idea *is* the current thread — snapshot it as
@@ -85,7 +98,8 @@ the reaper stays silent to preserve the one-line ack.
   researchability as usual. Open questions take the Full path unchanged. With
   none, claim `NN` with the same O_EXCL loop below, define `SLUG` from the
   snapshot gist, write `ideas/$NN-$SLUG.md` with header status `parked`,
-  Original, and Sharpened only, add the `#$NN` README pointer, then stamp
+  Original, and Sharpened only, run the bounded reaper above, add the `#$NN`
+  README pointer with the locked append form in Full path step 6, then stamp
   `qq-phase parked --producer idea-$NN --status done --detail "ideas/$NN-$SLUG.md" >/dev/null` —
   no brief, no spawn. The file lands before the stamp. The slot shows the
   parked signal until the next capture reaps it.
@@ -120,15 +134,17 @@ Use the same `$root` resolved above for every path in this section.
    Take the working title mechanically from the operator's own words —
    sharpening starts only after this write exists on disk. The stamp is a
    signal; the file is the thought, and the thought lands first.
-3. Stamp `qq-phase capturing --producer idea-$NN >/dev/null`. The status line
+3. Run the bounded reaper above. Cleanup never blocks the capture that just
+   landed.
+4. Stamp `qq-phase capturing --producer idea-$NN >/dev/null`. The status line
    is the only place a main-session stamp is allowed to speak.
-4. Sharpen in place: add the remaining sections of the template (Sharpened
+5. Sharpen in place: add the remaining sections of the template (Sharpened
    plus the two researcher placeholders) and set the header status to
    `researching`. The title may be sharpened in place; never rename the file.
    The finished shape:
 
    ```markdown
-   # <title — the operator's gist at capture, sharpened in step 4>
+   # <title — the operator's gist at capture, sharpened in step 5>
 
    _Captured YYYY-MM-DD via /idea. Status: researching._
 
@@ -151,12 +167,21 @@ Use the same `$root` resolved above for every path in this section.
    _(researcher fills — what acting on it involves, naming the next skill)_
    ```
 
-5. Add a pointer bullet for it under `$root/ideas/README.md` **Backlog**. The
+6. Add a pointer bullet for it under `$root/ideas/README.md` **Backlog**. The
    bullet number is the claimed file number: `#$NN` points to
    `ideas/$NN-$SLUG.md`, so there is no separate README counter to race. State
    the idea, not its live status — status lives in the file header and on the
    status line, and the bullet goes stale the moment the researcher lands.
-6. Write the researcher's brief to `$root/.qq/idea-brief-$NN.md`, substituting
+   Use one locked append; `Backlog` is the last section:
+
+   ```bash
+   title="<title>"
+   line="<one line>"
+   today="$(date +%F)"
+   flock .qq/ideas-readme.lock bash -c 'printf -- "- **#%s · %s** → [%s](%s). %s _(%s)_\n" "$1" "$2" "$3" "$3" "$4" "$5" >> ideas/README.md' bash "$NN" "$title" "$NN-$SLUG.md" "$line" "$today"
+   ```
+
+7. Write the researcher's brief to `$root/.qq/idea-brief-$NN.md`, substituting
    the real `NN`, `SLUG`, and root at write time so the researcher reads its
    actual file and stamps its actual `idea-$NN` producer:
 
@@ -184,7 +209,7 @@ Use the same `$root` resolved above for every path in this section.
    EOF
    ```
 
-7. Spawn it detached:
+8. Spawn it detached:
 
    From a Claude cockpit:
 
@@ -246,4 +271,4 @@ Use the same `$root` resolved above for every path in this section.
    no equivalent git rail today. Other mitigations are stdout/stderr in `.qq/idea-research-$NN.log`,
    fetched pages treated as untrusted per the research skill's method, and gated landing with human review.
 
-8. Ack in one line (contract 3) and return to the interrupted task.
+9. Ack in one line (contract 3) and return to the interrupted task.
