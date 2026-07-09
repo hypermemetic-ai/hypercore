@@ -29,9 +29,10 @@ itself (design-doc substrate + minted sub-tasks) landed as its own first run.
    *through* the new lifecycle collapsed them into one tracer bullet — the
    deliberate red→repair round exercised the repair path on real work instead
    of a synthetic drill.
-4. **Unattended runs queue cleanly.** The gate daemon serializes runs;
-   submit-and-continue (background `axi run`, keep working the next slice)
-   costs nothing and keeps the worker unattended end-to-end.
+4. **Unattended runs queue cleanly within a slice.** The gate daemon serializes
+   work without babysitting; background `axi run` is fine once a slice is ready.
+   Successor slices can keep moving locally, but don't submit their gate run
+   until the predecessor reaches `main` and the successor branch has absorbed it.
 5. **Dependency links carried the sequencing.** `--dep` on the sub-tasks
    encoded "land in order" without any coordination protocol. (The *branch*
    stacking that accompanied them did not survive the gate — see friction #1;

@@ -94,10 +94,10 @@ never the report of record (that stays file-based, below).
    (`herdr agent read cx-<branch>`) and the live stream (`herdr terminal session
    observe cx-<branch>`) are debug/fallback only — never parse them as the result
    of record.
-6. Repair loop: the pane session is alive — send the failing evidence as a
-   follow-up message in the same pane. `codex exec resume --last` semantics
-   (and its cross-worktree bleed hazard, audit Part 2.3) are deleted, not
-   scoped. If a pane dies, herdr holds the codex session id
+6. Repair loop: the pane session is alive — send the failing evidence as the
+   next handoff in the same pane, using the next `<n>`. `codex exec resume
+   --last` semantics (and its cross-worktree bleed hazard, audit Part 2.3) are
+   deleted, not scoped. If a pane dies, herdr holds the codex session id
    (`herdr agent get cx-<branch>` → `agent_session.value`); restart with
    `herdr agent start cx-<branch> … -- codex resume <session-id>` (flag
    confirmed 07-08: `codex resume [SESSION_ID]`; bare `--last` is banned in

@@ -22,9 +22,9 @@ the verdict is worth something.
   Each returns only its artifact; the reads that produced it stay out of this context.
 - **Codex worker** (`cx-<branch>`, a named herdr pane) — implementation and its own
   repair. Nothing else. One worker per working tree, spawned into the conductor's
-  tab, visible in the sidebar with live idle/working/blocked state, driven over the
-  herdr comms primitives (send / read / wait). Model, reasoning effort, sandbox, and
-  approvals come from `~/.codex/config.toml` (`gpt-5.5` / `xhigh` / `priority` tier /
+  tab, visible in the sidebar with live idle/working/done/blocked state, driven
+  over the herdr comms primitives (send / read / wait). Model, reasoning effort,
+  sandbox, and approvals come from `~/.codex/config.toml` (`gpt-5.5` / `xhigh` / `priority` tier /
   full-access / no-prompt here); pass `-c` overrides only if you must.
 
 Two rules make the separation real:
