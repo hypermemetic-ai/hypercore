@@ -5,7 +5,7 @@ status: Done
 assignee:
   - task-19-gate-viewer-panes
 created_date: '2026-07-09 01:13'
-updated_date: '2026-07-09 01:15'
+updated_date: '2026-07-09 01:40'
 labels:
   - cockpit
 dependencies: []
@@ -23,11 +23,12 @@ Operator direction (2026-07-08): 'any pane that needs one should spawn with one.
 <!-- AC:BEGIN -->
 - [x] #1 bin/qq-gate-view attaches only to the current branch's run and never to another branch's run
 - [x] #2 A viewer pane spawned before any run exists waits, then attaches when the branch's run starts
-- [x] #3 The wave launcher spawns a viewer as a right split in every task tab
+- [x] #3 qq-activate.sh puts qq-gate-view (and qq-frontier) on PATH — typing the command works without an absolute path
+- [x] #4 bin/qq-wave spawns a viewer right-split beside every worker it launches (the in-repo call site), and refuses to dispatch a task that is not on the frontier
 <!-- AC:END -->
 
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
-bin/qq-gate-view wraps 'no-mistakes attach'. Reuse-first: the gate's own TUI does the rendering; the wrapper only fixes scoping and lifetime. AC1 evidence: guard accepts only a status block whose branch: field matches this worktree — verified from the task-19 worktree (repo-active run was task-8's; guard REJECTed) and from the task-14 worktree (own run; ACCEPTed). AC2 evidence: viewer spawned in w7 before any run existed, showed the waiting banner, then attached to this branch's run by id. AC3 evidence: 'qq-gate-view --spawn <pane>' splits a right pane (ratio 0.42), renames it gate-view, and starts the viewer via herdr's non-agent pane pattern (split + send-text + Enter, discovered by task-14) — verified absent from 'herdr agent list', so the sidebar stays reserved for real agents. Findings recorded for TASK-11: (a) bare 'attach' is repo-scoped, (b) 'axi status' silently falls back to the repo's active run on a branch with no run — this is how the task-8 worker went blind to its own parked slice-0 run. TASK-11 subsumes or wraps this; qq-gate-view is the gate segment of the lifecycle view, not a competitor.
+bin/qq-gate-view wraps 'no-mistakes attach' (reuse-first: the gate's TUI renders; the wrapper fixes scoping and lifetime). bin/qq-wave is the in-repo call site that makes 'any pane that needs one spawns with one' true, promoted from an ad-hoc scratchpad launcher on operator direction after gate finding NM-002 correctly showed AC3 was aspirational. AC1: guard accepts a status block only when its branch: field matches this worktree — verified from the task-19 worktree (repo-active run was task-8's; REJECTed) and task-14's (own run; ACCEPTed). AC2: viewer spawned before any run existed showed the waiting banner, then attached to this branch's run by id and rendered the pipeline live. AC3: qq-wave --dry-run accepts frontier tasks (16,17), refuses claimed (TASK-8) and dependency-blocked (TASK-11) tasks, and refuses to dispatch from a tree behind origin/main (stale frontier guard); each launch spawns worker pane + gate-view right split. AC4: qq-activate.sh now links qq-gate-view AND qq-frontier — the latter shipped in TASK-4 and was never on PATH because the install list is hardcoded. Findings for TASK-11: (a) bare 'attach' is repo-scoped; (b) 'axi status' silently falls back to the repo active run on a branch with no run — how the task-8 worker went blind to its own parked slice-0 run; (c) qq-activate's hardcoded install list silently drops new bin/ tools. Gate findings honored: NM-002 (real; fixed by promoting the launcher rather than narrowing the AC).
 <!-- SECTION:NOTES:END -->

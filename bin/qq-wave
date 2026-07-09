@@ -1,0 +1,113 @@
+#!/bin/bash
+# qq-wave — fan out a wave of parallel task workers, one per herdr tab.
+#
+# Usage:
+#   qq-wave <task-id> [<task-id> ...]     launch a worker per task
+#   qq-wave --frontier [--afk]            launch every claimable task (qq-frontier)
+#   qq-wave --dry-run <task-id> ...       print what would happen
+#
+# Each task gets: its own worktree on task-<id>-<slug>, its own tab in the qq
+# workspace, a worker pane, and — per operator direction, 2026-07-08 — a gate
+# viewer as a right split beside the worker ("any pane that needs one should
+# spawn with one").
+#
+# Lessons encoded here so they are not relearned (all 2026-07-08):
+#   - herdr workspace ids RE-MINT on server restart: resolve at runtime, never
+#     hardcode. `worktree create` also auto-opens a stray workspace, so panes are
+#     placed explicitly into a tab of the qq workspace.
+#   - a fresh worktree path triggers Claude Code's trust prompt, which silently
+#     blocks the worker until Enter is sent.
+#   - only DISPATCHABLE tasks go to workers: intent already resolved with the
+#     operator (see qq-methodology §Parallel operation, "the dispatchability
+#     bar"). This tool refuses to dispatch a task that is not on the frontier.
+set -euo pipefail
+
+dry=0 frontier=0 afk=0
+ids=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --dry-run) dry=1; shift ;;
+    --frontier) frontier=1; shift ;;
+    --afk) afk=1; shift ;;
+    -h|--help) sed -n '2,12p' "$0"; exit 0 ;;
+    -*) echo "qq-wave: unknown flag $1" >&2; exit 64 ;;
+    *) ids+=("${1#TASK-}"); shift ;;
+  esac
+done
+
+for tool in herdr jq backlog qq-frontier qq-gate-view; do
+  command -v "$tool" >/dev/null || { echo "qq-wave: $tool not on PATH (run bin/qq-activate.sh)" >&2; exit 1; }
+done
+
+root=$(git rev-parse --show-toplevel) || exit 1
+
+# dispatch reads the registry from THIS tree's HEAD, so a stale tree would
+# mis-evaluate the frontier (a merged task still looks claimable). Refuse.
+git -C "$root" fetch -q origin main 2>/dev/null || true
+if git -C "$root" rev-parse -q --verify origin/main >/dev/null 2>&1 &&
+   ! git -C "$root" merge-base --is-ancestor origin/main HEAD; then
+  echo "qq-wave: this tree's HEAD is behind origin/main — the frontier would be stale." >&2
+  echo "         launch waves from the main checkout, up to date with origin/main." >&2
+  exit 1
+fi
+
+# the frontier is the only dispatchable set — status To Do, deps Done,
+# unassigned, unclaimed by any task-<id> branch
+frontier_args=(--json)
+[ "$afk" = 1 ] && frontier_args=(--afk --json)
+mapfile -t claimable < <(qq-frontier "${frontier_args[@]}" | jq -r '.[].id | sub("^TASK-";"")')
+if [ "$frontier" = 1 ]; then
+  ids=("${claimable[@]}")
+fi
+[ "${#ids[@]}" -gt 0 ] || { echo "qq-wave: nothing to launch" >&2; exit 1; }
+
+for id in "${ids[@]}"; do
+  printf '%s\n' "${claimable[@]}" | grep -qx "$id" || {
+    echo "qq-wave: TASK-$id is not on the frontier (claimed, blocked, or not To Do) — refusing" >&2
+    echo "         run 'qq-frontier' to see what is dispatchable" >&2
+    exit 1
+  }
+done
+
+slug() { # title -> short branch slug
+  tr '[:upper:]' '[:lower:]' <<<"$1" | sed 's/[^a-z0-9]\+/-/g; s/^-//; s/-$//' | cut -c1-28 | sed 's/-$//'
+}
+
+# the worker protocol. Workers enter the loop at Plan: Align is the dispatcher's
+# job, already resolved in the task file (see §Parallel operation).
+PREAMBLE='You are the dedicated worker for one qq backlog task, in your own git worktree on your own branch. You own this tree; never touch main, the main checkout, or another task. Protocol: (1) read your task with `backlog task view <ID> --plain` — the task file is the source of truth for scope and acceptance criteria; (2) claim it: `backlog task edit <ID> -s "In Progress" -a <your-branch>`, commit the claim immediately; (3) work it per the qq methodology — Align is already done unless you find REAL ambiguity, in which case stop and ask rather than guessing; verification-before-completion is never skipped; (4) check ACs with evidence, flip the task Done, commit, push; (5) land through the gate: `no-mistakes axi run --skip ci --intent "<task + acceptance criteria + decisions>"`. You own the run: objective findings you fix; ask-user findings you RELAY to the conductor (`herdr agent list`, then `herdr send`) and keep the run parked — never self-approve a finding about your own work. When driving stacked branches always use `no-mistakes axi status --run <id>`: bare `axi status` silently falls back to the repo active run when your branch has none. Never end a turn on an announcement — if you say you will do something, do it in the same turn. Stamp phases with `qq-phase <Phase> --task task-<ID>`.'
+
+ws=$(herdr worktree list --cwd "$root" | jq -r '.result.source.source_workspace_id')
+[ -n "$ws" ] && [ "$ws" != null ] || { echo "qq-wave: cannot resolve the qq workspace id" >&2; exit 1; }
+
+for id in "${ids[@]}"; do
+  title=$(backlog task view "$id" --plain | sed -n 's/^Task TASK-[0-9.]* - //p' | head -1)
+  branch="task-$id-$(slug "$title")"
+
+  if [ "$dry" = 1 ]; then
+    echo "would launch TASK-$id on $branch (tab in $ws, worker + gate viewer)"
+    continue
+  fi
+
+  out=$(herdr worktree create --cwd "$root" --branch "$branch" --base origin/main \
+        --label "task-$id" --no-focus --json)
+  path=$(jq -r '.. | .path? // empty' <<<"$out" | head -1)
+  [ -n "$path" ] || { echo "qq-wave: worktree create failed for TASK-$id" >&2; continue; }
+
+  # explicit placement: a tab per task in the qq workspace, never the stray
+  # workspace that `worktree create` opens
+  tab=$(herdr tab create --workspace "$ws" --cwd "$path" --label "task-$id" --no-focus \
+        | jq -r '.. | .tab_id? // empty' | head -1)
+
+  out=$(herdr agent start "task-$id" ${tab:+--tab "$tab"} --cwd "$path" --no-focus -- \
+        claude "$PREAMBLE Your task: TASK-$id. Your branch: $branch.")
+  pane=$(jq -r '.result.agent.pane_id // empty' <<<"$out")
+  [ -n "$pane" ] || { echo "qq-wave: agent start failed for TASK-$id" >&2; continue; }
+
+  # a fresh worktree path raises Claude Code's trust prompt; accept it or the
+  # worker sits silently blocked
+  sleep 5; herdr pane send-keys "$pane" Enter >/dev/null 2>&1 || true
+
+  viewer=$(qq-gate-view --spawn "$pane" --cwd "$path" 2>/dev/null || true)
+  echo "TASK-$id → $branch  (tab ${tab:-?}, worker $pane, viewer ${viewer:-none})"
+done
