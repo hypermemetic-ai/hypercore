@@ -50,6 +50,14 @@ itself (design-doc substrate + minted sub-tasks) landed as its own first run.
 3. **`axi run` is current-branch-bound.** The branch is pinned at submission,
    so submit, then switch branches freely. One landing agent can drive N slice
    runs from one worktree.
+4. **Gate auto-fixes on a mid-stack branch collide with fix-forward commits
+   on the successor.** The slice-2 run's review fixes rewrote the same skill
+   hunk slice 3 had already fix-forwarded (both encoding the same lesson,
+   different words). Don't leave that to the next run's rebase-fix:
+   **merge the gate-fixed predecessor branch into the successor and resolve
+   by hand** before submitting the successor's run — deterministic, and the
+   merge also absorbs main drift early. (Caught live: settled-submit wording,
+   slice 2 → slice 3.)
 
 ## Worker-pane lessons (fed back into the skill in slice 3)
 
