@@ -1,5 +1,13 @@
 # `codex exec` hangs on stdin — always pass `< /dev/null`
 
+**Superseded 2026-07-08 by TASK-8** (worker-pane Build path,
+`docs/plans/2026-07-08-orchestrate-codex-panes.md`): orchestrate no longer has
+a headless `codex exec` path, so the `< /dev/null` rule below no longer applies
+to orchestrate handoffs. The rationale still applies to background side-quest
+`codex exec` invocations, including the detached `/idea` subprocess described in
+`ideas/01-btw-ideas-skill.md`; this is not a blanket "redirect never needed"
+repeal.
+
 **Status:** _known footgun + one-line fix; wire it into `orchestrate`._
 
 ## The bug

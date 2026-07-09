@@ -3,7 +3,7 @@
 _Banked 2026-07-07. Status: audit complete (three parallel readers + main-session
 verification of every load-bearing claim); sequencing proposed. Update 2026-07-08:
 TASK-3 landed the qq-phase, WIP-ref, and rail hardening from Part 2; Codex resume
-scoping moved to TASK-8.
+scoping was resolved by TASK-8.
 Trigger: operator asked "make the whole workflow parallel safe" + "audit the whole
 methodology for coherence, soundness, simplification — then see where concurrency
 fits in."_
@@ -97,12 +97,15 @@ fine (root-caused in idea #4). The rail allows `git push no-mistakes`.
    keeps fresh-run reset/detail/status/gate state per slot, migrates legacy
    single-slot files on first stamp, and renders every active slot. `qq-phase
    clear` wipes all state; `qq-phase clear --producer <id>` removes one slot.
-3. **`codex exec resume --last` is not worktree-scoped (MED).** Two orchestrate
-   runs in two worktrees can cross-resume each other's Codex session — silently
-   corrupting "the reviewer is never the author". Fix: capture the session id at
-   first handoff and `codex exec resume <id>`; `--last` is banned in parallel
-   operation. (Also `orchestrate/SKILL.md:89` shows the repair handoff without
-   `< /dev/null` — the one handoff missing the idea-#3 redirect.)
+3. **`codex exec resume --last` is not worktree-scoped (MED) — resolved by TASK-8.**
+   Two orchestrate runs in two worktrees could cross-resume each other's Codex
+   session — silently corrupting "the reviewer is never the author". TASK-8
+   resolved this with a stronger fix than per-worktree scoping: orchestrate now
+   runs Codex as a named herdr pane worker, herdr captures the Codex session id
+   (`herdr agent get` → `agent_session.value`), and repair happens in-pane. If a
+   pane dies, recover it with `codex resume <session-id>`; `--last` was deleted
+   from orchestrate entirely. The old parenthetical about `orchestrate/SKILL.md:89`
+   missing `< /dev/null` is moot too — the skill no longer has `codex exec` lines.
 4. **Same-tree Stop-hook race (LOW) — resolved by TASK-3.** Two sessions in one
    tree no longer clobber `refs/wip/<branch>`: `qq-wip-snapshot.sh` updates the
    ref with compare-and-swap against the previously read value, retries against

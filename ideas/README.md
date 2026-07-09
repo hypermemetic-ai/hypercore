@@ -37,8 +37,11 @@ it its own `NN-slug.md` file in this folder and leave a one-line pointer here.
   free**. The `02-*.md` note now records the built shape; the archived patch is safe to retire
   once merged. _(2026-07-06 → 08)_
 - **#3 · `codex exec` stdin-hang** → [`03-codex-exec-stdin-hang.md`](03-codex-exec-stdin-hang.md).
-  ✅ **Done (07-07).** Wired `< /dev/null` + a rule bullet into
-  `skills/orchestrate/SKILL.md`'s Build handoffs. Note kept for rationale; safe to delete. _(2026-07-06 → 07)_
+  ✅ **Superseded for orchestrate (07-08 by TASK-8).** Orchestrate no longer has
+  a headless `codex exec` Build path, so the `< /dev/null` handoff rule does not
+  apply there anymore; see the supersession note in the record. The rationale
+  survives for background side-quest `codex exec` invocations, including #1's
+  detached subprocess model. _(2026-07-06 → 08)_
 - **#4 · Gate "stall" after a rename** → [`04-gate-stale-path-after-rename.md`](04-gate-stale-path-after-rename.md).
   ✅ **Root-caused (07-07).** (1) stale-path → `no-mistakes init` repairs it. (2) the
   "post-review freeze" was **not** a deadlock — the run parked in `awaiting_approval`
@@ -60,8 +63,9 @@ it its own `NN-slug.md` file in this folder and leave a one-line pointer here.
   merges around the gate; `superpowers:*` refs baked into every generated plan), three
   mechanical concurrency hazards (then-single-slot `.qq/state.json`, `codex resume --last`
   cross-worktree bleed, WIP-ref race), and a proposed 5-step sequencing. **TASK-3 has now
-  landed the multi-producer phase slots, WIP-ref CAS, and argv-aware rail hardening; the Codex
-  resume hazard moved to task-8.** _(2026-07-07 → 08)_
+  landed the multi-producer phase slots, WIP-ref CAS, and argv-aware rail hardening; TASK-8
+  retired the Codex resume hazard by deleting `--last` from orchestrate's worker-pane Build
+  path.** _(2026-07-07 → 08)_
 - **#7 · Drop Understand-Anything for an agent-maintained map** → Part 4 of
   [`05-methodology-audit-parallel-safety.md`](05-methodology-audit-parallel-safety.md).
   Operator's call, independently corroborated: the knowledge layer produced both HIGH
@@ -118,20 +122,19 @@ it its own `NN-slug.md` file in this folder and leave a one-line pointer here.
   and watch what they do with them before designing any protocol. ✅ The teaching
   note landed in the methodology's Sessions layer (branch `feat/document-stack`,
   07-08); now we watch. _(2026-07-08)_
-- **#9 · Codex workers get their own herdr pane** _(decided 07-08)._ Codex is
-  about to become the main driver, so its workers stop being second-class
-  (today: headless `codex exec` inside the conductor's session while Claude
-  workers get panes). Run Codex workers as herdr agents (`herdr agent start
-  <name> -- codex …`) — one approach for every worker: own pane, sidebar
-  visibility, reachable via #8's send/read/wait. Touches `orchestrate`'s Build
-  handoff (the `codex exec` + `< /dev/null` model, and the `resume --last`
-  cross-worktree hazard in #6 Part 2.3) — a gated branch of its own.
-  ✅ **Mechanics smoke-tested (07-08):** `herdr agent start … -- codex` is
-  auto-detected as agent `codex` with live idle/working state; `send` + `pane
-  send-keys Enter` delivers prompts; `wait --status idle` blocks correctly; and
-  herdr captures the codex **session id**, which dissolves the `resume --last`
-  hazard. Tracked as backlog task-8; design doc:
+- **#9 · Codex workers get their own herdr pane** _(landed 07-08 by TASK-8)._ TASK-8
+  landed the worker-pane Build path in `skills/orchestrate/SKILL.md`; design:
   [`docs/plans/2026-07-08-orchestrate-codex-panes.md`](../docs/plans/2026-07-08-orchestrate-codex-panes.md).
+  Codex workers now run as named herdr agents (`herdr agent start <name> -- codex …`):
+  one approach for every worker, with an own pane, sidebar visibility, and #8's
+  send/read/wait primitives. This retired the old headless `codex exec` handoff
+  model, including #3's `< /dev/null` orchestrate workaround, and removed the
+  former `resume --last` cross-worktree hazard from #6 Part 2.3; repair now
+  happens in-pane, and dead panes resume by captured session id.
+  ✅ **Mechanics smoke-tested (07-08):** `herdr agent start … -- codex` was
+  auto-detected as agent `codex` with live idle/working state; `send` + `pane
+  send-keys Enter` delivered prompts; `wait --status idle` blocked correctly;
+  and herdr captured the codex **session id**. Tracked as backlog task-8.
   _(2026-07-08)_
 - **#10 · Expand–contract for wide refactors** _(captured 07-08)._ mattpocock
   v1.1's `to-tickets` slices a wide refactor (one mechanical change,
