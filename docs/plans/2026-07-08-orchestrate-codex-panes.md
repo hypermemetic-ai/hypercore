@@ -7,13 +7,8 @@ model**. Mechanics smoke-tested 07-08 (scratch workspace): `herdr agent start �
 -- codex` is auto-detected as agent `codex` with live idle/working/done state;
 `herdr agent send cx-<branch>` + `herdr pane send-keys <pane> Enter` delivers
 prompts after a brief read/settle before Enter; `herdr agent wait
-<<<<<<< HEAD
-cx-<branch> --status idle` blocks until the turn ends; herdr captures the codex
-session id. This plan lands as its own gated branch **after**
-=======
 cx-<branch> --status idle` unblocks when Codex surfaces `done` at turn end;
 herdr captures the codex session id. This plan lands as its own gated branch **after**
->>>>>>> origin/task-8.3-closeout
 `feat/document-stack` merges._
 
 ## Goal
@@ -36,7 +31,6 @@ that genuinely needs more workers fans the extras into a fresh tab. Worktree
 affinity is **per-pane**: `--cwd` pins each worker to its tree — one writer per
 tree, per the methodology's parallel rules.
 
-<<<<<<< HEAD
 **The orchestrator→worker relation is carried by convention, not by herdr.**
 Verified against `herdr api schema --json` (0.7.3): there is **no first-class
 parent/child agent relation** — no `parent`, `child`, `group`, or `hierarchy`
@@ -62,8 +56,6 @@ structural instead of conventional, and let the sidebar render workers as
 nodes under their orchestrator — the "list of nodes under a parent" the
 operator asked for. Operator's call whether to file it upstream.
 
-=======
->>>>>>> origin/task-8.3-closeout
 **Observation — herdr 0.7.3 socket primitives.** `herdr terminal session
 observe <target>` streams a pane read-only (NDJSON ANSI) — the conductor or
 operator tooling watches a Codex worker live *without stealing input*.
@@ -89,12 +81,7 @@ never the report of record (that stays file-based, below).
    write .qq/handoffs/<n>-report.md (what changed, files touched, how to
    verify)."`. Wait a couple seconds or read
    `herdr agent read cx-<branch> --source visible` until the text is in the
-<<<<<<< HEAD
    pane, then `herdr pane send-keys <pane> Enter`.
-=======
-   pane, then `herdr pane send-keys <pane> Enter`. If the agent stays idle,
-   `agent read` to check for an unsubmitted prompt and re-send Enter.
->>>>>>> origin/task-8.3-closeout
 4. Wait: `herdr agent wait cx-<branch> --status idle --timeout <generous>`;
    Codex surfaces `done` at turn end, and the wait unblocks on that transition —
    don't poll for a literal `idle`. If the status flickers mid-turn, wait twice a
@@ -168,17 +155,10 @@ only from this pilot's lessons (captured in slice 3).
 - Non-focused pane rendering: worked in the smoke test; re-verify under a
   real multi-hour build.
 - `herdr agent wait cx-<branch> --status idle` fidelity during codex sub-shell
-<<<<<<< HEAD
   activity: if idle flickers mid-turn, add a settle re-check (wait idle twice,
   N s apart).
 - ~~Codex resume-by-id flag name for dead panes~~ — confirmed 07-08:
   `codex resume [SESSION_ID]` / `codex exec resume [SESSION_ID]`.
-=======
-  activity: Codex now surfaces `done` at turn end, but if state flickers
-  mid-turn, settle by waiting twice a few seconds apart.
-- ~~Codex resume-by-id flag name for dead panes~~ — confirmed 07-08:
-  `codex resume [SESSION_ID]`.
->>>>>>> origin/task-8.3-closeout
 - Stacked slice branches: a later slice's PR shows the cumulative diff until
   its predecessor merges (merge commits preserve SHAs, so it self-corrects).
   Pilot lesson to watch, not a blocker.
