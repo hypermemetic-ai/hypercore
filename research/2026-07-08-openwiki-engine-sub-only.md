@@ -212,18 +212,20 @@ The engine decision converts TASK-7's implementation half into:
    AGENTS.md/CLAUDE.md injection by default (qq wires its own imports), keep
    `openwiki/.last-update.json` + `gitHead..HEAD` diff protocol.
 2. Rewrite `bin/qq-openwiki-refresh` to call
-   `codex exec --sandbox workspace-write --cd <repo> --skip-git-repo-check -o <log>
-   "$(cat <prompt-file>)" < /dev/null` — the sandbox flag is mandatory:
+   `codex exec --sandbox workspace-write --cd <repo> --skip-git-repo-check - < "$prompt_file"` — the sandbox flag is mandatory:
    non-interactive codex defaults to a read-only sandbox
    (developers.openai.com/codex/noninteractive), so an unflagged call could
-   never write `openwiki/`; the stdin redirect is mandatory because raw
-   `codex exec "<prompt>"` can block forever while reading inherited stdin.
+   never write `openwiki/`; the prompt-file stdin form is mandatory because it
+   EOF-closes stdin without putting repo context/diffs in shell arguments, while
+   raw `codex exec "<prompt>"` can block forever while reading inherited stdin.
    Do not rely on a machine's permissive `~/.codex/config.toml`. Keep
    update-mode guards (no `openwiki/` → skip unless `--init`; no `codex` binary
    or no ChatGPT-managed Codex login → warn+skip; snapshot/restore on failure;
    warn-don't-block) and re-key the "is it configured" check from
    `~/.openwiki/.env` to a CODEX_HOME/keyring-aware `codex login status` probe
-   that must report ChatGPT auth (`auth_mode: chatgpt`), not API-key auth.
+   that accepts human status output such as `Logged in using ChatGPT` (or a
+   `$CODEX_HOME/auth.json` record with `auth_mode: "chatgpt"`) and rejects
+   API-key auth.
 3. One-time initial generation: the init-mode prompt through the same script
    (`--init` flag), bypassing the update-only missing-`openwiki/` skip and
    creating `openwiki/` only after the ChatGPT-auth probe passes, reviewed by the
