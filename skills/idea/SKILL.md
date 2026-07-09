@@ -34,6 +34,10 @@ operator's ceremony stays at zero and the transcript stays clean.
 5. **Silent distill.** At most one clarifying question, and only when the idea
    cannot be researched without the answer.
 
+The status line is a courtesy signal, never a gate: every `qq-phase` stamp is
+bounded and best-effort, so a wedged `.qq/state.json` can lose a signal but
+never a thought.
+
 ## Route
 
 Capture lands on `ideas/` — the informal holding pen — not `backlog/`; backlog
@@ -82,7 +86,7 @@ one-line ack.
   ```bash
   todo="<verbatim idea plus needed session context>"
   today="$(date +%F)"
-  flock .qq/ideas-readme.lock bash -c 'printf -- "- %s _(%s)_\n" "$1" "$2" >> ideas/README.md' bash "$todo" "$today"
+  flock .qq/ideas-readme.lock bash -c 'printf -- "- %s. _(%s)_\n" "$1" "$2" >> ideas/README.md' bash "$todo" "$today"
   ```
 
   Then run the bounded reaper above. No file, no stamps, no researcher. Done.
@@ -100,7 +104,7 @@ one-line ack.
   snapshot gist, write `ideas/$NN-$SLUG.md` with header status `parked`,
   Original, and Sharpened only, run the bounded reaper above, add the `#$NN`
   README pointer with the locked append form in Full path step 6, then stamp
-  `qq-phase parked --producer idea-$NN --status done --detail "ideas/$NN-$SLUG.md" >/dev/null` —
+  `timeout 5 qq-phase parked --producer idea-$NN --status done --detail "ideas/$NN-$SLUG.md" >/dev/null 2>&1 || true` —
   no brief, no spawn. The file lands before the stamp. The slot shows the
   parked signal until the next capture reaps it.
 
@@ -136,7 +140,7 @@ Use the same `$root` resolved above for every path in this section.
    signal; the file is the thought, and the thought lands first.
 3. Run the bounded reaper above. Cleanup never blocks the capture that just
    landed.
-4. Stamp `qq-phase capturing --producer idea-$NN >/dev/null`. The status line
+4. Stamp `timeout 5 qq-phase capturing --producer idea-$NN >/dev/null 2>&1 || true`. The status line
    is the only place a main-session stamp is allowed to speak.
 5. Sharpen in place: add the remaining sections of the template (Sharpened
    plus the two researcher placeholders) and set the header status to
@@ -178,7 +182,7 @@ Use the same `$root` resolved above for every path in this section.
    title="<title>"
    line="<one line>"
    today="$(date +%F)"
-   flock .qq/ideas-readme.lock bash -c 'printf -- "- **#%s · %s** → [%s](%s). %s _(%s)_\n" "$1" "$2" "$3" "$3" "$4" "$5" >> ideas/README.md' bash "$NN" "$title" "$NN-$SLUG.md" "$line" "$today"
+   flock .qq/ideas-readme.lock bash -c 'printf -- "- **#%s - %s** -> [%s](%s). %s. _(%s)_\n" "$1" "$2" "$3" "$3" "$4" "$5" >> ideas/README.md' bash "$NN" "$title" "$NN-$SLUG.md" "$line" "$today"
    ```
 
 7. Write the researcher's brief to `$root/.qq/idea-brief-$NN.md`, substituting
@@ -189,8 +193,9 @@ Use the same `$root` resolved above for every path in this section.
    cat > "$root/.qq/idea-brief-$NN.md" <<EOF
    You are a detached researcher working in $root. Nobody reads
    your stdout — your output is the idea file and the status stamps.
+   The enrichment write is what matters; every stamp is a courtesy.
 
-   1. Stamp: qq-phase researching --producer idea-$NN --detail "ideas/$NN-$SLUG.md"
+   1. Stamp: timeout 5 qq-phase researching --producer idea-$NN --detail "ideas/$NN-$SLUG.md" || true
    2. Read ideas/$NN-$SLUG.md. Follow the research skill's method — read it from
       the agent skills dir (\`~/.claude/skills/research/SKILL.md\`) or the repo's
       own \`skills/research/SKILL.md\` if present: primary sources first, every
@@ -201,11 +206,11 @@ Use the same `$root` resolved above for every path in this section.
       involves, naming the next skill to reach for (writing-plans,
       orchestrate, …). Set the header status to "researched". Keep Original
       untouched.
-   4. Stamp: qq-phase done --producer idea-$NN
+   4. Stamp: timeout 5 qq-phase done --producer idea-$NN || true
 
    Write only ideas/$NN-$SLUG.md; never commit or push. If you cannot finish,
-   stamp: qq-phase researching --producer idea-$NN --status red --detail
-   "failed -- see .qq/idea-research-$NN.log" and stop.
+   stamp \`timeout 5 qq-phase researching --producer idea-$NN --status red --detail
+   "failed -- see .qq/idea-research-$NN.log" || true\`, then stop.
    EOF
    ```
 
@@ -227,7 +232,7 @@ Use the same `$root` resolved above for every path in this section.
        rc=$?
      fi
      if [ "$rc" -ne 0 ]; then
-       qq-phase researching --producer "$3" --status red --detail "failed -- see $4"
+       timeout 5 qq-phase researching --producer "$3" --status red --detail "failed -- see $4" || true
      fi
      exit "$rc"
    ' bash "$root" "$brief" "$producer" "$log_rel" < /dev/null > "$log" 2>&1 &
@@ -249,7 +254,7 @@ Use the same `$root` resolved above for every path in this section.
        rc=$?
      fi
      if [ "$rc" -ne 0 ]; then
-       qq-phase researching --producer "$3" --status red --detail "failed -- see $4"
+       timeout 5 qq-phase researching --producer "$3" --status red --detail "failed -- see $4" || true
      fi
      exit "$rc"
    ' bash "$root" "$brief" "$producer" "$log_rel" < /dev/null > "$log" 2>&1 &
