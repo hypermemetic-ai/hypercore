@@ -34,7 +34,8 @@ status line with every active phase plus any live gate step.
 When the backlog is deep, pick from the claimable frontier instead of the raw
 To Do column: `bin/qq-frontier` lists unassigned ready tasks with no local or
 remote `task-<id>` branch claim; `--afk` narrows to unattended-safe work and
-`--json` is for tooling.
+`--json` is for tooling. It reads the current committed `HEAD`, so run it from
+the same clean commit workers will branch from.
 
 ## Skills
 16 skills, curated from four MIT collections (mattpocock, superpowers,
