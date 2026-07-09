@@ -4,8 +4,10 @@ title: Roll the document stack out to linked repos
 status: To Do
 assignee: []
 created_date: '2026-07-08 14:41'
-updated_date: '2026-07-08 20:27'
-labels: []
+updated_date: '2026-07-09 00:50'
+labels:
+  - afk
+  - parallel-ok
 dependencies: []
 priority: medium
 ordinal: 9000
