@@ -212,16 +212,20 @@ The engine decision converts TASK-7's implementation half into:
    AGENTS.md/CLAUDE.md injection by default (qq wires its own imports), keep
    `openwiki/.last-update.json` + `gitHead..HEAD` diff protocol.
 2. Rewrite `bin/qq-openwiki-refresh` to call
-   `codex exec --sandbox workspace-write --cd <repo> --skip-git-repo-check - < "$prompt_file"` — the sandbox flag is mandatory:
+   `timeout 600 codex exec --sandbox workspace-write --cd <repo> --skip-git-repo-check - < "$prompt_file"` — the sandbox flag is mandatory:
    non-interactive codex defaults to a read-only sandbox
    (developers.openai.com/codex/noninteractive), so an unflagged call could
    never write `openwiki/`; the prompt-file stdin form is mandatory because it
    EOF-closes stdin without putting repo context/diffs in shell arguments, while
    raw `codex exec "<prompt>"` can block forever while reading inherited stdin.
-   Do not rely on a machine's permissive `~/.codex/config.toml`. Keep
+   Keep the bounded timeout so stalled Codex/model/network calls always reach the
+   warn-don't-block path and restore the snapshot. Do not rely on a machine's
+   permissive `~/.codex/config.toml`. Keep
    update-mode guards (no `openwiki/` → skip unless `--init`; no `codex` binary
    or no ChatGPT-managed Codex login → warn+skip; snapshot/restore on failure;
-   warn-don't-block) and re-key the "is it configured" check from
+   pre/post diff containment that restores/rejects every refresh-introduced
+   modification outside `openwiki/` before returning and warns loudly if it
+   trips; warn-don't-block) and re-key the "is it configured" check from
    `~/.openwiki/.env` to a CODEX_HOME/keyring-aware `codex login status` probe
    that accepts human status output such as `Logged in using ChatGPT` (or a
    `$CODEX_HOME/auth.json` record with `auth_mode: "chatgpt"`) and rejects
@@ -230,8 +234,10 @@ The engine decision converts TASK-7's implementation half into:
    (`--init` flag), bypassing the update-only missing-`openwiki/` skip and
    creating `openwiki/` only after the ChatGPT-auth probe passes, reviewed by the
    operator before first landing.
-4. Update `.no-mistakes.yaml` comment + lint list; remember `commands.*` goes
-   live only after merge to main (default-branch trust rule).
+4. Update `.no-mistakes.yaml` comment + lint list and rewrite `bin/install.sh`
+   preflight from OpenWiki CLI/API-key setup to Codex CLI + ChatGPT-login setup;
+   remember `commands.*` goes live only after merge to main (default-branch trust
+   rule).
 5. Roll-out note for TASK-9 (linked repos): the same script works per-repo since
    codex auth is machine-global.
 
