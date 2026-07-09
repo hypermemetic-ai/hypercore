@@ -1,11 +1,11 @@
 ---
 id: TASK-7
 title: Generate the initial openwiki/ wiki
-status: In Progress
+status: Done
 assignee:
   - task-7-openwiki-seed
 created_date: '2026-07-08 14:41'
-updated_date: '2026-07-09 00:02'
+updated_date: '2026-07-09 00:42'
 labels:
   - research
   - parallel-ok
@@ -22,6 +22,18 @@ RESEARCH FIRST - nothing here is decided except the constraint and the format. C
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Cited research report in research/ answering questions 1-5 with load-bearing claims adversarially verified
-- [ ] #2 Engine decision made from that evidence and recorded on this task, with implementation re-planned accordingly
+- [x] #1 Cited research report in research/ answering questions 1-5 with load-bearing claims adversarially verified
+- [x] #2 Engine decision made from that evidence and recorded on this task, with implementation re-planned accordingly
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+ENGINE DECISION (2026-07-08, from research/2026-07-08-openwiki-engine-sub-only.md — codex-delegated round, load-bearing claims adversarially verified: 7 CONFIRMED / 1 WEAKENED / 0 REFUTED):
+
+ADOPTED: bespoke codex-exec-driven refresh. bin/qq-openwiki-refresh will drive 'codex exec' on the ChatGPT sub (same engine+auth the gate already uses via agent: codex) with OpenWiki's MIT prompt discipline vendored into the repo (preserve MIT notice). Keep openwiki/ format, .last-update.json gitHead..HEAD protocol, and all guards; re-key the configured-check from ~/.openwiki/.env to codex auth presence. commands.format stays the hook (document step verified unsteerable; format runs pre-commit in push step; failures warn -> script stays self-guarding).
+FALLBACK: same script on 'claude -p' (documented sub envelope; never --bare). Reserved — Claude sub is the scarce resource (operator load directive).
+REJECTED: OpenWiki CLI + API key (violates sub-only constraint; upstream has no merged sub backend — PRs #76/#181 open, #188 closed); OpenWiki-on-Claude-OAuth shim (the exact third-party credential-routing shape Anthropic prohibits); CodeWiki (real claude-code/codex CLI providers but writes docs/, breaks the openwiki/ format); local models (documented quality failures at that size); steering the gate's document step (no config surface, verified in no-mistakes v1.34.0 source).
+ToS: headless codex exec on ChatGPT sub = documented pattern for trusted PRIVATE automation (developers.openai.com/codex/auth/ci-cd-auth); limit exhaustion = credits/blocking, no ban guarantee.
+IMPLEMENTATION RE-PLAN: 5 steps in the research doc ('Implementation re-plan' section) — vendor prompts, rewrite refresh script, one-time init reviewed by operator, .no-mistakes.yaml comment/lint update (commands.* live only after merge to main), TASK-9 rollout note. Follow-up implementation task must be minted from the main-tree session (worktree-minted IDs risk duplicates).
+<!-- SECTION:NOTES:END -->
