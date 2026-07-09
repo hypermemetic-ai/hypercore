@@ -49,7 +49,7 @@ Two native primitives together already cover most of what this note set out to b
    **report status to the shared background-status surface** — `qq-phase` writing
    its own producer slot in `.qq/state.json`, read by `qq-phase render` in the Claude Code
    status line — flipping `capturing → researching → done: ideas/NN-slug.md` via
-   `qq-phase ... --producer idea`. The skill returns nothing into the transcript.
+   `qq-phase ... --producer idea-NN`. The skill returns nothing into the transcript.
 3. **The genuinely additive part is small but real:** durable persistence + the
    grooming convention (`ideas/` + README backlog). Everything else is now native.
 4. **#1 and #5 converge.** The completion-visibility surface *is* the progress tracker's
@@ -64,8 +64,8 @@ thread switched to via `/agent` — not a returns-when-done background subagent)
 `/btw` alias for `/side` is only a **request** (openai/codex#18884). Codex has no
 returns-when-done background-subagent-from-a-command, so the Codex build uses a
 **detached agent subprocess** —
-`setsid codex exec "$(cat brief)" < /dev/null >research.log 2>&1 &` (note `< /dev/null`,
-per idea #3) — that self-files to `ideas/`. Both harnesses share the `SKILL.md` model,
+the wrapper in `skills/idea/SKILL.md` with `< /dev/null` (per idea #3) — that
+self-files to `ideas/`. Both harnesses share the `SKILL.md` model,
 so author once and link into both `~/.claude/skills` and `~/.codex/skills`.
 
 Sources: code.claude.com/docs/en/commands (`/btw`, `/fork`, `/branch`) ·

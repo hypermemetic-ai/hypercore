@@ -24,7 +24,7 @@ Idea #1, design locked 07-07: capture verbatim in-turn, detached researcher writ
 <!-- AC:BEGIN -->
 - [x] #1 skills/idea/SKILL.md exists and passed the writing-skills eval loop: RED baseline failures observed without the skill, GREEN compliance observed with it
 - [x] #2 Capture is verbatim-first: raw operator input is written to the ideas/ surface before sharpening or research
-- [x] #3 Research path spawns a detached researcher (setsid ... < /dev/null &) that enriches ideas/NN-slug.md and stamps qq-phase --producer idea (capturing -> researching -> done); the main producer slot is verified untouched
+- [x] #3 Research path spawns a detached researcher (setsid ... < /dev/null &) that enriches ideas/NN-slug.md and stamps qq-phase --producer idea-NN (capturing -> researching -> done/red); producer-slot isolation is verified
 - [x] #4 No-research ideas land as a README Backlog bullet with no status stamps; bare /idea captures a handoff-style session snapshot
 - [x] #5 Nothing returns to the transcript: completion is ambient status only
 - [x] #6 Methodology support line + skill index, SKILLS-ATTRIBUTION.md, and ideas/README.md reference the skill

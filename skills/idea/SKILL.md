@@ -131,14 +131,45 @@ Resolve the repo root once and use it for every path in this section:
    ```bash
    brief="$root/.qq/idea-brief-NN.md"
    log="$root/.qq/idea-research-NN.log"
-   setsid bash -c 'cd "$1" && exec claude -p "$(cat "$2")" --permission-mode bypassPermissions' \
-     bash "$root" "$brief" < /dev/null > "$log" 2>&1 &
+   log_rel=".qq/idea-research-NN.log"
+   producer="idea-NN"
+   setsid bash -c '
+     cd "$1" || exit 1
+     prompt="$(cat "$2")"
+     rc=$?
+     if [ "$rc" -eq 0 ]; then
+       claude -p "$prompt" --permission-mode bypassPermissions
+       rc=$?
+     fi
+     if [ "$rc" -ne 0 ]; then
+       qq-phase researching --producer "$3" --status red --detail "failed -- see $4"
+     fi
+     exit "$rc"
+   ' bash "$root" "$brief" "$producer" "$log_rel" < /dev/null > "$log" 2>&1 &
    ```
 
-   From a Codex cockpit: `setsid codex exec --cd "$root" --sandbox
-   danger-full-access "$(cat "$brief")" < /dev/null > "$log" 2>&1 &`. In
-   both, `< /dev/null` is load-bearing: an inherited-but-open stdin hangs the
-   worker forever before its first token.
+   From a Codex cockpit:
+
+   ```bash
+   setsid bash -c '
+     cd "$1" || exit 1
+     prompt="$(cat "$2")"
+     rc=$?
+     if [ "$rc" -eq 0 ]; then
+       codex exec --cd "$1" --sandbox danger-full-access "$prompt"
+       rc=$?
+     fi
+     if [ "$rc" -ne 0 ]; then
+       qq-phase researching --producer "$3" --status red --detail "failed -- see $4"
+     fi
+     exit "$rc"
+   ' bash "$root" "$brief" "$producer" "$log_rel" < /dev/null > "$log" 2>&1 &
+   ```
+
+   In both, the wrapper stamps the per-idea producer red when the agent process
+   exits nonzero, including CLI/auth/flag failures before the model starts.
+   `< /dev/null` is load-bearing: an inherited-but-open stdin hangs the worker
+   forever before its first token.
 
    The researcher deliberately runs full-access: its highest-value output is empirical, and scratch-repo
    repros need real bash. A tool allowlist cannot scope write paths, so `Write only ideas/NN-slug.md`
