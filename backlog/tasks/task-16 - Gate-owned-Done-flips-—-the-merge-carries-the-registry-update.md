@@ -4,9 +4,10 @@ title: Gate-owned Done flips — the merge carries the registry update
 status: To Do
 assignee: []
 created_date: '2026-07-08 22:37'
-updated_date: '2026-07-09 00:32'
+updated_date: '2026-07-09 00:50'
 labels:
   - afk
+  - parallel-ok
 dependencies: []
 priority: medium
 ordinal: 14000

@@ -72,9 +72,10 @@ the gate.
   starting at Align — or hand the whole task to `orchestrate`, which conducts the
   loop end-to-end (Claude aligns / plans / verifies / reviews; Codex implements).
 
-Triage also flags parallelism — without being asked: every task gets its
-`parallel-ok` label (or explicit dependencies) and its `hitl`/`afk` attendance
-label at creation or first triage. When the operator asks for the next task and
+Triage also flags parallelism — without being asked: every **unclaimed To Do**
+task gets its `parallel-ok` label (or explicit dependencies) and its
+`hitl`/`afk` attendance label at creation or first triage (claimed tasks are
+exempt — see §Parallel operation). When the operator asks for the next task and
 the queue is deep, don't default to serial: run `bin/qq-frontier` and propose a
 wave of independent frontier tasks fanned out via herdr worktrees (see
 §Parallel operation).
@@ -202,7 +203,11 @@ These are the rules that make that safe.
   dependencies: `parallel-ok` (surface-disjoint; safe in a wave) and one of
   `hitl` (needs the operator in the loop — judgment calls, interactive tests)
   or `afk` (runs unattended end-to-end; the operator's only touchpoint is the
-  merge click). A task that can't be labeled yet isn't triaged yet.
+  merge click). A task that can't be labeled yet isn't triaged yet. The
+  invariant covers **unclaimed To Do tasks only** (operator decision,
+  2026-07-08): once a task is claimed — a `task-<id>` branch exists — labels
+  are moot for dispatch, and the task file is worker-owned, so cross-tree
+  label backfills are forbidden by the tree-ownership rule.
 - **The dispatchability bar** — a task is handed to a worker only when Align is
   done: intent resolved with the operator and encoded in the task file plus the
   dispatch brief. The dispatcher front-loads Align; the worker enters the loop
