@@ -84,7 +84,7 @@ here once; every step below refers to it.
 1. **Start** — one worker per working tree, spawned into your own tab
    (tab-per-task: one tab reads as one task; cap ~3 panes per tab). Find your
    tab with `herdr pane current` → `tab_id`, then:
-   `herdr agent start cx-<branch> --cwd <tree> --tab <tab_id> --split down
+   `herdr agent start cx-<branch> --cwd <tree> --tab <tab_id> --split right
    --no-focus -- codex`. Fanning out? `herdr worktree create --branch <name>`
    first — worktree affinity is per-pane via `--cwd`.
 2. **Trust prompt** — `herdr agent read cx-<branch> --source visible`; if the
