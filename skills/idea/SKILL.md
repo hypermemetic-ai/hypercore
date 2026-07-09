@@ -41,6 +41,16 @@ tasks are minted at grooming, in the session that owns the main tree.
 Resolve the repo root before choosing a route:
 `root="$(git rev-parse --show-toplevel)"`.
 
+Before choosing any route, reap finished idea slots from earlier captures; this
+runs on every `/idea`, including bare todos and bare snapshots:
+
+```bash
+qq-phase status | python3 -c 'import json,sys; [print(n) for n,s in json.load(sys.stdin).get("producers",{}).items() if n.startswith("idea-") and s.get("status")=="done"]' | while read p; do qq-phase clear --producer "$p"; done
+```
+
+A finished researcher's slot stays on the status line until the next `/idea`
+reaps it, so a completion the operator has not looked at yet is never erased.
+
 - **Bare todo** (nothing researchable in it): append one dated bullet under
   `$root/ideas/README.md` **Backlog** — verbatim, plus a half-line of session
   context if a "this/that" needs resolving. No file, no stamps, no researcher.
@@ -61,16 +71,9 @@ Resolve the repo root before choosing a route:
 
 Use the same `$root` resolved above for every path in this section.
 
-1. Pick NN — the next free two-digit number in `$root/ideas/` — reap any finished
-   idea slots from earlier captures, then stamp `qq-phase capturing --producer
-   idea-NN`. Choose NN before the first stamp because it is also the producer id.
-
-   ```bash
-   qq-phase status | python3 -c 'import json,sys; [print(n) for n,s in json.load(sys.stdin).get("producers",{}).items() if n.startswith("idea-") and s.get("status")=="done"]' | while read p; do qq-phase clear --producer "$p"; done
-   ```
-
-   A finished researcher's slot stays on the status line until the next `/idea`
-   reaps it, so a completion the operator has not looked at yet is never erased.
+1. Pick NN — the next free two-digit number in `$root/ideas/` — then stamp
+   `qq-phase capturing --producer idea-NN`. Choose NN before the first stamp
+   because it is also the producer id.
    Always use `--producer idea-NN`: a bare stamp clobbers the main slot's loop
    position, and a shared `idea` slot would let one researcher's `done` falsely
    clear another's. `qq-phase render` shows each active slot, so concurrent
