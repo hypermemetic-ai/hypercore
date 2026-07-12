@@ -110,7 +110,5 @@ codebase-memory-mcp config set auto_watch true
 ```
 
 After restarting the agent runtime, index each long-lived Repository root once.
-Use `list_projects` or `index_status` to confirm that a graph is ready, and
-re-run `index_repository` after material uncommitted or branch changes.
-`detect_changes` analyzes a Change's impact against Git history; it does not
-test index freshness.
+Freshness and usage rules ride with the agents in `AGENTS.md`;
+`openwiki/operations.md` describes the running stack.

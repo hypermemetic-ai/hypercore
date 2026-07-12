@@ -5,61 +5,84 @@ description: Delegates review of a branch, PR, or work in progress to a fresh re
 
 # Review with fresh context
 
-1. Define the exact change surface. Honor a supplied base; otherwise infer the
-   target branch and merge-base. For work in progress, include committed,
-   staged, unstaged, and untracked changes.
-2. Before delegation, test whether the actual Change remains the agreed Change.
-   Reconcile the owning Task or specification with later approved operator
-   decisions, then compare the surface with the intended outcome, ownership
-   boundary and explicit non-goals, and success evidence. If the intent sources
-   conflict, intent remains unclear, or the Change crosses that boundary, stop
-   and align before delegation.
-3. Prepare a factual review brief:
-   - repository path, base, head, and working-tree state;
-   - a changed-path map grouped by behavior, with mechanical moves, generated
-     files, and historical material identified;
-   - current intent, acceptance criteria, explicit inclusions, ownership
-     boundary and explicit non-goals, success evidence, and applicable
-     repository rules;
-   - commands and results from relevant local Checks.
+A review is independent judgment, not repeated discovery. The owning agent
+resolves the orientation once and hands the reviewer a complete brief; the
+reviewer grounds its verdict in the diff and the code around it. Neither
+inherits the other's conclusions.
 
-   Give the reviewer repository coordinates, not a pasted full diff. Do not
-   include the author's conclusions, suspected findings, or development
-   transcript.
-4. Delegate to one fresh read-only leaf reviewer. State that the review is an
-   approved continuation: do not repeat grilling, delegate another review,
-   modify state, rerun the full Check suite, or audit unrelated local or external
-   systems. Have the reviewer first test the actual Change's responsibilities
-   against the brief's intended outcome, ownership boundary and explicit
-   non-goals, and success evidence. A correctly implemented but unapproved
-   responsibility is a material intent finding. Only then have the reviewer
-   inspect internal correctness through relevant diffs, surrounding callers,
-   and tests. Use targeted reads; test only suspected failure paths.
-   Review mechanical moves and deletions through their invariants rather than
-   reading unchanged or historical bodies line by line.
-5. Request only material findings introduced by the Change across correctness,
-   security, reliability, intent, and non-tool-enforced standards. Each finding
-   needs a file and line, a concrete failure path, and supporting evidence.
-6. Use Fowler's code smells as maintenance heuristics, never violations. Report
-   one only when the diff or history shows a concrete future cost; weigh
-   counterevidence such as deliberate bounded-context duplication, generated or
-   boundary code, adapters/facades, and compatibility constraints. Prescribe no
-   refactoring from a label alone.
-7. Verify every returned finding against the Repository and reproduce it when
-   practical. Deduplicate, rank by impact, and report only confirmed findings.
-   State when none remain. Group confirmed findings by cause. When a cluster
-   centers on one responsibility or protocol, revisit the model with the
-   operator rather than feed an expanding patch queue. Stop at review unless the
-   operator asks for fixes.
-8. Treat a confirmed finding as evidence, not authorization to expand the
-   Change. It is a fix candidate only when the Change introduced it, it is
-   reproducible in an explicitly supported state, it falls within the agreed
-   intent and inclusions, and the remedy is the smallest causal correction.
-   Otherwise report it separately and stop.
-9. If a remedy would materially widen the Change surface, stop and align with
-   the operator. After an in-scope fix, rerun affected Checks and review the
-   exact delta from the last reviewed tree. Restart the full review only when
-   intent or scope materially changes.
-10. A reviewer error or missing final report is not a review. Retry the unchanged
-   brief with a fresh reviewer. Do not narrow scope or alter intent merely to
-   obtain a pass; repeated reviewer unavailability is a blocker.
+## Own the orientation
+
+1. Define the exact change surface. Honor a supplied base; otherwise infer
+   the target branch and merge-base. For work in progress, include committed,
+   staged, unstaged, and untracked changes.
+2. Test whether the actual Change is still the agreed Change. Reconcile the
+   owning Task or specification with later approved operator decisions, then
+   compare the surface against the intended outcome, the ownership boundary,
+   and the explicit non-goals. If the intent sources conflict, intent stays
+   unclear, or the Change crosses the boundary, stop and align first —
+   delegation cannot repair a misaligned Change.
+3. Compose the review brief. It is the reviewer's complete orientation, not a
+   reading list:
+   - repository path, base, head, and working-tree state;
+   - the review objective and its layer: Task, branch, pull request, or
+     working tree;
+   - a changed-path map grouped by behavior, with mechanical moves, generated
+     files, and historical material marked;
+   - current intent, acceptance criteria, explicit inclusions, the ownership
+     boundary, and the explicit non-goals;
+   - the repository rules and standards that apply and no tool enforces;
+   - the sources already consulted and the facts each one contributed;
+   - relevant local Check commands with their results;
+   - the reviewer's tool and permission boundary, the required finding shape
+     — file, line, concrete failure path, supporting evidence — and the exact
+     condition for reporting a context gap.
+
+   Give coordinates, not dumps: repository locations rather than a pasted
+   diff, distilled facts rather than source excerpts. Never include the
+   author's conclusions, suspected findings, or development transcript.
+
+## Delegate the judgment
+
+4. Spawn one fresh read-only reviewer with no inherited conversation history,
+   through the cleanest fresh-context mechanism the runtime offers. State
+   that the brief completes orientation: no start-of-work sequence, no broad
+   searches of intent or knowledge surfaces, no unrelated skills, no further
+   delegation, no state changes, no full Check-suite reruns.
+5. The reviewer tests the Change's responsibilities against the brief, then
+   inspects the exact diff, the surrounding callers and tests, and the
+   failure paths it suspects. A correctly implemented but unapproved
+   responsibility is a material intent finding. Moves and deletions are
+   reviewed through their invariants, not line by line through unchanged or
+   historical bodies.
+6. A brief with a hole gets a context-gap report, not improvisation: the
+   exact missing or contradictory fact, why the verdict depends on it, and
+   the evidence already inspected. Supply exactly that fact to the same
+   reviewer; without it the review cannot proceed. A context gap is neither a
+   finding nor a pass.
+7. Request only material findings the Change introduced, across correctness,
+   security, reliability, intent, and standards no tool enforces. Treat code
+   smells as maintenance heuristics, never violations: report one only when
+   the diff or history shows a concrete future cost, weigh counterevidence
+   such as deliberate bounded-context duplication, generated and boundary
+   code, and compatibility constraints, and prescribe no refactoring from a
+   label alone.
+
+## Verify and close
+
+8. Verify every returned finding against the Repository and reproduce it when
+   practical; a reviewer's conclusion is not yet evidence. Deduplicate, rank
+   by impact, and report only confirmed findings — and say so plainly when
+   none remain. When confirmed findings cluster around one responsibility or
+   protocol, revisit the model with the operator instead of feeding a patch
+   queue. Stop at review unless the operator asks for fixes.
+9. A confirmed finding is evidence, not authorization to grow the Change. Fix
+   it only when the Change introduced it, it reproduces in a supported state,
+   it sits inside the agreed intent and inclusions, and the remedy is the
+   smallest causal correction; otherwise report it separately and stop. After
+   an in-scope fix, rerun the affected Checks and review the exact delta from
+   the last reviewed tree. If a remedy would materially widen the Change,
+   stop and align with the operator.
+10. A reviewer error or a missing final report is not a review. Handle an
+    explicit context gap through step 6; otherwise retry the unchanged brief
+    with a fresh reviewer. Never narrow scope or soften intent to obtain a
+    pass; repeated reviewer unavailability is a blocker.
