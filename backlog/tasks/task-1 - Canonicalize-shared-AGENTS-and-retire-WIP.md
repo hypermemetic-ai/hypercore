@@ -1,11 +1,11 @@
 ---
 id: TASK-1
 title: Canonicalize shared AGENTS and retire WIP
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-07-12 02:14'
-updated_date: '2026-07-12 03:01'
+updated_date: '2026-07-12 17:45'
 labels: []
 dependencies: []
 modified_files:

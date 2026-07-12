@@ -1,11 +1,11 @@
 ---
 id: TASK-5
 title: Supersede stale in-flight OpenWiki updates instead of waiting
-status: In Progress
+status: Done
 assignee:
   - '@claude'
 created_date: '2026-07-12 04:58'
-updated_date: '2026-07-12 05:03'
+updated_date: '2026-07-12 17:45'
 labels:
   - architecture
   - openwiki
@@ -37,3 +37,9 @@ Operator finding: the openwiki-maintainer flow queues newly landed merges behind
 <!-- SECTION:NOTES:BEGIN -->
 Semantics settled: a stale unmerged update Change is discarded and regenerated from current origin/main — generated pages are derived content with no preservation value once main advances past the tree they document. The single-writer property survives untouched: same worktree, same branch, same flock, same wrapper preconditions (reset satisfies HEAD == origin/main exactly as fast-forward did). Residual wiki latency is now generation-plus-review time and observation cadence only; the accepted cost is discarded generation work under rapid merges. Independent fresh-context review confirmed both semantic criteria and the completeness guarantee (regeneration from the full landed tree subsumes the old accumulated-range rule) and returned one low finding: the supersede push is a non-fast-forward and the text did not say force-push, which could strand a maintainer or masquerade as a competing-writer signal. Fixed with one clause (force-push with lease; the single writer owns its history); the same reviewer confirmed the delta with no material findings outstanding. Landing bookkeeping rides along: TASK-2 and TASK-4 marked Done after their Changes merged in PRs #28 and #30.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Changed the OpenWiki maintainer to supersede stale in-flight updates by regenerating from current origin/main and force-pushing with lease, while preserving the single-writer property and wrapper guards. Independent review passed, and the Change landed in PR #31.
+<!-- SECTION:FINAL_SUMMARY:END -->
