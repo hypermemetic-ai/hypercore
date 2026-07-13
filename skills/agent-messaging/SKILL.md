@@ -12,8 +12,8 @@ finishes.
 
 Message text is literal: escape sequences such as `\n` render as characters,
 not formatting, so send prompts as clean single-line text. `herdr agent send`
-types into the target without submitting; follow it with `herdr pane run
-<pane-id>` to submit the line as a turn.
+types into the target without submitting; follow it with `herdr pane send-keys
+<pane-id> Enter` to submit the line as a turn.
 
 No further protocol exists. Coordinate when it helps; skip the ceremony when
 it does not.
