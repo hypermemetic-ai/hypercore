@@ -2,7 +2,7 @@
 
 ## Repository-wide baseline
 
-This repository has no conventional package manifest or automated test suite. Verification is behavior-specific. Repository instructions require:
+This repository has no single conventional application test suite; its shell utilities and BPMN pipeline have focused behavioral harnesses. Verification remains behavior-specific. Root instructions require evidence-backed execution; the triggered Skills add these working checks:
 
 1. Validate each changed Skill with Codex’s `skill-creator` validator.
 2. Run Checks relevant to the changed files and behavior.
@@ -17,29 +17,29 @@ A green Check must demonstrate that it observed the intended subject. A successf
 | Area | Minimum useful checks | Watch for |
 |---|---|---|
 | `skills/*/SKILL.md` | Skill validator; inspect trigger/procedure coherence; scenario-test changed instructions; `git diff --check` | Ambiguous triggers, duplicated methodology, hidden state, scope expansion, restored ceremony |
-| `qq-methodology.md` / `CONCEPTS.md` | Cross-check terms and ordering across README, Skills, and local instructions; render/read Markdown; `git diff --check` | Conflicting authority, changed business rules, stale references to retired systems |
+| `AGENTS.md` / `CONCEPTS.md` | Cross-check terms and ordering across README, Skills, and linked-repository instructions; render/read Markdown; `git diff --check` | Conflicting authority, changed business rules, stale references to retired systems |
 | `bin/*.sh` | `bash -n` for syntax plus isolated behavioral tests with temporary HOME/repository and mocked dependencies | User-config mutation, quoting, symlink ownership, fail-open paths, race behavior |
-| `bin/qq-herdr-pull` | Exercise invalid input and `QQ_HERDR_PULL_DRY`; mock herdr JSON and `jq` paths before live layout testing | 1-based indexing, current-pane protection, closing target only after successful move, silent notification failures |
-| WIP scripts | Temporary Git repository: clean/dirty/untracked cases, repeated snapshot, list/diff/branch recovery, race/ref behavior | Real index/working-tree mutation, secret capture, branch/ref collisions, quiet failures |
-| `bin/install.sh` | Temporary HOME: first install, repeat install, stale managed link pruning, unmanaged destination refusal, malformed hooks JSON, permission preservation | Accidental overwrite of user paths, partial installation, hook trust not communicated |
-| `cockpit/` | Parse with owning tools where available; exercise key bindings in herdr/yazi; verify linked paths | Machine-specific absolute paths and missing external binaries |
-| `bin/qq-openwiki` | `bash -n bin/qq-openwiki`; `bash tests/test-qq-openwiki.sh`; `git diff --check` | Wrong branch or stale-base acceptance, dirty-worktree writes, concurrent writers, retained generated workflow/guidance, altered authored instruction text |
+| `bin/qq-herdr-pull` | `bash tests/test-qq-herdr-pull.sh`; exercise `QQ_HERDR_PULL_DRY` before live layout testing | Operator-mode best effort versus agent-mode failure; live pane identity; sole idle placeholder; confirmed move before close |
+| `bin/install.sh` | Temporary HOME/data directory: repeat install, stale managed link pruning, unmanaged destination refusal, locked BPMN install, desktop entry and MIME registration | Accidental overwrite of user paths, partial installation, unmanaged desktop replacement |
+| `cockpit/` | Parse with owning tools where available; exercise key bindings in Herdr/yazi; verify linked paths | Machine-specific absolute paths and missing external binaries |
+| `bin/qq-openwiki` | `bash tests/test-qq-openwiki.sh`; `bash tests/test-openwiki-maintainer.sh`; `git diff --check` | Wrong branch or stale-base acceptance, dirty/staged-boundary errors, concurrent writers, unbounded correction, retained generated workflow/guidance, altered authored instruction text |
+| OpenWiki activation | `bash tests/test-qq-openwiki-activate.sh` | Wrong Repository/root discovery, ineligible merge dispatch, duplicate activation, recursive update activation, unsafe retry after uncertain dispatch |
+| OpenWiki BPMN | `bash tests/test-qq-openwiki-bpmn.sh`; `npm test --prefix skills/bpmn-plans/pipeline`; run `qq-openwiki-bpmn --check` for every retained spec | Escaped or stale evidence, unsupported edges, non-deterministic output, stale artifacts, unreadable or unhelpful images |
 | `openwiki/` | Verify links and source references; search for retired concepts; compare key claims to current source and diff | Source Changes editing generated pages, duplicated or stale documentation |
 
 Do not run `bin/install.sh` against a real user HOME merely to test it; isolate user-level mutation.
 
 ## Review sequence
 
-Prepare the reviewer with the repository/branch coordinates, owning Task and accepted scope, diff boundary, and relevant Check results. Do not pass the author’s conclusions. The reviewer derives findings independently; the owning agent then verifies each finding against source and scope.
+Prepare the reviewer with the repository/branch coordinates, owning Task and accepted scope, diff boundary, and relevant Check results. Do not pass the author’s conclusions. A complete brief replaces generic startup orientation for this delegated reviewer: no broad intent or knowledge search, unrelated Skills, further delegation, state changes, or full-suite rerun. The reviewer derives findings independently from the brief and targeted repository evidence; the owning agent then verifies each finding against source and scope.
 
 A discovered pre-existing defect or broader opportunity does not automatically belong in the current Change. Report it or create separate intent rather than broadening the fix silently.
 
 ## Current coverage gaps
 
-- No committed general CI or test workflow is visible; “final GitHub Checks” are a methodology requirement without a repository-specific suite documented here.
-- Most shell utilities have no checked-in automated behavioral harness; `tests/test-qq-openwiki.sh` is the focused exception. It uses a temporary Repository and fake `openwiki` binary to verify local cleanup and instruction rewriting, provider/argument forwarding, and rejection of a concurrent writer.
+- No committed general CI workflow is visible; “final GitHub Checks” remain a delivery requirement assembled from the affected behavior's focused checks.
+- Focused harnesses now cover OpenWiki generation/correction, merge activation, BPMN publication, and Herdr workspace adoption, but they do not replace live browser, desktop-protocol, Herdr, or graphical readability checks.
 - Installer behavior has a wide user-level blast radius despite careful refusal logic.
-- WIP capture is structurally non-destructive but may quietly fail and may capture unignored sensitive files.
 - Historical Backlog documents include obsolete gate/orchestration architecture and can mislead search-driven agents.
 
 These are constraints to account for, not authorization to add a broad framework. Add the smallest Check that directly observes the behavior being changed.

@@ -13,15 +13,13 @@ qq is deliberately a thin harness. It composes upstream ownership surfaces inste
 - herdr supplies named sessions and direct agent messaging.
 - The operator owns judgment, acceptance, and merge authority.
 
-This boundary is the result of an explicit simplification. Recent history removed custom gate, phase, wave, frontier, registry, activation, and orchestration commands. The retained repository should be evaluated as a policy/knowledge/cockpit layer, not as an incomplete workflow platform.
+This boundary is the result of an explicit simplification. Recent history removed the former custom gate, phase, wave, frontier, registry, and orchestration machinery. The retained repository should be evaluated as a policy/knowledge/cockpit layer with a few narrow adapters—not as an incomplete workflow platform. The merge activator is one such adapter: it verifies a GitHub merge and wakes the separate OpenWiki maintainer, but does not own source delivery or merge authority.
 
 ## Major surfaces
 
 ### Policy and vocabulary
 
-[`qq-methodology.md`](../qq-methodology.md) defines the cross-repository operating floor: orient before acting, clarify ambiguity, prefer simple surgical changes, define observable success, use GitHub Flow, and require fresh-context review for non-trivial Changes. [`CONCEPTS.md`](../CONCEPTS.md) keeps terms stable across conversation, Tasks, source, and documentation.
-
-Repository-local instructions live in [`AGENTS.md`](../AGENTS.md). `CLAUDE.md` is intended to expose the same instructions to Claude-compatible discovery rather than create a second policy source.
+[`AGENTS.md`](../AGENTS.md) defines the shared operating floor: stay within the agreement, expose material uncertainty, keep scope surgical, use evidence, and preserve the operator's authority. It says to start from supplied assignment context and use available knowledge surfaces only to resolve what is missing; triggered Skills own their detailed procedures and actor boundaries. Linked Repositories may expose the same instructions through a root-level `AGENTS.md` symlink. [`CONCEPTS.md`](../CONCEPTS.md) keeps terms stable across conversation, Tasks, source, and documentation.
 
 ### Stateless capabilities
 
@@ -46,7 +44,7 @@ OpenWiki and codebase-memory are upstream tools, not vendored qq subsystems. Der
 
 ### Operator layer
 
-`cockpit/` stores the human terminal surface for herdr, yazi, broot, Glow, and shell navigation. `bin/install.sh` live-links those files, the methodology, Skills, and retained commands into user configuration. `bin/qq-herdr-pull` moves an agent pane to the operator’s current location. The WIP scripts preserve recoverable uncommitted snapshots in private Git refs.
+`cockpit/` stores the human terminal surface for Herdr, yazi, broot, Glow, and shell navigation. `bin/install.sh` live-links cockpit files, Skills, and retained commands into user configuration, installs the BPMN pipeline dependencies, and registers the local OpenWiki activation protocol. `bin/qq-herdr-pull` supports both operator pane pulling and fail-fast adoption of a Herdr Change workspace by its accountable agent (`bin/qq-herdr-pull:1-23`, `69-112`). Herdr workspaces organize live interaction; Git worktrees remain the source of checkout identity and state.
 
 ## Data and state boundaries
 
@@ -54,7 +52,7 @@ qq has no application database or internal service API. Durable state is intenti
 
 - Git objects, refs, branches, commits, and pull requests hold delivery state.
 - Backlog owns Task, authored-document, and decision records.
-- `refs/wip/<branch>` stores private recovery snapshots.
+- Herdr workspaces and named sessions hold live terminal placement, not Repository truth.
 - Agent runtime configuration and credentials live outside the Repository.
 - OpenWiki credentials stay under `~/.openwiki/` and must never be committed.
 - codebase-memory’s graph is external and derived; indexing may need refresh after material branch or uncommitted changes.
@@ -67,7 +65,7 @@ Create or edit `skills/<name>/SKILL.md`, keep it stateless and trigger-driven, v
 
 ### Add a command or cockpit surface
 
-Commands and cockpit files are explicitly linked in `bin/install.sh`; adding a file alone does not install it. Update `cockpit/README.md` when changing the human interaction surface. Preserve the installer’s refusal rule: it must not overwrite paths it does not manage.
+Commands and cockpit files are explicitly linked in `bin/install.sh`; adding a file alone does not install it. Update `cockpit/README.md` when changing the human interaction surface. Preserve the installer’s refusal rule: it must not overwrite paths it does not manage. OpenWiki activation also crosses browser, desktop-protocol, GitHub CLI, Herdr, and dedicated-worktree boundaries, so changes require end-to-end eligibility and deduplication tests.
 
 ### Add knowledge
 

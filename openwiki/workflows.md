@@ -2,39 +2,30 @@
 
 ## Orient, align, act
 
-Every work item begins with knowledge retrieval before planning:
+Start from the assignment and context already provided, and read `CONCEPTS.md` before working. Resolve only material gaps through the surfaces that own them: Backlog Tasks, documents, and decisions for durable intent and history; relevant OpenWiki pages for the landed system; codebase-memory for architecture, dependencies, call paths, and impact; and source plus fresh Checks for verification. Use Backlog's CLI for its records. If a derived surface is stale or conflicts with source and Checks, trust the latter and report the conflict.
 
-1. Read `CONCEPTS.md`.
-2. If `backlog/config.yml` exists, consult Backlog instructions and search the shared index for matching Tasks, documents, and decisions. Alignment is read-only; create or update Backlog records only after approval and only through the CLI.
-3. Read relevant OpenWiki pages and matching Backlog `solutions` documents. Consult `research` documents when a claim depends on them.
-4. Use codebase-memory for architecture, dependency, call-path, and impact questions; confirm index freshness and verify important conclusions in source.
-5. Run `grilling` to make consequential assumptions and tradeoffs explicit.
-6. Invoke every other matching Skill.
-
-If the wiki is absent or stale, inspect Backlog documents and source. Source and fresh Checks are final evidence.
+For a genuinely new work item, `grilling` owns the default alignment interview and its exceptions. It does not rerun merely because already aligned work continues. Other procedures apply only when the relevant Skill's trigger and actor boundary match; there is no blanket requirement to invoke every Skill or search every knowledge surface.
 
 ## Task-to-Change delivery
 
 Backlog Tasks preserve intent, acceptance criteria, dependencies, and status. A Change is the branch, commits, and pull request used to deliver that intent.
 
-The expected GitHub Flow is:
+The accountable agent follows `deliver-change`:
 
-1. Create a branch.
-2. Implement and verify coherent units.
-3. Run independent `code-review` for every non-trivial Change.
-4. Resolve confirmed, in-scope findings and rerun affected Checks.
-5. Commit only green work and push each green commit.
-6. Open a pull request and pass final GitHub Checks.
-7. The operator merges; GitHub deletes the branch.
-8. Mark the Task Done only after acceptance criteria are verified and the Change has landed.
+1. Create or open an explicitly based Herdr worktree, adopt its pristine workspace, and anchor every tool call in the returned checkout. Stop before mutation if workspace adoption fails.
+2. Implement and verify coherent units, then run independent `code-review` for every non-trivial Change.
+3. Resolve confirmed in-scope findings, commit and push only green units, open one pull request, and pass final GitHub Checks.
+4. Verify the acceptance criteria, record the final summary, and mark the Task Done in the same pull request. Done means the agreed work is complete; it does not claim operator acceptance or landing.
+5. Open the verified PR in the operator's browser and monitor its disposition for the full three-minute window without ever merging it.
+6. If merged, verify the merge commit is on fresh `origin/main`, fast-forward the single clean registered `main` checkout to a frozen target OID, then safely leave and remove the ephemeral Change workspace. If closed, report and apply the unmet-criterion or changed-intent rule. If still open after the window, report its URL and Checks.
 
-The current methodology places fresh-context review after implementation but before commit, push, and PR creation.
+Fresh-context review remains after implementation and local verification but before the first commit or publication. The detailed refusal rules for browser visibility, primary-main synchronization, and workspace cleanup are canonical in `skills/deliver-change/SKILL.md:11-124`.
 
 ## Verification and review
 
 A Check must observe the intended subject, not merely exit successfully. Read complete output and guard against **silent failure**—plausible output that answered a different question.
 
-`code-review` prepares repository coordinates, Task intent, scope, and Check evidence for a fresh read-only reviewer without passing the author’s conclusions. The owning agent verifies reported findings. Fixes are limited to regressions introduced by the Change and within agreed scope; discovering a broader issue is evidence, not automatic authorization to expand work.
+`code-review` prepares repository coordinates, Task intent, scope, and Check evidence for a fresh read-only reviewer without passing the author’s conclusions. That complete brief finishes the reviewer's orientation: the reviewer does not run a generic start-of-work sequence, broadly search knowledge surfaces, invoke unrelated Skills, delegate further, or change state. The owning agent verifies reported findings. Fixes are limited to regressions introduced by the Change and within agreed scope; discovering a broader issue is evidence, not automatic authorization to expand work.
 
 See [Verification](verification.md) for repository-specific checks and gaps.
 
@@ -60,6 +51,6 @@ Use `idea` only for messages beginning with `idea:` or explicit `$idea`; append 
 
 ## Documentation update point
 
-OpenWiki maintenance is not a step in this Task-to-Change flow. Ordinary source
-agents consume it only; the narrowly triggered `openwiki-maintainer` Skill is
-the sole procedural authority.
+OpenWiki maintenance is not a step in the source agent's Task-to-Change flow. After an eligible operator merge, the browser/local activation adapter launches or wakes a separate maintainer Actor. That Actor regenerates from landed `origin/main`, independently reviews narrative and any diagrams, and delivers a documentation-only pull request. If `main` advances first, the old generated Change is superseded rather than queued (`skills/openwiki-maintainer/SKILL.md:12-33`, `108-117`).
+
+Review correction is intentionally bounded. A diagram-only defect may remove its JSON/BPMN/PNG/link as one reversible bundle when the page remains coherent. Other defects return the fully staged generated result to `qq-openwiki --correct`; another round is allowed only when findings materially decrease without comparable regressions. Initial generation gets one clean retry, not an unbounded loop (`skills/openwiki-maintainer/SKILL.md:66-106`).

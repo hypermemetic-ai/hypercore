@@ -1,6 +1,6 @@
 # Skill catalog
 
-qq currently retains eight stateless Skills. A Skill is invoked when its description/trigger matches the work; it is guidance, not persistent workflow state.
+qq currently retains eleven stateless Skills. A Skill is invoked when its description/trigger matches the work; it is guidance, not persistent workflow state.
 
 | Skill | Trigger and responsibility | Important boundary |
 |---|---|---|
@@ -10,14 +10,17 @@ qq currently retains eight stateless Skills. A Skill is invoked when its descrip
 | `research` | Multi-source investigation supporting a decision. | Fresh researcher gathers evidence; owning agent retains judgment and verifies key citations. |
 | `compound` | Capture a verified, non-obvious, reusable lesson. | Do not create ceremony for routine outcomes or unverified speculation. |
 | `idea` | Append an explicitly triggered idea verbatim to the single Backlog `Ideas` document. | Discover and mutate it through Backlog commands; no interpretation, research, commit, staging, or push. |
-| `openwiki-maintainer` | Dedicated ownership of the derived OpenWiki surface. | Ordinary source agents consume the wiki only; its maintenance procedure lives exclusively in this Skill. |
+| `agent-messaging` | Coordinate with live agents through Herdr list/get/read/wait and atomic submitted turns. | Resolve live terminal identities after pane movement; use `pane run` for a submitted turn, not separate text and Enter calls. |
+| `bpmn-plans` | Plan complex authorized work with evidence-stamped BPMN artifacts. | Planning artifacts do not authorize implementation; OpenWiki publication adds stricter evidence and determinism checks. |
+| `deliver-change` | Accountable one-PR delivery from an aligned assignment through Task finalization, operator disposition, synchronization, and cleanup. | Only the operator-facing accountable agent owns this lifecycle; delegated agents do not. |
+| `openwiki-maintainer` | Dedicated ownership of the derived OpenWiki surface. | The maintainer reviews and delivers generator output; it does not author narrative or diagrams itself. |
 | `uat-signoff` | Obtain owner confirmation for user-visible or subjective behavior after autonomous checks. | UAT is not authorization for destructive, monetary, irreversible, or outbound actions. |
 
 ## How Skills compose
 
-`grilling` runs at the alignment boundary. Other Skills can compose around the work: `research` or `diagnosing-bugs` may establish evidence; implementation follows approval; `uat-signoff` may validate subjective behavior; `code-review` independently reviews the completed Change; `compound` captures a durable lesson only after verification. OpenWiki procedure remains confined to its narrowly triggered Skill.
+`grilling` runs at the alignment boundary. Other Skills can compose around the work: `research` or `diagnosing-bugs` may establish evidence; `bpmn-plans` can make an approved complex plan inspectable; `deliver-change` keeps delivery accountability with the operator-facing agent; `agent-messaging` coordinates live delegates; `uat-signoff` may validate subjective behavior; `code-review` independently reviews the completed Change; and `compound` captures a durable lesson only after verification. OpenWiki procedure remains confined to its narrowly triggered Skill.
 
-There is no global skill phase machine. Follow each Skill’s current `SKILL.md` and the ordering in `qq-methodology.md`.
+There is no global skill phase machine. Follow each Skill’s current `SKILL.md` and the shared operating floor in root `AGENTS.md`.
 
 ## Changing a Skill
 
@@ -39,5 +42,8 @@ The installer auto-discovers immediate `skills/*` directories containing `SKILL.
 - `skills/research/SKILL.md`
 - `skills/compound/SKILL.md`
 - `skills/idea/SKILL.md`
+- `skills/agent-messaging/SKILL.md`
+- `skills/bpmn-plans/SKILL.md`
+- `skills/deliver-change/SKILL.md`
 - `skills/openwiki-maintainer/SKILL.md`
 - `skills/uat-signoff/SKILL.md`

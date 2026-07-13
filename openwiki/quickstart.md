@@ -1,6 +1,6 @@
 # qq OpenWiki quickstart
 
-qq is an operator-owned harness for agentic software development. It is not an application server or autonomous workflow engine: it supplies shared language, operating guidance, stateless agent skills, durable knowledge surfaces, terminal preferences, and a few installation/recovery utilities. The human operator retains intent, judgment, acceptance, and merge authority; agents are replaceable collaborators. See [`README.md`](../README.md), [`CONCEPTS.md`](../CONCEPTS.md), and [`qq-methodology.md`](../qq-methodology.md).
+qq is an operator-owned harness for agentic software development. It is not an application server or autonomous workflow engine: it supplies shared language, operating guidance, stateless agent skills, durable knowledge surfaces, terminal preferences, and a few installation and workflow utilities. The human operator retains intent, judgment, acceptance, and merge authority; agents are replaceable collaborators. See [`README.md`](../README.md), [`CONCEPTS.md`](../CONCEPTS.md), and [`AGENTS.md`](../AGENTS.md).
 
 ## The model
 
@@ -20,37 +20,31 @@ Use these capitalized terms consistently. The canonical definitions and behavior
 
 ## Start here
 
-For a new work item:
+Start from the assignment and context already supplied, and read [`CONCEPTS.md`](../CONCEPTS.md) before working. Resolve only missing context through the surfaces relevant to the question: a Backlog Task or document for durable intent and decisions, this wiki for the landed system, codebase-memory for relational code questions, and source plus fresh Checks for verification. Backlog records are read and changed through its CLI; source and fresh Checks outrank derived knowledge.
 
-1. Read [`CONCEPTS.md`](../CONCEPTS.md).
-2. Search Backlog's shared index for matching Tasks, documents, and decisions and read them through the CLI. Mutate records only after approval and only through Backlog commands.
-3. Read the relevant page in this wiki, then any applicable Backlog `solutions` or `research` documents.
-4. Inspect source directly. Use codebase-memory for relational code questions when indexed; source and fresh Checks outrank all derived knowledge.
-5. Run the default-on `grilling` alignment Skill unless the request explicitly opts out or is genuinely impact-free and mechanical.
-6. Invoke every other matching Skill, implement only the agreed scope, and verify the actual behavior.
+For a genuinely new work item, the default-on `grilling` Skill owns alignment unless the operator opts out or the action is impact-free and mechanical. Do not restart it merely to continue already aligned work. Invoke other Skills only when their triggers and the agent's role match the assignment; each Skill owns its procedure and exceptions.
 
-The full ordering and behavioral floor are in [`qq-methodology.md`](../qq-methodology.md).
+The shared operating floor is in [`AGENTS.md`](../AGENTS.md); it does not mandate blanket Backlog, OpenWiki, source, or Skill searches for every assignment.
 
 ## Wiki map
 
 - [Architecture and knowledge model](architecture.md) — system boundaries, ownership, repository surfaces, and extension points.
 - [Workflows](workflows.md) — orientation, Task-to-Change delivery, review, research, diagnosis, UAT, and knowledge capture.
-- [Skill catalog](skills.md) — triggers, responsibilities, and change guidance for the eight current Skills.
-- [Operations](operations.md) — installation, cockpit, herdr pane movement, WIP recovery, and knowledge maintenance.
+- [Skill catalog](skills.md) — triggers, responsibilities, and change guidance for the eleven current Skills.
+- [Operations](operations.md) — installation, cockpit, Herdr workspace movement, and knowledge maintenance.
 - [Verification](verification.md) — required checks, review sequence, coverage gaps, and risk-focused validation.
 
 ## Repository map
 
-- `qq-methodology.md` — shared operating policy linked into agent runtimes.
-- `AGENTS.md` — instructions specific to this Repository.
+- `AGENTS.md` — shared operating guidance; linked Repositories may inherit it through a root symlink.
 - `skills/` — current stateless capabilities.
 - `backlog/` — CLI-managed Tasks, authored documents, and decisions.
 - `CONCEPTS.md` — shared vocabulary.
 - the root-level Backlog `Ideas` document — verbatim idea capture.
 - Backlog `plans`, `research`, and `solutions` document categories — historical designs, cited evidence, and reusable lessons.
 - `cockpit/` — source-controlled human terminal configuration.
-- `bin/` — installer, local OpenWiki wrapper, herdr pane movement, and WIP snapshot/recovery commands.
+- `bin/` — installer, guarded OpenWiki/diagram/activation commands, and Herdr pane movement.
 
 ## Authority and historical context
 
-Current source, fresh Checks, `CONCEPTS.md`, and `qq-methodology.md` are authoritative for present behavior. Historical Backlog `plans` and `research` documents preserve decision history and may describe the retired gate, phase, wave, registry, or orchestration systems. Commit `13638c3` intentionally removed that machinery and collapsed qq to the minimum entity set; do not infer that deleted subsystems still exist.
+Current source, fresh Checks, `CONCEPTS.md`, root `AGENTS.md`, and triggered Skills are authoritative for present behavior. Historical Backlog `plans` and `research` documents preserve decision history and may describe the retired gate, phase, wave, registry, or orchestration systems. Commit `13638c3` intentionally removed that machinery and collapsed qq to the minimum entity set; do not infer that deleted subsystems still exist.

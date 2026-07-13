@@ -8,21 +8,14 @@ From the Repository root:
 bash bin/install.sh
 ```
 
-The installer resolves the checkout from its own location and live-links:
+The installer resolves the checkout from its own location, installs the locked BPMN pipeline dependencies, and live-links:
 
-- `qq-methodology.md` to `~/.codex/AGENTS.md`;
 - each `skills/*` directory containing `SKILL.md` to `~/.codex/skills/`;
-- yazi, Glow, herdr, and shell cockpit files to `~/.config/`;
-- `qq-herdr-pull`, `qq-openwiki`, and `qq-wip` to `~/.local/bin/`;
-- `qq-wip-snapshot.sh` to `~/.codex/hooks/`.
+- yazi, Glow, Herdr, and shell cockpit files to `~/.config/`;
+- `qq-herdr-pull`, `qq-openwiki`, `qq-openwiki-bpmn`, and `qq-openwiki-activate` to `~/.local/bin/`;
+- the OpenWiki merge userscript into the qq data directory.
 
-It also merges a Stop hook into `~/.codex/hooks.json` atomically, preserving file mode. It refuses malformed/symlinked hook configuration, duplicate or ambiguous qq snapshot hooks, unmanaged symlinks, and existing unmanaged paths. It prunes dead links that point into this checkout’s removed Skills or commands.
-
-In a new Codex session, run `/hooks` and explicitly trust the WIP hook. Installation alone does not activate it. Verify the global methodology target with:
-
-```bash
-readlink -f ~/.codex/AGENTS.md
-```
+It also installs a managed desktop entry and registers `qq-openwiki://` as a local protocol handler. The installer prunes dead links into this checkout and refuses to replace unmanaged paths or desktop entries (`bin/install.sh:43-65`, `85-150`). It does not manage repository instruction files; linked Repositories point their own root `AGENTS.md` symlink to qq's canonical `AGENTS.md`.
 
 ## Cockpit
 
@@ -40,39 +33,25 @@ Typical flow: `prefix+f` launches `qqy` at the Repository root, `prefix+shift+f`
 
 `qq-herdr-pull <N|next>` identifies the focused pane, selects an agent from `herdr agent list`, moves that pane into the focused tab, and closes the old pane only after a successful move. Numeric selection is 1-based. `next` prioritizes blocked, then working, then idle agents while excluding the current pane.
 
-The command requires `jq` and resolves herdr from `HERDR_BIN_PATH`, `PATH`, or a known Homebrew path. Because it runs detached, errors are best-effort herdr notifications and exit successfully. Use a dry run before testing layout mutation:
+The command requires `jq` and resolves Herdr from `HERDR_BIN_PATH`, `PATH`, or a known Homebrew path. Operator mode runs detached, so errors are best-effort notifications and exit successfully. Use a dry run before testing layout mutation:
 
 ```bash
 QQ_HERDR_PULL_DRY=1 HERDR_PANE_ID=<pane-id> qq-herdr-pull next
 ```
 
-## WIP snapshots and recovery
+`qq-herdr-pull --workspace <workspace-id>` is the fail-fast agent mode used by `deliver-change`. It resolves the caller's live pane identity, safely no-ops if already present, otherwise accepts only the target workspace's sole idle non-agent shell, moves the accountable agent, confirms Herdr reported a changed move, and only then closes the placeholder (`bin/qq-herdr-pull:69-112`, `175-205`). Stop before Repository mutation if adoption fails.
 
-The trusted Stop hook runs `qq-wip-snapshot.sh`. On a dirty Git worktree it builds a tree in a temporary index from tracked and untracked non-ignored files, then records a commit at `refs/wip/<branch>`. It never changes HEAD, the real index, or working files. Duplicate trees are skipped; compare-and-swap plus one retry protects ref updates from races. Collection failures fail open so a Stop event is not blocked.
+## Merge-triggered OpenWiki maintenance
 
-Recovery commands:
+Install the Tampermonkey userscript linked from the README and create one long-lived `openwiki/update` worktree per linked Repository. On the final GitHub merge confirmation, the userscript waits briefly, then sends the canonical PR URL to the local protocol handler (`browser/openwiki-merge-activator.user.js:16-50`).
 
-```bash
-qq-wip list
-qq-wip diff
-qq-wip branch <recovery-branch>
-```
-
-Recovery is non-destructive: `branch` materializes the latest snapshot as a new branch for inspection or selective copying.
-
-Watch-outs:
-
-- same-named branches across worktrees share a WIP ref;
-- detached worktrees share `refs/wip/detached`;
-- every unignored file enters the snapshot tree, so sensitive local files must be ignored;
-- fail-open behavior means snapshot failures may be quiet.
+`qq-openwiki-activate` finds an unambiguous checkout under `QQ_PROJECT_ROOTS`, requires its root `AGENTS.md` to resolve to qq's canonical instructions, and polls GitHub for a completed merge. It dispatches only operator-authored merges into `main`, ignores `openwiki/update` merges, and records each merge SHA before launching or waking the named maintainer session. This marker makes dispatch at-most-once: an uncertain Herdr failure is not automatically retried (`bin/qq-openwiki-activate:174-228`, `324-427`).
 
 ## Knowledge maintenance
 
-OpenWiki and codebase-memory are installed separately. `bash bin/install.sh`
-links the Repository's `bin/qq-openwiki` wrapper into `~/.local/bin`. The README
-describes operator runtime setup; ordinary source agents only consume the wiki,
-and the `openwiki-maintainer` Skill is the sole maintenance procedure.
+OpenWiki and codebase-memory are installed separately. `bash bin/install.sh` links qq's guarded wrappers into `~/.local/bin`; the README describes the upstream runtime setup. `qq-openwiki --update` requires the dedicated branch to be clean and exactly equal to `origin/main`, then holds a per-Repository writer lock and restores root instruction files after generation. `--correct` instead requires a fully staged baseline confined to `openwiki/` (`bin/qq-openwiki:76-129`, `162-215`).
+
+The generator may add evidence-backed process specs under `openwiki/processes/`. `qq-openwiki-bpmn` publishes only the semantic BPMN and attributed PNG after path/evidence validation, lint/layout, evidence round-trip, and deterministic repeat generation; `--check` verifies retained artifacts without replacing them. Ordinary source agents only consume the wiki, and the `openwiki-maintainer` Skill is the sole maintenance procedure.
 
 For codebase-memory 0.9+:
 
