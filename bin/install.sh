@@ -3,11 +3,17 @@
 set -euo pipefail
 
 QQ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+QQ_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 
 die() {
   printf 'qq install: %s\n' "$*" >&2
   exit 1
 }
+
+case "$QQ_DATA_HOME" in
+  /*) ;;
+  *) die "XDG_DATA_HOME must be an absolute path" ;;
+esac
 
 resolved_path() {
   readlink -f "$1" 2>/dev/null || true
@@ -76,6 +82,45 @@ prune_removed_commands() {
   done
 }
 
+install_openwiki_activation_handler() {
+  local applications="$QQ_DATA_HOME/applications"
+  local desktop="$applications/qq-openwiki-activate.desktop"
+  local command_path="$HOME/.local/bin/qq-openwiki-activate"
+  local escaped_command temporary
+
+  command -v xdg-mime >/dev/null 2>&1 || die "xdg-mime is required for the OpenWiki activation handler"
+  mkdir -p "$applications"
+  [ ! -L "$desktop" ] || die "refusing symlinked desktop entry: $desktop"
+  if [ -e "$desktop" ] && ! grep -Fxq 'X-qq-managed=true' "$desktop"; then
+    die "refusing to replace unmanaged desktop entry: $desktop"
+  fi
+
+  escaped_command="${command_path//\\/\\\\}"
+  escaped_command="${escaped_command//\"/\\\"}"
+  escaped_command="${escaped_command//\`/\\\`}"
+  escaped_command="${escaped_command//\$/\\\$}"
+  temporary="$(mktemp "$applications/.qq-openwiki-activate.desktop.XXXXXX")"
+  trap 'rm -f "$temporary"' RETURN
+  printf '%s\n' \
+    '[Desktop Entry]' \
+    'Type=Application' \
+    'Name=qq OpenWiki Activator' \
+    'NoDisplay=true' \
+    'Terminal=false' \
+    "Exec=\"$escaped_command\" %u" \
+    'MimeType=x-scheme-handler/qq-openwiki;' \
+    'X-qq-managed=true' >"$temporary"
+  chmod 0644 "$temporary"
+  mv -f "$temporary" "$desktop"
+  trap - RETURN
+
+  xdg-mime default qq-openwiki-activate.desktop x-scheme-handler/qq-openwiki
+  if command -v update-desktop-database >/dev/null 2>&1; then
+    update-desktop-database "$applications"
+  fi
+  printf 'installed: qq-openwiki:// activation handler\n'
+}
+
 sync_skills
 prune_removed_commands
 
@@ -89,5 +134,10 @@ link_one "$QQ/cockpit/shell/file-navigation.bash" "$HOME/.config/shell/file-navi
 
 link_one "$QQ/bin/qq-herdr-pull" "$HOME/.local/bin/qq-herdr-pull" "command/qq-herdr-pull"
 link_one "$QQ/bin/qq-openwiki" "$HOME/.local/bin/qq-openwiki" "command/qq-openwiki"
+link_one "$QQ/bin/qq-openwiki-activate" "$HOME/.local/bin/qq-openwiki-activate" "command/qq-openwiki-activate"
+link_one "$QQ/browser/openwiki-merge-activator.user.js" "$QQ_DATA_HOME/qq/openwiki-merge-activator.user.js" "browser/openwiki-merge-activator.user.js"
+
+install_openwiki_activation_handler
 
 printf 'qq install: links complete\n'
+printf 'Tampermonkey userscript: https://raw.githubusercontent.com/hypermemetic-ai/qq/main/browser/openwiki-merge-activator.user.js\n'
