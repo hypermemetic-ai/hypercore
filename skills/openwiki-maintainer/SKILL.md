@@ -40,31 +40,61 @@ Do not require the source-change agent to update, enqueue, or assess OpenWiki.
    which processes benefit from BPMN and to author their specs, artifacts, and
    Markdown links during the same run.
 2. Read OpenWiki's complete output, then verify its claims independently. The
-   internal generator owns both narrative and diagram authorship; this Actor
-   reviews the result and does not fill gaps by editing generated content.
+   internal generator owns narrative and diagram semantics; this Actor reviews
+   the result and does not fill gaps by rewriting generated content. Mechanical
+   rejection below removes an optional diagram as one indivisible bundle; it is
+   not permission to edit any part of that bundle.
 3. Inventory `openwiki/processes/*.json` in stable filename order. For each
    retained spec, require the matching semantic `<id>.bpmn`, visibly attributed
    `<id>.png`, and a link from the Markdown page that explains the process. Run
    `qq-openwiki-bpmn --check <spec>` and require clean lint, a lossless evidence
    round trip, repeat-generation determinism, and exact published artifacts.
 4. Inspect every rendered PNG. Confirm that each diagram materially clarifies
-   its process, stays legible, agrees with the surrounding narrative, and has
-   source-backed documentation and evidence on every node and edge. Spot-check
-   the cited file and line ranges against landed source. Also look for stale
-   diagram links or previously modeled processes that changed or disappeared.
-5. If a useful diagram is missing, a retained one is unhelpful or stale, any
-   evidence is unsupported, or an artifact fails verification, do not author,
-   patch, regenerate, or delete diagram content yourself. Discard the generated
-   output, return the dedicated branch to current `origin/main`, and rerun
-   `qq-openwiki --update` with concise evidence-backed feedback about the
-   observed problem. Repeat verification on the wholly regenerated result.
-6. Require the resulting Change to remain within `openwiki/` and the marked
+   its process, agrees with the surrounding narrative, and has source-backed
+   documentation and evidence on every node and edge. Inspect it at its actual
+   Markdown embed width and open its linked full-resolution image. A wide or
+   panoramic aspect ratio and pixel width are not defects by themselves; reject
+   only a material semantic, evidentiary, or readability failure. Spot-check the
+   cited file and line ranges against landed source. Also look for stale diagram
+   links or previously modeled processes that changed or disappeared.
+5. Before mutating generated output, finish all other local verification.
+   Require the resulting Change to remain within `openwiki/` and the marked
    OpenWiki instruction block. Reject any generated GitHub workflow, provider
-   credential, or unrelated source edit.
-7. Check Markdown links and source claims, search for stale descriptions, run
-   `git diff --check`, and run any Repository-specific documentation Checks.
-8. Invoke `code-review` with fresh-context independence. Resolve confirmed
-   findings and rerun affected Checks.
+   credential, or unrelated source edit. Check Markdown links and source claims,
+   search for stale descriptions, run `git diff --check`, and run any
+   Repository-specific documentation Checks.
+6. Invoke `code-review` with fresh-context independence on the complete generated
+   set. Verify and classify every finding before changing files. A non-diagram
+   finding or uncertainty about safe bundle removal follows step 8; do not
+   partially sanitize the evidence first.
+7. Diagrams are optional: a missing diagram does not fail an otherwise complete
+   narrative. When diagram findings are the only material defects after steps
+   2-6, first run `git add -A` to stage the complete scope-checked generated
+   result as a reversible index snapshot; never commit or push that snapshot.
+   Before removal, require each affected page to remain coherent and contain no
+   other reference or link to the diagram; otherwise follow step 8. Then remove
+   the `<id>.json`, `<id>.bpmn`, `<id>.png`, and exact standalone Markdown link
+   together from the working tree. Do not rewrite the spec, artifacts, or
+   surrounding prose. Repeat the artifact inventory and step 5 Checks, then
+   review the exact `git diff --` removal delta against the snapshot. If it is
+   green, run `git add -A` to replace the snapshot with the removals and continue.
+   If any removal Check or review fails, run `git restore --worktree .` before
+   `git restore --staged .` to restore and then unstage the complete result, and
+   follow step 8.
+8. For each target `origin/main` commit, permit at most one evidence-backed
+   whole-generation correction after a complete result has a non-diagram defect
+   or a diagram bundle cannot be rejected cleanly. Discard that result, return
+   the dedicated branch to current `origin/main`, and rerun
+   `qq-openwiki --update` with concise feedback. Repeat verification on the
+   wholly regenerated result. If the corrected result remains materially
+   invalid, do not reset, commit, push, or rerun: preserve the worktree and
+   evidence, report the defects, and stop for operator direction. A newer
+   `origin/main` commit is a new target and supersedes the old result under
+   Observe landed state.
+9. An upstream error or interrupted generation has no reviewable result. Discard
+   its partial output, return the branch to current `origin/main`, and retry once
+   for that target. If the retry also fails, leave the branch clean, report both
+   failures, and stop instead of creating an unbounded service-retry loop.
 
 ## Deliver and continue observing
 
