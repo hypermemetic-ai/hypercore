@@ -1,11 +1,11 @@
 ---
 id: TASK-21
 title: Bound OpenWiki correction retries and reject defective diagram bundles
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-07-13 16:15'
-updated_date: '2026-07-13 16:58'
+updated_date: '2026-07-13 17:00'
 labels:
   - openwiki
   - methodology
@@ -25,11 +25,11 @@ Operator finding from the first live BPMN-bearing OpenWiki refresh: a complete g
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 A materially defective optional diagram is rejected as one complete JSON/BPMN/PNG/Markdown-link bundle without discarding independently verified narrative output; the outer maintainer never rewrites diagram semantics.
-- [ ] #2 For one landed origin/main SHA, a complete generated result receives at most one evidence-backed whole-generation correction retry; if the corrected result remains materially invalid, the maintainer preserves the evidence, does not commit or push, and stops for operator direction.
-- [ ] #3 Incomplete or failed generation and a newer landed main still reset and regenerate from current origin/main, preserving the single-writer and supersede-in-place decisions.
-- [ ] #4 Diagram acceptance is based on material semantic correctness, source evidence, and actual readability at the embed plus linked full resolution; aspect ratio alone is not a rejection condition.
-- [ ] #5 Focused wrapper and methodology Checks plus fresh-context code review pass before the Change is committed or published.
+- [x] #1 A materially defective optional diagram is rejected as one complete JSON/BPMN/PNG/Markdown-link bundle without discarding independently verified narrative output; the outer maintainer never rewrites diagram semantics.
+- [x] #2 For one landed origin/main SHA, a complete generated result receives at most one evidence-backed whole-generation correction retry; if the corrected result remains materially invalid, the maintainer preserves the evidence, does not commit or push, and stops for operator direction.
+- [x] #3 Incomplete or failed generation and a newer landed main still reset and regenerate from current origin/main, preserving the single-writer and supersede-in-place decisions.
+- [x] #4 Diagram acceptance is based on material semantic correctness, source evidence, and actual readability at the embed plus linked full resolution; aspect ratio alone is not a rejection condition.
+- [x] #5 Focused wrapper and methodology Checks plus fresh-context code review pass before the Change is committed or published.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -50,6 +50,8 @@ Fresh-context review found two confirmed issues: optional bundle deletion preced
 Exact-delta review found that bundle deletion was still irreversible if its own checks failed on an already-corrected result. Bundle rejection is now transactional: after full-set verification, the maintainer stages the intact scope-checked generated result as a non-deliverable index snapshot, reviews the unstaged removal against it, replaces the snapshot only after green checks/review, and otherwise restores and unstages the complete evidence before entering the bounded correction/stop branch.
 
 A focused forward test of the removal-failure branch restored the worktree from the staged snapshot before unstaging, preserved the complete corrected result and review evidence, prohibited reset/rerun/commit/push, and reported no ambiguity. The same fresh-context reviewer then inspected the exact transactional correction and returned no material findings: the staged index preserves new and modified bundle files plus the Markdown link, git diff -- exposes the removal, and the required restore order reaches the stop branch with intact uncommitted evidence.
+
+Final validation: tests/test-qq-openwiki.sh and tests/test-qq-openwiki-bpmn.sh passed; affected Bash syntax and shellcheck passed; quick_validate.py reported the Skill valid; BPMN pipeline passed 16/16 tests; doc-30 regenerated with zero lint errors and a lossless evidence round trip; strict conformance accounted for 16/16 flow nodes with zero divergence or unknowns; git diff checks passed; final fresh-context exact-delta review returned no material findings; PR #58 is OPEN, MERGEABLE, CLEAN, with no configured GitHub checks.
 <!-- SECTION:NOTES:END -->
 
 ## Comments
@@ -67,3 +69,9 @@ created: 2026-07-13 16:30
 Explicit non-goals from alignment: do not change the platform-level progress-update cadence, OpenWiki provider/model, BPMN schema/layout/publisher, activation, single-writer locking, internal-generator semantic authorship, or supersede-on-new-main behavior.
 ---
 <!-- COMMENTS:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Replaced OpenWiki's destructive unbounded correction loop with transactional optional-diagram rejection, one whole-generation correction per target SHA, bounded upstream retries, and evidence-preserving stops. Grounded diagram generation in semantic edge tracing and actual readability, verified realistic recovery branches, resolved independent review findings, and delivered the green Change in PR #58.
+<!-- SECTION:FINAL_SUMMARY:END -->
