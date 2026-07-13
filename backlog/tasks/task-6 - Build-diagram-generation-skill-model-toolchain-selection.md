@@ -5,13 +5,14 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-07-12 05:18'
-updated_date: '2026-07-13 02:43'
+updated_date: '2026-07-13 05:22'
 labels: []
 dependencies: []
 documentation:
   - doc-17
   - doc-18
   - doc-26
+  - doc-29
 ordinal: 4000
 ---
 
@@ -43,13 +44,13 @@ Evidence: doc-17 (model choice), doc-18 (process standard + smoke-test spec).
 ## Implementation Plan
 
 <!-- SECTION:PLAN:BEGIN -->
-1. Source enablement Change: add backward-compatible sequence-flow evidence to the shared BPMN pipeline; update pipeline tests/docs and the dedicated maintainer's diagram-refresh procedure; run focused Checks and fresh-context review; deliver a green PR without touching openwiki/. 2. After that PR lands, explicitly switch into the dedicated OpenWiki maintainer role, generate a separate BPMN plan, create the OpenWiki refresh and research process models/renders, embed attributed PNGs, verify deterministic evidence-grounded output, run fresh-context review, and deliver a documentation-only openwiki/update PR.
+1. Landed prerequisite: PR #51 added sequence-flow evidence support to the shared BPMN pipeline and verification guidance. 2. In the remaining Change, expose one reliable wiki-publication command from that pipeline and have qq-openwiki supply stable BPMN authoring guidance to the internal OpenWiki agent on normal init/update runs while preserving caller options and messages. 3. The internal OpenWiki agent decides whether a process is materially clearer as BPMN; when useful, it authors the JSON spec, generates semantic BPMN and an attributed PNG, and embeds the PNG alongside its Markdown narrative. There is no prescribed diagram, quota, or outer-maintainer post-processing authorship. 4. Verify the command and prompt integration mechanically, then run the real internal OpenWiki generator against a disposable diagram-worthy repository; tune until it produces at least one genuinely helpful, valid, evidence-grounded, deterministic, correctly embedded diagram. 5. Run fresh-context review and deliver one green source PR. The separately activated OpenWiki maintainer remains responsible only for invoking the run, verifying its output, and delivering its documentation Change.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
-Source enablement implemented. Checks: rendering-enabled BPMN pipeline suite 14/14 passed; skill-creator validation passed for bpmn-plans and openwiki-maintainer; git diff --check passed. Fresh-context review found stale evidence ranges in doc-26; all plan stamps were audited, three ranges corrected, plan.bpmn regenerated with 0 lint findings and lossless round trip, plan.png remained byte-identical, and the reviewer's exact-delta recheck returned no findings. TASK-6 remains In Progress for the separately planned OpenWiki maintainer Change.
+PR #51 landed the shared pipeline prerequisite. Superseded wording: this task agent does not switch into the dedicated OpenWiki maintainer role, directly generate OpenWiki pages, prescribe the OpenWiki refresh and research diagrams, or create a separate maintainer execution plan. The operator corrected that interpretation twice. The remaining outcome is to equip OpenWiki internal generation itself to choose and author helpful BPMN alongside Markdown; the outer maintainer invokes, verifies, and delivers.
 <!-- SECTION:NOTES:END -->
 
 ## Comments
@@ -64,5 +65,11 @@ author: operator
 created: 2026-07-13 02:34
 ---
 Operator approved the rendered source-enablement plan in doc-26 and the two-Change ownership boundary on 2026-07-12.
+---
+
+author: @codex
+created: 2026-07-13 05:18
+---
+Recovered operator-settled correction from the 2026-07-12 sessions: OpenWiki internal generator authors useful BPMN as part of wiki generation. The dedicated outer maintainer does not invent diagrams in a post-processing Change. This comment and the replaced plan/notes supersede doc-26 wording that implies a role switch or two prescribed diagrams.
 ---
 <!-- COMMENTS:END -->
