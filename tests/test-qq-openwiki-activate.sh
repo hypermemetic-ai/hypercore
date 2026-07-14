@@ -20,6 +20,10 @@ assert_contains() {
   [[ "$haystack" == *"$needle"* ]] || fail "expected '$needle' in: $haystack"
 }
 
+notification_count() {
+  awk '$1 == "notification" && $2 == "show" { count += 1 } END { print count + 0 }' "$FAKE_HERDR_LOG"
+}
+
 make_repository() {
   local path="$1"
   local slug="$2"
@@ -130,6 +134,8 @@ case "$1 $2" in
   "pane run")
     [ "${FAKE_HERDR_MODE:-launch}" != fail_run ] || exit 70
     ;;
+  "notification show")
+    ;;
   *)
     exit 70
     ;;
@@ -211,9 +217,12 @@ unset FAKE_HERDR_MODE
 
 export QQ_OPENWIKI_ACTIVATE_STATE_DIR="$TMP/state-wrong-agent"
 export FAKE_HERDR_MODE=wrong_agent
+notifications_before="$(notification_count)"
 if "$ACTIVATOR" "$WIDGET_URL" >"$TMP/wrong-agent.out" 2>"$TMP/wrong-agent.err"; then
   fail "non-Codex named agent was accepted"
 fi
+[ "$(notification_count)" -eq "$((notifications_before + 1))" ] || fail "wrong-agent ActivationError was not notified"
+assert_contains "$(tail -n 1 "$FAKE_HERDR_LOG")" 'notification show qq-openwiki-activate --body named OpenWiki agent is not an active Codex session'
 [ ! -e "$TMP/state-wrong-agent/acme--widget/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.json" ] || fail "rejected agent poisoned deduplication state"
 unset FAKE_HERDR_MODE
 
@@ -226,10 +235,12 @@ agent_names="$(awk '$1 == "agent" && $2 == "rename" {print $4}' "$FAKE_HERDR_LOG
 export QQ_OPENWIKI_ACTIVATE_STATE_DIR="$TMP/state-busy"
 export FAKE_HERDR_MODE=busy
 busy_before="$(wc -l <"$FAKE_HERDR_LOG")"
+notifications_before="$(notification_count)"
 if "$ACTIVATOR" "$WIDGET_URL" >"$TMP/busy.out" 2>"$TMP/busy.err"; then
   fail "busy placeholder was accepted"
 fi
 assert_contains "$(<"$TMP/busy.err")" 'root pane is not an idle shell'
+[ "$(notification_count)" -eq "$((notifications_before + 1))" ] || fail "busy-pane ActivationError was not notified"
 busy_log="$(tail -n "+$((busy_before + 1))" "$FAKE_HERDR_LOG")"
 [[ "$busy_log" != *'pane run '* ]] || fail "busy placeholder received the maintainer command"
 unset FAKE_HERDR_MODE
@@ -237,16 +248,23 @@ unset FAKE_HERDR_MODE
 for mode in fail_run fail_detect; do
   export QQ_OPENWIKI_ACTIVATE_STATE_DIR="$TMP/state-$mode"
   export FAKE_HERDR_MODE="$mode"
+  notifications_before="$(notification_count)"
   if "$ACTIVATOR" "$WIDGET_URL" >"$TMP/$mode.out" 2>"$TMP/$mode.err"; then
     fail "$mode Herdr dispatch reported success"
   fi
-  ambiguous_before="$(wc -l <"$FAKE_HERDR_LOG")"
+  [ "$(notification_count)" -eq "$((notifications_before + 1))" ] || fail "$mode ActivationError was not notified"
+  marker="$TMP/state-$mode/acme--widget/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.json"
+  assert_contains "$(<"$marker")" '"action": "failed"'
+  unset FAKE_HERDR_MODE
+  output="$($ACTIVATOR "$WIDGET_URL")"
+  assert_contains "$output" '"status": "dispatched"'
+  marker_payload="$(<"$marker")"
+  [[ "$marker_payload" != *'"action": "failed"'* ]] || fail "$mode successful retry left a failed marker"
+  dispatched_before="$(wc -l <"$FAKE_HERDR_LOG")"
   output="$($ACTIVATOR "$WIDGET_URL")"
   assert_contains "$output" '"reason": "already-dispatched"'
-  ambiguous_after="$(wc -l <"$FAKE_HERDR_LOG")"
-  [ "$ambiguous_before" -eq "$ambiguous_after" ] || fail "$mode dispatch was repeated"
+  [ "$(wc -l <"$FAKE_HERDR_LOG")" -eq "$dispatched_before" ] || fail "$mode completed retry dispatched again"
 done
-unset FAKE_HERDR_MODE
 
 for scenario in unmerged wrong_base recursion wrong_operator; do
   export FAKE_GH_SCENARIO="$scenario"
@@ -263,10 +281,12 @@ assert_contains "$output" '"status": "ignored"'
 gh_after="$(wc -l <"$FAKE_GH_LOG")"
 [ "$gh_before" -eq "$gh_after" ] || fail "unlinked Repository reached GitHub verification"
 
+notifications_before="$(notification_count)"
 if "$ACTIVATOR" 'qq-openwiki://activate?repo=acme%2Fwidget' >"$TMP/malformed.out" 2>"$TMP/malformed.err"; then
   fail "malformed activation was accepted"
 fi
 assert_contains "$(<"$TMP/malformed.err")" 'exactly one pr parameter'
+[ "$(notification_count)" -eq "$((notifications_before + 1))" ] || fail "malformed ActivationError was not notified"
 
 node - "$USERSCRIPT" <<'NODE'
 const fs = require("fs");
