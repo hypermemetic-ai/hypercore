@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -171,6 +172,14 @@ def linked_repository(slug: str) -> Path | None:
     return repository if agents.resolve() == (canonical_qq / "AGENTS.md").resolve() else None
 
 
+def retry_configuration() -> tuple[int, float]:
+    attempts = int(os.environ.get("QQ_OPENWIKI_ACTIVATE_ATTEMPTS", "30"))
+    interval = float(os.environ.get("QQ_OPENWIKI_ACTIVATE_INTERVAL", "1"))
+    if attempts < 1 or attempts > 120 or interval < 0 or interval > 10:
+        raise ActivationError("invalid activation retry configuration")
+    return attempts, interval
+
+
 def verify_merge(url: str) -> dict[str, str] | None:
     match = PR_URL.fullmatch(url)
     if match is None:
@@ -184,10 +193,7 @@ def verify_merge(url: str) -> dict[str, str] | None:
     operator = run([gh, "api", "user", "--jq", ".login"]).strip()
     if not operator:
         raise ActivationError("GitHub authenticated operator login is empty")
-    attempts = int(os.environ.get("QQ_OPENWIKI_ACTIVATE_ATTEMPTS", "30"))
-    interval = float(os.environ.get("QQ_OPENWIKI_ACTIVATE_INTERVAL", "1"))
-    if attempts < 1 or attempts > 120 or interval < 0 or interval > 10:
-        raise ActivationError("invalid activation retry configuration")
+    attempts, interval = retry_configuration()
 
     fields = "state,mergedAt,mergeCommit,baseRefName,headRefName,url,mergedBy"
     payload: dict[str, Any] | None = None
@@ -258,6 +264,39 @@ def workspace_id(opened: dict[str, Any]) -> str:
     raise ActivationError("Herdr worktree open returned no workspace id")
 
 
+def placeholder_pane(herdr: str, opened: dict[str, Any], workspace: str) -> str:
+    result = opened.get("result")
+    root = result.get("root_pane") if isinstance(result, dict) else None
+    opened_workspace = result.get("workspace") if isinstance(result, dict) else None
+    pane = root.get("pane_id") if isinstance(root, dict) else None
+    if (
+        not isinstance(pane, str)
+        or not pane
+        or root.get("workspace_id") != workspace
+        or root.get("agent") is not None
+        or root.get("agent_session") is not None
+        or not isinstance(opened_workspace, dict)
+        or opened_workspace.get("workspace_id") != workspace
+        or opened_workspace.get("pane_count") != 1
+    ):
+        raise ActivationError("Herdr worktree did not return one unassigned root pane")
+    process = run_json([herdr, "pane", "process-info", "--pane", pane])
+    process_result = process.get("result")
+    info = process_result.get("process_info") if isinstance(process_result, dict) else None
+    foreground = info.get("foreground_processes") if isinstance(info, dict) else None
+    shell = info.get("shell_pid") if isinstance(info, dict) else None
+    if (
+        shell is None
+        or info.get("foreground_process_group_id") != shell
+        or not isinstance(foreground, list)
+        or len(foreground) != 1
+        or not isinstance(foreground[0], dict)
+        or foreground[0].get("pid") != shell
+    ):
+        raise ActivationError("OpenWiki worktree root pane is not an idle shell")
+    return pane
+
+
 def maintainer_name(slug: str) -> str:
     normalized = slug.casefold()
     readable = re.sub(r"[^a-z0-9]+", "-", normalized).strip("-")[:32]
@@ -297,6 +336,20 @@ def named_agent(herdr: str, name: str) -> dict[str, Any] | None:
     return agent
 
 
+def wait_for_codex_agent(herdr: str, pane: str) -> dict[str, Any]:
+    attempts, interval = retry_configuration()
+    for attempt in range(attempts):
+        agent = named_agent(herdr, pane)
+        detected = agent.get("agent") if isinstance(agent, dict) else None
+        if detected == "codex":
+            return agent
+        if detected is not None:
+            raise ActivationError("OpenWiki placeholder started a non-Codex agent")
+        if attempt + 1 < attempts:
+            time.sleep(interval)
+    raise ActivationError("OpenWiki maintainer was not detected in its placeholder")
+
+
 def write_marker(path: Path, payload: dict[str, str], *, exclusive: bool) -> None:
     flags = os.O_WRONLY | os.O_CREAT | (os.O_EXCL if exclusive else os.O_TRUNC)
     created = False
@@ -329,8 +382,7 @@ def dispatch(merge: dict[str, str], marker: Path) -> str:
     agent_name = maintainer_name(merge["slug"])
     active = named_agent(herdr, agent_name)
     if active is not None and (
-        not isinstance(active.get("agent_session"), dict)
-        or active["agent_session"].get("agent") != "codex"
+        active.get("agent") != "codex"
         or not isinstance(active.get("pane_id"), str)
         or not active["pane_id"]
     ):
@@ -362,25 +414,22 @@ def dispatch(merge: dict[str, str], marker: Path) -> str:
         pane = active["pane_id"]
         run([herdr, "pane", "run", pane, prompt])
         return "woke"
+    pane = placeholder_pane(herdr, opened, workspace)
     write_marker(marker, {**merge, "action": "dispatching", "agent": agent_name}, exclusive=True)
-    run(
-        [
-            herdr,
-            "agent",
-            "start",
-            agent_name,
-            "--cwd",
-            str(worktree),
-            "--workspace",
-            workspace,
-            "--no-focus",
-            "--",
-            codex,
-            "-C",
-            str(worktree),
-            prompt,
-        ]
-    )
+    command = shlex.join([codex, "-C", str(worktree), prompt])
+    run([herdr, "pane", "run", pane, command])
+    launched = wait_for_codex_agent(herdr, pane)
+    if launched.get("pane_id") != pane or launched.get("workspace_id") != workspace:
+        raise ActivationError("detected OpenWiki maintainer left its placeholder")
+    run([herdr, "agent", "rename", pane, agent_name])
+    active = named_agent(herdr, agent_name)
+    if (
+        active is None
+        or active.get("agent") != "codex"
+        or active.get("pane_id") != pane
+        or active.get("workspace_id") != workspace
+    ):
+        raise ActivationError("OpenWiki maintainer name did not resolve to its placeholder")
     return "launched"
 
 

@@ -124,7 +124,8 @@ defaulting to `~/projects`), matches its GitHub origin, and requires its root
 uses the authenticated `gh` session to require a completed merge into `main` by
 that operator. It ignores `openwiki/update` merges, records each dispatched merge
 commit once per Repository under the user's state directory, and launches or
-wakes that Repository's dedicated maintainer Codex session through Herdr.
+wakes that Repository's dedicated maintainer Codex session in the worktree's
+root pane through Herdr.
 
 This activation path has no polling, daemon, local server, Repository registry,
 custom browser extension, or self-hosted runner. Each linked Repository needs its

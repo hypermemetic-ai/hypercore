@@ -37,8 +37,8 @@ then use `qq-herdr-pull --workspace <workspace-id>` to move the current
 conversation into the work session before Repository mutation. That mode fails
 loudly unless the target contains exactly one idle shell placeholder.
 
-At terminal Change disposition, the worktree workspace and every work pane stay
-intact for inspection and explicit operator retirement. `qq-herdr-home
+At terminal Change disposition, the accountable and operator-created work panes
+stay intact for inspection and explicit operator retirement. `qq-herdr-home
 focus-board --repo <root>` validates the persistent home and its unique dedicated
 Backlog-board tab, then focuses that tab without moving or closing the work
 session.

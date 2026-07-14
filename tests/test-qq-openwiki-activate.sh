@@ -94,22 +94,41 @@ set -euo pipefail
 printf '%s\n' "$*" >>"$FAKE_HERDR_LOG"
 case "$1 $2" in
   "worktree open")
-    printf '%s\n' '{"result":{"workspace":{"workspace_id":"w-openwiki"}}}'
+    printf '%s\n' '{"result":{"root_pane":{"pane_id":"p-placeholder","workspace_id":"w-openwiki"},"workspace":{"workspace_id":"w-openwiki","pane_count":1}}}'
     ;;
   "agent get")
     if [ "${FAKE_HERDR_MODE:-launch}" = wake ]; then
-      printf '%s\n' '{"result":{"agent":{"workspace_id":"w-openwiki","pane_id":"term-maintainer","agent_session":{"agent":"codex"}}}}'
+      printf '%s\n' '{"result":{"agent":{"agent":"codex","agent_session":null,"workspace_id":"w-openwiki","pane_id":"term-maintainer"}}}'
     elif [ "${FAKE_HERDR_MODE:-launch}" = wrong_agent ]; then
-      printf '%s\n' '{"result":{"agent":{"workspace_id":"w-openwiki","pane_id":"term-maintainer","agent_session":{"agent":"claude"}}}}'
+      printf '%s\n' '{"result":{"agent":{"agent":"claude","agent_session":null,"workspace_id":"w-openwiki","pane_id":"term-maintainer"}}}'
+    elif [ "$3" = p-placeholder ] && grep -q '^pane run p-placeholder ' "$FAKE_HERDR_LOG"; then
+      if [ "${FAKE_HERDR_MODE:-launch}" = fail_detect ]; then
+        printf '%s\n' '{"result":{"agent":{"workspace_id":"w-openwiki","pane_id":"p-placeholder"}}}'
+      else
+        printf '%s\n' '{"result":{"agent":{"agent":"codex","agent_session":null,"workspace_id":"w-openwiki","pane_id":"p-placeholder"}}}'
+      fi
+    elif [ "${FAKE_HERDR_MODE:-launch}" = launch ] \
+      && grep -q "^agent rename p-placeholder $3$" "$FAKE_HERDR_LOG"; then
+      printf '%s\n' '{"result":{"agent":{"agent":"codex","agent_session":null,"workspace_id":"w-openwiki","pane_id":"p-placeholder"}}}'
     else
       printf '%s\n' '{"error":{"code":"agent_not_found","message":"missing"}}'
       exit 1
     fi
     ;;
   "agent start")
-    [ "${FAKE_HERDR_MODE:-launch}" != fail_start ] || exit 70
+    exit 70
+    ;;
+  "agent rename")
+    ;;
+  "pane process-info")
+    if [ "${FAKE_HERDR_MODE:-launch}" = busy ]; then
+      printf '%s\n' '{"result":{"process_info":{"shell_pid":10,"foreground_process_group_id":20,"foreground_processes":[{"pid":20}]}}}'
+    else
+      printf '%s\n' '{"result":{"process_info":{"shell_pid":10,"foreground_process_group_id":10,"foreground_processes":[{"pid":10}]}}}'
+    fi
     ;;
   "pane run")
+    [ "${FAKE_HERDR_MODE:-launch}" != fail_run ] || exit 70
     ;;
   *)
     exit 70
@@ -171,8 +190,11 @@ export QQ_OPENWIKI_ACTIVATE_STATE_DIR="$TMP/state-launch"
 output="$($ACTIVATOR "$WIDGET_ACTIVATION")"
 assert_contains "$output" '"status": "dispatched"'
 assert_contains "$output" '"action": "launched"'
-assert_contains "$(<"$FAKE_HERDR_LOG")" 'agent start openwiki-acme-widget-'
+assert_contains "$(<"$FAKE_HERDR_LOG")" 'pane run p-placeholder'
+assert_contains "$(<"$FAKE_HERDR_LOG")" 'agent rename p-placeholder openwiki-acme-widget-'
+assert_contains "$(<"$FAKE_HERDR_LOG")" "Use \$openwiki-maintainer"
 assert_contains "$(<"$FAKE_HERDR_LOG")" 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+[[ "$(<"$FAKE_HERDR_LOG")" != *'agent start '* ]] || fail "activation created a second pane"
 
 before="$(wc -l <"$FAKE_HERDR_LOG")"
 output="$($ACTIVATOR https://github.com/ACME/WIDGET/pull/7)"
@@ -198,19 +220,32 @@ unset FAKE_HERDR_MODE
 export QQ_OPENWIKI_ACTIVATE_STATE_DIR="$TMP/state-generic"
 output="$($ACTIVATOR https://github.com/other/project/pull/19)"
 assert_contains "$output" '"repository": "other/project"'
-agent_names="$(awk '$1 == "agent" && $2 == "start" {print $3}' "$FAKE_HERDR_LOG" | sort -u)"
+agent_names="$(awk '$1 == "agent" && $2 == "rename" {print $4}' "$FAKE_HERDR_LOG" | sort -u)"
 [ "$(wc -l <<<"$agent_names")" -eq 2 ] || fail "Repositories did not receive unique Herdr agent names"
 
-export QQ_OPENWIKI_ACTIVATE_STATE_DIR="$TMP/state-ambiguous"
-export FAKE_HERDR_MODE=fail_start
-if "$ACTIVATOR" "$WIDGET_URL" >"$TMP/ambiguous.out" 2>"$TMP/ambiguous.err"; then
-  fail "failed Herdr dispatch reported success"
+export QQ_OPENWIKI_ACTIVATE_STATE_DIR="$TMP/state-busy"
+export FAKE_HERDR_MODE=busy
+busy_before="$(wc -l <"$FAKE_HERDR_LOG")"
+if "$ACTIVATOR" "$WIDGET_URL" >"$TMP/busy.out" 2>"$TMP/busy.err"; then
+  fail "busy placeholder was accepted"
 fi
-ambiguous_before="$(wc -l <"$FAKE_HERDR_LOG")"
-output="$($ACTIVATOR "$WIDGET_URL")"
-assert_contains "$output" '"reason": "already-dispatched"'
-ambiguous_after="$(wc -l <"$FAKE_HERDR_LOG")"
-[ "$ambiguous_before" -eq "$ambiguous_after" ] || fail "ambiguous dispatch was repeated"
+assert_contains "$(<"$TMP/busy.err")" 'root pane is not an idle shell'
+busy_log="$(tail -n "+$((busy_before + 1))" "$FAKE_HERDR_LOG")"
+[[ "$busy_log" != *'pane run '* ]] || fail "busy placeholder received the maintainer command"
+unset FAKE_HERDR_MODE
+
+for mode in fail_run fail_detect; do
+  export QQ_OPENWIKI_ACTIVATE_STATE_DIR="$TMP/state-$mode"
+  export FAKE_HERDR_MODE="$mode"
+  if "$ACTIVATOR" "$WIDGET_URL" >"$TMP/$mode.out" 2>"$TMP/$mode.err"; then
+    fail "$mode Herdr dispatch reported success"
+  fi
+  ambiguous_before="$(wc -l <"$FAKE_HERDR_LOG")"
+  output="$($ACTIVATOR "$WIDGET_URL")"
+  assert_contains "$output" '"reason": "already-dispatched"'
+  ambiguous_after="$(wc -l <"$FAKE_HERDR_LOG")"
+  [ "$ambiguous_before" -eq "$ambiguous_after" ] || fail "$mode dispatch was repeated"
+done
 unset FAKE_HERDR_MODE
 
 for scenario in unmerged wrong_base recursion wrong_operator; do

@@ -1,6 +1,6 @@
 ---
 name: agent-messaging
-description: Coordinates directly with other live agents through herdr. Use when the work needs another agent's state, output, or attention — finding live agents, sending them prompts, reading their panes, or waiting for them to finish.
+description: Coordinates directly with other live agents through herdr, including finding, starting, messaging, waiting for, and cleaning up temporary delegates. Use when work needs another agent's state, output, or attention.
 ---
 
 # Message agents through herdr
@@ -28,6 +28,11 @@ is needed, resolve its current `.result.agent.pane_id`, then send the reply with
 Never leave an inter-agent reply only in the receiving agent's transcript. If
 the source no longer resolves, report that the reply is unrouteable instead of
 guessing a destination.
+
+The agent that starts a temporary delegate owns its pane. Retain it through the
+final result and any required follow-up; then close it with `herdr pane close
+<pane-id>` and verify it no longer resolves. Report cleanup failure; never close
+the accountable or an operator-created pane.
 
 No correlation IDs or acknowledgement protocol exists. Coordinate when it
 helps; skip the ceremony when it does not.

@@ -91,7 +91,9 @@ inherits the other's conclusions.
    an in-scope fix, rerun the affected Checks and review the exact delta from
    the last reviewed tree. If a remedy would materially widen the Change,
    stop and align with the operator.
-10. A reviewer error or a missing final report is not a review. Handle an
-    explicit context gap through step 6; otherwise retry the unchanged brief
-    with a fresh reviewer. Never narrow scope or soften intent to obtain a
-    pass; repeated reviewer unavailability is a blocker.
+10. Handle an explicit context gap through step 6. A reviewer error or missing
+    final report is not a review: close its pane and verify removal, then retry
+    the unchanged brief with a fresh reviewer. After the final report and any
+    step 9 delta review, close every reviewer pane and verify removal. Never
+    narrow scope or soften intent to obtain a pass; repeated reviewer
+    unavailability or cleanup failure is a blocker.

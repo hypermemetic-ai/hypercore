@@ -120,13 +120,13 @@ delegated agents bounded assignments; do not hand them this lifecycle.
    remaining work: retain the Change checkout and resume after the blocking
    primary-checkout state is resolved.
 12. After a terminal disposition leaves no further work in this Change, leave
-   its accountable pane, other panes and tabs, worktree workspace, and checkout
-   intact for inspection. Capture the calling terminal's live pane, tab, and
-   workspace ids, then run `qq-herdr-home focus-board --repo <root>`. Require
-   the returned home and board ids to equal the initial inspection, require
+   its accountable pane, operator-created panes and tabs, worktree workspace,
+   and checkout intact for inspection. Capture the calling terminal's live pane,
+   tab, and workspace ids, then run `qq-herdr-home focus-board --repo <root>`.
+   Require the returned home and board ids to equal the initial inspection,
+   require
    `.focused` to be true, and re-resolve the calling terminal to prove its three
    work-session ids did not change. Do not move the accountable pane into the
-   project home, close a work pane, or invoke `herdr worktree remove`. The
-   operator explicitly retires a completed work session and its checkout later;
-   focus returns to the synchronized home board without erasing the Change's
-   visible context.
+   project home, close a retained work pane, or invoke `herdr worktree remove`.
+   The operator explicitly retires a completed work session and its checkout;
+   focus returns to the synchronized home board without erasing its context.

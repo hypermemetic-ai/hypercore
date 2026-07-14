@@ -19,7 +19,9 @@ Outside Herdr, use the cleanest fresh-context mechanism available and report
 that pane placement was unavailable. The researcher remains read-only in the
 repo: it returns findings directly or writes raw notes under the OS temporary
 directory. The owning agent spot-checks load-bearing citations, decides what the
-findings mean, and writes the repository artifacts.
+findings mean, and writes the repository artifacts. After each researcher's
+final contribution and follow-up, close its pane and verify removal; report
+cleanup failure.
 
 ## Method
 
