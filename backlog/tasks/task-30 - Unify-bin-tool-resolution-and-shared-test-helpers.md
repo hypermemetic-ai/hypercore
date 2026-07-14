@@ -1,14 +1,33 @@
 ---
 id: TASK-30
 title: Unify bin tool resolution and shared test helpers
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-07-14 03:01'
-updated_date: '2026-07-14 04:16'
+updated_date: '2026-07-14 04:17'
 labels: []
 dependencies:
   - TASK-26
+modified_files:
+  - README.md
+  - backlog/tasks/task-30 - Unify-bin-tool-resolution-and-shared-test-helpers.md
+  - bin/lib/qq-bin.sh
+  - bin/qq-herdr-home
+  - bin/qq-herdr-pull
+  - bin/qq-openwiki
+  - bin/qq-openwiki-activate
+  - bin/qq-openwiki-bpmn
+  - tests/helpers.sh
+  - tests/test-bin-resolution.sh
+  - tests/test-bpmn-plans.sh
+  - tests/test-grilling.sh
+  - tests/test-openwiki-maintainer.sh
+  - tests/test-qq-herdr-home.sh
+  - tests/test-qq-herdr-pull.sh
+  - tests/test-qq-openwiki-activate.sh
+  - tests/test-qq-openwiki-bpmn.sh
+  - tests/test-qq-openwiki.sh
 priority: medium
 ordinal: 27000
 ---
@@ -22,10 +41,10 @@ Operator-settled decision: one QQ_<TOOL>_BIN convention everywhere with all sett
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 All bin scripts honor the QQ_<TOOL>_BIN convention; HERDR_BIN_PATH is gone from the repository including all setters
-- [ ] #2 One shared helper owns PATH/homebrew fallback resolution; no duplicated hardcoded linuxbrew blocks remain in bin/
-- [ ] #3 Test scripts source one shared helper library for fail/assert utilities
-- [ ] #4 All tests/ suites pass
+- [x] #1 All bin scripts honor the QQ_<TOOL>_BIN convention; HERDR_BIN_PATH is gone from the repository including all setters
+- [x] #2 One shared helper owns PATH/homebrew fallback resolution; no duplicated hardcoded linuxbrew blocks remain in bin/
+- [x] #3 Test scripts source one shared helper library for fail/assert utilities
+- [x] #4 All tests/ suites pass
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -45,3 +64,9 @@ Implemented one shared resolver for QQ_<TOOL>_BIN overrides, PATH lookup, and Ho
 
 Fresh Checks passed all nine tests/ harnesses, 18/18 BPMN pipeline tests with rendering, Bash syntax, ShellCheck, Python compilation, and diff hygiene. Independent read-only review raised empty explicit overrides falling through; verification against origin/main showed the same empty-as-unset behavior in every prior Python and Bash resolver, so it was not a Change-introduced finding and no code change was made.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Unified configurable binary discovery behind one shared `QQ_<TOOL>_BIN` resolver used by Bash utilities and the Python OpenWiki activator, removed active legacy override setters, and centralized shell-test fail/assert helpers. All nine shell harnesses, 18 BPMN tests, Bash syntax, ShellCheck, Python compilation, focused convention checks, and diff hygiene passed. Independent review left no confirmed Change-introduced material findings; PR #73 is open, mergeable, and CLEAN with no configured GitHub checks.
+<!-- SECTION:FINAL_SUMMARY:END -->
