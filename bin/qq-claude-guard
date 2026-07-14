@@ -1,0 +1,761 @@
+#!/usr/bin/env python3
+"""Enforce qq hard mandates for Claude Code PreToolUse events."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+import re
+import shlex
+import sys
+from typing import Any
+
+
+EDIT_TOOLS = frozenset({"Edit", "Write", "MultiEdit", "NotebookEdit"})
+SHELL_SEPARATORS = frozenset(";&|()\n`")
+SHELL_RESERVED_PREFIXES = frozenset(
+    {"!", "{", "do", "elif", "else", "for", "if", "then", "until", "while"}
+)
+ASSIGNMENT = re.compile(r"[A-Za-z_][A-Za-z0-9_]*=.*", re.DOTALL)
+GH_OPTIONS_WITH_VALUES = frozenset(
+    {"-R", "--repo", "--hostname", "--config-file", "--prompt"}
+)
+HEREDOC_DELIMITER = re.compile(r"(?s)(?=.*[A-Za-z_]).+")
+
+MERGE_REASON = "qq-claude-guard: only the operator may merge pull requests"
+BACKLOG_REASON = (
+    "qq-claude-guard: managed Backlog markdown must be edited through the backlog CLI"
+)
+
+
+def without_shell_comments(command: str) -> str:
+    """Remove unquoted shell comments while retaining command separators."""
+    result: list[str] = []
+    quote: str | None = None
+    word_start = True
+    index = 0
+    while index < len(command):
+        character = command[index]
+        if quote is not None:
+            result.append(character)
+            if character == quote:
+                quote = None
+            elif character == "\\" and quote == '"' and index + 1 < len(command):
+                index += 1
+                result.append(command[index])
+            index += 1
+            continue
+        if character in {"'", '"'}:
+            quote = character
+            word_start = False
+            result.append(character)
+            index += 1
+            continue
+        if character == "\\" and index + 1 < len(command):
+            word_start = False
+            result.extend((character, command[index + 1]))
+            index += 2
+            continue
+        if character == "#" and word_start:
+            while index < len(command) and command[index] != "\n":
+                result.append(" ")
+                index += 1
+            continue
+
+        result.append(character)
+        if character.isspace() or character in ";&|()<>`":
+            word_start = True
+        else:
+            word_start = False
+        index += 1
+    return "".join(result)
+
+
+def heredoc_operator_details(line: str) -> list[tuple[bool, bool]]:
+    """Return tab-stripping and quote use for raw ``<<`` operators."""
+    text = without_shell_comments(line)
+    punctuation = ";&|()\n`<>"
+    details: list[tuple[bool, bool]] = []
+    quote: str | None = None
+    index = 0
+    while index < len(text):
+        character = text[index]
+        if quote is not None:
+            if character == "\\" and quote == '"' and index + 1 < len(text):
+                index += 2
+                continue
+            if character == quote:
+                quote = None
+            index += 1
+            continue
+        if character == "\\" and index + 1 < len(text):
+            index += 2
+            continue
+        if character in {"'", '"'}:
+            quote = character
+            index += 1
+            continue
+        if not text.startswith("<<", index):
+            index += 1
+            continue
+
+        before = text[index - 1] if index else ""
+        after = text[index + 2] if index + 2 < len(text) else ""
+        if (before and before in punctuation) or (after and after in punctuation):
+            index += 2
+            continue
+
+        word_index = index + 2
+        strip_tabs = word_index < len(text) and text[word_index] == "-"
+        if strip_tabs:
+            word_index += 1
+        while word_index < len(text) and text[word_index] in " \t\r":
+            word_index += 1
+
+        quoted = False
+        word_quote: str | None = None
+        while word_index < len(text):
+            character = text[word_index]
+            if word_quote is not None:
+                quoted = True
+                if character == "\\" and word_quote == '"' and word_index + 1 < len(text):
+                    word_index += 2
+                    continue
+                if character == word_quote:
+                    word_quote = None
+                word_index += 1
+                continue
+            if character == "\\" and word_index + 1 < len(text):
+                quoted = True
+                word_index += 2
+                continue
+            if character in {"'", '"'}:
+                quoted = True
+                word_quote = character
+                word_index += 1
+                continue
+            if character.isspace() or character in punctuation:
+                break
+            word_index += 1
+
+        details.append((strip_tabs, quoted))
+        index = word_index
+    return details
+
+
+def heredoc_delimiters(line: str) -> list[tuple[str, bool, bool]]:
+    """Return delimiter, tab-stripping, and expansion for each heredoc."""
+    lexer = shlex.shlex(
+        without_shell_comments(line),
+        posix=True,
+        punctuation_chars=";&|()\n`<>",
+    )
+    lexer.whitespace = " \t\r"
+    lexer.whitespace_split = True
+    lexer.commenters = ""
+    try:
+        words = list(lexer)
+    except ValueError:
+        return []
+
+    delimiters: list[tuple[str, bool, bool]] = []
+    operator_details = heredoc_operator_details(line)
+    operator_index = 0
+    index = 0
+    arithmetic_depth = 0
+    command_position = True
+    while index < len(words):
+        word = words[index]
+        details: tuple[bool, bool] | None = None
+        if word == "<<":
+            if operator_index < len(operator_details):
+                details = operator_details[operator_index]
+            operator_index += 1
+        if arithmetic_depth:
+            if word == "((":
+                arithmetic_depth += 1
+            elif word.startswith("))"):
+                arithmetic_depth -= 1
+            index += 1
+            continue
+        if word == "((" and (
+            command_position or (index > 0 and words[index - 1].endswith("$"))
+        ):
+            arithmetic_depth = 1
+            index += 1
+            continue
+        if word and all(character in SHELL_SEPARATORS for character in word):
+            command_position = True
+            index += 1
+            continue
+        if words[index] != "<<" or index + 1 >= len(words):
+            if word not in SHELL_RESERVED_PREFIXES and not ASSIGNMENT.fullmatch(word):
+                command_position = False
+            index += 1
+            continue
+
+        candidate = words[index + 1]
+        strip_tabs = details[0] if details is not None else candidate.startswith("-")
+        delimiter = candidate[1:] if strip_tabs else candidate
+        consumed = 2
+        if strip_tabs and candidate == "-" and index + 2 < len(words):
+            delimiter = words[index + 2]
+            consumed = 3
+        if HEREDOC_DELIMITER.fullmatch(delimiter):
+            quoted = details[1] if details is not None else False
+            expands = not quoted
+            delimiters.append((delimiter, strip_tabs, expands))
+        index += consumed
+    return delimiters
+
+
+def parenthesized_substitution(text: str, start: int) -> tuple[str, int] | None:
+    """Return one balanced ``$(...)`` body and its closing-parenthesis index."""
+    depth = 1
+    quote: str | None = None
+    index = start + 2
+    content_start = index
+    while index < len(text):
+        character = text[index]
+        if quote is not None:
+            if character == "\\" and quote in {'"', "`"} and index + 1 < len(text):
+                index += 2
+                continue
+            if character == quote:
+                quote = None
+            index += 1
+            continue
+        if character == "\\" and index + 1 < len(text):
+            index += 2
+            continue
+        if character in {"'", '"', "`"}:
+            quote = character
+            index += 1
+            continue
+        if character == "(":
+            depth += 1
+        elif character == ")":
+            depth -= 1
+            if depth == 0:
+                return text[content_start:index], index
+        index += 1
+    return None
+
+
+def backtick_substitution(text: str, start: int) -> tuple[str, int] | None:
+    """Return one legacy backtick substitution and its closing-backtick index."""
+    content: list[str] = []
+    index = start + 1
+    while index < len(text):
+        if text[index] == "\\" and index + 1 < len(text):
+            escaped = text[index + 1]
+            if escaped in {"$", "`", "\\"}:
+                content.append(escaped)
+            else:
+                content.extend(("\\", escaped))
+            index += 2
+            continue
+        if text[index] == "`":
+            return "".join(content), index
+        content.append(text[index])
+        index += 1
+    return None
+
+
+def command_substitutions(text: str, *, quotes_are_literal: bool = False) -> list[str]:
+    """Extract the outermost command substitutions from shell-like text."""
+    substitutions: list[str] = []
+    quote: str | None = None
+    index = 0
+    while index < len(text):
+        character = text[index]
+        if quote == "'":
+            if character == "'":
+                quote = None
+            index += 1
+            continue
+        if character == "\\" and index + 1 < len(text):
+            index += 2
+            continue
+        if not quotes_are_literal and character == '"':
+            quote = None if quote == '"' else '"'
+            index += 1
+            continue
+        if not quotes_are_literal and quote is None and character == "'":
+            quote = "'"
+            index += 1
+            continue
+        if text.startswith("$(", index) and not text.startswith("$((", index):
+            substitution = parenthesized_substitution(text, index)
+            if substitution is not None:
+                content, end = substitution
+                substitutions.append(content)
+                index = end + 1
+                continue
+        if character == "`":
+            substitution = backtick_substitution(text, index)
+            if substitution is not None:
+                content, end = substitution
+                substitutions.append(content)
+                index = end + 1
+                continue
+        index += 1
+    return substitutions
+
+
+def without_heredoc_bodies(command: str) -> tuple[str, list[str]]:
+    """Strip heredocs, retaining substitutions from expansion-bearing bodies."""
+    pending: list[tuple[str, bool, bool]] = []
+    body: list[str] = []
+    substitutions: list[str] = []
+    result: list[str] = []
+    for line in command.splitlines(keepends=True):
+        if pending:
+            delimiter, strip_tabs, expands = pending[0]
+            content = line.rstrip("\r\n")
+            comparison = content.lstrip("\t") if strip_tabs else content
+            if comparison == delimiter:
+                if expands:
+                    substitutions.extend(
+                        command_substitutions(
+                            "".join(body), quotes_are_literal=True
+                        )
+                    )
+                pending.pop(0)
+                body = []
+            elif expands:
+                body.append(line)
+            if line.endswith("\r\n"):
+                result.append("\r\n")
+            elif line.endswith("\n"):
+                result.append("\n")
+            continue
+
+        result.append(line)
+        pending.extend(heredoc_delimiters(line))
+    if pending and pending[0][2]:
+        substitutions.extend(
+            command_substitutions("".join(body), quotes_are_literal=True)
+        )
+    return "".join(result), substitutions
+
+
+def shell_words(command: str) -> list[str] | None:
+    """Tokenize shell syntax without expanding or executing any part of it."""
+    lexer = shlex.shlex(
+        without_shell_comments(command),
+        posix=True,
+        punctuation_chars=";&|()\n`<>",
+    )
+    lexer.whitespace = " \t\r"
+    lexer.whitespace_split = True
+    lexer.commenters = ""
+    try:
+        return list(lexer)
+    except ValueError:
+        return None
+
+
+def simple_commands(words: list[str]) -> list[list[str]]:
+    commands: list[list[str]] = []
+    command: list[str] = []
+    for word in words:
+        if word and all(character in SHELL_SEPARATORS for character in word):
+            if command:
+                commands.append(command)
+                command = []
+        else:
+            command.append(word)
+    if command:
+        commands.append(command)
+    return commands
+
+
+def skip_redirection(words: list[str], index: int) -> int | None:
+    """Return the word after a leading redirection, or None when absent."""
+    redirections = {"<", ">", "<<", ">>", "<<<", "<>", ">&", "<&", "&>", "&>>"}
+    if words[index] in redirections:
+        return index + 2 if index + 1 < len(words) else len(words)
+    if (
+        words[index].isdigit()
+        and index + 1 < len(words)
+        and words[index + 1] in redirections
+        and not words[index + 1].startswith("&")
+    ):
+        return index + 3 if index + 2 < len(words) else len(words)
+    return None
+
+
+def consume_option_value(words: list[str], index: int) -> int:
+    """Advance past an option and its value, skipping interleaved redirections."""
+    index += 1
+    while index < len(words):
+        redirected = skip_redirection(words, index)
+        if redirected is None:
+            break
+        index = redirected
+    return index + 1
+
+
+def skip_wrapper_options(
+    words: list[str],
+    index: int,
+    *,
+    options_with_values: frozenset[str] = frozenset(),
+    terminal_options: frozenset[str] = frozenset({"--help", "--version"}),
+) -> int:
+    """Skip wrapper options and return the first possible command argument."""
+    while index < len(words):
+        word = words[index]
+        redirected = skip_redirection(words, index)
+        if redirected is not None:
+            index = redirected
+            continue
+        if word == "--":
+            return index + 1
+        if word in terminal_options:
+            return len(words)
+        if word in options_with_values:
+            index = consume_option_value(words, index)
+            continue
+        if word.startswith("-") and word != "-":
+            index += 1
+            continue
+        break
+    return index
+
+
+def unwrap_invocation(words: list[str]) -> list[str]:
+    """Remove assignments and common wrappers to expose the invoked command."""
+    index = 0
+    while index < len(words):
+        word = words[index]
+        if word in SHELL_RESERVED_PREFIXES or ASSIGNMENT.fullmatch(word):
+            index += 1
+            continue
+        redirected = skip_redirection(words, index)
+        if redirected is not None:
+            index = redirected
+            continue
+        break
+
+    if index >= len(words):
+        return []
+
+    executable = Path(words[index]).name
+    index += 1
+
+    if executable == "command":
+        while index < len(words) and words[index].startswith("-"):
+            option = words[index]
+            index += 1
+            if option in {"-v", "-V"}:
+                return []
+            if option == "--":
+                break
+        return unwrap_invocation(words[index:])
+
+    if executable in {"exec", "time"}:
+        options_with_values = (
+            {"-a"}
+            if executable == "exec"
+            else {"-o", "--output", "-f", "--format"}
+        )
+        while index < len(words):
+            word = words[index]
+            redirected = skip_redirection(words, index)
+            if redirected is not None:
+                index = redirected
+                continue
+            if word == "--":
+                index += 1
+                break
+            if word in options_with_values:
+                index = consume_option_value(words, index)
+                continue
+            if word.startswith("-"):
+                index += 1
+                continue
+            break
+        return unwrap_invocation(words[index:])
+
+    if executable == "env":
+        options_with_values = {"-u", "--unset", "-C", "--chdir", "-S", "--split-string"}
+        while index < len(words):
+            word = words[index]
+            redirected = skip_redirection(words, index)
+            if redirected is not None:
+                index = redirected
+                continue
+            if word == "--":
+                index += 1
+                break
+            if ASSIGNMENT.fullmatch(word):
+                index += 1
+                continue
+            if word in options_with_values:
+                index = consume_option_value(words, index)
+                continue
+            if word.startswith("-"):
+                index += 1
+                continue
+            break
+        return unwrap_invocation(words[index:])
+
+    if executable == "sudo":
+        options_with_values = {
+            "-C",
+            "--close-from",
+            "-g",
+            "--group",
+            "-h",
+            "--host",
+            "-p",
+            "--prompt",
+            "-R",
+            "--chroot",
+            "-r",
+            "--role",
+            "-t",
+            "--type",
+            "-u",
+            "--user",
+        }
+        while index < len(words):
+            word = words[index]
+            if word == "--":
+                index += 1
+                break
+            if word in options_with_values:
+                index = consume_option_value(words, index)
+                continue
+            if word.startswith("-"):
+                index += 1
+                continue
+            break
+        return unwrap_invocation(words[index:])
+
+    if executable == "nohup":
+        index = skip_wrapper_options(words, index)
+        return unwrap_invocation(words[index:])
+
+    if executable == "setsid":
+        index = skip_wrapper_options(
+            words,
+            index,
+            terminal_options=frozenset({"-h", "--help", "-V", "--version"}),
+        )
+        return unwrap_invocation(words[index:])
+
+    if executable == "timeout":
+        index = skip_wrapper_options(
+            words,
+            index,
+            options_with_values=frozenset(
+                {"-k", "--kill-after", "-s", "--signal"}
+            ),
+        )
+        if index < len(words):
+            index += 1
+        return unwrap_invocation(words[index:])
+
+    if executable == "nice":
+        index = skip_wrapper_options(
+            words,
+            index,
+            options_with_values=frozenset({"-n", "--adjustment"}),
+        )
+        return unwrap_invocation(words[index:])
+
+    if executable == "stdbuf":
+        index = skip_wrapper_options(
+            words,
+            index,
+            options_with_values=frozenset(
+                {"-i", "--input", "-o", "--output", "-e", "--error"}
+            ),
+        )
+        return unwrap_invocation(words[index:])
+
+    if executable == "xargs":
+        index = skip_wrapper_options(
+            words,
+            index,
+            options_with_values=frozenset(
+                {
+                    "-a",
+                    "--arg-file",
+                    "-d",
+                    "--delimiter",
+                    "-E",
+                    "--eof",
+                    "-I",
+                    "--replace",
+                    "-L",
+                    "--max-lines",
+                    "-n",
+                    "--max-args",
+                    "-P",
+                    "--max-procs",
+                    "--process-slot-var",
+                    "-s",
+                    "--max-chars",
+                }
+            ),
+        )
+        return unwrap_invocation(words[index:])
+
+    return [words[index - 1], *words[index:]]
+
+
+def next_positional(words: list[str], index: int) -> tuple[str | None, int]:
+    while index < len(words):
+        word = words[index]
+        redirected = skip_redirection(words, index)
+        if redirected is not None:
+            index = redirected
+            continue
+        if word == "--":
+            index += 1
+            break
+        if word in GH_OPTIONS_WITH_VALUES:
+            index = consume_option_value(words, index)
+            continue
+        if any(word.startswith(f"{option}=") for option in GH_OPTIONS_WITH_VALUES):
+            index += 1
+            continue
+        if word.startswith("-"):
+            index += 1
+            continue
+        return word, index + 1
+    if index < len(words):
+        return words[index], index + 1
+    return None, index
+
+
+def is_gh_pr_merge(arguments: list[str]) -> bool:
+    command, index = next_positional(arguments, 0)
+    if command != "pr":
+        return False
+    subcommand, _ = next_positional(arguments, index)
+    return subcommand == "merge"
+
+
+def segment_invokes_merge(words: list[str], depth: int) -> bool:
+    invocation = unwrap_invocation(words)
+    if not invocation:
+        return False
+
+    executable = Path(invocation[0]).name
+    arguments = invocation[1:]
+    if executable == "gh":
+        return is_gh_pr_merge(arguments)
+
+    if depth >= 3:
+        return False
+    if executable in {"bash", "dash", "sh", "zsh"}:
+        for index, option in enumerate(arguments):
+            if option == "--":
+                continue
+            if option.startswith("-") and not option.startswith("--") and "c" in option[1:]:
+                if index + 1 < len(arguments):
+                    return invokes_gh_pr_merge(arguments[index + 1], depth + 1)
+                return False
+            if not option.startswith("-"):
+                return False
+    if executable == "eval" and arguments:
+        return invokes_gh_pr_merge(" ".join(arguments), depth + 1)
+    return False
+
+
+def invokes_gh_pr_merge(command: str, depth: int = 0) -> bool:
+    stripped_command, heredoc_substitutions = without_heredoc_bodies(command)
+    words = shell_words(stripped_command)
+    if words is None:
+        return False
+    if any(segment_invokes_merge(segment, depth) for segment in simple_commands(words)):
+        return True
+    if depth >= 3:
+        return False
+    substitutions = [
+        *heredoc_substitutions,
+        *command_substitutions(without_shell_comments(stripped_command)),
+    ]
+    return any(
+        invokes_gh_pr_merge(substitution, depth + 1)
+        for substitution in substitutions
+    )
+
+
+def resolved_target(payload: dict[str, Any], tool_input: dict[str, Any]) -> Path | None:
+    raw_path = next(
+        (
+            tool_input[key]
+            for key in ("file_path", "notebook_path", "path")
+            if isinstance(tool_input.get(key), str) and tool_input[key]
+        ),
+        None,
+    )
+    if raw_path is None:
+        return None
+
+    target = Path(raw_path)
+    if not target.is_absolute():
+        raw_cwd = payload.get("cwd")
+        if isinstance(raw_cwd, str) and Path(raw_cwd).is_absolute():
+            base = Path(raw_cwd)
+        else:
+            base = repository_root()
+        target = base / target
+    try:
+        return target.resolve(strict=False)
+    except (OSError, RuntimeError, ValueError):
+        return None
+
+
+def repository_root() -> Path:
+    return Path(__file__).resolve().parent.parent
+
+
+def is_managed_backlog_markdown(payload: dict[str, Any], tool_input: dict[str, Any]) -> bool:
+    target = resolved_target(payload, tool_input)
+    if target is None or target.suffix != ".md":
+        return False
+    backlog = (repository_root() / "backlog").resolve()
+    try:
+        relative = target.relative_to(backlog)
+    except ValueError:
+        return False
+    is_plan_asset = relative.parts[:3] == ("docs", "plans", "assets")
+    return not is_plan_asset
+
+
+def load_payload() -> dict[str, Any] | None:
+    try:
+        payload = json.load(sys.stdin)
+    except (json.JSONDecodeError, OSError, RecursionError, UnicodeError):
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def main() -> int:
+    payload = load_payload()
+    if payload is None:
+        return 0
+    tool_name = payload.get("tool_name")
+    tool_input = payload.get("tool_input")
+    if not isinstance(tool_name, str) or not isinstance(tool_input, dict):
+        return 0
+
+    command = tool_input.get("command")
+    if tool_name == "Bash" and isinstance(command, str) and invokes_gh_pr_merge(command):
+        print(MERGE_REASON, file=sys.stderr)
+        return 2
+    if tool_name in EDIT_TOOLS and is_managed_backlog_markdown(payload, tool_input):
+        print(BACKLOG_REASON, file=sys.stderr)
+        return 2
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

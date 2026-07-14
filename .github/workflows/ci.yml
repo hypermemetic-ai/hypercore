@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  bpmn-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Install BPMN pipeline dependencies
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: "true"
+        run: npm ci --prefix tools/bpmn-pipeline
+      - name: Run BPMN pipeline tests
+        env:
+          QQ_BPMN_SKIP_RENDER: "1"
+        run: npm test --prefix tools/bpmn-pipeline
+
+  shell-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+      - name: Run shell tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test_script in tests/test-*.sh; do
+            bash "$test_script"
+          done
