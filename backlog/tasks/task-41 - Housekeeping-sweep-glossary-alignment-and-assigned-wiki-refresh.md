@@ -1,9 +1,10 @@
 ---
 id: TASK-41
 title: 'Housekeeping sweep: glossary alignment and assigned wiki refresh'
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-07-14 22:47'
+updated_date: '2026-07-15 01:00'
 labels: []
 dependencies:
   - TASK-39
