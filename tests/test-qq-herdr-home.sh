@@ -191,6 +191,12 @@ grep -Fq -- 'herdr agent wait <name> --status idle' \
   "$ROOT/skills/agent-messaging/SKILL.md"
 grep -Fq -- 'herdr notification show "<title>" --body "<body>" --sound <sound>' \
   "$ROOT/skills/agent-messaging/SKILL.md"
+tr '\n\t' '  ' <"$ROOT/CONCEPTS.md" | \
+  grep -Fq "**agent messaging** — Direct coordination between live agents across runtimes through herdr's list, send, read, and wait operations, plus operator-visible notifications outside any transcript. It does not start, own, or retire agents."
+tr '\n\t' '  ' <"$ROOT/CONCEPTS.md" | \
+  grep -qE "\\*\\*work order\\*\\* — One complete work-order brief per delegated ticket: the delegate's complete orientation and the plan bound, carrying .*the required completion envelope\\."
+tr '\n\t' '  ' <"$ROOT/CONCEPTS.md" | \
+  grep -qE "\\*\\*completion envelope\\*\\* — Every delegate's final message must report per-ticket status, commits, files changed, Checks run with results, .*The owner must verify every claim against the tree; an envelope claim is not yet evidence\\."
 grep -Fq -- "-c 'skills.include_instructions=false'" "$ROOT/skills/code-review/SKILL.md"
 grep -Fq -- "-c 'skills.bundled.enabled=false'" "$ROOT/skills/code-review/SKILL.md"
 grep -Fq -- '--sandbox read-only' "$ROOT/skills/code-review/SKILL.md"

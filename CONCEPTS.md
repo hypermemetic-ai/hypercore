@@ -50,8 +50,21 @@ observed the intended subject.
 derives findings from the Change and its intent without inheriting the author's
 working context or conclusions.
 
-**agent messaging** — Direct communication among agents through herdr's list,
-send, read, and wait operations, used whenever coordination helps.
+**agent messaging** — Direct coordination between live agents across runtimes
+through herdr's list, send, read, and wait operations, plus operator-visible
+notifications outside any transcript. It does not start, own, or retire agents.
+
+**work order** — One complete work-order brief per delegated ticket: the
+delegate's complete orientation and the plan bound, carrying the ticket and its
+acceptance criteria, exact orientation paths and reconciliation facts the owner
+already verified, hard constraints, the per-ticket commit protocol, the exact
+Checks to run, and the required completion envelope.
+
+**completion envelope** — Every delegate's final message must report per-ticket
+status, commits, files changed, Checks run with results, decisions taken that
+the operator might contest, open questions, unresolved risks, and the branch
+and worktree that contain the work. The owner must verify every claim against
+the tree; an envelope claim is not yet evidence.
 
 **silent failure** — A command that succeeds or produces plausible output while
 answering a different question from the one intended.
