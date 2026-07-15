@@ -4,7 +4,7 @@ title: Give agents a dedicated machine identity for merges
 status: Done
 assignee: []
 created_date: '2026-07-14 17:39'
-updated_date: '2026-07-15 23:29'
+updated_date: '2026-07-15 23:37'
 labels: []
 dependencies:
   - TASK-36
@@ -36,10 +36,12 @@ Bypass-scope decision for the implementer: ruleset bypass lists cannot name indi
 
 <!-- SECTION:NOTES:BEGIN -->
 Implemented 2026-07-15/16. Machine account qqp-bot (id 305644191) created by operator; invited as write collaborator and accepted; gh device-flow auth captured agent-side (scopes repo, read:org, admin:public_key, workflow; token stored in gh keyring, temp file shredded). Dedicated SSH key ~/.ssh/qqp-bot registered (key id 157418022); repo core.sshCommand pins it (applies to all worktrees), ssh -T answers 'Hi qqp-bot!'; gh active account qqp-bot. New ruleset 19016968 'main: ref updates by operators only' (active, update rule, bypass: repository admins) alongside untouched 18942749. AC2 evidence on scratch PR #92 (closed unmerged, branch deleted): API merge attempt as qqp-bot with green checks -> HTTP 405 'Cannot update this protected ref'; direct push to main -> GH013 remote rejection. AC3: 18942749 verified unchanged; qqp-dev retains admin bypass; the operator's browser merge of this finalization PR is the live re-proof. Bypass scope decision (operator, 2026-07-15): repository-admin role, not a single-account team. Note: merge-rejection probe used the pulls/merge API deliberately, expecting rejection — the guarded 'gh pr merge' idiom was not used.
+
+Mechanism correction (2026-07-16, after operator hit 'unable to merge' on PR 93): the ruleset 'update' rule blocks the PR merge box even for bypass actors — mergeStateStatus stayed BLOCKED for qqp-dev under both bypass_mode always and pull_request, despite current_user_can_bypass=always. Ruleset 19016968 was deleted and replaced by classic branch protection on main restricting pushes to the three admin accounts (qqp-dev, hypermemetic, sshmendez — same operator-decided scope); ruleset 18942749 unchanged. With the restriction in place, qqp-dev's merge state is CLEAN. AC2 re-verified under the final mechanism on scratch PR #94 (closed unmerged): green checks, API merge as qqp-bot -> HTTP 405 'You're not authorized to push to this branch.'
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
 
 <!-- SECTION:FINAL_SUMMARY:BEGIN -->
-Agents on this machine now authenticate to GitHub as the dedicated machine account qqp-bot, and GitHub itself rejects agent-credential merges. Delivered: operator-created qqp-bot as write collaborator; agent-side device-flow auth, dedicated SSH key, repo-pinned push identity, gh active-account switch; ruleset 19016968 restricting main ref updates to repository admins (operator-decided bypass scope) alongside the unchanged PR-plus-green-checks ruleset 18942749. Verified live: SSH and gh identify as qqp-bot; a green scratch PR's merge attempt with agent credentials returned HTTP 405 and a direct push GH013 (PR #92, closed unmerged); operator browser merges continue via admin bypass, re-proven by this PR's own merge.
+Agents on this machine now authenticate to GitHub as the dedicated machine account qqp-bot, and GitHub itself rejects agent-credential merges. Delivered: operator-created qqp-bot as write collaborator; agent-side device-flow auth, dedicated SSH key, repo-pinned push identity, gh active-account switch; and classic branch protection on main restricting pushes/merges to the three admin accounts (operator-decided scope) alongside the unchanged PR-plus-green-checks ruleset 18942749. A ruleset-based update restriction was tried first and abandoned: its rule blocks the merge box even for bypass actors (operator UX failure observed live on this PR). Verified: SSH and gh identify as qqp-bot; merge attempts with agent credentials on green scratch PRs #92 and #94 returned HTTP 405 under each mechanism respectively; direct push rejected (GH013); operator merge state CLEAN, re-proven by this PR's own merge.
 <!-- SECTION:FINAL_SUMMARY:END -->
