@@ -11,9 +11,9 @@ qq is deliberately a thin harness. It composes upstream ownership surfaces inste
 - OpenWiki describes the current system.
 - codebase-memory maintains a derived structural graph outside the Repository.
 - herdr supplies named sessions and direct agent messaging.
-- The operator owns judgment, acceptance, and merge authority for ordinary source Changes; only the OpenWiki maintainer's fully revalidated, documentation-only Change has a guarded non-force self-merge exception.
+- The operator owns judgment, acceptance, and merge authority, including for OpenWiki documentation Changes.
 
-This boundary is the result of an explicit simplification. Recent history removed the former custom gate, phase, wave, frontier, registry, and orchestration machinery. The retained repository should be evaluated as a policy/knowledge/cockpit layer with a few narrow adapters—not as an incomplete workflow platform. The merge activator is one such adapter: it verifies a GitHub merge and wakes the separate OpenWiki maintainer, but does not own source delivery or merge authority.
+This boundary is the result of an explicit simplification. Recent history removed the former custom gate, phase, wave, frontier, registry, activation, and orchestration machinery. The retained repository should be evaluated as a policy/knowledge/cockpit layer with a few narrow adapters—not as an incomplete workflow platform. OpenWiki maintenance begins only from an explicit on-demand or scheduled assignment and produces an ordinary operator-merged documentation pull request (`skills/openwiki-maintainer/SKILL.md:8-35`).
 
 ## Major surfaces
 
@@ -44,7 +44,7 @@ OpenWiki and codebase-memory are upstream tools, not vendored qq subsystems. Der
 
 ### Operator layer
 
-`cockpit/` stores the human terminal surface for Herdr, yazi, broot, Glow, and shell navigation. `bin/install.sh` live-links cockpit files, Skills, and retained commands into user configuration, installs the BPMN pipeline dependencies, and registers the local OpenWiki activation protocol. Each Repository has one persistent Herdr **project home** bound to its sole primary `main` checkout; linked-worktree **work sessions** grouped beneath it contain Change-specific interaction. Each spawning agent retains a temporary delegate pane only through its final result and required follow-up, then closes the pane and verifies removal (`skills/agent-messaging/SKILL.md:32-35`; `skills/code-review/SKILL.md:94-99`; `skills/research/SKILL.md:22-24`). At terminal Change disposition, the accountable pane, operator-created panes and tabs, work-session workspace, and checkout remain for operator inspection and retirement (`skills/deliver-change/SKILL.md:122-132`). `bin/qq-herdr-home` validates the home boundary and its dedicated single-pane Backlog-board tab, while `bin/qq-herdr-pull` supports operator pane pulling and fail-fast adoption of a Change work session by its accountable agent (`bin/qq-herdr-home:38-140`; `bin/qq-herdr-pull:69-112`). Herdr organizes live interaction; Git worktrees remain the source of checkout identity and state.
+`cockpit/` stores the human terminal surface for Herdr, yazi, broot, Glow, and shell navigation. `bin/install.sh` live-links cockpit files, Skills, and retained commands into user configuration, installs the BPMN pipeline dependencies, and removes obsolete qq-owned OpenWiki protocol/userscript plumbing. Each Repository has one persistent Herdr **project home** bound to its sole primary `main` checkout; linked-worktree **work sessions** grouped beneath it contain Change-specific interaction. Review and research use fresh non-interactive Codex processes with OS read-only access; process exit retires them, while `agent-messaging` is limited to already-live cross-runtime coordination and operator notifications (`skills/code-review/SKILL.md:54-84`; `skills/research/SKILL.md:8-35`; `skills/agent-messaging/SKILL.md:8-18`). At terminal Change disposition, the accountable pane, operator-created panes and tabs, work-session workspace, and checkout remain for operator inspection and retirement (`skills/deliver-change/SKILL.md:114-124`). `bin/qq-herdr-home` validates the home boundary and its dedicated single-pane Backlog-board tab, while `bin/qq-herdr-pull` supports operator pane pulling and fail-fast adoption of a Change work session by its accountable agent (`bin/qq-herdr-home:38-140`; `bin/qq-herdr-pull:69-112`). Herdr organizes live interaction; Git worktrees remain the source of checkout identity and state.
 
 ## Data and state boundaries
 
@@ -66,7 +66,9 @@ Create or edit `skills/<name>/SKILL.md`, keep it stateless and trigger-driven, v
 
 ### Add a command or cockpit surface
 
-Commands and cockpit files are explicitly linked in `bin/install.sh`; adding a file alone does not install it. Update `cockpit/README.md` when changing the human interaction surface. Preserve the installer’s refusal rule: it must not overwrite paths it does not manage. OpenWiki activation also crosses browser, desktop-protocol, GitHub CLI, Herdr, and dedicated-worktree boundaries, so changes require end-to-end eligibility and deduplication tests.
+Commands and cockpit files are explicitly linked in `bin/install.sh`; adding a file alone does not install it. Update `cockpit/README.md` when changing the human interaction surface. Preserve the installer’s refusal rule: it must not overwrite paths it does not manage. The installer also performs surgical retirement cleanup for qq-owned MIME, desktop-entry, and userscript artifacts while preserving unrelated user configuration (`bin/install.sh:93-224`; `tests/test-install-cleanup.sh`).
+
+Claude Code loads `.claude/settings.json`, which invokes `bin/qq-claude-guard` as a narrow `PreToolUse` drift-net. It blocks recognizable `gh pr merge` shell invocations and direct edit-tool writes to Backlog-managed Markdown, but explicitly does not claim to be a security boundary or cover shell-mediated Backlog writes. Treat it as an accidental-violation adapter with declared limits, not authoritative resource-layer enforcement (`bin/qq-claude-guard:4-31`, `808-929`; `CONCEPTS.md:59-63`).
 
 ### Add knowledge
 

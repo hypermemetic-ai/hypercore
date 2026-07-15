@@ -1,6 +1,6 @@
 # qq OpenWiki quickstart
 
-qq is an operator-owned harness for agentic software development. It is not an application server or autonomous workflow engine: it supplies shared language, operating guidance, stateless agent skills, durable knowledge surfaces, terminal preferences, and a few installation and workflow utilities. The human operator retains intent, judgment, acceptance, and merge authority for ordinary source Changes; the sole narrow exception is the OpenWiki maintainer's fully revalidated, documentation-only Change, which may use its guarded non-force merge path. See [`README.md`](../README.md), [`CONCEPTS.md`](../CONCEPTS.md), and [`AGENTS.md`](../AGENTS.md).
+qq is an operator-owned harness for agentic software development. It is not an application server or autonomous workflow engine: it supplies shared language, operating guidance, stateless agent skills, durable knowledge surfaces, terminal preferences, and a few installation and workflow utilities. The human operator retains intent, judgment, acceptance, and merge authority; OpenWiki refreshes also end in an ordinary documentation pull request for operator review and merge. See [`README.md`](../README.md), [`CONCEPTS.md`](../CONCEPTS.md), and [`AGENTS.md`](../AGENTS.md).
 
 ## The model
 
@@ -30,7 +30,7 @@ The shared operating floor is in [`AGENTS.md`](../AGENTS.md); it does not mandat
 
 - [Architecture and knowledge model](architecture.md) — system boundaries, ownership, repository surfaces, and extension points.
 - [Workflows](workflows.md) — orientation, Task-to-Change delivery, review, research, diagnosis, UAT, and knowledge capture.
-- [Skill catalog](skills.md) — triggers, responsibilities, and change guidance for the eleven current Skills.
+- [Skill catalog](skills.md) — triggers, responsibilities, and change guidance for the twelve current Skills.
 - [Operations](operations.md) — installation, cockpit, Herdr workspace movement, and knowledge maintenance.
 - [Verification](verification.md) — required checks, review sequence, coverage gaps, and risk-focused validation.
 
@@ -43,7 +43,7 @@ The shared operating floor is in [`AGENTS.md`](../AGENTS.md); it does not mandat
 - the root-level Backlog `Ideas` document — verbatim idea capture.
 - Backlog `plans`, `research`, and `solutions` document categories — historical designs, cited evidence, and reusable lessons.
 - `cockpit/` — source-controlled human terminal configuration.
-- `bin/` — installer, guarded OpenWiki/diagram/activation commands, and Herdr pane movement.
+- `bin/` — installer, guarded OpenWiki and diagram commands, the Claude drift-net, and Herdr pane movement.
 
 ## Authority and historical context
 
