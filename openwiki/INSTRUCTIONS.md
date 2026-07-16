@@ -28,9 +28,10 @@ The operator reads it second; agents read it first.
 
 ## Diagrams
 
-BPMN process diagrams are governed by the authoring extension supplied on each
-run by `bin/qq-openwiki`; it carries the machine-specific publisher commands.
-This brief does not duplicate those instructions. Follow them as given.
+None. The wiki is prose-only: the BPMN toolchain and its authoring extension
+were removed from the Repository (TASK-55), and no diagram generation is part
+of a run. Do not generate, embed, or reference rendered diagrams. If diagrams
+return, this brief will say so explicitly.
 
 ## Boundaries
 

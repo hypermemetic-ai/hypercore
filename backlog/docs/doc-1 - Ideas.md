@@ -3,28 +3,12 @@ id: doc-1
 title: Ideas
 type: other
 created_date: '2026-07-10 20:56'
-updated_date: '2026-07-16 04:44'
+updated_date: '2026-07-16 19:11'
 tags:
   - ideas
 ---
 # Ideas
 
-## 2026-07-12 11:09
+## 2026-07-16 13:57
 
-the system context diagram was the only tolerable one. figure out why and whether we can justify including it.
-
-## 2026-07-12 15:05
-
-Add explicit flag handling to `bin/install.sh`: `--help` should display usage and exit without installing, and unsupported flags should be refused instead of silently running the installer.
-
-## 2026-07-15 23:24
-
-delegations sometimes hang invisibly.
-
-## 2026-07-15 23:43
-
-backlog board is always stale. if cause isn't obvious, test adversarially.
-
-## 2026-07-15 23:44
-
-bug: already on the orchestrator when not orchestrator
+new idea, probably a skill. The idea here is that sometimes work needs operator input. This might mean going to websites or answering questions, copy-pasting some value from somewhere, updating a configuration. All of these should be made as easy as possible for the operator, even if it means doing a lot of work in the background to make that input step cheap.
