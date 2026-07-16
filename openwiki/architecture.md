@@ -13,7 +13,7 @@ qq is deliberately a thin harness. It composes upstream ownership surfaces inste
 - herdr supplies named sessions and direct agent messaging.
 - The operator owns judgment, acceptance, and merge authority, including for OpenWiki documentation Changes.
 
-This boundary is the result of an explicit simplification. Recent history removed the former custom gate, phase, wave, frontier, registry, activation, and orchestration machinery. The retained repository should be evaluated as a policy/knowledge/cockpit layer with a few narrow adapters—not as an incomplete workflow platform. OpenWiki maintenance begins only from an explicit on-demand or scheduled assignment and produces an ordinary operator-merged documentation pull request (`skills/openwiki-maintainer/SKILL.md:8-35`).
+This boundary is the result of an explicit simplification. Recent history removed the former custom gate, phase, wave, frontier, registry, activation, and orchestration machinery. The retained repository should be evaluated as a policy/knowledge/cockpit layer with a few narrow adapters—not as an incomplete workflow platform. OpenWiki maintenance begins only from an explicit on-demand or scheduled assignment and produces an ordinary operator-merged documentation pull request (`skills/openwiki-maintainer/SKILL.md:8-32`).
 
 ## Major surfaces
 
@@ -44,7 +44,7 @@ OpenWiki and codebase-memory are upstream tools, not vendored qq subsystems. Der
 
 ### Operator layer
 
-`cockpit/` stores the human terminal surface for Herdr, yazi, broot, Glow, and shell navigation. `bin/install.sh` live-links cockpit files, Skills, and retained commands into user configuration and removes obsolete qq-owned OpenWiki protocol/userscript plumbing. Each Repository has one persistent Herdr **project home** bound to its sole primary `main` checkout; linked-worktree **work sessions** grouped beneath it contain Change-specific interaction. Review and research use fresh non-interactive Codex processes with OS read-only access; process exit retires them, while `agent-messaging` is limited to already-live cross-runtime coordination and operator notifications (`skills/code-review/SKILL.md:54-84`; `skills/research/SKILL.md:8-35`; `skills/agent-messaging/SKILL.md:8-18`). At terminal Change disposition, the accountable pane, operator-created panes and tabs, work-session workspace, and checkout remain for operator inspection and retirement (`skills/deliver-change/SKILL.md:114-124`). `bin/qq-herdr-home` validates the home boundary and its dedicated single-pane Backlog-board tab, while `bin/qq-herdr-pull` supports operator pane pulling and fail-fast adoption of a Change work session by its accountable agent (`bin/qq-herdr-home:38-140`; `bin/qq-herdr-pull:69-112`). Herdr organizes live interaction; Git worktrees remain the source of checkout identity and state.
+`cockpit/` stores the human terminal surface for Herdr, yazi, broot, Glow, and shell navigation. `bin/install.sh` live-links cockpit files, Skills, and retained commands into user configuration and removes obsolete qq-owned OpenWiki protocol/userscript plumbing. Each Repository has one persistent Herdr **project home** bound to its sole primary `main` checkout; linked-worktree **work sessions** grouped beneath it contain Change-specific interaction. Review and research use fresh non-interactive Codex processes with OS read-only access; process exit retires them, while `agent-messaging` is limited to already-live cross-runtime coordination and operator notifications (`skills/code-review/SKILL.md:54-84`; `skills/research/SKILL.md:8-35`; `skills/agent-messaging/SKILL.md:8-18`). After a verified merged disposition and primary-`main` synchronization, `deliver-change` retires the Change work session, linked checkout, and branch at source only when strict cleanliness, ancestry, ownership, pane, and focus rails all pass; a tripped rail or any other terminal disposition preserves them for operator inspection (`skills/deliver-change/SKILL.md:121-188`). `bin/qq-herdr-home` validates the home boundary and its dedicated single-pane Backlog-board tab, `bin/qq-herdr-pull` supports operator pane pulling and fail-fast work-session adoption, and `bin/qq-herdr-snap` gives the operator a best-effort orchestrator/bounce navigation shortcut (`bin/qq-herdr-home:38-140`; `bin/qq-herdr-pull:69-112`; `bin/qq-herdr-snap`). Herdr organizes live interaction; Git worktrees remain the source of checkout identity and state.
 
 ## Data and state boundaries
 
@@ -54,7 +54,7 @@ qq has no application database or internal service API. Durable state is intenti
 - Backlog owns Task, authored-document, and decision records.
 - Herdr workspaces and named sessions hold live terminal placement, not Repository truth.
 - Agent runtime configuration and credentials live outside the Repository.
-- Temporary OpenWiki instruction-file snapshots are durable external state under `${XDG_STATE_HOME:-$HOME/.local/state}/qq/openwiki/`, keyed by Git common directory so a later invocation can safely restore the recorded originating worktree after interruption (`bin/qq-openwiki:100-126`, `131-212`).
+- Temporary OpenWiki instruction-file snapshots are durable external state under `${XDG_STATE_HOME:-$HOME/.local/state}/qq/openwiki/`, keyed by Git common directory so a later invocation can safely restore the recorded originating worktree after interruption (`bin/qq-openwiki:64-101`, `108-189`, `214-253`).
 - OpenWiki credentials stay under `~/.openwiki/` and must never be committed.
 - codebase-memory’s graph is external and derived; indexing may need refresh after material branch or uncommitted changes.
 
@@ -62,11 +62,11 @@ qq has no application database or internal service API. Durable state is intenti
 
 ### Add or change a Skill
 
-Create or edit `skills/<name>/SKILL.md`, keep it stateless and trigger-driven, validate it with Codex’s `skill-creator` validator, then rerun `bash bin/install.sh`. The installer discovers Skill directories automatically and synchronizes qq-owned links for both Codex and Claude Code, pruning dead links in each runtime (`bin/install.sh:43-65`, `132-134`).
+Create or edit `skills/<name>/SKILL.md`, keep it stateless and trigger-driven, validate it with Codex’s `skill-creator` validator, then rerun `bash bin/install.sh`. The installer discovers Skill directories automatically and synchronizes qq-owned links for both Codex and Claude Code, pruning dead links in each runtime (`bin/install.sh:80-102`, `240-241`).
 
 ### Add a command or cockpit surface
 
-Commands and cockpit files are explicitly linked in `bin/install.sh`; adding a file alone does not install it. Update `cockpit/README.md` when changing the human interaction surface. Preserve the installer’s refusal rule: it must not overwrite paths it does not manage. The installer also performs surgical retirement cleanup for qq-owned MIME, desktop-entry, and userscript artifacts while preserving unrelated user configuration (`bin/install.sh:93-224`; `tests/test-install-cleanup.sh`).
+Commands and cockpit files are explicitly linked in `bin/install.sh`; adding a file alone does not install it. Update `cockpit/README.md` when changing the human interaction surface. Preserve the installer’s refusal rule: it must not overwrite paths it does not manage. The installer also performs surgical retirement cleanup for qq-owned MIME, desktop-entry, and userscript artifacts while preserving unrelated user configuration (`bin/install.sh:59-78`, `122-257`; `tests/test-install-cleanup.sh`).
 
 Claude Code loads `.claude/settings.json`, which invokes `bin/qq-claude-guard` as a narrow `PreToolUse` drift-net. It blocks recognizable `gh pr merge` shell invocations and direct edit-tool writes to Backlog-managed Markdown, but explicitly does not claim to be a security boundary or cover shell-mediated Backlog writes. Treat it as an accidental-violation adapter with declared limits, not authoritative resource-layer enforcement (`bin/qq-claude-guard:4-31`, `808-929`; `CONCEPTS.md:59-63`).
 
@@ -81,7 +81,7 @@ present-system description belongs in this wiki.
 
 ### Support another runtime
 
-Keep content runtime-neutral and expose it through each runtime’s native instruction and skill discovery. The installer currently wires Skills into Codex (`~/.codex/skills`) and Claude Code (`~/.claude/skills`); any additional runtime needs equivalent native wiring rather than a new qq-owned compatibility engine (`bin/install.sh:132-134`).
+Keep content runtime-neutral and expose it through each runtime’s native instruction and skill discovery. The installer currently wires Skills into Codex (`~/.codex/skills`) and Claude Code (`~/.claude/skills`); any additional runtime needs equivalent native wiring rather than a new qq-owned compatibility engine (`bin/install.sh:80-102`, `240-241`).
 
 ## Change hazards
 
