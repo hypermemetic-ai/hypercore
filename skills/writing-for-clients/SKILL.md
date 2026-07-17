@@ -1,6 +1,12 @@
 ---
 name: writing-for-clients
-description: The register for everything a client reads — a deck, a website, a proposal, a client email, in any project. Titles that state the fact, particulars over adjectives, honesty kept, self-praise out — the practical voice that earns a buyer's trust. Load before drafting, revising, or judging client-facing material, and before any language-hardening pass on one. Triggers: deck, presentation, slides, website, landing page, proposal, pitch, client email.
+description: >-
+  The register for everything a client reads — a deck, a website, a proposal,
+  a client email, in any project. Titles that state the fact, particulars over
+  adjectives, honesty kept, self-praise out — the practical voice that earns a
+  buyer's trust. Load before drafting, revising, or judging client-facing
+  material, and before any language-hardening pass on one. Triggers: deck,
+  presentation, slides, website, landing page, proposal, pitch, client email.
 ---
 
 # writing-for-clients
