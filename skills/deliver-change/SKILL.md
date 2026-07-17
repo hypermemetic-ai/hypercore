@@ -111,8 +111,14 @@ delegated agents bounded assignments; do not hand them this lifecycle.
    rejects it, report that disposition and apply step 6.
 11. After a merged disposition is verified, use `git worktree list --porcelain`
    to find the local checkout registered for `refs/heads/main`. Require exactly
-   one such checkout, an empty `git status --porcelain --untracked-files=all`,
-   and symbolic `HEAD` on `refs/heads/main`. Establish exclusive use of that
+   one such checkout and symbolic `HEAD` on `refs/heads/main`. Require every
+   line of `git status --porcelain --untracked-files=all` to be an untracked
+   managed Task record under `backlog/tasks/`: the hybrid Task-truth
+   convention (doc-48) keeps in-flight records there by design, and Git
+   itself refuses a fast-forward that would overwrite an untracked path, so
+   the records cannot be silently clobbered. Any tracked modification or any
+   other untracked entry still blocks the synchronization.
+   Establish exclusive use of that
    checkout before mutating it—coordinate through agent messaging when another
    Actor may hold it—and refuse synchronization while it is contested. With
    those preconditions satisfied,

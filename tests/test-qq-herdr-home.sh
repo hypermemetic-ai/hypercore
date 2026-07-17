@@ -219,6 +219,12 @@ fi
 if grep -Fq 'accountable pane' "$ROOT/skills/deliver-change/SKILL.md"; then
   fail 'deliver-change reintroduced an accountable pane inside the work session (it dispatches from the project home, T-70)'
 fi
+grep -Fq 'managed Task record under `backlog/tasks/`' "$ROOT/skills/deliver-change/SKILL.md"
+grep -Fq 'other untracked entry still blocks the synchronization' "$ROOT/skills/deliver-change/SKILL.md"
+if tr '\n\t' '  ' <"$ROOT/skills/deliver-change/SKILL.md" | \
+  grep -qE 'one such checkout, an empty `git status'; then
+  fail 'deliver-change step 11 regressed to the strict all-untracked sync rail (T-73)'
+fi
 if grep -Fq -- 'herdr agent start' "$ROOT/skills/agent-messaging/SKILL.md"; then
   fail "agent-messaging reintroduced delegate lifecycle machinery"
 fi
