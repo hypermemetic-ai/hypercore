@@ -12,8 +12,8 @@ points:
   tickets.
 - **Board-driven dispatch:** the operator asks the accountable session to work
   the to-do list. The accountable session stays in the project home as the
-  dispatcher—an explicit exception to deliver-change step 1—while every
-  writing ticket gets its own work session.
+  dispatcher—the same project-home posture deliver-change step 1 binds for a
+  single Change—while every writing ticket gets its own work session.
 
 In both modes, the operator talks to the accountable session. That session
 owns the batch, judgment, and delivery lifecycle.
@@ -101,12 +101,12 @@ Fable composes plans, briefs, and verdicts; codex executes within them.
 
 ## Report the batch on the status surface
 
-Follow doc-43 as amended 2026-07-16 round 4. Treat every visibility action as
+Follow doc-43 as amended 2026-07-16 round 5. Treat every visibility action as
 best-effort glass; it never gates dispatch, the envelope contract, or the
 single completion wake.
 
-Keep one status file per Repository per orchestrator work session, using the
-project-home dispatcher workspace in board-driven mode. From any path in a
+Keep one status file per Repository per dispatcher workspace — the project
+home in both modes. From any path in a
 primary or linked checkout, derive it exactly as follows:
 
 ```sh
@@ -156,7 +156,7 @@ herdr workspace report-metadata <ticket-work-session-id> \
   --seq <next-seq> --ttl-ms 7200000
 ```
 
-In board-driven mode, report each delegate on that work session's placeholder
+In both modes, report each delegate on its work session's placeholder
 root pane from dispatch until terminal disposition:
 
 ```sh
@@ -167,26 +167,15 @@ herdr pane report-agent <placeholder-pane-id> \
 
 Use `working` only while the delegate process is alive, `blocked` for a
 consequential-decision stop or failure awaiting disposition, and `idle` after
-a normal exit while envelope, review, and PR work continues. In migrated
-single-Change mode, report the same stage rollup on the accountable pane as
-well as its own work session:
-
-```sh
-herdr pane report-metadata <own-pane-id> \
-  --source qq-dispatch --token stage="<batch-rollup-one-liner>" \
-  --seq <next-seq> --ttl-ms 7200000
-```
+a normal exit while envelope, review, and PR work continues.
 
 When one work session hosts several delegates, make its single `stage` token a
 batch rollup: blocked or failed outranks every routine stage, and a routine
 update never overwrites a standing attention state. At the batch's terminal
-disposition, clear the workspace token and, in migrated mode, the accountable
-pane token; release each board-driven presence:
+disposition, clear the workspace token and release each delegate's presence:
 
 ```sh
 herdr workspace report-metadata <ticket-work-session-id> \
-  --source qq-dispatch --clear-token stage --seq <next-seq>
-herdr pane report-metadata <own-pane-id> \
   --source qq-dispatch --clear-token stage --seq <next-seq>
 herdr pane release-agent <placeholder-pane-id> \
   --source qq-dispatch --agent <label> --seq <next-seq>

@@ -29,18 +29,18 @@ delegated agents bounded assignments; do not hand them this lifecycle.
    --no-focus --json`; never omit `--base` and inherit an incidental `HEAD`.
    Require the returned workspace to be a linked worktree for the same
    Repository with `.label` equal to `<change-label>`, and retain its workspace
-   id and checkout path. Immediately run
-   `qq-herdr-pull --workspace <workspace-id>` from the accountable agent pane;
-   it safely no-ops when that pane is already there and otherwise refuses any
-   target except the workspace's sole idle shell placeholder. Stop before
-   Repository mutation if adoption fails. Moving a live terminal does not
-   change the agent process's working directory, so run every subsequent tool
-   in `<checkout-path>` (or use `git -C <checkout-path>`) and verify that path's
-   top level before editing. Treat the returned workspace as the Change's work
-   session: the current accountable conversation and every Change-specific tab,
-   pane, and delegated agent remain there. The project home stays on `main` with
-   its board and general-purpose tabs. Return to alignment before acting on any
-   new consequential decision.
+   id and checkout path. Stop before Repository mutation if the work session
+   cannot be attached or created. The accountable session dispatches from the
+   project home in every mode and never moves its own pane into the work
+   session; a single Change is a batch of one. The session's working directory
+   stays in the project home, so run every subsequent tool in `<checkout-path>`
+   (or use `git -C <checkout-path>`) and verify that path's top level before
+   editing. Treat the returned workspace as the Change's work session: it owns
+   the Change's checkout, its root placeholder pane, and every delegated
+   agent. The accountable conversation and every operator-facing tab stay in
+   the project home, which remains on `main` with its board and
+   general-purpose tabs. Return to alignment before acting on any new
+   consequential decision.
 2. Implement and verify coherent units, with execution codex-first: within
    plan bounds, compose one work-order brief for this Change's bounded
    implementation and dispatch it per delegate-batch's "Dispatch codex-first"
@@ -128,7 +128,7 @@ delegated agents bounded assignments; do not hand them this lifecycle.
    signal; changing operator focus is never part of ending a Change. Retire the
    Change at source only after steps 10–11 have verified a merged disposition
    and synchronized the primary `main` checkout. For any other terminal
-   disposition, report it and leave the accountable pane, every other pane and
+   disposition, report it and leave every pane and
    tab, the work session, checkout, and branch intact for inspection. Do not
    focus, move, or close any tab or pane, do not run `qq-herdr-home
    focus-board`, and do not invoke `herdr worktree remove` or `git worktree
@@ -150,16 +150,15 @@ delegated agents bounded assignments; do not hand them this lifecycle.
       the checkout now holds. Delete the branch later only with `git branch
       -d`, never `-D`, so Git independently re-enforces mergedness.
    4. If a Herdr work session exists for the Change, scope `herdr api snapshot`
-      and `herdr pane list --workspace <work-session-id>` to it. Require no live
-      agent there other than this executing session in migrated posture; in
-      board-driven dispatch, where the dispatcher pane is already in the
-      project home, require no live agent there at all. Require the snapshot's
+      and `herdr pane list --workspace <work-session-id>` to it. The
+      accountable session dispatches from the project home, so require no
+      live agent in the work session at all. Require the snapshot's
       focused workspace to differ from `<work-session-id>`: retiring a work
       session the operator is looking at would move operator focus, which
       ending a Change never does.
    5. For an existing work session, require exactly one tab and a pane census
-      containing only what this Change created: the root placeholder pane
-      and/or the accountable pane. Treat every
+      containing only what this Change created: the root placeholder pane.
+      Treat every
       unexplained pane or tab as operator-created and trip the rail; never close
       operator-created panes or tabs. If no work session exists, rails 4–5 have
       no subject; instead require evidence that this executing session owns the
@@ -173,20 +172,9 @@ delegated agents bounded assignments; do not hand them this lifecycle.
    worktree remove` or `git worktree remove`.
 
    Only with every rail green, retire in this order:
-   a. In migrated posture, if this executing session's own accountable pane is
-      inside the work session, first run `herdr pane move <own-pane-id> --tab
-      <home-board-or-general-tab-id> --split right --no-focus`. Resolve the
-      destination tab from the step-1 `qq-herdr-home inspect` result retained
-      for this Change, then re-resolve the calling terminal's live pane, tab,
-      and workspace ids and require them to prove the move into the project
-      home without changing operator focus. This is the sole deliberate
-      exception to the no-pane-move ending rule: it moves only the executing
-      session's own pane and uses `--no-focus`. In board-driven dispatch the
-      pane is already home; when the work session is absent there is no pane to
-      move from it; skip this move in either case.
-   b. If the work session exists, run `herdr worktree remove --workspace
+   a. If the work session exists, run `herdr worktree remove --workspace
       <work-session-id>` without `--force`. If it is absent, run `git worktree
       remove <checkout-path>` without `--force`. If either command refuses,
       report the observed state and stop; never retry with force.
-   c. Run `git -C <main-checkout> branch -d <branch>`; never use `-D`.
+   b. Run `git -C <main-checkout> branch -d <branch>`; never use `-D`.
       Do not perform a closing focus move.

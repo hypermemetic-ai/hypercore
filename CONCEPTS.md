@@ -33,15 +33,18 @@ replaces the complete list; it does not append to it.
 Checks to operator merge and automatic branch deletion.
 
 **project home** — A Repository's persistent Herdr workspace bound to its sole
-primary `main` checkout. Its dedicated Backlog-board tab and operator-created
-general tabs remain at this level; Change work does not.
+primary `main` checkout. Its dedicated Backlog-board tab, operator-created
+general tabs, and the accountable session dispatching every Change remain at
+this level; Change checkouts and delegated agents do not.
 
 **work session** — A linked-worktree Herdr workspace natively grouped beneath
-its Repository's project home. Its **change label** is an agent-chosen,
-operator-renameable recognizer matching `[A-Za-z0-9-]{1,15}`, unique among
-sibling work sessions and independent of branch or Task cardinality. One work
-session owns one worktree and all tabs, panes, and agents working on its Change
-until the operator explicitly retires it.
+its Repository's project home. Its **change label** is an
+agent-chosen, operator-renameable recognizer matching `[A-Za-z0-9-]{1,15}`,
+unique among sibling work sessions and independent of branch or Task
+cardinality. One work
+session owns one worktree, its root placeholder pane, and the delegated agents
+working on its Change until the operator explicitly retires it; the
+accountable session dispatches from the project home.
 
 **green** — A unit of work whose applicable Checks pass with evidence that they
 observed the intended subject.

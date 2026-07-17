@@ -3,7 +3,7 @@ id: doc-43
 title: Design — The delegate status surface
 type: specification
 created_date: '2026-07-15 02:51'
-updated_date: '2026-07-16 19:06'
+updated_date: '2026-07-17 02:45'
 tags:
   - design
   - delegation
@@ -530,3 +530,49 @@ round amends the feeds accordingly; sections not named here stand as written.
 4. **TTL alignment.** Sidebar `--ttl-ms` drops from 86400000 to 7200000,
    about twice the default dispatch bound: the backstop should outlive a
    contained wedge, not the workday.
+
+### 2026-07-16 — Round 5: the posture collapse (T-70)
+
+The operator collapsed the session-topology split this design still modeled
+as two modes. The accountable session now dispatches every Change from the
+project home; a single Change is a batch of one, and migrated single-Change
+mode is withdrawn entirely. Sections not named here stand as written.
+
+1. **Round 2's AC #4 posture disposition is superseded by name.**
+   "AC #4 — session-posture disposition: keep both postures; collapse is
+   trigger-gated" and its collapse trigger (the app-server lane's mid-turn
+   steering and delegate-survival triggers, with the posture re-decision
+   folded into that adapter Change) no longer stand. Neither trigger fired:
+   the operator collapsed the posture directly after T-48 made
+   single-Change execution codex-first and left the migration vestigial —
+   AC #4's cost argument (routing every small operator iteration through a
+   delegation boundary) had already been adopted as the operator-settled
+   engine/glass split, so the migrated posture bought nothing. The outcome
+   is the dispatch-only posture AC #4 named as presumptive, and AC #4's
+   accepted cost (an accountable pane left in the retired work session) is
+   moot: no pane ever enters the work session.
+2. **One posture, one writer.** Every "migrated single-Change mode" /
+   "migrated mode" provision is superseded by name: the round-2 coverage
+   claim ("Migrated single-Change mode is covered"), the round-1 status-pane
+   placement for "a migrated accountable session running headless helpers",
+   and the token write contract's "the migrated accountable session for its
+   own Change" writer. The `$stage` token's single writer is always the
+   project-home dispatcher, and the accountable-pane stage-token channel
+   (report and clear on the dispatcher's own pane) is removed — the
+   dispatcher's pane lives in the project home, whose rows are not Change
+   glass.
+3. **Presence reporting is universal.** Because no session migrates into the
+   work session, its root placeholder pane is never consumed: per-delegate
+   `herdr pane report-agent` presence and the blocked/failed color
+   escalation apply in both entry modes, not board-driven mode only. Round
+   1's ruling that sidebar reporting is skipped in migrated mode (live-agent
+   detection outranking reports) is moot — no live agent occupies the work
+   session.
+4. **Status file owner.** The status file's owning workspace is always the
+   project-home dispatcher workspace; the round-3 "orchestrator work
+   session" phrasing (a Change work session in migrated mode) is superseded.
+
+Companion edits land in deliver-change (step 1 binds the work session
+without moving the accountable pane; step 12's rails and retire order lose
+the migrated posture and the pane move-back) and delegate-batch
+(board-driven dispatch is no longer an exception to deliver-change step 1).

@@ -190,6 +190,36 @@ if tr '\n\t' '  ' <"$ROOT/skills/deliver-change/SKILL.md" | \
   grep -qE 'qq-herdr-home +focus-board +--repo'; then
   fail 'deliver-change reintroduced the disposition-time focus-board invocation (focus-board is operator-invocable only)'
 fi
+
+grep -Fq 'dispatches from the project home' "$ROOT/skills/deliver-change/SKILL.md"
+grep -Fq 'dispatches from the project home' "$ROOT/CONCEPTS.md"
+tr '\n\t' '  ' <"$ROOT/skills/delegate-batch/SKILL.md" | \
+  grep -qE 'In both modes, report each delegate on its work session.s placeholder +root pane'
+if grep -Fq 'qq-herdr-pull' "$ROOT/skills/deliver-change/SKILL.md"; then
+  fail 'deliver-change reintroduced the qq-herdr-pull migration (the accountable session dispatches from the project home, T-70)'
+fi
+if grep -qiE 'migrat' "$ROOT/skills/deliver-change/SKILL.md" "$ROOT/skills/delegate-batch/SKILL.md"; then
+  fail 'a skill reintroduced the migrated posture (collapsed to the universal project-home dispatcher, T-70)'
+fi
+if grep -Fq -- '<own-pane-id>' "$ROOT/skills/delegate-batch/SKILL.md"; then
+  fail 'delegate-batch reintroduced the accountable-pane stage-token channel (removed by the posture collapse, T-70)'
+fi
+if grep -Fq 'herdr pane move' "$ROOT/skills/deliver-change/SKILL.md"; then
+  fail 'deliver-change reintroduced a retire-time pane move (the retire order moves no pane, T-70)'
+fi
+grep -Fq 'posture deliver-change step 1 binds' "$ROOT/skills/delegate-batch/SKILL.md"
+tr '\n\t' '  ' <"$ROOT/cockpit/README.md" | \
+  grep -Fq 'their own conversation stays in the project home'
+if tr '\n\t' '  ' <"$ROOT/cockpit/README.md" | \
+  grep -qE 'move the current +conversation into the work session'; then
+  fail 'cockpit/README.md reintroduced the pane-migration flow (agents dispatch from the project home, T-70)'
+fi
+if grep -qE 'exception to deliver-change' "$ROOT/skills/delegate-batch/SKILL.md"; then
+  fail 'delegate-batch reintroduced the board-driven exception framing (one posture since T-70)'
+fi
+if grep -Fq 'accountable pane' "$ROOT/skills/deliver-change/SKILL.md"; then
+  fail 'deliver-change reintroduced an accountable pane inside the work session (it dispatches from the project home, T-70)'
+fi
 if grep -Fq -- 'herdr agent start' "$ROOT/skills/agent-messaging/SKILL.md"; then
   fail "agent-messaging reintroduced delegate lifecycle machinery"
 fi

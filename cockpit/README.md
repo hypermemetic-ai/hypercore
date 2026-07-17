@@ -47,9 +47,10 @@ change label matching `[A-Za-z0-9-]{1,15}`; the label is a recognizable UI
 handle, not a branch name or a claim that Tasks and Changes are one-to-one.
 Accountable agents validate the home with `qq-herdr-home inspect --repo
 <root>`, create or open the worktree from that home workspace with that label,
-then use `qq-herdr-pull --workspace <workspace-id>` to move the current
-conversation into the work session before Repository mutation. That mode fails
-loudly unless the target contains exactly one idle shell placeholder.
+and dispatch delegated work into it while their own conversation stays in the
+project home. `qq-herdr-pull --workspace <workspace-id>` is an
+operator-invocable mover, not part of the delivery flow; it fails loudly
+unless the target contains exactly one idle shell placeholder.
 
 At terminal Change disposition, the accountable and operator-created work panes
 stay intact for inspection and explicit operator retirement, and operator focus
