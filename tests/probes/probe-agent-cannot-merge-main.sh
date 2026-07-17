@@ -124,21 +124,12 @@ run_probe() (
   printf 'live_ruleset: '
   jq -c '{id, name, enforcement, bypass_actor_count: ((.bypass_actors // []) | length), required_checks: [.rules[]? | select(.type == "required_status_checks") | .parameters.required_status_checks[]?]}' "$tmp/ruleset.json"
 
-  gh api "repos/$repo/branches/main/protection" >"$tmp/protection.json"
-  if ! jq -e --arg actor "$actor" '
-    .restrictions != null
-    and (([.restrictions.users[]?.login] | index($actor)) == null)
-    and (([.restrictions.users[]?.login] | index("qqp-dev")) != null)
-    and (([.restrictions.users[]?.login] | index("hypermemetic")) != null)
-    and (([.restrictions.users[]?.login] | index("sshmendez")) != null)
-  ' "$tmp/protection.json" >/dev/null; then
-    printf 'CRITICAL: classic main protection no longer restricts updates to the three operator admin accounts\n'
-    jq '{restriction_users: [.restrictions.users[]?.login]}' "$tmp/protection.json"
-    exit 1
-  fi
-  printf 'live_push_restrictions: '
-  jq -c '{allowed_users: [.restrictions.users[]?.login]}' "$tmp/protection.json"
-  printf 'config_result: PASS — active default-branch rules require PRs and shell-tests; qqp-bot is not an allowed updater\n'
+  # The classic branch-protection endpoint that carries the operator-only push
+  # restriction is admin-scoped, so the write-only agent identity this probe
+  # runs as cannot read it (HTTP 404). That restriction is proven behaviorally,
+  # from the agent's side, by C2's GH013 direct-push rejection — the same rule
+  # firing — so C1 asserts only the agent-readable ruleset here.
+  printf 'config_result: PASS — active default-branch ruleset requires PRs and shell-tests (push restriction: see C2)\n'
 
   git -C "$ROOT" fetch --quiet origin \
     refs/heads/main:refs/remotes/origin/main

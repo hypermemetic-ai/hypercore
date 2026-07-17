@@ -9,7 +9,7 @@ observes the expected boundary behavior.
 
 | Contract | Probe or existing Check | Expected observable outcome | Evidence |
 |---|---|---|---|
-| Required CI green-gates `main` | [`probe-agent-cannot-merge-main.sh`](probe-agent-cannot-merge-main.sh), plus the `shell-tests` job in [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) | Live ruleset 18942749 is active on the default branch with no bypass actors, requires a PR and the GitHub Actions `shell-tests` status (integration 15368), and blocks deletion/non-fast-forward updates. Classic protection restricts updates to `qqp-dev`, `hypermemetic`, and `sshmendez`, excluding `qqp-bot`. The scratch PR's required Checks are green before C1 attempts its merge. | **Pending owner run.** C1 writes `evidence/<UTC-date>-c1-agent-cannot-merge-main.txt`. |
+| Required CI green-gates `main` | [`probe-agent-cannot-merge-main.sh`](probe-agent-cannot-merge-main.sh), plus the `shell-tests` job in [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) | Live ruleset 18942749 is active on the default branch with no bypass actors, requires a PR and the GitHub Actions `shell-tests` status (integration 15368), and blocks deletion/non-fast-forward updates. The scratch PR's required Checks are green before C1 attempts its merge. The operator-only push restriction (classic protection, admin-read-only) is proven from the agent side by C2's GH013 rejection, not re-read here. | **Pending owner run.** C1 writes `evidence/<UTC-date>-c1-agent-cannot-merge-main.txt`. |
 | C1 — agent credentials cannot merge `main` | [`probe-agent-cannot-merge-main.sh`](probe-agent-cannot-merge-main.sh) | With `gh` authenticated as `qqp-bot`, the REST `PUT /pulls/{number}/merge` attempt against a green, empty-commit scratch PR is rejected with HTTP 405. The PR is closed unmerged and its branch deleted. | **Pending owner run.** `evidence/<UTC-date>-c1-agent-cannot-merge-main.txt`. Historical baseline: T-37 observed HTTP 405 on green scratch PR #94. |
 | C2 — agent credentials cannot push `main` | [`probe-agent-cannot-push-main.sh`](probe-agent-cannot-push-main.sh) | A direct push of a harmless empty commit from the repo-pinned agent SSH identity is rejected with GH013, and the remote `main` SHA remains unchanged. The probe creates no scratch remote ref. | **Pending owner run.** `evidence/<UTC-date>-c2-agent-cannot-push-main.txt`. Historical baseline: T-37 observed GH013. |
 | C3 — structured edits to managed Backlog markdown get local feedback | [`probe-managed-backlog-feedback.sh`](probe-managed-backlog-feedback.sh) and [`tests/test-qq-claude-guard.sh`](../test-qq-claude-guard.sh) | A synthetic Claude Code `PreToolUse` `Edit` event targeting managed Backlog markdown is denied by the guard with exit 2, no stdout, and the one-line Backlog-CLI feedback on stderr. No Backlog file is opened or changed. | [`evidence/2026-07-17-c3-managed-backlog-feedback.txt`](evidence/2026-07-17-c3-managed-backlog-feedback.txt). |
@@ -36,8 +36,8 @@ bash tests/probes/probe-agent-cannot-push-main.sh
 bash tests/probes/probe-pr-handoff-url.sh
 ```
 
-The C1 command includes the live configuration re-query for the required-CI
-contract. It deliberately uses the REST API for the merge attempt, never
+The C1 command re-queries the agent-readable required-CI ruleset before it
+attempts the merge, and deliberately uses the REST API for that attempt, never
 `gh pr merge`.
 
 ## Mutation and cleanup safety

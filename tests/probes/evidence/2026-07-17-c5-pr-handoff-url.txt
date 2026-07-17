@@ -1,0 +1,17 @@
+probe: C5 PR handoff yields a usable URL
+captured_utc: 2026-07-17T18:34:25Z
+authenticated_actor: qqp-bot
+repository: hypermemetic-ai/qq
+remote: 
+remote: Create a pull request for 'probe/t80-c5-20260717T183425Z-3970509' on GitHub by visiting:        
+remote:      https://github.com/hypermemetic-ai/qq/pull/new/probe/t80-c5-20260717T183425Z-3970509        
+remote: 
+Warning: 2 uncommitted changes
+harmless_empty_commit: 4dce0a0688c08e317afc46af6c42acda731e0f1e
+handoff_url: https://github.com/hypermemetic-ai/qq/pull/130
+url_resolution: PASS — URL resolves to the expected open PR, branch, base, and head SHA
+cleanup: closed scratch PR #130
+cleanup: deleted scratch branch probe/t80-c5-20260717T183425Z-3970509
+cleanup: removed temporary detached worktree
+post_cleanup_url_state: CLOSED
+result: PASS — gh pr create yielded a usable URL and all scratch resources were cleaned

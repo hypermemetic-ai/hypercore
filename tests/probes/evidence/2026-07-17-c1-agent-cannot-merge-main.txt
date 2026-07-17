@@ -1,0 +1,56 @@
+probe: C1 agent credentials cannot merge main; live main green-gate config remains active
+captured_utc: 2026-07-17T18:37:15Z
+authenticated_actor: qqp-bot
+repository: hypermemetic-ai/qq
+live_ruleset: {"id":18942749,"name":"main: pull request with green checks","enforcement":"active","bypass_actor_count":0,"required_checks":[{"context":"shell-tests","integration_id":15368}]}
+config_result: PASS — active default-branch ruleset requires PRs and shell-tests (push restriction: see C2)
+remote: 
+remote: Create a pull request for 'probe/t80-c1-20260717T183715Z-3980182' on GitHub by visiting:        
+remote:      https://github.com/hypermemetic-ai/qq/pull/new/probe/t80-c1-20260717T183715Z-3980182        
+remote: 
+scratch_branch: probe/t80-c1-20260717T183715Z-3980182
+harmless_empty_commit: 6424679e65631fb957189c1ca28994b275d79f0a
+scratch_pr: https://github.com/hypermemetic-ai/qq/pull/131
+checks_initial: shell-tests	pending	0	https://github.com/hypermemetic-ai/qq/actions/runs/29604497941/job/87964371165	
+Refreshing checks status every 10 seconds. Press Ctrl+C to quit.
+
+shell-tests	pending	0	https://github.com/hypermemetic-ai/qq/actions/runs/29604497941/job/87964371165	
+Refreshing checks status every 10 seconds. Press Ctrl+C to quit.
+
+shell-tests	pending	0	https://github.com/hypermemetic-ai/qq/actions/runs/29604497941/job/87964371165	
+shell-tests	pass	12s	https://github.com/hypermemetic-ai/qq/actions/runs/29604497941/job/87964371165	
+shell-tests	pass	12s	https://github.com/hypermemetic-ai/qq/actions/runs/29604497941/job/87964371165	
+checks_result: PASS — all required checks are green before the merge attempt
+attempt: PUT /repos/hypermemetic-ai/qq/pulls/131/merge (REST API, squash, exact head SHA)
+merge_response: HTTP/2.0 405 Method Not Allowed
+merge_response: Access-Control-Allow-Origin: *
+merge_response: Access-Control-Expose-Headers: ETag, Link, Location, Retry-After, X-GitHub-OTP, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Used, X-RateLimit-Resource, X-RateLimit-Reset, X-OAuth-Scopes, X-Accepted-OAuth-Scopes, X-Poll-Interval, X-GitHub-Media-Type, X-GitHub-SSO, X-GitHub-Request-Id, Deprecation, Sunset, Warning
+merge_response: Content-Length: 323
+merge_response: Content-Security-Policy: default-src 'none'
+merge_response: Content-Type: application/json; charset=utf-8
+merge_response: Date: Fri, 17 Jul 2026 18:37:49 GMT
+merge_response: Referrer-Policy: origin-when-cross-origin, strict-origin-when-cross-origin
+merge_response: Server: github.com
+merge_response: Strict-Transport-Security: max-age=31536000; includeSubdomains; preload
+merge_response: Vary: Accept-Encoding, Accept, X-Requested-With
+merge_response: X-Accepted-Oauth-Scopes: 
+merge_response: X-Content-Type-Options: nosniff
+merge_response: X-Frame-Options: deny
+merge_response: X-Github-Api-Version-Selected: 2022-11-28
+merge_response: X-Github-Media-Type: github.v3; format=json
+merge_response: X-Github-Request-Id: 81BA:1B66FE:816445:1C64301:6A5A767C
+merge_response: X-Oauth-Client-Id: 178c6fc778ccc68e1d6a
+merge_response: X-Oauth-Scopes: admin:public_key, read:org, repo, workflow
+merge_response: X-Ratelimit-Limit: 5000
+merge_response: X-Ratelimit-Remaining: 4997
+merge_response: X-Ratelimit-Reset: 1784316871
+merge_response: X-Ratelimit-Resource: core
+merge_response: X-Ratelimit-Used: 3
+merge_response: X-Xss-Protection: 0
+merge_response: 
+merge_response: {"message":"You're not authorized to push to this branch. Visit https://docs.github.com/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches for more information.","documentation_url":"https://docs.github.com/articles/about-protected-branches","status":"405"}merge_error: gh: You're not authorized to push to this branch. Visit https://docs.github.com/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches for more information. (HTTP 405)
+merge_cli_exit_status: 1
+cleanup: closed scratch PR #131
+cleanup: deleted scratch branch probe/t80-c1-20260717T183715Z-3980182
+cleanup: removed temporary detached worktree
+result: PASS — a green PR could not be merged by qqp-bot; GitHub returned HTTP 405
