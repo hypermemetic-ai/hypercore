@@ -87,3 +87,12 @@ rewriting it into a different value and proceeding as though it were valid.
 **reproduce before you fix** — Establish an observation that fails on the
 unfixed behavior and passes after the fix; a Check that passes in both states
 has not verified the repair.
+
+**by construction** — A property that holds because the system's structure
+makes the failure impossible, not because a procedure checks or repairs it.
+What holds by construction needs no reconciler and cannot silently drift.
+
+**mount, don't mirror** — Consume a set through a single link to its root
+rather than through per-member copies or links. Mirroring makes membership
+itself reconcilable state whose reconciler must be remembered; mounting makes
+every addition, removal, and edit live by construction.
