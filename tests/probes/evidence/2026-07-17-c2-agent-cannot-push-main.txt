@@ -1,0 +1,24 @@
+probe: C2 agent credentials cannot push main
+captured_utc: 2026-07-17T19:04:09Z
+authenticated_actor: qqp-bot
+repository: hypermemetic-ai/qq
+push_identity: qqp-bot
+remote_main_before: f910b4b9d2c3760787d4c2a97314f1c91afdf45a
+harmless_empty_commit: 0d7494192a6e9e2425264ffaa04eeaea57a93b1a
+attempt: git push origin HEAD:refs/heads/main
+push: remote: error: GH013: Repository rule violations found for refs/heads/main.        
+push: remote: Review all repository rules at https://github.com/hypermemetic-ai/qq/rules?ref=refs%2Fheads%2Fmain        
+push: remote: 
+push: remote: - Changes must be made through a pull request.        
+push: remote: 
+push: remote: - Required status check "shell-tests" is expected.        
+push: remote: 
+push: remote: - You're not authorized to push to this branch. Visit https://docs.github.com/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches for more information.        
+push: remote: 
+push: To github.com:hypermemetic-ai/qq.git
+push:  ! [remote rejected] HEAD -> main (push declined due to repository rule violations)
+push: error: failed to push some refs to 'github.com:hypermemetic-ai/qq.git'
+push_exit_status: 1
+remote_main_after: f910b4b9d2c3760787d4c2a97314f1c91afdf45a
+cleanup: PASS — temporary detached worktree removed; no scratch remote ref was created
+result: PASS — GitHub rejected the agent-authenticated direct push and main was unchanged
