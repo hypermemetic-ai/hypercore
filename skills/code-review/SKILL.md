@@ -58,16 +58,10 @@ inherits the other's conclusions.
    machinery. Keep the brief and report under the OS temporary directory:
 
    ```sh
-   timeout -k 10 3600 codex exec \
-     -c 'skills.include_instructions=false' \
-     -c 'skills.bundled.enabled=false' \
-     --sandbox read-only \
-     --skip-git-repo-check \
-     -C <repository-root> \
-     -o <report-path> \
-     "Read <brief-path> fully and perform the review it specifies. You are
-   the reviewer; the brief is your complete orientation. Do not invoke
-   skills or delegate. Your final message is the review report."
+   qq-dispatch reviewer \
+     --root <repository-root> \
+     --brief <brief-path> \
+     --output <report-path>
    ```
 
    The runner enforces mechanically what prose cannot: a fresh session with

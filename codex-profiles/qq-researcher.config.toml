@@ -1,0 +1,7 @@
+sandbox_mode = "read-only"
+
+[skills]
+include_instructions = false
+
+[skills.bundled]
+enabled = false

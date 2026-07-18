@@ -62,20 +62,12 @@ Within plan bounds, default execution to Codex's non-interactive runner in a
 workspace-write sandbox confined to the ticket's worktree:
 
 ```sh
-timeout -k 10 3600 codex exec \
-  -c 'skills.include_instructions=false' \
-  -c 'skills.bundled.enabled=false' \
-  -c 'mcp_servers={}' \
-  --sandbox workspace-write \
-  --skip-git-repo-check \
-  -C <ticket-worktree-root> \
-  --json \
-  -o <envelope-path> \
-  "Read <work-order-path> fully and perform the assignment it specifies.
-You are the delegated implementer; the work order is your complete
-orientation. Do not invoke skills or delegate. Your final message is the
-completion envelope the work order requires." \
-  > <events-path> 2> <stderr-path>
+qq-dispatch implementer \
+  --root <ticket-worktree-root> \
+  --brief <work-order-path> \
+  --output <envelope-path> \
+  --events <events-path> \
+  --stderr <stderr-path>
 ```
 
 Substitute only the bracketed paths; keep all other prompt text exact. Never

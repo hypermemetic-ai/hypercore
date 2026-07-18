@@ -1,0 +1,284 @@
+#!/usr/bin/env bash
+# Dispatch one bounded Codex role under the settled timeout and profile rails.
+# shellcheck disable=SC1091,SC2016
+set -euo pipefail
+
+self="$(readlink -f -- "${BASH_SOURCE[0]}")"
+# shellcheck source=bin/lib/qq-bin.sh
+source "$(dirname "$self")/lib/qq-bin.sh"
+# shellcheck source=bin/lib/qq-engine.sh
+source "$(dirname "$self")/lib/qq-engine.sh"
+
+qq_engine_init qq-dispatch dispatch
+
+mode=dispatch
+if [ "${1:-}" = inspect ]; then
+  mode=inspect
+  shift
+fi
+
+role="${1:-}"
+[ -n "$role" ] || qq_engine_error \
+  'usage: qq-dispatch [inspect] <implementer|reviewer|researcher> --root <path> --brief <path> --output <path> [--events <path>] [--stderr <path>] [--timeout <seconds>] [--mcp] [--dry-run]'
+shift
+
+case "$role" in
+  implementer | reviewer | researcher) ;;
+  *) qq_engine_error "unsupported dispatch role: $role" ;;
+esac
+
+root=""
+brief=""
+output=""
+events=""
+stderr_file=""
+timeout_seconds=3600
+mcp_opt_in=false
+dry_run=false
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --root)
+      [ "$#" -ge 2 ] || qq_engine_error '--root requires a path'
+      root="$2"
+      shift 2
+      ;;
+    --brief)
+      [ "$#" -ge 2 ] || qq_engine_error '--brief requires a path'
+      brief="$2"
+      shift 2
+      ;;
+    --output)
+      [ "$#" -ge 2 ] || qq_engine_error '--output requires a path'
+      output="$2"
+      shift 2
+      ;;
+    --events)
+      [ "$#" -ge 2 ] || qq_engine_error '--events requires a path'
+      events="$2"
+      shift 2
+      ;;
+    --stderr)
+      [ "$#" -ge 2 ] || qq_engine_error '--stderr requires a path'
+      stderr_file="$2"
+      shift 2
+      ;;
+    --timeout)
+      [ "$#" -ge 2 ] || qq_engine_error '--timeout requires seconds'
+      timeout_seconds="$2"
+      shift 2
+      ;;
+    --mcp)
+      mcp_opt_in=true
+      shift
+      ;;
+    --dry-run)
+      dry_run=true
+      shift
+      ;;
+    *) qq_engine_error "unknown qq-dispatch argument: $1" ;;
+  esac
+done
+
+qq_engine_set_action "$mode:$role"
+
+if [ "$mcp_opt_in" = true ] && [ "$role" != implementer ]; then
+  qq_engine_error '--mcp applies only to the implementer role'
+fi
+
+[ -n "$root" ] || qq_engine_error '--root is required'
+[ -n "$brief" ] || qq_engine_error '--brief is required'
+[ -n "$output" ] || qq_engine_error '--output is required'
+[[ "$timeout_seconds" =~ ^[0-9]+([.][0-9]+)?$ ]] \
+  || qq_engine_error '--timeout must be a positive number of seconds'
+awk -v value="$timeout_seconds" 'BEGIN { exit !(value > 0) }' \
+  || qq_engine_error '--timeout must be greater than zero'
+
+for path_name in root brief output; do
+  path_value="${!path_name}"
+  [[ "$path_value" = /* ]] \
+    || qq_engine_error "--$path_name must be an absolute path"
+done
+[ -d "$root" ] || qq_engine_error "dispatch root is not a directory: $root"
+root="$(cd "$root" && pwd -P)" \
+  || qq_engine_error "cannot canonicalize dispatch root: $root"
+if [ ! -f "$brief" ] || [ ! -r "$brief" ]; then
+  qq_engine_error "brief is not a readable file: $brief"
+fi
+
+events="${events:-$output.events}"
+stderr_file="${stderr_file:-$output.stderr}"
+for artifact in "$output" "$events" "$stderr_file"; do
+  [[ "$artifact" = /* ]] \
+    || qq_engine_error "artifact paths must be absolute: $artifact"
+  [ -d "$(dirname "$artifact")" ] \
+    || qq_engine_error "artifact directory does not exist: $(dirname "$artifact")"
+done
+if [ "$output" = "$events" ] || [ "$output" = "$stderr_file" ] \
+  || [ "$events" = "$stderr_file" ]; then
+  qq_engine_error 'output, events, and stderr paths must be distinct'
+fi
+
+repo_root="$(dirname "$(dirname "$self")")"
+profile_name="qq-$role"
+profile_source="$repo_root/codex-profiles/$profile_name.config.toml"
+[ -f "$profile_source" ] \
+  || qq_engine_error "dispatch profile source is missing: $profile_source"
+
+if [ -n "${CODEX_HOME:-}" ]; then
+  codex_home="$CODEX_HOME"
+elif [ -n "${HOME:-}" ]; then
+  codex_home="$HOME/.codex"
+else
+  qq_engine_error 'CODEX_HOME and HOME are both unset; cannot resolve Codex profiles'
+fi
+profile_link="$codex_home/$profile_name.config.toml"
+if [ ! -L "$profile_link" ]; then
+  state="$("$QQ_ENGINE_JQ" -cn \
+    --arg profile "$profile_name" \
+    --arg expected_source "$profile_source" \
+    --arg required_link "$profile_link" \
+    '{profile:$profile, expected_source:$expected_source, required_link:$required_link}')"
+  qq_engine_refuse \
+    "Codex profile $profile_name is not mounted from this checkout. Create the stated symlink and retry; do not copy or mirror the profile." \
+    "$state"
+fi
+resolved_profile="$(readlink -f -- "$profile_link" 2>/dev/null || true)"
+resolved_source="$(readlink -f -- "$profile_source" 2>/dev/null || true)"
+if [ -z "$resolved_profile" ] || [ "$resolved_profile" != "$resolved_source" ]; then
+  state="$("$QQ_ENGINE_JQ" -cn \
+    --arg profile "$profile_name" \
+    --arg mounted_source "$resolved_profile" \
+    --arg expected_source "$resolved_source" \
+    '{profile:$profile, mounted_source:$mounted_source, expected_source:$expected_source}')"
+  qq_engine_refuse \
+    "Codex profile $profile_name points somewhere other than this checkout. Replace the stale link with the expected mount; do not dispatch under ambiguous access controls." \
+    "$state"
+fi
+
+if ! qq_resolve_bin codex; then
+  qq_engine_error "$QQ_BIN_ERROR"
+fi
+codex_bin="$QQ_BIN_RESULT"
+if ! qq_resolve_bin timeout; then
+  qq_engine_error "$QQ_BIN_ERROR"
+fi
+timeout_bin="$QQ_BIN_RESULT"
+
+case "$role" in
+  implementer)
+    prompt="Read $brief fully and perform the assignment it specifies.
+You are the delegated implementer; the work order is your complete
+orientation. Do not invoke skills or delegate. Your final message is the
+completion envelope the work order requires."
+    codex_args=(
+      exec
+      --profile "$profile_name"
+    )
+    if [ "$mcp_opt_in" = true ]; then
+      mcp_mode=on
+    else
+      codex_args+=(-c 'mcp_servers={}')
+      mcp_mode=off
+    fi
+    codex_args+=(
+      --skip-git-repo-check
+      -C "$root"
+      --json
+      -o "$output"
+      "$prompt"
+    )
+    ;;
+  reviewer)
+    prompt="Read $brief fully and perform the review it specifies. You are
+the reviewer; the brief is your complete orientation. Do not invoke
+skills or delegate. Your final message is the review report."
+    codex_args=(
+      exec
+      --profile "$profile_name"
+      --skip-git-repo-check
+      -C "$root"
+      -o "$output"
+      "$prompt"
+    )
+    mcp_mode=on
+    ;;
+  researcher)
+    prompt="Read $brief fully and perform the research it specifies. You are
+the researcher; the brief is your complete orientation. Do not invoke
+skills or delegate. Your final message is the findings report."
+    codex_args=(
+      exec
+      --profile "$profile_name"
+      --skip-git-repo-check
+      -C "$root"
+      -o "$output"
+      "$prompt"
+    )
+    mcp_mode=on
+    ;;
+esac
+
+state="$("$QQ_ENGINE_JQ" -cn \
+  --arg role "$role" \
+  --arg root "$root" \
+  --arg brief "$brief" \
+  --arg output "$output" \
+  --arg events "$events" \
+  --arg stderr "$stderr_file" \
+  --arg timeout "$timeout_seconds" \
+  --arg profile "$profile_name" \
+  --arg profile_source "$profile_source" \
+  --arg mcp "$mcp_mode" \
+  '{
+    role:$role,
+    root:$root,
+    brief:$brief,
+    output:$output,
+    events:$events,
+    stderr:$stderr,
+    timeout_seconds:$timeout,
+    profile:$profile,
+    profile_source:$profile_source,
+    mcp:$mcp
+  }')"
+
+if [ "$mode" = inspect ] || [ "$dry_run" = true ]; then
+  qq_engine_done 'dispatch preconditions passed; Codex was not started' "$state"
+fi
+
+if ! rm -f -- "$output" 2>/dev/null; then
+  qq_engine_error \
+    'Could not remove the pre-existing completion artifact; Codex was not started.' \
+    "$state"
+fi
+set +e
+"$timeout_bin" -k 10 "$timeout_seconds" \
+  "$codex_bin" "${codex_args[@]}" >"$events" 2>"$stderr_file"
+codex_status=$?
+set -e
+
+state="$("$QQ_ENGINE_JQ" -cn \
+  --argjson base "$state" \
+  --argjson codex_exit "$codex_status" \
+  '$base + {codex_exit:$codex_exit}')"
+case "$codex_status" in
+  0)
+    if [ ! -s "$output" ]; then
+      qq_engine_error \
+        'Codex exited successfully without a completion artifact; this is not a completed dispatch.' \
+        "$state"
+    fi
+    qq_engine_done 'dispatch completed and produced its final artifact' "$state"
+    ;;
+  124 | 137)
+    qq_engine_error \
+      'Codex exceeded the dispatch bound; timeout reaped the process tree. Treat this as a startup/turn wedge, not completed work.' \
+      "$state"
+    ;;
+  *)
+    qq_engine_error \
+      'Codex exited nonzero; inspect the stderr and events artifacts before retrying the unchanged brief.' \
+      "$state"
+    ;;
+esac

@@ -246,23 +246,20 @@ tr '\n\t' '  ' <"$ROOT/CONCEPTS.md" | \
   grep -qE "\\*\\*work order\\*\\* — One complete work-order brief per delegated ticket: the delegate's complete orientation and the plan bound, carrying .*the required completion envelope\\."
 tr '\n\t' '  ' <"$ROOT/CONCEPTS.md" | \
   grep -qE "\\*\\*completion envelope\\*\\* — Every delegate's final message must report per-ticket status, commits, files changed, Checks run with results, .*The owner must verify every claim against the tree; an envelope claim is not yet evidence\\."
-grep -Fq -- "-c 'skills.include_instructions=false'" "$ROOT/skills/code-review/SKILL.md"
-grep -Fq -- "-c 'skills.bundled.enabled=false'" "$ROOT/skills/code-review/SKILL.md"
-grep -Fq -- '--sandbox read-only' "$ROOT/skills/code-review/SKILL.md"
-grep -Fq -- "-c 'skills.include_instructions=false'" "$ROOT/skills/research/SKILL.md"
-grep -Fq -- "-c 'skills.bundled.enabled=false'" "$ROOT/skills/research/SKILL.md"
-grep -Fq -- '--sandbox read-only' "$ROOT/skills/research/SKILL.md"
+grep -Fq -- 'qq-dispatch reviewer' "$ROOT/skills/code-review/SKILL.md"
+grep -Fq -- 'qq-dispatch researcher' "$ROOT/skills/research/SKILL.md"
+grep -Fq -- 'qq-dispatch implementer' "$ROOT/skills/delegate-batch/SKILL.md"
 
-if grep -qE '^[[:space:]]*codex[[:space:]]+exec[[:space:]]+\\' "$ROOT/skills/code-review/SKILL.md" \
+if grep -qE '^[[:space:]]*(timeout[^[:space:]]*[[:space:]]+)*codex[[:space:]]+exec[[:space:]]+\\' "$ROOT/skills/code-review/SKILL.md" \
   "$ROOT/skills/research/SKILL.md" "$ROOT/skills/delegate-batch/SKILL.md"; then
-  fail 'a skill reintroduced an unwrapped codex exec dispatch command (startup wedge containment, doc-45/T-63/T-75)'
+  fail 'a skill reintroduced a direct codex exec dispatch command instead of qq-dispatch'
 fi
 tr '\n\t' '  ' <"$ROOT/skills/code-review/SKILL.md" | \
-  grep -qF 'timeout -k 10 3600 codex exec'
+  grep -qF 'qq-dispatch reviewer'
 tr '\n\t' '  ' <"$ROOT/skills/research/SKILL.md" | \
-  grep -qF 'timeout -k 10 3600 codex exec'
+  grep -qF 'qq-dispatch researcher'
 tr '\n\t' '  ' <"$ROOT/skills/delegate-batch/SKILL.md" | \
-  grep -qF 'timeout -k 10 3600 codex exec'
+  grep -qF 'qq-dispatch implementer'
 tr '\n\t' '  ' <"$ROOT/skills/delegate-batch/SKILL.md" | \
   grep -qE 'timeout -k 10 3600 codex +exec +resume'
 grep -Fq 'deliberately keeps its MCP servers' "$ROOT/skills/code-review/SKILL.md"

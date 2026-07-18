@@ -12,16 +12,10 @@ fresh read-only researcher through Codex's non-interactive runner, adopting
 its native access control instead of any owned delegate machinery:
 
 ```sh
-timeout -k 10 3600 codex exec \
-  -c 'skills.include_instructions=false' \
-  -c 'skills.bundled.enabled=false' \
-  --sandbox read-only \
-  --skip-git-repo-check \
-  -C <working-root> \
-  -o <findings-path> \
-  "Read <brief-path> fully and perform the research it specifies. You are
-the researcher; the brief is your complete orientation. Do not invoke
-skills or delegate. Your final message is the findings report."
+qq-dispatch researcher \
+  --root <working-root> \
+  --brief <brief-path> \
+  --output <findings-path>
 ```
 
 Substitute only the bracketed paths; the rest of the prompt stays exactly

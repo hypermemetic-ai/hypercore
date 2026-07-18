@@ -61,6 +61,19 @@ ln -sT "$HOME/projects/qq/skills" "$HOME/.claude/skills"
 ln -sT "$HOME/projects/qq/skills" "$HOME/.codex/skills"
 ```
 
+Mount qq's Codex execution profiles into Codex's fixed profile directory:
+
+```bash
+ln -s "$HOME/projects/qq/codex-profiles/qq-implementer.config.toml" "$HOME/.codex/qq-implementer.config.toml"
+ln -s "$HOME/projects/qq/codex-profiles/qq-reviewer.config.toml" "$HOME/.codex/qq-reviewer.config.toml"
+ln -s "$HOME/projects/qq/codex-profiles/qq-researcher.config.toml" "$HOME/.codex/qq-researcher.config.toml"
+```
+
+`qq-dispatch` requires these links to resolve back to the checkout, so profile
+changes stay live without a copy step. The profiles carry sandbox and Skill
+settings; implementer dispatch adds the MCP-off override, while reviewer and
+researcher dispatches retain the user's configured MCP servers.
+
 On a machine migrating off the retired installer, remove the old per-skill
 link directories first (after checking they hold nothing but links into this
 checkout): `rm -r ~/.claude/skills ~/.codex/skills`. `ln -sT` fails loudly
