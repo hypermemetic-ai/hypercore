@@ -69,11 +69,7 @@ jq -e '
   .permissions.deny == [
     "Bash(gh pr merge:*)",
     "Bash(gh * pr merge)",
-    "Bash(gh * pr merge *)",
-    "Bash(gh pr * merge)",
-    "Bash(gh pr * merge *)",
-    "Bash(gh * pr * merge)",
-    "Bash(gh * pr * merge *)"
+    "Bash(gh * pr merge *)"
   ]
   and .hooks.PreToolUse == [{
     matcher: "Bash|Edit|Write|MultiEdit|NotebookEdit",
