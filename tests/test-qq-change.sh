@@ -1,0 +1,196 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+TEST_NAME="test-qq-change"
+# shellcheck source=tests/helpers.sh
+source "$TESTS_DIR/helpers.sh"
+ROOT="$(cd "$TESTS_DIR/.." && pwd -P)"
+CHANGE="$ROOT/bin/qq-change"
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+
+remote="$tmp/remote.git"
+main_checkout="$tmp/main"
+change_checkout="$tmp/change"
+git init -q --bare "$remote"
+git clone -q "$remote" "$main_checkout"
+git -C "$main_checkout" switch -q -c main
+git -C "$main_checkout" -c user.name=test -c user.email=test@example.com \
+  commit --allow-empty -qm base
+git -C "$main_checkout" push -qu origin main
+git -C "$main_checkout" worktree add -qb feature "$change_checkout" main
+printf 'landed content\n' >"$change_checkout/change.txt"
+git -C "$change_checkout" add change.txt
+git -C "$change_checkout" -c user.name=test -c user.email=test@example.com \
+  commit -qm feature
+merge_oid="$(git -C "$change_checkout" rev-parse HEAD)"
+# Simulate GitHub's merge while leaving the sole local main checkout behind.
+git -C "$change_checkout" push -qu origin HEAD:main
+
+fake_gh="$tmp/gh"
+cat >"$fake_gh" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+if [ "${FAKE_GH_BAD:-}" = 1 ]; then
+  printf 'not-json\n'
+  exit 0
+fi
+jq -cn \
+  --arg state "${FAKE_PR_STATE:-MERGED}" \
+  --arg oid "${FAKE_MERGE_OID:-}" \
+  '{state:$state,mergedAt:(if $state == "MERGED" then "2026-07-18T00:00:00Z" else null end),mergeCommit:(if $state == "MERGED" then {oid:$oid} else null end),url:"https://example.test/pr/83"}'
+SH
+chmod +x "$fake_gh"
+export QQ_GH_BIN="$fake_gh"
+export FAKE_MERGE_OID="$merge_oid"
+
+fake_herdr="$tmp/herdr"
+cat >"$fake_herdr" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "$*" >>"$FAKE_HERDR_LOG"
+case "${1:-} ${2:-}" in
+  "workspace list")
+    if [ -d "$FAKE_CHANGE_CHECKOUT" ]; then
+      jq -cn --arg checkout "$FAKE_CHANGE_CHECKOUT" '
+        {result:{workspaces:[
+          {workspace_id:"change-ws",worktree:{checkout_path:$checkout,is_linked_worktree:true}}
+        ]}}'
+    else
+      printf '%s\n' '{"result":{"workspaces":[]}}'
+    fi
+    ;;
+  "agent list")
+    if [ "${FAKE_LIVE_AGENT:-}" = 1 ]; then
+      printf '%s\n' '{"result":{"agents":[{"workspace_id":"change-ws","agent":"codex"}]}}'
+    else
+      printf '%s\n' '{"result":{"agents":[]}}'
+    fi
+    ;;
+  "pane list")
+    printf '%s\n' '{"result":{"panes":[{"pane_id":"change-ws:p1","tab_id":"change-ws:t1"}]}}'
+    ;;
+  "api snapshot")
+    printf '%s\n' '{"result":{"focused_workspace_id":"home-ws"}}'
+    ;;
+  "worktree remove")
+    git -C "$FAKE_MAIN_CHECKOUT" worktree remove "$FAKE_CHANGE_CHECKOUT"
+    printf '%s\n' '{"result":{"removed":true}}'
+    ;;
+  *)
+    printf 'unexpected fake herdr command: %s\n' "$*" >&2
+    exit 2
+    ;;
+esac
+SH
+chmod +x "$fake_herdr"
+export QQ_HERDR_BIN="$fake_herdr"
+export FAKE_HERDR_LOG="$tmp/herdr.log"
+export FAKE_CHANGE_CHECKOUT="$change_checkout"
+export FAKE_MAIN_CHECKOUT="$main_checkout"
+
+run_change() {
+  local expected_exit="$1"
+  shift
+  set +e
+  "$CHANGE" "$@" >"$tmp/result.json"
+  actual_exit=$?
+  set -e
+  assert_equal "$expected_exit" "$actual_exit" "unexpected qq-change exit"
+  jq -e . "$tmp/result.json" >/dev/null
+}
+
+# Exit 2: a non-merged PR is a rail refusal and leaves local main behind.
+export FAKE_PR_STATE=OPEN
+run_change 2 land 83 --repo "$change_checkout"
+jq -e '
+  .status == "refused"
+  and .state.pr_state == "OPEN"
+' "$tmp/result.json" >/dev/null
+assert_not_contains "$(git -C "$main_checkout" rev-parse HEAD)" "$merge_oid" \
+  'OPEN refusal synchronized main'
+
+# Exit 1: unreadable GitHub data is an error.
+export FAKE_GH_BAD=1
+run_change 1 land 83 --repo "$change_checkout"
+jq -e '.status == "error"' "$tmp/result.json" >/dev/null
+unset FAKE_GH_BAD
+
+# Exit 0: verify merge ancestry, then fast-forward only the sole main checkout.
+export FAKE_PR_STATE=MERGED
+run_change 0 land 83 --repo "$change_checkout"
+jq -e '
+  .status == "done"
+  and .state.pr_state == "MERGED"
+  and .state.merge_commit == $oid
+' --arg oid "$merge_oid" "$tmp/result.json" >/dev/null
+assert_equal "$merge_oid" "$(git -C "$main_checkout" rev-parse HEAD)" \
+  'land did not synchronize main to the merge commit'
+
+# Land is idempotent when main already contains the verified merge.
+run_change 0 land 83 --repo "$main_checkout"
+
+# Retirement refuses while any live delegate remains and changes nothing.
+export FAKE_LIVE_AGENT=1
+run_change 2 retire change-ws --repo "$main_checkout" --branch feature
+jq -e '
+  .status == "refused"
+  and .state.live_agent_count == 1
+' "$tmp/result.json" >/dev/null
+[ -d "$change_checkout" ] || fail 'live-agent refusal removed the checkout'
+git -C "$main_checkout" show-ref --verify --quiet refs/heads/feature \
+  || fail 'live-agent refusal deleted the branch'
+unset FAKE_LIVE_AGENT
+
+# Inspect mirrors every retirement rail without removing anything.
+run_change 0 inspect retire change-ws --repo "$main_checkout" --branch feature
+[ -d "$change_checkout" ] || fail 'retire inspect removed the checkout'
+
+# Green retirement uses unforced Herdr removal followed by branch -d.
+run_change 0 retire change-ws --repo "$main_checkout" --branch feature
+[ ! -e "$change_checkout" ] || fail 'retire left the Change checkout'
+if git -C "$main_checkout" show-ref --verify --quiet refs/heads/feature; then
+  fail 'retire left the local Change branch'
+fi
+assert_file_contains "$FAKE_HERDR_LOG" 'worktree remove --workspace change-ws'
+
+# Retirement is idempotent once both subjects are absent.
+run_change 0 retire change-ws --repo "$main_checkout" --branch feature
+jq -e '
+  .status == "done"
+  and .state.workspace_state == "absent"
+  and .state.branch_exists == false
+' "$tmp/result.json" >/dev/null
+
+# A legitimately operator-closed work session uses the explicit lifecycle
+# ownership assertion and unforced git worktree removal.
+absent_checkout="$tmp/absent-change"
+git -C "$main_checkout" worktree add -qb absent-feature "$absent_checkout" main
+printf 'absent-session content\n' >"$absent_checkout/absent.txt"
+git -C "$absent_checkout" add absent.txt
+git -C "$absent_checkout" -c user.name=test -c user.email=test@example.com \
+  commit -qm absent-feature
+git -C "$absent_checkout" push -qu origin HEAD:main
+git -C "$main_checkout" pull -q --ff-only origin main
+
+run_change 2 retire missing-ws --repo "$main_checkout" \
+  --branch absent-feature --checkout "$absent_checkout"
+jq -e '
+  .status == "refused"
+  and (.message | contains("completion wake fired"))
+' "$tmp/result.json" >/dev/null
+[ -d "$absent_checkout" ] || fail 'absent-session evidence refusal removed the checkout'
+
+run_change 0 retire missing-ws --repo "$main_checkout" \
+  --branch absent-feature --checkout "$absent_checkout" --workspace-absent-owned
+[ ! -e "$absent_checkout" ] || fail 'absent-session retirement left the checkout'
+if git -C "$main_checkout" show-ref --verify --quiet refs/heads/absent-feature; then
+  fail 'absent-session retirement left the branch'
+fi
+
+if grep -Eq -- '(^| )(--force|-D)( |$)' "$FAKE_HERDR_LOG"; then
+  fail 'retirement used a forced removal flag'
+fi
+
+printf 'test-qq-change: pass\n'
