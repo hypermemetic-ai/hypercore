@@ -337,6 +337,17 @@ else
     fi
     if [ "$write_ok" = true ] \
       && mv -f -- "$temporary" "$status_file" 2>/dev/null; then
+      resolved_written_status_dir="$(realpath -- "$status_dir" 2>/dev/null || true)"
+      # Full mid-flight TOCTOU prevention is out of scope for a non-gating Bash
+      # glass engine; this outcome guard prevents a redirected write persisting.
+      if [ "$resolved_written_status_dir" != "$expected_status_dir" ]; then
+        rm -f -- "$status_file" 2>/dev/null || true
+        state="$("$QQ_ENGINE_JQ" -cn --argjson base "$base_state" \
+          '$base + {current_state:"status write escaped through an intermediate symlink"}')"
+        qq_engine_refuse \
+          'The derived status path contains an intermediate symlink. Leave it untouched and resolve the unexpected filesystem state; visibility glass never justifies overwriting an unexplained object.' \
+          "$state"
+      fi
       detail_written=true
     else
       rm -f -- "$temporary"

@@ -140,6 +140,51 @@ jq -e '
 ' "$tmp/result.json" >/dev/null
 export TMPDIR="$tmp/runtime"
 
+# If an intermediate directory is replaced after the pre-write rail, the
+# outcome guard removes the redirected write and refuses the transition.
+race_bin="$tmp/race-bin"
+mkdir -p "$race_bin"
+real_mv_bin="$(command -v mv)"
+race_component="$TMPDIR/qq-delegates/$repo_first_component"
+cat >"$race_bin/mv" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+source_path="$3"
+destination="$4"
+race_backup="$RACE_COMPONENT.before-redirect"
+"$REAL_MV_BIN" -- "$RACE_COMPONENT" "$race_backup"
+ln -s "$RACE_REDIRECT_TARGET" "$RACE_COMPONENT"
+source_suffix="${source_path#"$RACE_COMPONENT"}"
+exec "$REAL_MV_BIN" -f -- "$race_backup$source_suffix" "$destination"
+SH
+chmod +x "$race_bin/mv"
+race_args=(
+  --repo "$repo"
+  --dispatcher-workspace race-home
+  --work-session change-1
+  --pane change-1:p1
+  --agent worker-1
+  --ticket T-83
+  --label engines
+)
+repo_status_before="$(git -C "$repo" status --porcelain=v1 --untracked-files=all)"
+original_path="$PATH"
+export REAL_MV_BIN="$real_mv_bin"
+export RACE_COMPONENT="$race_component"
+export RACE_REDIRECT_TARGET="/$repo_first_component"
+export PATH="$race_bin:$PATH"
+run_status 2 dispatched "${race_args[@]}"
+export PATH="$original_path"
+jq -e '
+  .status == "refused"
+  and (.message | contains("never justifies overwriting"))
+' "$tmp/result.json" >/dev/null
+escaped_status="$(find "$repo" -name '*.status' -print -quit)"
+assert_equal '' "$escaped_status" 'redirected status write persisted outside the status tree'
+assert_equal "$repo_status_before" \
+  "$(git -C "$repo" status --porcelain=v1 --untracked-files=all)" \
+  'redirected status write changed the Repository working tree'
+
 # Exit 1: invalid events are command errors.
 run_status 1 invented "${status_args[@]}"
 jq -e '.status == "error"' "$tmp/result.json" >/dev/null
