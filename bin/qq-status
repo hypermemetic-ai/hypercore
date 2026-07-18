@@ -230,8 +230,15 @@ common_dir="$({ "$git_bin" -C "$repo" rev-parse --path-format=absolute --git-com
 [ -n "$common_dir" ] || qq_engine_error "not a Git checkout: $repo"
 repo_root="$(cd "$(dirname "$common_dir")" 2>/dev/null && pwd -P)" \
   || qq_engine_error "cannot resolve Repository root from: $repo"
-status_dir="${TMPDIR:-/tmp}/qq-delegates${repo_root}"
+status_base="${TMPDIR:-/tmp}/qq-delegates"
+status_dir="$status_base$repo_root"
 status_file="$status_dir/$dispatcher_workspace.status"
+canonical_status_base="$(readlink -m -- "$status_base" 2>/dev/null || true)"
+resolved_status_dir="$(readlink -m -- "$status_dir" 2>/dev/null || true)"
+if [ -z "$canonical_status_base" ] || [ -z "$resolved_status_dir" ]; then
+  qq_engine_error 'cannot resolve the derived status path'
+fi
+expected_status_dir="$canonical_status_base$repo_root"
 
 base_state="$("$QQ_ENGINE_JQ" -cn \
   --arg event "$event" \
@@ -253,10 +260,13 @@ base_state="$("$QQ_ENGINE_JQ" -cn \
     agent:$agent
   }')"
 
-if [ "$mode" = inspect ] || [ "$dry_run" = true ]; then
-  qq_engine_done 'status transition inspected; no detail file or Herdr state was changed' "$base_state"
+if [ -L "$status_base" ] || [ "$resolved_status_dir" != "$expected_status_dir" ]; then
+  state="$("$QQ_ENGINE_JQ" -cn --argjson base "$base_state" \
+    '$base + {current_state:"status path contains an intermediate symlink"}')"
+  qq_engine_refuse \
+    'The derived status path contains an intermediate symlink. Leave it untouched and resolve the unexpected filesystem state; visibility glass never justifies overwriting an unexplained object.' \
+    "$state"
 fi
-
 if [ -L "$status_dir" ] || { [ -e "$status_dir" ] && [ ! -d "$status_dir" ]; }; then
   state="$("$QQ_ENGINE_JQ" -cn --argjson base "$base_state" \
     '$base + {current_state:"status directory is not a real directory"}')"
@@ -270,6 +280,10 @@ if [ -L "$status_file" ] || { [ -e "$status_file" ] && [ ! -f "$status_file" ]; 
   qq_engine_refuse \
     'The derived status file is not a regular file. Leave it untouched, resolve the unexpected filesystem state, and retry; visibility glass never justifies overwriting an unexplained object.' \
     "$state"
+fi
+
+if [ "$mode" = inspect ] || [ "$dry_run" = true ]; then
+  qq_engine_done 'status transition inspected; no detail file or Herdr state was changed' "$base_state"
 fi
 
 notes=()

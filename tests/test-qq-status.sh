@@ -107,11 +107,33 @@ run_status 0 inspect dispatched "${rail_args[@]}"
 rail_file="$(jq -r '.state.status_file' "$tmp/result.json")"
 mkdir -p "$(dirname "$rail_file")"
 ln -s "$tmp/unexplained" "$rail_file"
+run_status 2 inspect dispatched "${rail_args[@]}"
+jq -e '
+  .status == "refused"
+  and (.message | contains("never justifies overwriting"))
+' "$tmp/result.json" >/dev/null
 run_status 2 dispatched "${rail_args[@]}"
 jq -e '
   .status == "refused"
   and (.message | contains("never justifies overwriting"))
 ' "$tmp/result.json" >/dev/null
+
+# Intermediate symlinks beneath the qq-delegates base are the same unexplained
+# filesystem state, including during inspection.
+intermediate_runtime="$tmp/intermediate-runtime"
+intermediate_target="$tmp/intermediate-target"
+mkdir -p "$intermediate_runtime/qq-delegates" "$intermediate_target"
+export TMPDIR="$intermediate_runtime"
+repo_first_component="${repo#/}"
+repo_first_component="${repo_first_component%%/*}"
+ln -s "$intermediate_target" \
+  "$TMPDIR/qq-delegates/$repo_first_component"
+run_status 2 inspect dispatched "${rail_args[@]}"
+jq -e '
+  .status == "refused"
+  and (.message | contains("never justifies overwriting"))
+' "$tmp/result.json" >/dev/null
+export TMPDIR="$tmp/runtime"
 
 # Exit 1: invalid events are command errors.
 run_status 1 invented "${status_args[@]}"
