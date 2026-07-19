@@ -182,10 +182,16 @@ grep -Fq 'command fails or reports notifications disabled' \
 grep -Fq 'browser-only fallback' "$ROOT/skills/deliver-change/SKILL.md"
 tr '\n\t' '  ' <"$ROOT/skills/deliver-change/SKILL.md" | \
   grep -qE 'harness-native +background disposition watch'
-grep -Fq 'single-notification' "$ROOT/skills/deliver-change/SKILL.md"
-grep -Fq 'GitHub CLI' "$ROOT/skills/deliver-change/SKILL.md"
-grep -Fq 'state every 5' "$ROOT/skills/deliver-change/SKILL.md"
-grep -Fq 'either `MERGED` or `CLOSED`' "$ROOT/skills/deliver-change/SKILL.md"
+grep -Fq 'bin/qq-pr-watch <number-or-URL>' "$ROOT/skills/deliver-change/SKILL.md"
+grep -Fq 'exactly-once completion-wake' "$ROOT/skills/deliver-change/SKILL.md"
+grep -Fq '`inspect` semantics' "$ROOT/skills/deliver-change/SKILL.md"
+grep -Fq -- '--interval <30-60>' "$ROOT/skills/deliver-change/SKILL.md"
+tr -s '[:space:]' ' ' <"$ROOT/skills/deliver-change/SKILL.md" | \
+  grep -Fq '30 seconds by default'
+grep -Fq '`MERGED` and `CLOSED`' "$ROOT/skills/deliver-change/SKILL.md"
+if grep -Fq 'state every 5' "$ROOT/skills/deliver-change/SKILL.md"; then
+  fail 'deliver-change must not reintroduce hand-rolled 5-second pull-request polling; qq-pr-watch owns disposition polling'
+fi
 grep -Fq 'follow-on dispatch' "$ROOT/skills/deliver-change/SKILL.md"
 if grep -Fq 'observability pane' "$ROOT/skills/delegate-batch/SKILL.md"; then
   fail 'delegate-batch must not reintroduce the observability pane (operator UAT rejected it; the status surface owns delegate visibility)'
