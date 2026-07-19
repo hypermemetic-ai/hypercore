@@ -3,7 +3,7 @@ id: doc-43
 title: Design — The delegate status surface
 type: specification
 created_date: '2026-07-15 02:51'
-updated_date: '2026-07-17 02:45'
+updated_date: '2026-07-19 21:46'
 tags:
   - design
   - delegation
@@ -576,3 +576,16 @@ Companion edits land in deliver-change (step 1 binds the work session
 without moving the accountable pane; step 12's rails and retire order lose
 the migrated posture and the pane move-back) and delegate-batch
 (board-driven dispatch is no longer an exception to deliver-change step 1).
+
+## Amendment 2026-07-19 (T-115): per-batch status-file namespacing
+
+The status-file derivation is namespaced per dispatcher batch:
+`<dispatcher-workspace-id>-<batch-label>.status` (e.g.
+`wM-t107-followon.status`). Two dispatchers sharing one project home must not
+write the same file; the suffix form keeps every batch detail file visible
+to the prefix+d popup, which renders every detail file in the directory.
+`bin/qq-status --batch-label` is the owned publisher form of the same
+namespacing (legacy unsuffixed path retained for callers that omit it).
+Operational text lives in skills/delegate-batch; this note is the design
+record. Settled by operator approval 2026-07-19 after the live doc-62 /
+T-107-follow-on wM.status collision.
