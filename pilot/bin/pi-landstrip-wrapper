@@ -56,6 +56,22 @@ system_tmp="$(realpath -e -- /tmp)"
 path_is_within "$runtime_root" "$system_tmp" || fail 68 "runtime root must stay beneath /tmp"
 [[ "$runtime_root" != "$system_tmp" ]] || fail 68 "runtime root may not be all of /tmp"
 
+structured_output_capture=""
+if [[ -n "${PI_SUBAGENT_STRUCTURED_OUTPUT_CAPTURE:-}" ]]; then
+  capture_input="$PI_SUBAGENT_STRUCTURED_OUTPUT_CAPTURE"
+  [[ "$capture_input" == /* ]] || fail 68 "structured-output capture path must be absolute"
+  [[ ! -L "$capture_input" ]] || fail 68 "structured-output capture path may not be a symlink"
+  capture_parent_input="$(dirname -- "$capture_input")"
+  [[ -d "$capture_parent_input" ]] || fail 68 "structured-output capture directory is unavailable"
+  capture_parent="$(realpath -e -- "$capture_parent_input")"
+  capture_leaf="$(basename -- "$capture_input")"
+  [[ -n "$capture_leaf" && "$capture_leaf" != "." && "$capture_leaf" != ".." ]] \
+    || fail 68 "structured-output capture filename is invalid"
+  structured_output_capture="$capture_parent/$capture_leaf"
+  path_is_within "$structured_output_capture" "$runtime_root" \
+    || fail 68 "structured-output capture path must stay beneath the runtime root"
+fi
+
 run_token="${PI_SUBAGENT_RUN_ID:-manual}"
 run_token="${run_token//[^A-Za-z0-9._-]/_}"
 run_token="${run_token:0:80}"
@@ -109,6 +125,7 @@ metadata="$($wrapper_dir/render-policy.mjs \
   --git-common-dir "$git_common_dir" \
   --git-worktree-dir "$git_worktree_dir" \
   --runtime-root "$runtime_root" \
+  --structured-output-capture "$structured_output_capture" \
   --policy "$policy_path" \
   --event-log "$event_log" \
   --timeout "$timeout_spec" \

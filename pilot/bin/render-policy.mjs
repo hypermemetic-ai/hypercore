@@ -52,6 +52,24 @@ const worktree = canonicalDirectory(required(args, "--worktree"), "worktree");
 const gitCommonDir = canonicalDirectory(required(args, "--git-common-dir"), "Git common directory");
 const gitWorktreeDir = canonicalDirectory(required(args, "--git-worktree-dir"), "worktree Git directory");
 const runtimeRoot = canonicalDirectory(required(args, "--runtime-root"), "runtime root");
+const captureInput = args.get("--structured-output-capture") ?? "";
+let structuredOutputCapture = "";
+if (captureInput) {
+  if (!path.isAbsolute(captureInput)) fail("structured-output capture path must be absolute");
+  const captureLeaf = path.basename(captureInput);
+  if (!captureLeaf || captureLeaf === "." || captureLeaf === "..") fail("structured-output capture filename is invalid");
+  const captureParent = canonicalDirectory(path.dirname(captureInput), "structured-output capture directory");
+  structuredOutputCapture = path.join(captureParent, captureLeaf);
+  const relativeCapture = path.relative(runtimeRoot, structuredOutputCapture);
+  if (relativeCapture === "" || relativeCapture.startsWith(`..${path.sep}`) || relativeCapture === ".." || path.isAbsolute(relativeCapture)) {
+    fail("structured-output capture path must stay beneath the runtime root");
+  }
+  try {
+    if (fs.lstatSync(structuredOutputCapture).isSymbolicLink()) fail("structured-output capture path may not be a symlink");
+  } catch (error) {
+    if (error?.code !== "ENOENT") fail(`cannot inspect structured-output capture path: ${error.message}`);
+  }
+}
 const policyPath = required(args, "--policy");
 const eventLogPath = required(args, "--event-log");
 const timeout = required(args, "--timeout");
@@ -71,6 +89,8 @@ if (typeof definition.policyIdentity !== "string" || !definition.policyIdentity)
 const allowWrite = [];
 if (definition.access === "workspace-write") {
   allowWrite.push(runtimeRoot, worktree, gitCommonDir, gitWorktreeDir, "/dev/null");
+} else if (structuredOutputCapture) {
+  allowWrite.push(structuredOutputCapture);
 }
 
 const policy = {
@@ -99,10 +119,12 @@ fs.appendFileSync(eventLogPath, `${JSON.stringify({
   role,
   policyIdentity: definition.policyIdentity,
   access: definition.access,
+  allowWrite: policy.filesystem.allowWrite,
   worktree,
   gitCommonDir,
   gitWorktreeDir,
   runtimeRoot,
+  structuredOutputCapture: structuredOutputCapture || null,
   timeout,
   landstripVersion,
 })}\n`, { mode: 0o600 });

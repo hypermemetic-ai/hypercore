@@ -171,27 +171,56 @@ static void launch_report(int argc, char **argv) {
   emit_final("pilot launch record complete");
 }
 
-static bool write_payload(const char *payload) {
+static struct attempt write_payload(const char *payload) {
+  struct attempt result = { .ok = false, .error_number = EINVAL };
   const char *path = getenv("PI_SUBAGENT_STRUCTURED_OUTPUT_CAPTURE");
-  if (path == NULL || path[0] == '\0') return false;
+  if (path == NULL || path[0] == '\0') return result;
+  errno = 0;
   int descriptor = open(path, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
-  if (descriptor < 0) return false;
+  if (descriptor < 0) {
+    result.error_number = errno;
+    return result;
+  }
   size_t length = strlen(payload);
-  bool ok = write(descriptor, payload, length) == (ssize_t)length;
+  ssize_t written = write(descriptor, payload, length);
+  result.ok = written == (ssize_t)length;
+  result.error_number = result.ok ? 0 : errno;
   close(descriptor);
-  return ok;
+  return result;
 }
 
 static void schema_scenario(const char *scenario) {
+  bool attempted = true;
+  struct attempt capture = { .ok = false, .error_number = EINVAL };
   if (strcmp(scenario, "schema-valid") == 0) {
-    write_payload("{\"status\":\"complete\",\"summary\":\"done\",\"checks\":[{\"name\":\"probe\",\"result\":\"pass\"}],\"filesChanged\":[],\"openQuestions\":[],\"unresolvedRisks\":[]}");
+    capture = write_payload("{\"status\":\"complete\",\"summary\":\"done\","
+                            "\"commits\":[\"deadbeef pilot fixture\"],"
+                            "\"checks\":[{\"name\":\"probe\",\"result\":\"pass\"}],"
+                            "\"filesChanged\":[\"pilot/example\"],\"contestableDecisions\":[],"
+                            "\"openQuestions\":[],\"unresolvedRisks\":[],"
+                            "\"branch\":\"feat/pilot-fixture\",\"worktree\":\"/assigned/worktree\"}");
   } else if (strcmp(scenario, "schema-invalid-json") == 0) {
-    write_payload("not-json");
+    capture = write_payload("not-json");
+  } else if (strcmp(scenario, "schema-missing-commits") == 0) {
+    capture = write_payload("{\"status\":\"complete\",\"summary\":\"done\","
+                            "\"checks\":[{\"name\":\"probe\",\"result\":\"pass\"}],"
+                            "\"filesChanged\":[],\"contestableDecisions\":[],"
+                            "\"openQuestions\":[],\"unresolvedRisks\":[],"
+                            "\"branch\":\"feat/pilot-fixture\",\"worktree\":\"/assigned/worktree\"}");
   } else if (strcmp(scenario, "schema-empty-object") == 0) {
-    write_payload("{}");
+    capture = write_payload("{}");
   } else if (strcmp(scenario, "schema-empty-fields") == 0) {
-    write_payload("{\"status\":\"complete\",\"summary\":\"\",\"checks\":[],\"filesChanged\":[],\"openQuestions\":[],\"unresolvedRisks\":[]}");
+    capture = write_payload("{\"status\":\"complete\",\"summary\":\"\",\"commits\":[],"
+                            "\"checks\":[],\"filesChanged\":[],\"contestableDecisions\":[],"
+                            "\"openQuestions\":[],\"unresolvedRisks\":[],\"branch\":\"\",\"worktree\":\"\"}");
+  } else {
+    attempted = false;
   }
+  fputs("{\"type\":\"qq_pilot_report\",\"scenario\":\"structured-output-capture\",\"attempted\":", stdout);
+  fputs(attempted ? "true," : "false,", stdout);
+  print_attempt("captureWrite", capture, false);
+  fputs("}\n", stdout);
+  fflush(stdout);
   emit_final("pilot schema probe complete");
 }
 

@@ -4,7 +4,10 @@ import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 
-import type { AgentConfig } from "../../.pi/npm/node_modules/pi-subagents/src/agents/agents.ts";
+import {
+  discoverAgents,
+  type AgentConfig,
+} from "../../.pi/npm/node_modules/pi-subagents/src/agents/agents.ts";
 import { executeAsyncSingle } from "../../.pi/npm/node_modules/pi-subagents/src/runs/background/async-execution.ts";
 import { runSync } from "../../.pi/npm/node_modules/pi-subagents/src/runs/foreground/execution.ts";
 import {
@@ -281,12 +284,25 @@ async function localServerBaseline(): Promise<{
   }
 }
 
+function confinementVerdict(
+  filesystemVerdict: Verdict,
+  networkVerdict: Verdict,
+): Verdict {
+  if (filesystemVerdict === "FAIL" || networkVerdict === "FAIL") return "FAIL";
+  if (
+    filesystemVerdict === "INCONCLUSIVE-UNDER-SUBSTRATE" ||
+    networkVerdict === "INCONCLUSIVE-UNDER-SUBSTRATE"
+  ) return "INCONCLUSIVE-UNDER-SUBSTRATE";
+  return "PASS";
+}
+
 async function checkOne(): Promise<void> {
   const escapePath = path.join("/tmp", `qq-t94-escape-${process.pid}`);
   const baselinePaths = [
     path.join(worktree, `.qq-pilot-baseline-${process.pid}`),
     path.join(gitCommonDir, `.qq-pilot-baseline-${process.pid}`),
     path.join(gitWorktreeDir, `.qq-pilot-baseline-${process.pid}`),
+    path.join(runtimeRoot, `.qq-pilot-baseline-${process.pid}`),
     escapePath,
   ];
   const baselines = baselinePaths.map((filePath) => ({ path: filePath, ...safeProbeWrite(filePath) }));
@@ -303,25 +319,60 @@ async function checkOne(): Promise<void> {
 
   const expectedDenied = ["repositoryWrite", "gitCommonWrite", "gitWorktreeWrite", "runtimeWrite", "escapeWrite"];
   const reports = [reviewerReport, researcherReport];
-  const filesystemDenied = reports.every((report) => expectedDenied.every((name) => attemptOk(report, name) === false));
-  const networkDenied = loopback.baselineConnected && reports.every((report) => attemptOk(report, "loopbackConnect") === false);
-  const outerAllowsTargets = baselines.every((baseline) => baseline.ok);
   const childRunsSucceeded = reviewerResult.exitCode === 0 && researcherResult.exitCode === 0;
-  const verdict: Verdict = !loopback.baselineConnected
+  const filesystemTargets = expectedDenied.map((name, index) => {
+    const childResults = reports.map((report) => attemptOk(report, name));
+    const childrenObserved = childResults.every((value) => typeof value === "boolean");
+    const childWriteObserved = childResults.some((value) => value === true);
+    const childrenDenied = childResults.every((value) => value === false);
+    const parentWritable = baselines[index]?.ok === true;
+    const targetVerdict: Verdict = childWriteObserved || !childrenObserved
+      ? "FAIL"
+      : !parentWritable
+        ? "INCONCLUSIVE-UNDER-SUBSTRATE"
+        : childrenDenied
+          ? "PASS"
+          : "FAIL";
+    return {
+      name,
+      verdict: targetVerdict,
+      parentWritable,
+      parentError: baselines[index]?.error,
+      childResults,
+    };
+  });
+  const filesystemAssessment: Verdict = !childRunsSucceeded || filesystemTargets.some((target) => target.verdict === "FAIL")
+    ? "FAIL"
+    : filesystemTargets.some((target) => target.verdict === "INCONCLUSIVE-UNDER-SUBSTRATE")
+      ? "INCONCLUSIVE-UNDER-SUBSTRATE"
+      : "PASS";
+  const networkDenied = reports.every((report) => attemptOk(report, "loopbackConnect") === false);
+  const networkAssessment: Verdict = !childRunsSucceeded
+    ? "FAIL"
+    : !loopback.baselineConnected
     ? "INCONCLUSIVE-UNDER-SUBSTRATE"
-    : outerAllowsTargets && filesystemDenied && networkDenied && childRunsSucceeded
+    : networkDenied
       ? "PASS"
       : "FAIL";
+  const verdict = confinementVerdict(filesystemAssessment, networkAssessment);
 
   recordCheck({
     id: 1,
     title: "Reviewer/researcher read-only confinement",
     verdict,
     boundary:
-      "Every filesystem target first succeeded from the pilot parent inside Codex's allowed worktree/Git/tmp boundary and was then denied after crossing native Landstrip. Codex rejected the loopback listener itself, so the network subcase cannot be attributed.",
+      "Filesystem targets and network confinement are evaluated independently. Each writable parent control attributes its matching child denial to native Landstrip; a read-only parent control is inconclusive, while any observed child write or missing confinement observation makes the row FAIL regardless of the network result.",
     observations: {
       outerBaselines: baselines,
+      filesystemAssessment: {
+        verdict: filesystemAssessment,
+        targets: filesystemTargets,
+        childrenCompleted: childRunsSucceeded,
+      },
       loopbackBaseline: { connected: loopback.baselineConnected, error: loopback.error },
+      networkAssessment,
+      failOpenRegressionGuard:
+        confinementVerdict("FAIL", "INCONCLUSIVE-UNDER-SUBSTRATE") === "FAIL",
       reviewer: {
         exitCode: reviewerResult.exitCode,
         policy: "qq-pilot-reviewer-read-only-v1",
@@ -334,9 +385,13 @@ async function checkOne(): Promise<void> {
       },
       externalEgress: "not attempted; the work order forbids network use and the outer substrate blocks egress",
     },
-    unresolvedRisk: loopback.baselineConnected
-      ? "The attributable network case is local TCP. External egress remains unobservable beneath Codex's outer network denial."
-      : "Codex also blocked the loopback control, so the network denial could not be attributed.",
+    unresolvedRisk: filesystemAssessment === "FAIL"
+      ? "At least one attributable filesystem confinement requirement failed; the network result cannot reduce that failure to inconclusive."
+      : filesystemAssessment === "INCONCLUSIVE-UNDER-SUBSTRATE"
+        ? "The outer substrate made at least one filesystem control read-only, so the corresponding child denial cannot be attributed to Landstrip."
+        : loopback.baselineConnected
+          ? "The attributable network case is local TCP. External egress remains unobservable beneath Codex's outer network denial."
+          : "Codex also blocked the loopback control, so the network denial could not be attributed.",
   });
 }
 
@@ -395,18 +450,40 @@ async function checkTwo(): Promise<void> {
   const allowedNames = ["repositoryWrite", "gitCommonWrite", "gitWorktreeWrite", "runtimeWrite"];
   const expectedAllowed = allowedNames.every((name) => attemptOk(report, name) === true);
   const expectedDenied = attemptOk(report, "decoyWrite") === false;
-  const outerAllowsTargets = baselines.every((baseline) => baseline.ok);
-  const realPiStarted = realPiSmoke.status === 0 && realPiSmoke.stdout.trim() === "0.80.10";
-  const verdict: Verdict = outerAllowsTargets && expectedAllowed && expectedDenied && realPiStarted ? "PASS" : "FAIL";
+  const installedVersion = installedPiPackageVersion();
+  const realPiStarted = realPiSmoke.status === 0 && installedVersion === "0.80.10";
+  const allowedTargetAssessment = allowedNames.map((name, index) => ({
+    name,
+    parentWritable: baselines[index]?.ok === true,
+    parentError: baselines[index]?.error,
+    childWriteSucceeded: attemptOk(report, name) === true,
+    childErrno: attemptErrno(report, name),
+  }));
+  const attributableAllowedFailures = allowedTargetAssessment.filter(
+    (target) => target.parentWritable && !target.childWriteSucceeded,
+  );
+  const unavailableAllowedControls = allowedTargetAssessment.filter((target) => !target.parentWritable);
+  const decoyControlAvailable = baselines[4]?.ok === true;
+  const verdict: Verdict = attributableAllowedFailures.length > 0 || !realPiStarted
+    ? "FAIL"
+    : unavailableAllowedControls.length > 0 || !decoyControlAvailable
+      ? "INCONCLUSIVE-UNDER-SUBSTRATE"
+      : expectedAllowed && expectedDenied
+        ? "PASS"
+        : "FAIL";
 
   recordCheck({
     id: 2,
     title: "Implementer workspace/Git write confinement",
     verdict,
     boundary:
-      "The pilot parent proved Codex permits every intended worktree/Git/runtime target and the decoy /tmp target. A static child isolates Landstrip's filesystem decision from dynamic-loader effects; the real-Pi smoke separately tests executable viability.",
+      "Per-target parent controls separate outer-substrate restrictions from Landstrip. In this run the assigned worktree, runtime, and decoy are parent-writable while Git administrative controls are outer-read-only. The static child still fails on attributable allowed roots, and the real-Pi smoke separately fails executable viability.",
     observations: {
       outerBaselines: baselines,
+      allowedTargetAssessment,
+      attributableAllowedFailures: attributableAllowedFailures.map((target) => target.name),
+      unavailableAllowedControls: unavailableAllowedControls.map((target) => target.name),
+      decoyControlAvailable,
       staticImplementerChild: {
         exitCode: result.exitCode,
         policy: "qq-pilot-implementer-workspace-write-v1",
@@ -417,9 +494,10 @@ async function checkTwo(): Promise<void> {
         signal: realPiSmoke.signal,
         stdout: realPiSmoke.stdout,
         stderr: realPiSmoke.stderr,
+        installedPiPackageVersion: installedVersion,
       },
       diagnosis:
-        "Under the nested Codex substrate, Landstrip 0.17.30 denies writes even for every explicit allowWrite root; dynamically linked Pi also fails at libc load when allowWrite is non-empty.",
+        "Under the nested Codex substrate, Landstrip 0.17.30 denies its explicitly allowed worktree/runtime roots even though parent controls succeed; dynamically linked Pi also fails at libc load when allowWrite is non-empty. Git-root attribution is unavailable in this rework substrate because those parent controls return EROFS.",
     },
     unresolvedRisk:
       "This is the migration blocker: implementer authority cannot be demonstrated under the assigned substrate, and the interaction must be reproduced outside outer Codex confinement or fixed upstream before adoption.",
@@ -435,16 +513,43 @@ function argumentValues(argv: unknown[], flag: string): string[] {
 }
 
 async function checkThree(): Promise<void> {
-  const isolatedResult = await foreground("reviewer", "launch-record");
-  const isolatedReport = await readPilotReport(isolatedResult);
-  const explicitAgent = {
-    ...agent("reviewer"),
-    inheritProjectContext: true,
-    inheritSkills: true,
-    extensions: [allowedExtension],
-  } satisfies AgentConfig;
-  const explicitResult = await foreground("reviewer", "launch-record", { agentOverride: explicitAgent });
-  const explicitReport = await readPilotReport(explicitResult);
+  const manifestDir = path.join(pilotRoot, "manifests", "agents");
+  const documentedEnvironment = {
+    PI_SUBAGENT_PI_BINARY: wrapper,
+    PI_SUBAGENT_EXTRA_AGENT_DIRS: manifestDir,
+  };
+  const defaultDiscovery = await withEnvironment(
+    { PI_SUBAGENT_EXTRA_AGENT_DIRS: undefined },
+    () => discoverAgents(worktree, "both").agents,
+  );
+  const documentedDiscovery = await withEnvironment(
+    documentedEnvironment,
+    () => discoverAgents(worktree, "both").agents,
+  );
+  const defaultReviewer = defaultDiscovery.find((candidate) => candidate.name === "reviewer");
+  const defaultImplementer = defaultDiscovery.find((candidate) => candidate.name === "implementer");
+  const discoveredReviewer = documentedDiscovery.find((candidate) => candidate.name === "reviewer");
+  const discoveredResearcher = documentedDiscovery.find((candidate) => candidate.name === "researcher");
+  const discoveredImplementer = documentedDiscovery.find((candidate) => candidate.name === "implementer");
+
+  const isolatedResult = discoveredReviewer
+    ? await withEnvironment(documentedEnvironment, () =>
+        foreground("reviewer", "launch-record", { agentOverride: discoveredReviewer }))
+    : undefined;
+  const isolatedReport = isolatedResult ? await readPilotReport(isolatedResult) : undefined;
+  const explicitAgent = discoveredReviewer
+    ? ({
+        ...discoveredReviewer,
+        inheritProjectContext: true,
+        inheritSkills: true,
+        extensions: [allowedExtension],
+      } satisfies AgentConfig)
+    : undefined;
+  const explicitResult = explicitAgent
+    ? await withEnvironment(documentedEnvironment, () =>
+        foreground("reviewer", "launch-record", { agentOverride: explicitAgent }))
+    : undefined;
+  const explicitReport = explicitResult ? await readPilotReport(explicitResult) : undefined;
 
   const promptRuntimePath = path.join(
     worktree,
@@ -458,17 +563,31 @@ async function checkThree(): Promise<void> {
     promptRuntimeSource.includes("rewritten = stripInheritedSkills(rewritten)") &&
     promptRuntimeSource.includes('const SUBAGENT_INHERIT_PROJECT_CONTEXT_ENV = "PI_SUBAGENT_INHERIT_PROJECT_CONTEXT"') &&
     promptRuntimeSource.includes('const SUBAGENT_INHERIT_SKILLS_ENV = "PI_SUBAGENT_INHERIT_SKILLS"');
+  const runtimeDefaultsProjectContextToInherited =
+    promptRuntimeSource.includes("inheritProjectContext: inheritProjectContext ?? true");
   const isolatedArgv = Array.isArray(isolatedReport?.argv) ? isolatedReport.argv : [];
   const explicitArgv = Array.isArray(explicitReport?.argv) ? explicitReport.argv : [];
   const isolatedExtensions = argumentValues(isolatedArgv, "--extension");
   const explicitExtensions = argumentValues(explicitArgv, "--extension");
-  const manifests = ["reviewer", "researcher", "implementer"].map((name) => ({
-    name,
-    text: fs.readFileSync(path.join(pilotRoot, "manifests", "agents", `${name}.md`), "utf8"),
-  }));
+  const discoveredPilotAgents = [discoveredReviewer, discoveredResearcher, discoveredImplementer];
+  const manifestsResolved = discoveredPilotAgents.every((candidate, index) => {
+    const expectedName = ["reviewer", "researcher", "implementer"][index];
+    return candidate?.name === expectedName &&
+      fs.realpathSync(candidate.filePath) === fs.realpathSync(path.join(manifestDir, `${expectedName}.md`)) &&
+      candidate.inheritProjectContext === false &&
+      candidate.inheritSkills === false &&
+      candidate.defaultContext === "fresh" &&
+      Array.isArray(candidate.extensions) &&
+      candidate.extensions.length === 0;
+  });
+  const readme = fs.readFileSync(path.join(pilotRoot, "README.md"), "utf8");
+  const launchDocumentationComplete =
+    readme.includes("export PI_SUBAGENT_PI_BINARY=") &&
+    readme.includes("export PI_SUBAGENT_EXTRA_AGENT_DIRS=") &&
+    readme.includes("pilot/manifests/agents");
 
   const isolated =
-    isolatedResult.exitCode === 0 &&
+    isolatedResult?.exitCode === 0 &&
     isolatedArgv.includes("--no-skills") &&
     isolatedArgv.includes("--no-extensions") &&
     isolatedReport?.inheritProjectContext === "0" &&
@@ -477,26 +596,54 @@ async function checkThree(): Promise<void> {
     isolatedExtensions[0]?.endsWith("subagent-prompt-runtime.ts") &&
     runtimeStripHooksPresent;
   const explicit =
-    explicitResult.exitCode === 0 &&
+    explicitResult?.exitCode === 0 &&
     !explicitArgv.includes("--no-skills") &&
     explicitArgv.includes("--no-extensions") &&
     explicitReport?.inheritProjectContext === "1" &&
     explicitReport?.inheritSkills === "1" &&
     explicitExtensions.includes(allowedExtension);
-  const manifestsIsolated = manifests.every(
-    ({ text }) =>
-      text.includes("inheritProjectContext: false") && text.includes("inheritSkills: false") && /\nextensions:\n/.test(text),
-  );
 
   recordCheck({
     id: 3,
     title: "No implicit skill/project-context/extension leakage",
-    verdict: isolated && explicit && manifestsIsolated ? "PASS" : "FAIL",
+    verdict: isolated && explicit && manifestsResolved && launchDocumentationComplete ? "PASS" : "FAIL",
     boundary:
-      "This check targets pi-subagents' argument/environment and prompt-rewrite boundary. The child launch report is emitted after crossing the wrapper; the staged runtime source is checked for the exact environment-gated project-context and skill stripping hooks.",
+      "Real pi-subagents discovery is run first without and then with the two documented launch variables. Only the discovered pilot reviewer is launched through the wrapper; its child record verifies the resulting argument/environment boundary. Bundled-default behavior is retained as a separate observed leak, not mistaken for pilot isolation.",
     observations: {
-      isolatedLaunch: {
-        exitCode: isolatedResult.exitCode,
+      bundledDefaultWithoutManifestEnvironment: {
+        reviewerFound: Boolean(defaultReviewer),
+        reviewerSource: defaultReviewer?.source,
+        reviewerFile: defaultReviewer?.filePath,
+        reviewerInheritsProjectContext: defaultReviewer?.inheritProjectContext,
+        reviewerInheritsSkills: defaultReviewer?.inheritSkills,
+        reviewerTools: defaultReviewer?.tools,
+        implementerFound: Boolean(defaultImplementer),
+        stagedRuntimeDefaultsProjectContextToInherited: runtimeDefaultsProjectContextToInherited,
+        leakObserved:
+          defaultReviewer?.inheritProjectContext === true ||
+          !defaultImplementer,
+      },
+      documentedDiscovery: {
+        environment: {
+          PI_SUBAGENT_PI_BINARY: wrapper,
+          PI_SUBAGENT_EXTRA_AGENT_DIRS: manifestDir,
+        },
+        launchDocumentationComplete,
+        manifestsResolved,
+        agents: discoveredPilotAgents.map((candidate) => candidate
+          ? {
+              name: candidate.name,
+              source: candidate.source,
+              filePath: candidate.filePath,
+              inheritProjectContext: candidate.inheritProjectContext,
+              inheritSkills: candidate.inheritSkills,
+              defaultContext: candidate.defaultContext,
+              extensions: candidate.extensions,
+            }
+          : null),
+      },
+      isolatedDiscoveredLaunch: {
+        exitCode: isolatedResult?.exitCode,
         argv: isolatedArgv,
         extensions: isolatedExtensions,
         inheritProjectContext: isolatedReport?.inheritProjectContext,
@@ -504,14 +651,13 @@ async function checkThree(): Promise<void> {
         stagedPromptRuntimeStripHooksPresent: runtimeStripHooksPresent,
       },
       explicitAllowLaunch: {
-        exitCode: explicitResult.exitCode,
+        exitCode: explicitResult?.exitCode,
         argv: explicitArgv,
         extensions: explicitExtensions,
         inheritProjectContext: explicitReport?.inheritProjectContext,
         inheritSkills: explicitReport?.inheritSkills,
         explicitFlagsRetainedForRuntime: explicitReport?.inheritProjectContext === "1" && explicitReport?.inheritSkills === "1",
       },
-      roleManifestsDeclareIsolation: manifestsIsolated,
     },
   });
 }
@@ -522,38 +668,102 @@ async function checkFour(): Promise<void> {
     "schema-valid",
     "schema-invalid-json",
     "schema-missing",
+    "schema-missing-commits",
     "schema-empty-object",
     "schema-empty-fields",
   ];
-  const outcomes: Array<Record<string, unknown>> = [];
-  for (const scenario of scenarios) {
-    const structured = createStructuredOutputRuntime(schema, path.join(runtimeRoot, "structured-output"));
-    const result = await foreground("reviewer", scenario, {
-      directMock: true,
-      structuredOutput: structured,
-    });
-    outcomes.push({
-      scenario,
-      exitCode: result.exitCode,
-      error: result.error,
-      structuredOutput: result.structuredOutput,
-    });
-    cleanupStructuredOutputRuntime(structured);
-  }
-  const valid = outcomes.find((outcome) => outcome.scenario === "schema-valid");
-  const rejected = outcomes.filter((outcome) => outcome.scenario !== "schema-valid");
-  const passed =
-    valid?.exitCode === 0 &&
-    typeof valid.structuredOutput === "object" &&
-    rejected.every((outcome) => outcome.exitCode !== 0 && typeof outcome.error === "string");
+  const runScenarios = async (label: string, directMock: boolean) => {
+    const outcomes: Array<Record<string, unknown>> = [];
+    for (const scenario of scenarios) {
+      const runId = nextRunId(`check-04-${label}-${scenario}`);
+      const structured = createStructuredOutputRuntime(schema, path.join(runtimeRoot, "structured-output"));
+      const result = await foreground("reviewer", scenario, {
+        directMock,
+        structuredOutput: structured,
+        runId,
+      });
+      const captureAttempt = await readPilotReport(result);
+      outcomes.push({
+        scenario,
+        runId,
+        exitCode: result.exitCode,
+        error: result.error,
+        structuredOutput: result.structuredOutput,
+        captureExists: fs.existsSync(structured.outputPath),
+        captureAttempt,
+        wrapperPolicyEvent: directMock
+          ? undefined
+          : wrapperEvents().find((event) => event.runId === runId),
+      });
+      cleanupStructuredOutputRuntime(structured);
+    }
+    return outcomes;
+  };
+  const assess = (outcomes: Array<Record<string, unknown>>) => {
+    const valid = outcomes.find((outcome) => outcome.scenario === "schema-valid");
+    const rejected = outcomes.filter((outcome) => outcome.scenario !== "schema-valid");
+    const validEnvelope = valid?.structuredOutput;
+    const requiredFields = [
+      "status",
+      "summary",
+      "commits",
+      "checks",
+      "filesChanged",
+      "contestableDecisions",
+      "openQuestions",
+      "unresolvedRisks",
+      "branch",
+      "worktree",
+    ];
+    const fullEnvelopeAccepted =
+      valid?.exitCode === 0 &&
+      Boolean(validEnvelope) &&
+      typeof validEnvelope === "object" &&
+      requiredFields.every((field) => Object.hasOwn(validEnvelope, field));
+    const commitsLess = outcomes.find((outcome) => outcome.scenario === "schema-missing-commits");
+    const commitsLessRejected =
+      commitsLess?.exitCode !== 0 &&
+      typeof commitsLess?.error === "string" &&
+      commitsLess.error.includes("commits");
+    const allInvalidRejected = rejected.every(
+      (outcome) => outcome.exitCode !== 0 && typeof outcome.error === "string",
+    );
+    return {
+      passed: fullEnvelopeAccepted && commitsLessRejected && allInvalidRejected,
+      fullEnvelopeAccepted,
+      commitsLessRejected,
+      allInvalidRejected,
+      outcomes,
+    };
+  };
+
+  const parentBoundary = assess(await runScenarios("parent", true));
+  const composedBoundary = assess(await runScenarios("composed", false));
+  const passed = parentBoundary.passed && composedBoundary.passed;
 
   recordCheck({
     id: 4,
-    title: "Strict Completion Envelope rejection",
+    title: "Strict Completion Envelope validation and composed delivery",
     verdict: passed ? "PASS" : "FAIL",
     boundary:
-      "The staged pi-subagents parent validator owns this boundary. The deterministic child is launched directly so Landstrip's nested allowWrite defect cannot turn every structured-output case into the same filesystem failure.",
-    observations: { schema: "<WORKTREE>/pilot/manifests/completion-envelope.schema.json", outcomes },
+      "Parent-boundary schema validation and composed reviewer delivery are reported separately. Direct mock runs prove the staged validator's behavior; composed runs cross the wrapper with a read-only policy granting only that run's capture path. A parent PASS cannot mask a composed delivery defect.",
+    observations: {
+      schema: "<WORKTREE>/pilot/manifests/completion-envelope.schema.json",
+      parentBoundaryValidation: {
+        verdict: parentBoundary.passed ? "PASS" : "FAIL",
+        ...parentBoundary,
+      },
+      composedReadOnlyDelivery: {
+        verdict: composedBoundary.passed ? "PASS" : "DEFECT",
+        attemptedFix: "grant only PI_SUBAGENT_STRUCTURED_OUTPUT_CAPTURE to the read-only Landstrip policy",
+        ...composedBoundary,
+      },
+    },
+    unresolvedRisk: !parentBoundary.passed
+      ? "The qq Completion Envelope schema or parent validator does not enforce the full required contract."
+      : !composedBoundary.passed
+        ? "The parent validator passes, but a reviewer cannot reliably deliver the required envelope through the composed pi-subagents/Landstrip boundary."
+        : undefined,
   });
 }
 
@@ -635,10 +845,12 @@ async function treeRun(options: { timeout: string; signal?: NodeJS.Signals; labe
     stderr += chunk;
   });
 
-  await waitFor(
-    () => (["pi", "tool", "mcp", "orphan"].every((name) => processRows.has(name)) ? true : undefined),
-    3000,
-  );
+  const requiredAnnouncements = ["pi", "tool", "mcp", "orphan"];
+  const announcementsObserved =
+    (await waitFor(
+      () => (requiredAnnouncements.every((name) => processRows.has(name)) ? true : undefined),
+      3000,
+    )) === true;
   const piPid = processRows.get("pi");
   const identities: ProcessIdentity[] = [];
   for (const [name, pid] of processRows) {
@@ -703,6 +915,8 @@ async function treeRun(options: { timeout: string; signal?: NodeJS.Signals; labe
     exitCode,
     exitSignal,
     exitElapsedMs,
+    announcementsObserved,
+    requiredAnnouncements,
     terminated,
     survivorsBeforeCleanup,
     stderr,
@@ -723,6 +937,7 @@ async function checkFive(): Promise<void> {
   const passed =
     result.exited &&
     result.exitCode === 124 &&
+    result.announcementsObserved &&
     result.terminated &&
     required.every((name) => observedNames.has(name)) &&
     result.observed.every((row) => row.terminatedBeforeCleanup) &&
@@ -739,24 +954,29 @@ async function checkFive(): Promise<void> {
 
 async function checkSix(): Promise<void> {
   const signals: NodeJS.Signals[] = ["SIGINT", "SIGTERM", "SIGHUP"];
+  const required = ["pi", "landstrip", "timeout", "tool", "mcp", "orphan"];
   const outcomes = [];
   for (const signal of signals) {
     outcomes.push(await treeRun({ timeout: "30s", signal, label: `check-06-${signal.toLowerCase()}` }));
   }
   const passed = outcomes.every(
-    (outcome) =>
-      outcome.exited &&
-      outcome.terminated &&
-      outcome.exitElapsedMs <= 6000 &&
-      outcome.observed.every((row) => row.terminatedBeforeCleanup),
+    (outcome) => {
+      const observedNames = new Set(outcome.observed.map((row) => row.name));
+      return outcome.announcementsObserved &&
+        required.every((name) => observedNames.has(name)) &&
+        outcome.exited &&
+        outcome.terminated &&
+        outcome.exitElapsedMs <= 6000 &&
+        outcome.observed.every((row) => row.terminatedBeforeCleanup);
+    },
   );
   recordCheck({
     id: 6,
     title: "SIGINT/SIGTERM/pane-close signal cleanup",
     verdict: passed ? "PASS" : "FAIL",
     boundary:
-      "Signals target only each check's dedicated timeout leader. SIGHUP is the Herdr-pane-closure signal-path simulation; no live Herdr pane or unrelated PID is touched.",
-    observations: outcomes.map((outcome, index) => ({ signal: signals[index], ...outcome })),
+      "Each signal case must announce and expose Pi, Landstrip, timeout, tool, MCP, and orphan descendants before cleanup can pass. Signals target only that dedicated timeout leader. SIGHUP simulates Herdr pane closure; no live Herdr pane or unrelated PID is touched.",
+    observations: outcomes.map((outcome, index) => ({ signal: signals[index], requiredObservedNames: required, ...outcome })),
   });
 }
 
@@ -986,7 +1206,7 @@ function writeMatrix(): void {
     "",
     `Overall: **${failed.length === 0 && inconclusive.length === 0 ? "PASS" : "HOLD"}**. Failed checks: ${failed.length ? failed.join(", ") : "none"}. Inconclusive-under-substrate checks: ${inconclusive.length ? inconclusive.join(", ") : "none"}.`,
     "",
-    "The migration verdict is HOLD whenever any required check fails or is inconclusive. In this run, Check 2 is the decisive blocker: nested Landstrip denies its own explicit implementer allowWrite roots under the outer Codex sandbox.",
+    "The migration verdict is HOLD whenever any required check fails or is inconclusive. Filesystem/network and parent-validator/composed-delivery subcases are evaluated independently so a weaker result cannot mask a failure.",
     "",
   ].join("\n");
   fs.writeFileSync(path.join(evidenceDir, "matrix.md"), matrix, "utf8");

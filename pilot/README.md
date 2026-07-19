@@ -4,9 +4,17 @@ This pilot composes `pi-subagents@0.35.1` with native Landstrip `0.17.30` throug
 
 ## Launch contract
 
-Set `PI_SUBAGENT_PI_BINARY` to `pilot/bin/pi-landstrip-wrapper`. Pi-subagents supplies `PI_SUBAGENT_CHILD_AGENT`; the wrapper accepts only `reviewer`, `researcher`, and `implementer`.
+From the assigned worktree root, expose both the wrapper and the pilot's role manifests to the parent Pi process:
 
-- reviewer/researcher: have an empty Landstrip write allowlist; Pi-subagents' parent process owns their run artifacts beneath `/tmp`;
+```sh
+pilot_worktree="$(git rev-parse --show-toplevel)"
+export PI_SUBAGENT_PI_BINARY="$pilot_worktree/pilot/bin/pi-landstrip-wrapper"
+export PI_SUBAGENT_EXTRA_AGENT_DIRS="$pilot_worktree/pilot/manifests/agents"
+```
+
+Both variables are part of the launch contract. The extra-agent directory makes the isolated reviewer/researcher manifests and the pilot-only implementer discoverable instead of silently selecting pi-subagents' bundled defaults. Pi-subagents supplies `PI_SUBAGENT_CHILD_AGENT`; the wrapper accepts only `reviewer`, `researcher`, and `implementer`.
+
+- reviewer/researcher: have an empty Landstrip write allowlist except for the exact per-run structured-output capture path when pi-subagents requests one; Pi-subagents' parent process owns all other run artifacts beneath `/tmp`;
 - implementer: additionally writes to the assigned worktree, common Git directory, and linked-worktree Git directory;
 - every role: direct network, local TCP binding, and Unix sockets are denied by Landstrip;
 - every launch: GNU `timeout -k 10` remains outermost; a Linux child-subreaper beneath it reaps the Landstrip/Pi tree, including descendants that double-fork or create a new session;
@@ -18,7 +26,7 @@ By default, the wrapper uses the native binary from the project-staged Landstrip
 
 ## Agent and completion policy
 
-The role manifests under `manifests/agents/` use fresh context, system-prompt replacement, `inheritProjectContext: false`, `inheritSkills: false`, and an empty extension allowlist. Pi-subagents still loads its required child runtime extension. The JSON Schema in `manifests/completion-envelope.schema.json` rejects missing output, malformed JSON, empty objects/fields, unknown status values, and empty Check lists.
+The role manifests under `manifests/agents/` use fresh context, system-prompt replacement, `inheritProjectContext: false`, `inheritSkills: false`, and an empty extension allowlist. Pi-subagents still loads its required child runtime extension. The JSON Schema in `manifests/completion-envelope.schema.json` requires qq's complete delegate report: status, summary, commits, files changed, Checks, contestable decisions, open questions, unresolved risks, branch, and worktree. It rejects missing output, malformed JSON, empty objects/required strings, unknown status values, and empty Check lists.
 
 ## Checks
 

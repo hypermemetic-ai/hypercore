@@ -6,10 +6,14 @@
   "required": [
     "status",
     "summary",
+    "commits",
     "checks",
     "filesChanged",
+    "contestableDecisions",
     "openQuestions",
-    "unresolvedRisks"
+    "unresolvedRisks",
+    "branch",
+    "worktree"
   ],
   "properties": {
     "status": {
@@ -19,6 +23,10 @@
     "summary": {
       "type": "string",
       "minLength": 1
+    },
+    "commits": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
     },
     "checks": {
       "type": "array",
@@ -37,6 +45,10 @@
       "type": "array",
       "items": { "type": "string", "minLength": 1 }
     },
+    "contestableDecisions": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
     "openQuestions": {
       "type": "array",
       "items": { "type": "string", "minLength": 1 }
@@ -44,6 +56,14 @@
     "unresolvedRisks": {
       "type": "array",
       "items": { "type": "string", "minLength": 1 }
+    },
+    "branch": {
+      "type": "string",
+      "minLength": 1
+    },
+    "worktree": {
+      "type": "string",
+      "minLength": 1
     }
   }
 }
