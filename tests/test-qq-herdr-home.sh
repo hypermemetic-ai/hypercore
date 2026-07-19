@@ -242,8 +242,8 @@ fi
 if grep -Fq -- 'herdr agent start' "$ROOT/skills/agent-messaging/SKILL.md"; then
   fail "agent-messaging reintroduced delegate lifecycle machinery"
 fi
-if grep -qE -- 'herdr (pane run|agent send|agent wait|agent list|agent get|agent read)' \
-  "$ROOT/skills/agent-messaging/SKILL.md"; then
+if tr '\n\t' '  ' <"$ROOT/skills/agent-messaging/SKILL.md" | \
+  grep -qE -- 'herdr (pane run|agent send|agent wait|agent list|agent get|agent read)'; then
   fail "agent-messaging reintroduced a herdr inter-agent path (amended T-109: intercom-only)"
 fi
 grep -Fq -- 'pi-intercom' "$ROOT/skills/agent-messaging/SKILL.md"
