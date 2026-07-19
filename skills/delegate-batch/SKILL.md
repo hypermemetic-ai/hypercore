@@ -171,7 +171,7 @@ dispatch a fresh `codex exec -C <checkout>` for the rework.
 On blocked or failed, run `herdr notification show "<ticket> needs attention"
 --body "<short actionable reason>" --sound request`. Verify that the result
 says it was shown; if the command fails or reports notifications disabled or
-not shown, plainly report the transcript/status-surface fallback and continue.
+not shown, plainly report the transcript fallback and continue.
 
 Degrade without changing the automation contract: if herdr is down, keep
 dispatching and carry the stage in the transcript. If a placeholder is missing,

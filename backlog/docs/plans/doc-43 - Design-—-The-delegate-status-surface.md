@@ -8,6 +8,15 @@ tags:
   - design
   - delegation
 ---
+
+> **RETIRED in part, 2026-07-19 (decision-3, T-116).** The detail-file
+> protocol this design specifies — plain `/tmp/qq-delegates` status files
+> and the `prefix+d` popup renderer — is deleted; the per-batch namespacing
+> amendment (T-115, PR #155) died with it. The Herdr reporting contract in
+> this document stays operative until T-95 removes the Herdr glass. Kept for
+> history. Delegate visibility: transcripts and pi-intercom until T-95 lands
+> pi-subagents native artifacts/widgets.
+
 # Design — The delegate status surface
 
 Owning task: [T-42](</home/qqp/projects/qq/backlog/tasks/task-42 - Design-the-delegate-status-surface.md>)
