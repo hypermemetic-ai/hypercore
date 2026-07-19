@@ -18,11 +18,13 @@ if [ "${1:-}" = inspect ]; then
 fi
 event="${1:-}"
 [ -n "$event" ] || qq_engine_error \
-  'usage: qq-status [inspect] <queued|dispatched|working|envelope-received|envelope-verified|review|pr-open|blocked|failed|terminal> --repo <path> --dispatcher-workspace <id> --work-session <id> --pane <id> --agent <label> --ticket <id> --label <text> [details] [--dry-run]'
+  'usage: qq-status [inspect] <queued|dispatched|working|envelope-received|envelope-verified|review|pr-open|blocked|failed|terminal> --repo <path> --dispatcher-workspace <id> [--batch-label <label>] --work-session <id> --pane <id> --agent <label> --ticket <id> --label <text> [details] [--dry-run]'
 shift
 
 repo=""
 dispatcher_workspace=""
+batch_label=""
+batch_label_provided=false
 work_session=""
 pane=""
 agent=""
@@ -51,6 +53,12 @@ while [ "$#" -gt 0 ]; do
     --dispatcher-workspace)
       [ "$#" -ge 2 ] || qq_engine_error '--dispatcher-workspace requires an id'
       dispatcher_workspace="$2"
+      shift 2
+      ;;
+    --batch-label)
+      [ "$#" -ge 2 ] || qq_engine_error '--batch-label requires a label'
+      batch_label="$2"
+      batch_label_provided=true
       shift 2
       ;;
     --work-session)
@@ -149,6 +157,10 @@ for required_name in repo dispatcher_workspace work_session pane agent ticket la
 done
 [[ "$dispatcher_workspace" =~ ^[A-Za-z0-9._:-]+$ ]] \
   || qq_engine_error '--dispatcher-workspace contains unsafe path characters'
+if [ "$batch_label_provided" = true ]; then
+  [[ "$batch_label" =~ ^[A-Za-z0-9-]{1,30}$ ]] \
+    || qq_engine_error '--batch-label must match [A-Za-z0-9-]{1,30}'
+fi
 [[ "$agent" =~ ^[A-Za-z0-9._-]+$ ]] \
   || qq_engine_error '--agent must match [A-Za-z0-9._-]+'
 for single_line in "$work_session" "$pane" "$ticket" "$label" "$runtime" "$handle"; do
@@ -232,7 +244,11 @@ repo_root="$(cd "$(dirname "$common_dir")" 2>/dev/null && pwd -P)" \
   || qq_engine_error "cannot resolve Repository root from: $repo"
 status_base="${TMPDIR:-/tmp}/qq-delegates"
 status_dir="$status_base$repo_root"
-status_file="$status_dir/$dispatcher_workspace.status"
+status_name="$dispatcher_workspace"
+if [ "$batch_label_provided" = true ]; then
+  status_name="$dispatcher_workspace-$batch_label"
+fi
+status_file="$status_dir/$status_name.status"
 canonical_status_base="$(readlink -m -- "$status_base" 2>/dev/null || true)"
 resolved_status_dir="$(readlink -m -- "$status_dir" 2>/dev/null || true)"
 if [ -z "$canonical_status_base" ] || [ -z "$resolved_status_dir" ]; then
@@ -291,7 +307,7 @@ detail_written=false
 if ! mkdir -p "$status_dir" 2>/dev/null; then
   notes+=('detail file unavailable: could not create the derived status directory')
 else
-  temporary="$(mktemp "$status_dir/.$dispatcher_workspace.status.XXXXXX" 2>/dev/null || true)"
+  temporary="$(mktemp "$status_dir/.$status_name.status.XXXXXX" 2>/dev/null || true)"
   if [ -z "$temporary" ]; then
     notes+=('detail file unavailable: could not create an atomic temporary file')
   else

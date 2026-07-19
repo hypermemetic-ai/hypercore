@@ -233,8 +233,11 @@ fi
 if grep -Fq 'accountable pane' "$ROOT/skills/deliver-change/SKILL.md"; then
   fail 'deliver-change reintroduced an accountable pane inside the work session (it dispatches from the project home, T-70)'
 fi
-grep -Fq 'managed Task record under `backlog/tasks/`' "$ROOT/skills/deliver-change/SKILL.md"
-grep -Fq 'other untracked entry still blocks the synchronization' "$ROOT/skills/deliver-change/SKILL.md"
+grep -Fq 'managed Backlog markdown under `backlog/`' "$ROOT/skills/deliver-change/SKILL.md"
+tr '\n\t' '  ' <"$ROOT/skills/deliver-change/SKILL.md" | \
+  grep -qE 'Verify zero path overlap .*`git diff --name-only HEAD origin/main`.*untracked list'
+tr '\n\t' '  ' <"$ROOT/skills/deliver-change/SKILL.md" | \
+  grep -qE 'Any tracked modification, any untracked entry outside `backlog/`, or any +path overlap still blocks the synchronization'
 if tr '\n\t' '  ' <"$ROOT/skills/deliver-change/SKILL.md" | \
   grep -qE 'one such checkout, an empty `git status'; then
   fail 'deliver-change step 11 regressed to the strict all-untracked sync rail (T-73)'

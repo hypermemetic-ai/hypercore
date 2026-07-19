@@ -68,6 +68,18 @@ assert_file_contains "$FAKE_HERDR_LOG" \
 assert_file_contains "$FAKE_HERDR_LOG" \
   'pane report-agent change-1:p1 --source qq-dispatch --agent worker-1 --state working'
 
+# A batch label namespaces the derived detail file, while malformed labels are
+# command errors rather than rewritten path components.
+run_status 0 inspect dispatched "${status_args[@]}" --batch-label t107-followon
+batch_status_file="$(jq -r '.state.status_file' "$tmp/result.json")"
+assert_equal "${status_file%.status}-t107-followon.status" "$batch_status_file" \
+  'batch label did not namespace the derived status file'
+run_status 1 inspect dispatched "${status_args[@]}" --batch-label bad_label
+jq -e '
+  .status == "error"
+  and (.message | contains("--batch-label must match [A-Za-z0-9-]{1,30}"))
+' "$tmp/result.json" >/dev/null
+
 # Terminal is idempotent glass cleanup: remove the block, clear the token, and
 # release presence with a fresh sequence for each call.
 : >"$FAKE_HERDR_LOG"
