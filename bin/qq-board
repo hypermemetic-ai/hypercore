@@ -318,11 +318,20 @@ for task_file in "${task_files[@]}"; do
       ;;
   esac
 
-  tracked=false
-  if "$git_bin" -C "$repo_root" ls-files --error-unmatch -- "$task_file" \
-    >/dev/null 2>&1; then
-    tracked=true
-  fi
+  set +e
+  "$git_bin" -C "$repo_root" ls-files --error-unmatch -- "$task_file" \
+    >/dev/null 2>&1
+  tracked_status=$?
+  set -e
+  case "$tracked_status" in
+    0) tracked=true ;;
+    1) tracked=false ;;
+    *)
+      state="$("$QQ_ENGINE_JQ" -cn --arg task_file "$task_file" \
+        '{task_file:$task_file}')"
+      qq_engine_error 'cannot determine whether a Task record is tracked' "$state"
+      ;;
+  esac
 
   branches="${branches_by_task[$task_number]-}"
   branches_json="$(printf '%s\n' "$branches" \

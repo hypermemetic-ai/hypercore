@@ -335,6 +335,40 @@ assert_equal '' \
 assert_equal 1 "$(wc -l <"$FAKE_BACKLOG_LOG")" \
   'reconcile did not limit writes to the untracked change'
 
+# A Git failure while checking trackedness must stop reconciliation before any
+# Task record can be mistaken for untracked and rewritten.
+failing_ls_files_git="$tmp/git-ls-files-error"
+cat >"$failing_ls_files_git" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+previous=''
+for argument in "$@"; do
+  if [ "$previous" = ls-files ] && [ "$argument" = --error-unmatch ]; then
+    exit 128
+  fi
+  previous="$argument"
+done
+exec "$REAL_GIT_BIN" "$@"
+SH
+chmod +x "$failing_ls_files_git"
+export QQ_GIT_BIN="$failing_ls_files_git"
+: >"$FAKE_BACKLOG_LOG"
+run_board 1 reconcile --repo "$repo"
+jq -e --arg task_file "$t1_file" '
+  .status == "error"
+  and .message == "cannot determine whether a Task record is tracked"
+  and .state == {task_file: $task_file}
+' "$tmp/result.json" >/dev/null
+assert_equal 0 "$(wc -l <"$FAKE_BACKLOG_LOG")" \
+  'trackedness Git failure allowed a Task record write'
+assert_equal 'To Do' "$(read_status "$t5_file")" \
+  'trackedness Git failure rewrote a tracked Task record'
+assert_equal '' \
+  "$("$real_git" -C "$repo" status --porcelain -- \
+    'backlog/tasks/t-5 - tracked-record.md')" \
+  'trackedness Git failure dirtied a tracked Task record'
+export QQ_GIT_BIN="$fake_git"
+
 # A stalled gh probe is bounded and degrades to branch-only derivation.
 slow_gh="$tmp/slow-gh"
 cat >"$slow_gh" <<'SH'
