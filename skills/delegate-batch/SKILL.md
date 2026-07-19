@@ -97,15 +97,21 @@ Follow doc-43 as amended 2026-07-16 round 5. Treat every visibility action as
 best-effort glass; it never gates dispatch, the envelope contract, or the
 single completion wake.
 
-Keep one status file per Repository per dispatcher workspace — the project
-home in both modes. From any path in a
-primary or linked checkout, derive it exactly as follows:
+Keep one status file per Repository per dispatcher batch in the project-home
+dispatcher workspace used by both modes. From any path in a primary or linked
+checkout, derive it exactly as follows:
 
 ```sh
 repo_root="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"
 status_dir="${TMPDIR:-/tmp}/qq-delegates${repo_root}"
-status_file="${status_dir}/<dispatcher-workspace-id>.status"
+status_file="${status_dir}/<dispatcher-workspace-id>-<batch-label>.status"
 ```
+
+The dispatcher chooses a short batch label unique within the project home (for
+example, `wM-t107-followon.status`); two dispatchers sharing that project home
+must not write the same file, and the suffix form keeps each batch's detail file
+visible to the existing `prefix+d` popup, which renders every detail file in
+the directory.
 
 This preserves the absolute main-checkout path below `qq-delegates`: linked
 worktrees resolve to the same Repository directory, and two different

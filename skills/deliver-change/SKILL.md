@@ -129,11 +129,13 @@ delegated agents bounded assignments; do not hand them this lifecycle.
    to find the local checkout registered for `refs/heads/main`. Require exactly
    one such checkout and symbolic `HEAD` on `refs/heads/main`. Require every
    line of `git status --porcelain --untracked-files=all` to be an untracked
-   managed Task record under `backlog/tasks/`: the hybrid Task-truth
-   convention (doc-48) keeps in-flight records there by design, and Git
-   itself refuses a fast-forward that would overwrite an untracked path, so
-   the records cannot be silently clobbered. Any tracked modification or any
-   other untracked entry still blocks the synchronization.
+   managed Backlog markdown under `backlog/`: the hybrid Task-truth convention
+   (doc-48) keeps in-flight Task records under `backlog/tasks/`, while other
+   managed markdown—docs, decisions, and completed/archive records—lands through
+   its own finalization moves. Verify zero path overlap between the incoming
+   pull's `git diff --name-only HEAD origin/main` output and the untracked list.
+   Any tracked modification, any untracked entry outside `backlog/`, or any
+   path overlap still blocks the synchronization.
    Establish exclusive use of that
    checkout before mutating it—coordinate through agent messaging when another
    Actor may hold it—and refuse synchronization while it is contested. With
