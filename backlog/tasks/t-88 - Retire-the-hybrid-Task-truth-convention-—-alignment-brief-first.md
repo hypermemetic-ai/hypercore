@@ -21,11 +21,12 @@ OPEN: this Task enacts nothing until its own alignment brief is answered. Eviden
 
 Decision ledger:
 - OPEN — routes through a dedicated alignment brief (grilling) before any Repository mutation; recorded as open in doc-51 (2026-07-17).
+- 2026-07-20: alignment brief answered — operator APPROVED the born-in-worktree model with board-as-read-model (asked-and-answered alignment exchange, project-home session); outcome recorded as decision-6. Enactment now routes through its own reviewed Change.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 An alignment brief is answered before any enactment and its outcome recorded as a decision record
+- [x] #1 An alignment brief is answered before any enactment and its outcome recorded as a decision record
 <!-- AC:END -->
 
 ## Implementation Notes
