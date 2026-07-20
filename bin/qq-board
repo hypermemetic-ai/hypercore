@@ -405,6 +405,7 @@ aggregate_tree() {
   done
 }
 
+reads_tmp=
 aggregate_tree "$repo_root" primary
 for worktree_path in "${worktree_paths[@]}"; do
   [ "$worktree_path" = "$repo_root" ] && continue
@@ -412,15 +413,34 @@ for worktree_path in "${worktree_paths[@]}"; do
   participate_all=false
   merge_base="$("$git_bin" -C "$worktree_path" merge-base HEAD refs/heads/main 2>/dev/null || true)"
   if [ -n "$merge_base" ]; then
-    while IFS= read -r -d '' changed_rel; do
-      [ -n "$changed_rel" ] && changed_paths["$changed_rel"]=true
-    done < <("$git_bin" -C "$worktree_path" diff --name-only -z \
-      "$merge_base" HEAD -- backlog/tasks/ 2>/dev/null)
-    while IFS= read -r -d '' changed_status; do
-      changed_rel="${changed_status:3}"
-      [ -n "$changed_rel" ] && changed_paths["$changed_rel"]=true
-    done < <("$git_bin" -C "$worktree_path" status --porcelain -z \
-      --untracked-files=all -- backlog/tasks/ 2>/dev/null)
+    # Participation reads buffer through a file so a failed Git command is
+    # distinguishable from an empty result; a failed read degrades loudly
+    # (every record participates) instead of hiding Task truth.
+    if [ -z "$reads_tmp" ]; then
+      reads_tmp="$(mktemp)" \
+        || qq_engine_error 'Could not allocate the participation-read buffer.'
+    fi
+    : >"$reads_tmp"
+    if "$git_bin" -C "$worktree_path" diff --name-only -z \
+      "$merge_base" HEAD -- backlog/tasks/ >"$reads_tmp" 2>/dev/null; then
+      while IFS= read -r -d '' changed_rel; do
+        [ -n "$changed_rel" ] && changed_paths["$changed_rel"]=true
+      done <"$reads_tmp"
+    else
+      participate_all=true
+      append_note "Cannot read committed Task changes for $worktree_path; every record there participates."
+    fi
+    : >"$reads_tmp"
+    if "$git_bin" -C "$worktree_path" status --porcelain -z \
+      --untracked-files=all -- backlog/tasks/ >"$reads_tmp" 2>/dev/null; then
+      while IFS= read -r -d '' changed_status; do
+        changed_rel="${changed_status:3}"
+        [ -n "$changed_rel" ] && changed_paths["$changed_rel"]=true
+      done <"$reads_tmp"
+    else
+      participate_all=true
+      append_note "Cannot read uncommitted Task changes for $worktree_path; every record there participates."
+    fi
   else
     participate_all=true
     append_note "Cannot derive a merge-base with main for $worktree_path; every record there participates."
@@ -518,6 +538,10 @@ cleanup_materialization() {
   case "$board_temp" in
     "$board_parent"/.*) rm -rf -- "$board_temp" ;;
   esac
+  if [ -n "$reads_tmp" ]; then
+    rm -f -- "$reads_tmp"
+    reads_tmp=
+  fi
 }
 trap cleanup_materialization EXIT
 

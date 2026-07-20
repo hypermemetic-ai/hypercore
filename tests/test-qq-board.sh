@@ -347,6 +347,27 @@ jq -e '
 [ -L "$scratch_root" ] || fail 'publish did not replace the malformed link'
 [ -d "$scratch_root/backlog/tasks" ] || fail 'malformed-link run left no board'
 
+# A failed participation read degrades loudly: the note names the worktree
+# and every record there participates, so truth is never silently hidden.
+fake_git_fail="$tmp/git-fail"
+cat >"$fake_git_fail" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "$*" >>"$FAKE_GIT_LOG"
+[ "${1:-}" = status ] && exit 64
+[ "${1:-}" = -C ] && [ "${3:-}" = status ] && exit 64
+exec "$REAL_GIT_BIN" "$@"
+SH
+chmod +x "$fake_git_fail"
+export QQ_GIT_BIN="$fake_git_fail"
+run_board 0 reconcile --repo "$repo"
+jq -e '
+  .status == "done"
+  and .state.task_count == 5
+  and any(.state.notes[]; contains("Cannot read uncommitted Task changes"))
+' "$tmp/result.json" >/dev/null
+export QQ_GIT_BIN="$fake_git"
+
 # An absent gh is a noted degradation, not an aggregation failure, and inspect
 # still leaves the materialized cache untouched.
 touch "$scratch_root/gh-degradation-sentinel"
