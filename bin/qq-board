@@ -307,8 +307,9 @@ declare -A task_name_by_id=()
 declare -A task_number_by_id=()
 declare -A task_status_by_id=()
 declare -A task_hash_by_id=()
-declare -A task_primary_hash_by_id=()
 declare -A task_source_by_id=()
+declare -A task_source_kind_by_id=()
+declare -A changed_paths=()
 task_ids=()
 
 aggregate_tree() {
@@ -334,6 +335,14 @@ aggregate_tree() {
       qq_engine_error 'Task filename does not expose a numeric Task id.' "$state"
     fi
     task_number="${BASH_REMATCH[1]}"
+    # Participation is decided by Git history, never by byte-inequality with
+    # primary: only records the Change itself touched (committed against the
+    # merge-base or dirty/untracked in the worktree) can overlay. A clean
+    # inherited snapshot stays out even after main advances beneath it.
+    if [ "$source_kind" = linked ] && [ "$participate_all" != true ] \
+      && [ -z "${changed_paths[backlog/tasks/$task_name]+present}" ]; then
+      continue
+    fi
     if ! metadata="$(read_task_metadata "$task_file")"; then
       state="$("$QQ_ENGINE_JQ" -cn --arg task_file "$task_file" \
         '{task_file:$task_file}')"
@@ -370,14 +379,12 @@ aggregate_tree() {
     if [ -z "${task_hash_by_id[$task_id]+present}" ]; then
       task_ids+=("$task_id")
     else
-      # Byte-identical copies never participate in overlay precedence: an
-      # inherited copy masks neither the primary baseline nor a divergent
-      # in-flight edit. Only content-divergent copies overlay, and only two
-      # divergent non-primary copies count as a collision.
+      # Among participants, identical copies step aside; a divergent copy
+      # overlays; only two divergent Change-side copies collide.
       case "$task_hash" in
-        "${task_hash_by_id[$task_id]}" | "${task_primary_hash_by_id[$task_id]-}") continue ;;
+        "${task_hash_by_id[$task_id]}") continue ;;
       esac
-      if [ "${task_hash_by_id[$task_id]}" != "${task_primary_hash_by_id[$task_id]-}" ]; then
+      if [ "${task_source_kind_by_id[$task_id]}" = linked ]; then
         append_note "Divergent cross-worktree Task copies for $task_id: ${task_source_by_id[$task_id]} -> $tree; the later divergent copy was selected."
         collisions="$("$QQ_ENGINE_JQ" -cn --argjson collisions "$collisions" \
           --arg id "$task_id" \
@@ -394,15 +401,30 @@ aggregate_tree() {
     task_status_by_id["$task_id"]="$stored_status"
     task_hash_by_id["$task_id"]="$task_hash"
     task_source_by_id["$task_id"]="$tree"
-    if [ "$source_kind" = primary ]; then
-      task_primary_hash_by_id["$task_id"]="$task_hash"
-    fi
+    task_source_kind_by_id["$task_id"]="$source_kind"
   done
 }
 
 aggregate_tree "$repo_root" primary
 for worktree_path in "${worktree_paths[@]}"; do
   [ "$worktree_path" = "$repo_root" ] && continue
+  changed_paths=()
+  participate_all=false
+  merge_base="$("$git_bin" -C "$worktree_path" merge-base HEAD refs/heads/main 2>/dev/null || true)"
+  if [ -n "$merge_base" ]; then
+    while IFS= read -r -d '' changed_rel; do
+      [ -n "$changed_rel" ] && changed_paths["$changed_rel"]=true
+    done < <("$git_bin" -C "$worktree_path" diff --name-only -z \
+      "$merge_base" HEAD -- backlog/tasks/ 2>/dev/null)
+    while IFS= read -r -d '' changed_status; do
+      changed_rel="${changed_status:3}"
+      [ -n "$changed_rel" ] && changed_paths["$changed_rel"]=true
+    done < <("$git_bin" -C "$worktree_path" status --porcelain -z \
+      --untracked-files=all -- backlog/tasks/ 2>/dev/null)
+  else
+    participate_all=true
+    append_note "Cannot derive a merge-base with main for $worktree_path; every record there participates."
+  fi
   aggregate_tree "$worktree_path" linked
 done
 
@@ -547,7 +569,9 @@ materialize_board() {
     || qq_engine_error 'Could not reserve the scratch-board link name.'
   ln -s -- "$board_temp" "$link_temp" \
     || qq_engine_error 'Could not stage the scratch-board link.'
-  previous_target="$(readlink -- "$scratch_root" 2>/dev/null || true)"
+  # Canonicalize the prior target before reaping: a lexical match would let
+  # a malformed link aim rm -rf outside the cache.
+  previous_target="$(readlink -f -- "$scratch_root" 2>/dev/null || true)"
   if ! mv -T -- "$link_temp" "$scratch_root"; then
     rm -f -- "$link_temp"
     qq_engine_error 'Could not publish the scratch board tree.'
@@ -558,6 +582,9 @@ materialize_board() {
       board_temp="$previous_target"
       rm -rf -- "$board_temp"
       board_temp=
+      ;;
+    ?*)
+      append_note "Skipped reaping a scratch target outside the board cache: $previous_target"
       ;;
   esac
 }

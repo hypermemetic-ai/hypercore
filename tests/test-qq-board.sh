@@ -315,6 +315,38 @@ assert_equal "$sources_before" "$(source_digest)" \
 assert_equal "$primary_before" "$(primary_digest)" \
   'second materialization changed a primary file'
 
+# Main advances after a linked worktree inherited clean snapshots: the
+# stale snapshot differs from primary but never participated in its Change,
+# so it must not overlay the advanced primary or count as a collision.
+make_task "$repo" 4 Done durable-done 'marker: primary T-4 advanced'
+"$real_git" -C "$repo" add backlog/tasks
+"$real_git" -C "$repo" -c user.name=test -c user.email=test@example.com \
+  commit -qm 'advance t-4'
+sources_before="$(source_digest)"
+primary_before="$(primary_digest)"
+run_board 0 reconcile --repo "$repo"
+jq -e --arg repo "$repo" '
+  .state.collision_count == 1
+  and ([.state.collisions[].id] == ["T-5"])
+  and ([.state.notes[] | select(contains("for T-4"))] | length == 0)
+  and (.state.tasks[] | select(.id == "T-4") | .source_worktree == $repo)
+' "$tmp/result.json" >/dev/null
+assert_file_contains "$scratch_root/backlog/tasks/t-4 - durable-done.md" \
+  'marker: primary T-4 advanced'
+
+# A malformed prior publish target is canonicalized before reaping, never
+# followed outside the cache.
+rm -f "$scratch_root"
+ln -s "$XDG_CACHE_HOME/qq/board/../../../repo" "$scratch_root"
+run_board 0 reconcile --repo "$repo"
+jq -e '
+  .status == "done"
+  and any(.state.notes[]; contains("Skipped reaping a scratch target"))
+' "$tmp/result.json" >/dev/null
+[ -d "$repo/backlog/tasks" ] || fail 'reap escaped into the fixture repo'
+[ -L "$scratch_root" ] || fail 'publish did not replace the malformed link'
+[ -d "$scratch_root/backlog/tasks" ] || fail 'malformed-link run left no board'
+
 # An absent gh is a noted degradation, not an aggregation failure, and inspect
 # still leaves the materialized cache untouched.
 touch "$scratch_root/gh-degradation-sentinel"
