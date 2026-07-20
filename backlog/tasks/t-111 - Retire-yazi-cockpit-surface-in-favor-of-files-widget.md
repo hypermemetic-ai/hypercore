@@ -13,12 +13,12 @@ ordinal: 43000
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
-Operator preference (T-107, 2026-07-19): files-widget over yazi as the browsing surface. NOT YET ALIGNED — needs its own alignment brief before any Change. Tension: yazi/qqy/qqbr/qqroot encode parent-shell cwd changes, Broot eval, focused-herdr-worktree targeting, MIME openers, and prefix+f popups (doc-60 KEEP verdict); files-widget cannot change the parent shell's cwd and lives only inside pi. Options span: full retirement (accept cwd-loss), demotion (yazi stays for cwd/openers, files-widget for browsing), or cockpit reshaping. Evidence: T-107 trial notes, cockpit/README.md.
+Operator preference (T-107, 2026-07-19): files-widget over yazi as the browsing surface. ALIGNED 2026-07-20: full retirement approved via alignment brief; outcome recorded as decision-7 (named replacements: qqroot/qq_space_dir kept + new qqcd; prefix+f/ prefix+shift+f popups deleted, doc-60 KEEP verdict on them superseded; MIME openers/Glow loss accepted with xdg-open and pi read tools named). Tension (historical): yazi/qqy/qqbr/qqroot encode parent-shell cwd changes, Broot eval, focused-herdr-worktree targeting, MIME openers, and prefix+f popups (doc-60 KEEP verdict); files-widget cannot change the parent shell's cwd and lives only inside pi.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 #1 Alignment brief approved before implementation
+- [x] #1 #1 Alignment brief approved before implementation
 <!-- AC:END -->
 
 ## Implementation Notes
