@@ -33,7 +33,7 @@ done
 for role in implementer reviewer researcher; do
   manifest="$ROOT/delegation/manifests/agents/$role.md"
   assert_equal 1 \
-    "$(grep -c '^model: openai/gpt-5\.6-sol$' "$manifest")" \
+    "$(grep -c '^model: openai-codex/gpt-5\.6-sol$' "$manifest")" \
     "$role does not have exactly one GPT-5.6 Sol model pin"
   assert_file_contains "$manifest" \
     '# Runtime model-identity verification is assigned to T-95 ticket 3.'
