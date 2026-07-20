@@ -605,16 +605,30 @@ materialize_board() {
     qq_engine_error 'Could not publish the scratch board tree.'
   fi
   board_temp=
+  # Reap eligibility is ownership by construction: only this Repository's
+  # own generations, never another cache entry or anything touching a
+  # listed checkout.
+  reap_target=
   case "$previous_target" in
-    "$board_parent"/.*)
-      board_temp="$previous_target"
-      rm -rf -- "$board_temp"
-      board_temp=
-      ;;
-    ?*)
-      append_note "Skipped reaping a scratch target outside the board cache: $previous_target"
+    "$board_parent"/\."$repo_key".gen.*)
+      reap_target="$previous_target"
+      for worktree_path in "${worktree_paths[@]}"; do
+        case "$reap_target" in
+          "$worktree_path" | "$worktree_path"/*)
+            reap_target=
+            break
+            ;;
+        esac
+      done
       ;;
   esac
+  if [ -n "$reap_target" ]; then
+    board_temp="$reap_target"
+    rm -rf -- "$board_temp"
+    board_temp=
+  elif [ -n "$previous_target" ]; then
+    append_note "Skipped reaping a scratch target outside this board's generations: $previous_target"
+  fi
 }
 
 materialized=false

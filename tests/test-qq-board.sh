@@ -347,6 +347,23 @@ jq -e '
 [ -L "$scratch_root" ] || fail 'publish did not replace the malformed link'
 [ -d "$scratch_root/backlog/tasks" ] || fail 'malformed-link run left no board'
 
+# A same-cache target outside this Repository's generations is never reaped.
+victim="$XDG_CACHE_HOME/qq/board/.victim"
+mkdir -p "$victim/backlog/tasks"
+touch "$victim/backlog/tasks/sentinel"
+rm -f "$scratch_root"
+ln -s "$victim" "$scratch_root"
+run_board 0 reconcile --repo "$repo"
+[ -f "$victim/backlog/tasks/sentinel" ] \
+  || fail 'reap deleted a same-cache foreign target'
+jq -e '
+  .status == "done"
+  and any(.state.notes[]; contains("Skipped reaping a scratch target"))
+' "$tmp/result.json" >/dev/null
+[ -L "$scratch_root" ] && [ -d "$scratch_root/backlog/tasks" ] \
+  || fail 'foreign-target run left no board'
+rm -rf "$victim"
+
 # A failed participation read degrades loudly: the note names the worktree
 # and every record there participates, so truth is never silently hidden.
 fake_git_fail="$tmp/git-fail"
