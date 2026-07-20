@@ -1,61 +1,40 @@
 ---
 name: code-review
-description: Delegates review of a branch, PR, or work in progress to a fresh read-only reviewer and returns verified findings. Run automatically once for every non-trivial Change after implementation and local verification, before commit, push, pull request creation, and final GitHub-side Checks; review the exact post-review delta after in-scope fixes. Also use when the operator asks to review changes, a PR, a branch, or work since a fixed point.
+description: Delegates review of a branch, pull request, or working tree to a fresh read-only reviewer, then verifies and returns material findings. Run once for every non-trivial Change after implementation and local verification, before the first commit or publication; review each in-scope fix delta. Also use when the operator asks for review.
 ---
 
 # Review with fresh context
 
-A review is independent judgment, not repeated discovery. The owning agent
-resolves the orientation once and hands the reviewer a complete brief; the
-reviewer grounds its verdict in the diff and the code around it. Neither
-inherits the other's conclusions.
+A review is independent judgment. The owning Actor resolves orientation once;
+the fresh reviewer derives its verdict from the Change, its intent, and the
+code around it without inheriting the author's conclusions.
 
 ## Own the orientation
 
-1. Define the exact change surface. Honor a supplied base; otherwise infer
-   the target branch and merge-base. For work in progress, include committed,
-   staged, unstaged, and untracked changes.
-2. Test whether the actual Change is still the agreed Change. Reconcile the
-   owning Task or specification with later approved operator decisions, then
-   compare the surface against the intended outcome, the ownership boundary,
-   and the explicit non-goals. If the intent sources conflict, intent stays
-   unclear, or the Change crosses the boundary, stop and align first —
-   delegation cannot repair a misaligned Change.
-3. Compose the review brief. It is the reviewer's complete orientation, not a
-   reading list:
-   - repository path, base, head, and working-tree state;
-   - the review objective and its layer: Task, branch, pull request, or
-     working tree;
-   - a changed-path map grouped by behavior, with mechanical moves, generated
-     files, and historical material marked;
-   - current intent, acceptance criteria, explicit inclusions, the ownership
-     boundary, and the explicit non-goals;
-   - the Change's threat model: what it defends and against which failure
-     modes, with the finding classes explicitly declared out of scope — a
-     drift-net's out-of-scope classes are owner-declined by default, not
-     reported and not fixed;
-   - the repository rules and standards that apply and no tool enforces;
-   - the sources already consulted and the facts each one contributed;
-   - relevant local Check commands with their results;
-   - the reviewer's tool and permission boundary, the required finding shape
-     — file, line, concrete failure path, supporting evidence — and the exact
-     condition for reporting a context gap.
+1. Define the exact surface. Honor a supplied base; otherwise infer the branch
+   and merge-base. Include committed, staged, unstaged, and untracked work.
+2. Compare the actual Change with its reconciled Task or specification,
+   ownership boundary, inclusions, and non-goals. Stop and align if intent is
+   conflicting or unclear, or the Change crossed its boundary.
+3. Write a complete review brief under the OS temporary directory containing:
+   - Repository path, base, head, working-tree state, objective, and layer;
+   - a changed-path map marking mechanical, generated, and historical material;
+   - intent, acceptance criteria, inclusions, boundary, and non-goals;
+   - the threat model, defended failure modes, and declined finding classes;
+   - applicable unenforced Repository rules and standards;
+   - consulted sources and the facts each supplied, plus Check results;
+   - the reviewer's permission boundary; the required finding shape of file,
+     line, concrete failure path, and supporting evidence; and the exact
+     context-gap condition.
 
-   Give coordinates, not dumps: repository locations rather than a pasted
-   diff, distilled facts rather than source excerpts. Never include the
-   author's conclusions, suspected findings, or development transcript.
-
-   The owned reviewer rules ride the engine's injection surfaces —
-   `REVIEW.md` for harness-native reviews, the review-guidelines section of
-   `AGENTS.md` for codex reviewers — so the brief carries the Change-specific
-   facts and does not restate them. Where the brief declares scope, the brief
-   wins.
+Give coordinates and distilled facts, not source dumps. Omit the author's
+conclusions, suspected findings, and development transcript. Owned reviewer
+rules ride `REVIEW.md`; the brief supplies only Change-specific facts, and its
+declared scope wins.
 
 ## Delegate the judgment
 
-4. Launch one fresh read-only reviewer through Codex's non-interactive
-   runner, adopting its native access control instead of any owned delegate
-   machinery. Keep the brief and report under the OS temporary directory:
+4. Call one fresh reviewer:
 
    ```sh
    qq-dispatch reviewer \
@@ -64,78 +43,32 @@ inherits the other's conclusions.
      --output <report-path>
    ```
 
-   The runner enforces mechanically what prose cannot: a fresh session with
-   no inherited conversation, no Skills in the reviewer's context — this
-   skill and its delegation step never enter it — an OS-enforced read-only
-   sandbox, and the final message written to `<report-path>` by the CLI
-   itself. Substitute only the bracketed paths; the rest of the prompt stays
-   exactly this text — never place free text on the command line, where
-   shell quoting can execute embedded text before the sandbox exists. State
-   in the brief that it completes orientation: no start-of-work sequence, no
-   broad searches of intent or knowledge surfaces, no full Check-suite
-   reruns. Run the command as an ordinary process in the Change's work
-   session, wait for it to exit, then read the report file; process exit
-   retires the reviewer.
-
-   The `timeout -k 10 3600` wrapper contains the startup wedge (doc-45): a
-   `codex exec` that parks before its first byte would otherwise never exit,
-   and process exit is the only signal the owning session waits on. Plain
-   `timeout` signals its own process group and reaps the full codex process
-   tree (probe-verified, 2026-07-16); never wrap it in `setsid`, which
-   detaches the group and leaks the tree. Tune the bound to the review,
-   never below real review time. Unlike wedge-hardened implementer
-   dispatches, the reviewer deliberately keeps its MCP servers — the
-   knowledge surfaces they provide serve review quality (operator
-   disposition, 2026-07-16) — and the timeout bounds the spawn risk their
-   startup adds. Exit status 124 is a reaped wedge, not a review — step 10
-   applies.
-5. The reviewer tests the Change's responsibilities against the brief, then
-   inspects the exact diff, the surrounding callers and tests, and the
-   failure paths it suspects. A correctly implemented but unapproved
-   responsibility is a material intent finding. Moves and deletions are
-   reviewed through their invariants, not line by line through unchanged or
-   historical bodies.
-6. A brief with a hole gets a context-gap report, not improvisation: the
-   exact missing or contradictory fact, why the verdict depends on it, and
-   the evidence already inspected. Amend the brief with exactly that fact and
-   rerun step 4 fresh; without it the review cannot proceed. A context gap is
-   neither a finding nor a pass.
-7. Request only material findings the Change introduced, across correctness,
-   security, reliability, intent, and standards no tool enforces. Treat code
-   smells as maintenance heuristics, never violations: report one only when
-   the diff or history shows a concrete future cost, weigh counterevidence
-   such as deliberate bounded-context duplication, generated and boundary
-   code, and compatibility constraints, and prescribe no refactoring from a
-   label alone.
+   Substitute only the paths. The engine owns fresh-context isolation,
+   read-only access, role configuration, containment, artifacts, and process
+   retirement. The brief states that it completes orientation: no start-of-work
+   sequence, broad intent search, or full-suite rerun.
+5. The reviewer tests the Change's responsibilities against the brief, exact
+   diff, surrounding callers and tests, and suspected failure paths. Review
+   moves and deletions through their invariants.
+6. A hole produces a context-gap report: the missing or contradictory fact,
+   why the verdict depends on it, and evidence inspected. Amend only that fact
+   and dispatch a new fresh reviewer. A context gap is neither finding nor pass.
+7. Request only material introduced failures across correctness, security,
+   reliability, intent, and unenforced standards. A smell needs concrete future
+   cost and counterevidence; never prescribe refactoring from a label.
 
 ## Verify and close
 
-8. Verify every returned finding against the Repository; a reviewer's
-   conclusion is not yet evidence. A finding that claims a failure is
-   confirmed only by a constructed failing scenario — a concrete input,
-   state, or sequence observed to go wrong — and is discarded without one; an
-   intent finding is confirmed against the agreed scope and the diff.
-   Deduplicate, rank by impact, and report only confirmed findings — and say
-   so plainly when none remain. When confirmed findings cluster around one
-   responsibility or protocol, revisit the model with the operator instead of
-   feeding a patch queue. Stop at review unless the operator asks for fixes.
-9. A confirmed finding is evidence, not authorization to grow the Change. Fix
-   it only when the Change introduced it, it reproduces in a supported state,
-   it sits inside the agreed intent and inclusions, and the remedy is the
-   smallest causal correction; otherwise report it separately and stop. After
-   an in-scope fix, rerun the affected Checks and review the exact delta from
-   the last reviewed tree. If a remedy would materially widen the Change,
-   stop and align with the operator.
-
-   Track the class of every confirmed finding across rounds. A new confirmed
-   finding of a class already fixed in two earlier rounds trips the
-   convergence circuit-breaker: sustained same-class findings measure a
-   design property of the chosen layer, not implementation sloppiness, and
-   every fix buys only the adjacent finding. Halt the fix loop at the last
-   green state and escalate a design decision to the operator — which layer
-   should own the violated invariant — instead of feeding a patch queue.
-10. Handle an explicit context gap through step 6. A reviewer error, a nonzero
-    exit — including 124, the timeout wrapper reaping a wedged reviewer — or a
-    missing or empty report file is not a review: rerun the unchanged brief as
-    a fresh step 4 invocation. Never narrow scope or soften intent to obtain a
-    pass; repeated reviewer failure is a blocker.
+8. Verify every finding against the Repository. Confirm a failure with a
+   constructed input, state, or sequence observed to go wrong; confirm intent
+   findings against scope and diff. Deduplicate and rank only confirmed
+   findings. Clustered findings may expose a model problem; raise it instead of
+   feeding a patch queue. Stop at review unless fixes were requested.
+9. Fix only a Change-introduced failure reproduced in a supported state whose
+   remedy stays inside agreed intent. Rerun affected Checks and review the exact
+   fix delta. A new finding class already fixed in two prior rounds trips the
+   convergence circuit-breaker: halt at the last green state and ask which
+   layer owns the invariant.
+10. A dispatch error, nonzero exit, missing report, or context gap is not a
+    review. Rerun the unchanged or minimally completed brief fresh. Never
+    narrow scope or soften intent to obtain a pass; repeated failure blocks.
