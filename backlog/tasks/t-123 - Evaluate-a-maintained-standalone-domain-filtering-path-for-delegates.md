@@ -1,5 +1,5 @@
 ---
-id: T-122
+id: T-123
 title: Evaluate a maintained standalone domain-filtering path for delegates
 status: To Do
 assignee: []
@@ -9,7 +9,7 @@ dependencies:
   - T-95
 priority: low
 type: task
-ordinal: 52000
+ordinal: 53000
 ---
 
 ## Description
