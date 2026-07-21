@@ -29,11 +29,9 @@ tools handle in-session Markdown.
 
 `prefix+F<N>` pulls the Nth priority-sorted agent into the focused pane;
 `prefix+0` pulls the agent that most needs attention. Those operator
-bindings use `qq-herdr-pull <N|next>`. `alt+o` snaps first to Pi in the
-Repository project home, then that home's Claude fallback. With no home
-runtime it tries focused-workspace Pi, focused-workspace Claude, and finally
-the first focused-workspace agent in sidebar order. Pressing it again at the
-target bounces back.
+bindings use `qq-herdr-pull <N|next>`. `alt+o` snaps to Pi in the Repository
+project home, or to focused-workspace Pi when no home runtime exists. Pressing
+it again at the target bounces back.
 
 Load `pi/qq-backlog-guard.ts` from Pi's global settings with its absolute
 checkout path. On each built-in `write` or `edit`, it discovers the current

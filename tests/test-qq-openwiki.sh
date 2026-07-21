@@ -43,7 +43,7 @@ generated = f"""{start}
 The scheduled OpenWiki GitHub Actions workflow refreshes this wiki.
 
 {end}"""
-for name in ("AGENTS.md", "CLAUDE.md"):
+for name in ("AGENTS.md",):
     path = Path(name)
     content = path.read_text() if path.exists() else ""
     if start in content and end in content:
@@ -87,8 +87,6 @@ unset OPENWIKI_PROVIDER
 test ! -e "$repo/.github/workflows/openwiki-update.yml"
 test ! -d "$repo/.github"
 cmp "$tmp/agents-original" "$repo/AGENTS.md"
-test ! -e "$repo/CLAUDE.md"
-test ! -L "$repo/CLAUDE.md"
 test "$(<"$tmp/args.count")" = 3
 test "$(<"$tmp/args.1")" = code
 test "$(<"$tmp/args.2")" = --update
@@ -160,24 +158,6 @@ fi
 grep -q 'OpenWiki setup deviates from HEAD' "$tmp/deviation.err"
 git -C "$repo" restore AGENTS.md
 
-cp "$repo/.git/info/exclude" "$tmp/info-exclude.original"
-printf 'CLAUDE.md\n' >>"$repo/.git/info/exclude"
-printf '# Ignored Claude instructions\n\nKeep this content.\n' >"$repo/CLAUDE.md"
-cp "$repo/CLAUDE.md" "$tmp/ignored-CLAUDE.expected"
-rm -f "$FAKE_LOG" "$FAKE_PROVIDER_LOG"
-if (
-  cd "$repo"
-  "$QQ_OPENWIKI" --update >"$tmp/ignored.out" 2>"$tmp/ignored.err"
-); then
-  fail 'update with ignored setup unexpectedly succeeded'
-fi
-grep -q 'OpenWiki setup deviates from HEAD' "$tmp/ignored.err"
-cmp "$tmp/ignored-CLAUDE.expected" "$repo/CLAUDE.md"
-test ! -e "$FAKE_LOG"
-test ! -e "$FAKE_PROVIDER_LOG"
-rm "$repo/CLAUDE.md"
-cp "$tmp/info-exclude.original" "$repo/.git/info/exclude"
-
 printf 'out-of-scope change\n' >>"$repo/README.md"
 git -C "$repo" add README.md
 if (
@@ -219,8 +199,6 @@ test "$(<"$tmp/args.5")" = gpt-5.5
 test "$(<"$tmp/args.6")" = 'focus on lifecycle'
 test "$(cat "$tmp/provider")" = 'openai-chatgpt'
 cmp "$tmp/agents-original" "$repo/AGENTS.md"
-test ! -e "$repo/CLAUDE.md"
-
 git -C "$repo" restore openwiki/quickstart.md
 test -z "$(git -C "$repo" status --porcelain)"
 
@@ -229,9 +207,7 @@ printf '# Shared instructions\n\nDo not change this target.\n' >"$shared_agents"
 cp "$shared_agents" "$tmp/shared-AGENTS.expected"
 rm "$repo/AGENTS.md"
 ln -s "$shared_agents" "$repo/AGENTS.md"
-printf '# Claude instructions\n\nKeep this file.\n' >"$repo/CLAUDE.md"
-cp "$repo/CLAUDE.md" "$tmp/CLAUDE.expected"
-git -C "$repo" add AGENTS.md CLAUDE.md
+git -C "$repo" add AGENTS.md
 git -C "$repo" commit -qm 'use shared agent instructions'
 git -C "$repo" update-ref refs/remotes/origin/main "$(git -C "$repo" rev-parse HEAD)"
 
@@ -242,7 +218,6 @@ git -C "$repo" update-ref refs/remotes/origin/main "$(git -C "$repo" rev-parse H
 test -L "$repo/AGENTS.md"
 test "$(readlink "$repo/AGENTS.md")" = "$shared_agents"
 cmp "$tmp/shared-AGENTS.expected" "$shared_agents"
-cmp "$tmp/CLAUDE.expected" "$repo/CLAUDE.md"
 test ! -e "$repo/.github/workflows/openwiki-update.yml"
 git -C "$repo" restore openwiki/quickstart.md
 test -z "$(git -C "$repo" status --porcelain)"
@@ -316,7 +291,6 @@ wait "$first_pid"
 test -L "$repo/AGENTS.md"
 test "$(readlink "$repo/AGENTS.md")" = "$shared_agents"
 cmp "$tmp/shared-AGENTS.expected" "$shared_agents"
-cmp "$tmp/CLAUDE.expected" "$repo/CLAUDE.md"
 git -C "$repo" restore openwiki/quickstart.md
 unset FAKE_STARTED FAKE_SLEEP
 set +e
@@ -331,6 +305,5 @@ test ! -e "$repo/.github/workflows/openwiki-update.yml"
 test -L "$repo/AGENTS.md"
 test "$(readlink "$repo/AGENTS.md")" = "$shared_agents"
 cmp "$tmp/shared-AGENTS.expected" "$shared_agents"
-cmp "$tmp/CLAUDE.expected" "$repo/CLAUDE.md"
 
 printf 'test-qq-openwiki: pass\n'
