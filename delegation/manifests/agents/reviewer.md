@@ -12,6 +12,13 @@ defaultContext: fresh
 acceptanceRole: read-only
 completionGuard: false
 timeoutMs: 900000
+acceptance:
+  level: none
+  reason: >-
+    qq acceptance is the strict completion-envelope schema plus owner
+    verification against the tree plus fresh-context review; the
+    pi-subagents attestation layer duplicates it and rejects runs whose
+    structured-output envelope is already complete (T-124).
 ---
 
 Review only the assigned scope. Return the strict Completion Envelope requested by the parent.
