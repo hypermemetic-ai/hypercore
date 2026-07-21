@@ -82,19 +82,12 @@ package at the same version.) The Landstrip binary then lives beneath
 the absolute `QQ_LANDSTRIP_BIN` override when one is set. It does not resolve a
 Repository-local `.pi/npm` copy.
 
-Mount the qq Skill root directly into Pi. This is one root mount, so Skill
-membership stays live by construction:
+Mount the qq Skill root directly into Pi and Codex. Each is one root mount, so
+Skill membership stays live by construction:
 
 ```bash
-mkdir -p ~/.pi/agent
+mkdir -p ~/.pi/agent ~/.codex
 ln -sT "$HOME/projects/qq/skills" "$HOME/.pi/agent/skills"
-```
-
-Mount the Skill set for Claude Code and Codex:
-
-```bash
-mkdir -p ~/.claude ~/.codex
-ln -sT "$HOME/projects/qq/skills" "$HOME/.claude/skills"
 ln -sT "$HOME/projects/qq/skills" "$HOME/.codex/skills"
 ```
 
@@ -178,14 +171,12 @@ or `CLOSED`, or when inspection fails.
 The accountable Pi session stays in the Repository project home and owns
 alignment, Task and Change judgment, work orders, verdicts, UAT, and handoff.
 Bounded implementation, fresh review, and research run through pi-subagents;
-`qq-dispatch` is only its fail-closed Landstrip adapter. Keep Claude Code
-installed and configured, including its Skill mount and Herdr integration, as
-the supported fallback runtime.
+`qq-dispatch` is only its fail-closed Landstrip adapter.
 
-On a machine migrating off the retired installer, remove the old per-skill
-link directories first (after checking they hold nothing but links into this
-checkout): `rm -r ~/.claude/skills ~/.codex/skills`. `ln -sT` fails loudly
-rather than nesting a link inside a directory that still exists.
+On a machine migrating off the retired installer, remove the old Codex
+per-skill link directory first (after checking it holds nothing but links into
+this checkout): `rm -r ~/.codex/skills`. `ln -sT` fails loudly rather than
+nesting a link inside a directory that still exists.
 
 Source the shell surface from `.bashrc`; it prepends `bin/` to `PATH` and
 provides the cockpit navigation helpers:

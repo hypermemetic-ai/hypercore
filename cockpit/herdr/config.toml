@@ -23,9 +23,8 @@ focus_pane_down = "prefix+k"
 navigate_pane_up = "j"
 navigate_pane_down = "k"
 
-# Snap to Repository project-home pi, its claude fallback, then focused-space
-# pi, claude, or the first agent in sidebar order; press again there to bounce
-# back to where you came from.
+# Snap to Repository project-home pi, or focused-space pi when no home runtime
+# exists; press again there to bounce back to where you came from.
 [[keys.command]]
 key = "alt+o"
 type = "shell"

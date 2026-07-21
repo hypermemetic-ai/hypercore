@@ -132,7 +132,7 @@ transcript — a limit your product design already accepts.
   to a new skill in core hypercore that travels across projects").
   The probe was authored before this body, on the work item's record
   (hypercore work.md, commit 9bf0da1).
-- Probe run 2026-07-03, by hand, fresh `claude -p` sessions on the
+- Probe run 2026-07-03, by hand, in fresh isolated sessions on the
   same eliciting task (five real slide bodies, titles stripped;
   transcripts in the session scratchpad, the marker readings on the
   folding commit). The bare arm failed as the document predicts: a

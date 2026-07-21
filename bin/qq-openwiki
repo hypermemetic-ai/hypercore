@@ -68,7 +68,7 @@ flock -n 9 || die "another OpenWiki writer is active for this Repository"
 
 workflow=".github/workflows/openwiki-update.yml"
 setup_deviation="$(git status --porcelain --untracked-files=all --ignored -- \
-  AGENTS.md CLAUDE.md "$workflow")"
+  AGENTS.md "$workflow")"
 [ -z "$setup_deviation" ] \
   || die "OpenWiki setup deviates from HEAD; restore it before retrying"
 
@@ -100,7 +100,7 @@ fi
 restore_local_setup() {
   local status=0
 
-  rm -f -- "$workflow" AGENTS.md CLAUDE.md || status=1
+  rm -f -- "$workflow" AGENTS.md || status=1
   rmdir .github/workflows .github 2>/dev/null || true
   git restore --source="$baseline" --staged --worktree -- \
     . ':(exclude)openwiki/**' || status=1
@@ -121,7 +121,6 @@ shadow_agent_symlink() {
 
 trap 'restore_local_setup >/dev/null 2>&1 || true' EXIT
 shadow_agent_symlink AGENTS.md
-shadow_agent_symlink CLAUDE.md
 
 set +e
 OPENWIKI_PROVIDER="openai-chatgpt" \
