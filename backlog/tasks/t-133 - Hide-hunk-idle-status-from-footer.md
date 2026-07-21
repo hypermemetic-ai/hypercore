@@ -1,9 +1,10 @@
 ---
 id: T-133
 title: Hide hunk idle status from footer
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-07-21 06:39'
+updated_date: '2026-07-21 06:40'
 labels: []
 dependencies: []
 ordinal: 58000
@@ -22,3 +23,9 @@ Decision ledger: operator verbatim instruction — 'Hide it entirely' (asked-and
 - [ ] #1 footer status row no longer renders the hunk status (verified headless with mock statuses)
 - [ ] #2 Change lands as one PR; operator merges
 <!-- AC:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Added 'hunk' to extensionStatusRow.hiddenKeys in extensions/pi-footer.json. Headless verification: hunk status filtered in idle and active states, merge-ready stays hidden, other statuses still render, empty row collapses to one line. PR #184 opened; operator merges.
+<!-- SECTION:FINAL_SUMMARY:END -->
