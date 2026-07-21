@@ -158,6 +158,104 @@ ln -s "$escape_target" "$escape_state/qq"
 assert_store_refused store-dir-escape "$escape_state" 'span store escapes the resolved state root'
 [ ! -e "$escape_target/spans" ] || fail 'store directory escape wrote outside the state root'
 
+# Pause the final Python process after the shell has validated its store, then
+# replace that checked directory with a symlink. The eventual open must not
+# follow the swapped ancestor outside the state root.
+real_python="$(command -v python3)"
+delayed_python="$tmp/delayed-python"
+cat >"$delayed_python" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+if [ "${2:-}" = record ] && [ -n "${DELAYED_PYTHON_READY:-}" ]; then
+  : >"$DELAYED_PYTHON_READY"
+  until [ -e "$DELAYED_PYTHON_RELEASE" ]; do sleep 0.01; done
+fi
+exec "$REAL_PYTHON" "$@"
+SH
+chmod +x "$delayed_python"
+ancestor_state="$tmp/ancestor-state"
+ancestor_target="$tmp/ancestor-target"
+mkdir -p "$ancestor_target"
+set +e
+(
+  cd "$ROOT"
+  REAL_PYTHON="$real_python" \
+  DELAYED_PYTHON_READY="$tmp/ancestor-ready" \
+  DELAYED_PYTHON_RELEASE="$tmp/ancestor-release" \
+  QQ_PYTHON3_BIN="$delayed_python" \
+  XDG_STATE_HOME="$ancestor_state" \
+    timeout 3 "$OBSERVE" record --name invoke_agent --actor test \
+      --start 2026-07-21T00:00:00Z --end 2026-07-21T00:00:01Z
+) >"$tmp/ancestor-swap.stdout" 2>"$tmp/ancestor-swap.stderr" &
+ancestor_pid=$!
+set -e
+for _ in $(seq 1 200); do
+  [ -e "$tmp/ancestor-ready" ] && break
+  sleep 0.01
+done
+[ -e "$tmp/ancestor-ready" ] || fail 'ancestor swap probe did not reach the post-validation window'
+ancestor_store="$ancestor_state/qq/spans/$repository_name"
+[ -d "$ancestor_store" ] || fail 'ancestor swap probe did not validate the store directory'
+mv "$ancestor_store" "$ancestor_store.checked"
+ln -s "$ancestor_target" "$ancestor_store"
+: >"$tmp/ancestor-release"
+set +e
+wait "$ancestor_pid"
+ancestor_status=$?
+set -e
+[ "$ancestor_status" -ne 124 ] || fail 'ancestor swap probe blocked'
+[ "$ancestor_status" -ne 0 ] || fail 'swapped store ancestor was accepted'
+[ ! -e "$ancestor_target/spans.jsonl" ] || fail 'swapped store ancestor redirected a span outside the state root'
+
+# Delay only the leaf open, after append() has completed its lstat, and swap a
+# FIFO into that gap. The probe open must return without waiting for a reader.
+open_hook_dir="$tmp/open-hook"
+mkdir "$open_hook_dir"
+cat >"$open_hook_dir/sitecustomize.py" <<'PY'
+import os
+from pathlib import Path
+import time
+
+real_open = os.open
+
+def delayed_open(path, flags, *args, **kwargs):
+    if os.path.basename(os.fspath(path)) == "spans.jsonl":
+        Path(os.environ["DELAYED_OPEN_READY"]).touch()
+        while not Path(os.environ["DELAYED_OPEN_RELEASE"]).exists():
+            time.sleep(0.01)
+    return real_open(path, flags, *args, **kwargs)
+
+os.open = delayed_open
+PY
+fifo_swap_state="$tmp/fifo-swap-state"
+set +e
+(
+  cd "$ROOT"
+  DELAYED_OPEN_READY="$tmp/fifo-swap-ready" \
+  DELAYED_OPEN_RELEASE="$tmp/fifo-swap-release" \
+  PYTHONPATH="$open_hook_dir" \
+  XDG_STATE_HOME="$fifo_swap_state" \
+    timeout 2 "$OBSERVE" record --name invoke_agent --actor test \
+      --start 2026-07-21T00:00:00Z --end 2026-07-21T00:00:01Z
+) >"$tmp/fifo-swap.stdout" 2>"$tmp/fifo-swap.stderr" &
+fifo_swap_pid=$!
+set -e
+for _ in $(seq 1 200); do
+  [ -e "$tmp/fifo-swap-ready" ] && break
+  sleep 0.01
+done
+[ -e "$tmp/fifo-swap-ready" ] || fail 'FIFO swap probe did not reach the lstat-open window'
+fifo_swap_leaf="$fifo_swap_state/qq/spans/$repository_name/spans.jsonl"
+mkfifo "$fifo_swap_leaf"
+: >"$tmp/fifo-swap-release"
+set +e
+wait "$fifo_swap_pid"
+fifo_swap_status=$?
+set -e
+[ "$fifo_swap_status" -ne 124 ] || fail 'FIFO swapped after lstat blocked the probe open'
+[ "$fifo_swap_status" -ne 0 ] || fail 'FIFO swapped after lstat was accepted'
+[ -p "$fifo_swap_leaf" ] || fail 'FIFO swap probe did not preserve its special-file leaf'
+
 fixture_primary="$tmp/repository-primary"
 fixture_linked="$tmp/repository-linked"
 git init -q "$fixture_primary"
