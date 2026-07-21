@@ -605,18 +605,19 @@ export XDG_STATE_HOME="$tmp/trash-state"
 export XDG_CACHE_HOME="$tmp/trash-cache"
 trash_key="$(printf '%s' "$trash_repo" | sha256sum | awk '{print $1}')"
 trash_dir="$tmp/trash-cache/qq/board/.trash"
-old_entry="$trash_dir/.$trash_key.gen.abc123.1000.1"
-fresh_entry="$trash_dir/.$trash_key.gen.def456.2000.2"
-foreign_entry="$trash_dir/.0000000000000000000000000000000000000000000000000000000000000000.gen.fff999.3000.3"
+now_epoch="$(date +%s)"
+old_epoch=$((now_epoch - 691200))
+old_entry="$trash_dir/.$trash_key.gen.abc123.$old_epoch.1"
+fresh_entry="$trash_dir/.$trash_key.gen.def456.$now_epoch.2"
+foreign_entry="$trash_dir/.0000000000000000000000000000000000000000000000000000000000000000.gen.fff999.$old_epoch.3"
 mkdir -p "$old_entry" "$fresh_entry" "$foreign_entry"
-touch -d '8 days ago' "$old_entry" "$foreign_entry"
 trash_scan_json="$tmp/trash-scan.json"
 run_reap 0 "$trash_scan_json" scan --repo "$trash_repo"
 jq -e '
   .state.nomination_counts == {docs:0,branches:0,worktrees:0,board_trash:1,total:1}
 ' "$trash_scan_json" >/dev/null
 trash_scan_report="$(jq -r '.state.report_path' "$trash_scan_json")"
-assert_file_contains "$trash_scan_report" "\"id\":\"board-trash:.$trash_key.gen.abc123.1000.1\""
+assert_file_contains "$trash_scan_report" "\"id\":\"board-trash:.$trash_key.gen.abc123.$old_epoch.1\""
 trash_apply_json="$tmp/trash-apply.json"
 run_reap 0 "$trash_apply_json" apply "$trash_scan_report" --repo "$trash_repo"
 jq -e '

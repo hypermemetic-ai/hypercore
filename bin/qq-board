@@ -412,10 +412,8 @@ reads_tmp=
 # listed checkout in either direction.
 disposal_eligible() {
   local target="$1" base worktree_path
-  case "$target" in
-    "$board_parent"/*) ;;
-    *) return 1 ;;
-  esac
+  # Direct child of board_parent only: a nested directory never qualifies.
+  [ "${target%/*}" = "$board_parent" ] || return 1
   base="${target##*/}"
   if [ "$target" != "$scratch_root" ] \
     && [[ ! "$base" =~ ^\.${repo_key}\.gen\.[A-Za-z0-9]{6}$ ]]; then
@@ -436,7 +434,11 @@ disposal_eligible() {
 # Trash expiry rides qq-reap's weekly debris scan.
 dispose_dir() {
   local target="$1"
-  [ -d "$target" ] || return 0
+  [ -e "$target" ] || [ -L "$target" ] || return 0
+  if [ ! -d "$target" ] || [ -L "$target" ]; then
+    append_note "Refused to dispose of a non-directory scratch target: $target"
+    return 1
+  fi
   if ! disposal_eligible "$target"; then
     append_note "Refused to dispose of an ineligible scratch target: $target"
     return 1

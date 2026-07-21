@@ -649,9 +649,15 @@ derive_nominations() {
 # Board-trash expiry (T-88 disposition): qq-board disposes old scratch
 # generations into the shared cache trash and never deletes them itself;
 # entries for this Repository past the retention window are nominated for
-# deletion by this reaper. Shared by the Herdr-available and refusal paths.
+# deletion by this reaper. Age is read from the disposal epoch qq-board
+# writes into the trash name, never from mtime: a long-lived generation
+# gets its full retention after disposal. Shared by the Herdr-available
+# and refusal paths.
 scan_board_trash() {
   local board_trash trash_repo_key trash_entry trash_name command nomination
+  local primary_canon now_epoch disposal_epoch
+  [ -n "$primary_main" ] || return 0
+  primary_canon="$(cd "$primary_main" 2>/dev/null && pwd -P)" || return 0
   board_trash=
   if [ -n "${XDG_CACHE_HOME:-}" ]; then
     board_trash="$(readlink -m -- "$XDG_CACHE_HOME/qq/board")/.trash"
@@ -659,13 +665,15 @@ scan_board_trash() {
     board_trash="$(readlink -m -- "$HOME/.cache/qq/board")/.trash"
   fi
   [ -n "$board_trash" ] && [ -d "$board_trash" ] || return 0
-  trash_repo_key="$(printf '%s' "$repo_root" | "$sha256sum_bin" | awk '{print $1}')"
+  trash_repo_key="$(printf '%s' "$primary_canon" | "$sha256sum_bin" | awk '{print $1}')"
+  now_epoch="$(date +%s)"
   while IFS= read -r -d '' trash_entry; do
     trash_name="${trash_entry##*/}"
-    case "$trash_name" in
-      "$trash_repo_key".* | ."$trash_repo_key".*) ;;
-      *) continue ;;
-    esac
+    if [[ ! "$trash_name" =~ ^\.?${trash_repo_key}(\.gen\.[A-Za-z0-9]{6})?\.([0-9]+)\.[0-9]+$ ]]; then
+      continue
+    fi
+    disposal_epoch="${BASH_REMATCH[2]}"
+    [ $((now_epoch - disposal_epoch)) -gt 604800 ] || continue
     shell_double_quote "$trash_entry"
     command="rm -rf -- $QUOTED_VALUE"
     nomination="$("$QQ_ENGINE_JQ" -cn \
@@ -673,7 +681,7 @@ scan_board_trash() {
       --arg path "$trash_entry" --arg command "$command" \
       '{id:$id,kind:"board-trash",evidence:{entry:$entry,path:$path},command:$command}')"
     append_nomination "$nomination"
-  done < <("$find_bin" "$board_trash" -mindepth 1 -maxdepth 1 -mtime +6 -print0 2>/dev/null)
+  done < <("$find_bin" "$board_trash" -mindepth 1 -maxdepth 1 -print0 2>/dev/null)
 }
 
 if ! repo_root="$("$git_bin" -C "$repo" rev-parse --show-toplevel 2>/dev/null)"; then
@@ -921,13 +929,11 @@ parse_source_report() {
               else
                 trash_root="$(readlink -m -- "${HOME:-}/.cache/qq/board")/.trash"
               fi
-              trash_repo_key="$(printf '%s' "$repo_root" | "$sha256sum_bin" | awk '{print $1}')"
-              case "$value" in
-                "$trash_repo_key".* | ."$trash_repo_key".*) ;;
-                *)
-                  finish_problem error "malformed report: board-trash entry is outside this Repository's key: $id"
-                  ;;
-              esac
+              # Key membership is verified against fresh nominations at
+              # apply; the report must carry a well-formed keyed entry.
+              if [[ ! "$value" =~ ^\.?[0-9a-f]{64}(\.gen\.[A-Za-z0-9]{6})?\.[0-9]+\.[0-9]+$ ]]; then
+                finish_problem error "malformed report: board-trash entry is not a keyed disposal name: $id"
+              fi
               shell_double_quote "$trash_root/$value"
               expected_command="rm -rf -- $QUOTED_VALUE"
               if ! "$QQ_ENGINE_JQ" -e --arg value "$value" \
