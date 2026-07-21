@@ -13,5 +13,5 @@ ordinal: 59000
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
-Operator decision 2026-07-21: the implementer role's dispatch timeout default is 45 minutes (2700000ms), up from 30m — longer bounded implementation tickets were the norm in wave 1. Applied to delegation/manifests/agents/implementer.md; reviewer/researcher keep 15m.
+Operator decision 2026-07-21: the implementer role's dispatch timeout default is 45 minutes (2700000ms), up from 30m for the implementer and 15m for reviewer/researcher — longer bounded tickets were the norm in wave 1, and review/research rounds showed the same pressure. Applied to all three role manifests (2700000ms).
 <!-- SECTION:DESCRIPTION:END -->
