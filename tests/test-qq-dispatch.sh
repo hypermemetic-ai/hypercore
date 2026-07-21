@@ -284,6 +284,60 @@ PY
   fi
 done
 
+# Correlation propagation experiment: qq-dispatch receives accountable-side
+# context and the stubbed child records the environment that crosses the policy.
+propagation_runtime="$tmp/propagation-runtime"
+mkdir -p "$propagation_runtime"
+(
+  cd "$ROOT"
+  QQ_TRACE_ID=11111111111111111111111111111111 \
+  PI_ROOT_SPAN_ID=2222222222222222 \
+  PI_PARENT_SPAN_ID=3333333333333333 \
+  PI_SUBAGENT_CHILD_AGENT=reviewer \
+  PI_SUBAGENT_RUN_ID=trace-propagation-smoke \
+  PI_SUBAGENT_CHILD_INDEX=7 \
+  QQ_DISPATCH_RUNTIME_ROOT="$propagation_runtime" \
+    "$DISPATCH" --json
+) >"$tmp/propagation.stdout" 2>"$tmp/propagation.stderr"
+grep -Fxq 'QQ_TRACE_ID=11111111111111111111111111111111' "$FAKE_PI_ENV" \
+  || fail 'trace ID did not propagate to the child'
+grep -Fxq 'PI_ROOT_SPAN_ID=2222222222222222' "$FAKE_PI_ENV" \
+  || fail 'root span ID did not propagate to the child'
+propagated_parent="$(sed -n 's/^PI_PARENT_SPAN_ID=//p' "$FAKE_PI_ENV")"
+[[ "$propagated_parent" =~ ^[0-9a-f]{16}$ ]] \
+  || fail 'delegate span ID did not propagate as the child parent'
+[ "$propagated_parent" != 3333333333333333 ] \
+  || fail 'child was parented directly to the accountable parent instead of the delegate span'
+span_store="$HOME/.local/state/qq/spans/$(basename "$ROOT")/spans.jsonl"
+jq -s -e \
+  --arg parent "$propagated_parent" \
+  --arg worktree "$ROOT" '
+  map(select(.attributes["run.id"] == "trace-propagation-smoke")) as $spans
+  | ($spans | length) == 1
+  and $spans[0].name == "invoke_agent"
+  and $spans[0].trace_id == "11111111111111111111111111111111"
+  and $spans[0].span_id == $parent
+  and $spans[0].parent_span_id == "3333333333333333"
+  and $spans[0].root_span_id == "2222222222222222"
+  and $spans[0].attributes["child.index"] == "7"
+  and $spans[0].attributes.worktree == $worktree
+  and $spans[0].attributes["exit.status"] == "0"
+' "$span_store" >/dev/null
+
+# Observation is not on the dispatch critical path: an unsafe configured store
+# is refused, while the child result remains successful.
+(
+  cd "$ROOT"
+  XDG_STATE_HOME="$ROOT/.dispatch-observation-test" \
+  PI_SUBAGENT_CHILD_AGENT=reviewer \
+  PI_SUBAGENT_RUN_ID=observation-failure-smoke \
+    "$DISPATCH" --json
+) >"$tmp/observation-failure.stdout" 2>"$tmp/observation-failure.stderr"
+assert_file_contains "$tmp/observation-failure.stdout" 'pi-live-event role=reviewer'
+assert_file_contains "$tmp/observation-failure.stderr" 'observation write failed; dispatch result preserved'
+[ ! -e "$ROOT/.dispatch-observation-test" ] \
+  || fail 'failed observation wrote state inside the worktree'
+
 # Pi-subagents creates this run's temp directories before spawn. A later run's
 # directory, created after these policies were rendered, must not be covered by
 # an earlier policy (there is deliberately no shared pi-subagent-* grant).
