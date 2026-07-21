@@ -3,9 +3,10 @@ id: T-136
 title: >-
   T-127 follow-on: close three observation-path races (startup signal, store
   TOCTOU)
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-07-21 07:41'
+updated_date: '2026-07-21 09:45'
 labels: []
 dependencies: []
 type: bug
