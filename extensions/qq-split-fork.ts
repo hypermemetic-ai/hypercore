@@ -105,10 +105,20 @@ export default function register(pi, deps = {}) {
   const run = deps.exec ?? ((command, args, options) => pi.exec(command, args, options));
 
   pi.registerCommand("split-fork", {
-    description: "Fork this session into a new pi process in a right-hand herdr split (tmux fallback). Usage: /split-fork [optional prompt]",
+    description: "Fork this session into a new pi process in a right-hand herdr split (tmux fallback). Usage: /split-fork [optional prompt — may not start with '-' or '@']",
     handler: async (args, ctx) => {
       const wasBusy = !ctx.isIdle();
       const prompt = args.trim();
+      // pi's CLI (pi [options] [@files...] [messages...]) has no escape for
+      // messages starting with '-' or '@': they parse as options or @files.
+      // Refuse instead of launching a fork with a mangled prompt.
+      if (prompt.startsWith("-") || prompt.startsWith("@")) {
+        ctx.ui.notify(
+          "Cannot fork with a prompt starting with '-' or '@': pi's CLI would parse it as an option or @file, not a message. Fork not launched.",
+          "error",
+        );
+        return;
+      }
       const forkedSessionFile = await createForkedSession(ctx);
       if (!forkedSessionFile) return;
 

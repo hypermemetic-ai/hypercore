@@ -92,7 +92,7 @@ function createHarness(name, options = {}) {
   assert.equal(command?.name, "split-fork");
   assert.equal(
     command?.description,
-    "Fork this session into a new pi process in a right-hand herdr split (tmux fallback). Usage: /split-fork [optional prompt]",
+    "Fork this session into a new pi process in a right-hand herdr split (tmux fallback). Usage: /split-fork [optional prompt — may not start with '-' or '@']",
   );
   assert.equal(typeof command?.handler, "function");
   return { command, ctx, cwd, sessionFile, notifications, execCalls };
@@ -149,9 +149,9 @@ async function testHerdrLaunch() {
   assert.match(h.execCalls[1].args[3], /--session/);
   assert.match(h.execCalls[1].args[3], /continue the fork/);
   assert.equal(
-    h.execCalls[1].args[3].includes(" -- "),
+    /\s'--'\s/.test(h.execCalls[1].args[3]),
     false,
-    "startup input carried the unsupported `--` sentinel",
+    "startup input carried the unsupported quoted '--' sentinel",
   );
   assert.equal(h.execCalls[1].args[3].endsWith("\n"), true, "herdr startup input lacked newline");
   assert.deepEqual(h.execCalls[2], {
@@ -233,11 +233,27 @@ async function testMissingSession() {
   );
 }
 
+async function testPrefixedPromptRefused() {
+  setLaunchEnvironment("source-pane", undefined);
+  const h = createHarness("prefixed");
+  await h.command.handler("- continue from here", h.ctx);
+
+  assert.equal(h.execCalls.length, 0, "prefixed prompt still launched");
+  assert.equal(forkedFiles(h).length, 0, "prefixed prompt wrote a fork file");
+  assert.ok(
+    h.notifications.some(({ message, level }) =>
+      level === "error" && message.includes("starting with '-' or '@'")
+    ),
+    "prefixed prompt did not refuse with a clear error",
+  );
+}
+
 await testHerdrLaunch();
 await testTmuxLaunch();
 await testTmuxLaunchFailure();
 await testManualFallback();
 await testMissingSession();
+await testPrefixedPromptRefused();
 setLaunchEnvironment(undefined, undefined);
 
 console.log("test-qq-split-fork-extension: pass");
