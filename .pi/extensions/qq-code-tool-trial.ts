@@ -37,27 +37,31 @@ const CODE_PROMPT_SNIPPET =
 
 type Arm = "control" | "treatment";
 
+interface OutcomeMetrics {
+	agent_runs: number;
+	model_turns: number;
+	direct_tool_calls: number;
+	total_tool_calls: number;
+	tool_failures: number;
+	code_invocations: number;
+	code_inner_calls: number;
+	code_failures: number;
+	operator_interruptions: number;
+	queued_followups: number;
+	usage_input: number;
+	usage_output: number;
+	usage_cache_read: number;
+	usage_cache_write: number;
+	prompt_code_selected: boolean | null;
+	prompt_code_snippet: boolean | null;
+}
+
 interface ActiveTrialInput {
 	index: number;
 	arm: Arm;
 	startedAt: bigint;
-	agentRuns: number;
-	modelTurns: number;
-	directToolCalls: number;
-	totalToolCalls: number;
-	toolFailures: number;
-	codeInvocations: number;
-	codeInnerCalls: number;
-	codeFailures: number;
-	operatorInterruptions: number;
-	queuedFollowups: number;
-	usageInput: number;
-	usageOutput: number;
-	usageCacheRead: number;
-	usageCacheWrite: number;
 	lastStopReason: string | null;
-	promptCodeSelected: boolean | null;
-	promptCodeSnippet: boolean | null;
+	metrics: OutcomeMetrics;
 }
 
 function eligibleOperatorInput(event: {
@@ -65,9 +69,9 @@ function eligibleOperatorInput(event: {
 	source: string;
 	streamingBehavior?: string;
 }): boolean {
-	if (event.source === "extension" || event.streamingBehavior !== undefined) return false;
-	const first = event.text.trimStart()[0];
-	return first !== "/" && first !== "!";
+	return event.source !== "extension" &&
+		event.streamingBehavior === undefined &&
+		!["/", "!"].includes(event.text.trimStart()[0]);
 }
 
 function toolSurfaceDigest(names: string[]): string {
@@ -111,23 +115,25 @@ function freshMetrics(index: number, arm: Arm): ActiveTrialInput {
 		index,
 		arm,
 		startedAt: process.hrtime.bigint(),
-		agentRuns: 0,
-		modelTurns: 0,
-		directToolCalls: 0,
-		totalToolCalls: 0,
-		toolFailures: 0,
-		codeInvocations: 0,
-		codeInnerCalls: 0,
-		codeFailures: 0,
-		operatorInterruptions: 0,
-		queuedFollowups: 0,
-		usageInput: 0,
-		usageOutput: 0,
-		usageCacheRead: 0,
-		usageCacheWrite: 0,
 		lastStopReason: null,
-		promptCodeSelected: null,
-		promptCodeSnippet: null,
+		metrics: {
+			agent_runs: 0,
+			model_turns: 0,
+			direct_tool_calls: 0,
+			total_tool_calls: 0,
+			tool_failures: 0,
+			code_invocations: 0,
+			code_inner_calls: 0,
+			code_failures: 0,
+			operator_interruptions: 0,
+			queued_followups: 0,
+			usage_input: 0,
+			usage_output: 0,
+			usage_cache_read: 0,
+			usage_cache_write: 0,
+			prompt_code_selected: null,
+			prompt_code_snippet: null,
+		},
 	};
 }
 
@@ -205,31 +211,16 @@ export default function (pi: ExtensionAPI) {
 			status,
 			terminal_reason: terminalReason,
 			active_wall_ms: Number(process.hrtime.bigint() - completed.startedAt) / 1_000_000,
-			agent_runs: completed.agentRuns,
-			model_turns: completed.modelTurns,
-			direct_tool_calls: completed.directToolCalls,
-			total_tool_calls: completed.totalToolCalls,
-			tool_failures: completed.toolFailures,
-			code_invocations: completed.codeInvocations,
-			code_inner_calls: completed.codeInnerCalls,
-			code_failures: completed.codeFailures,
-			operator_interruptions: completed.operatorInterruptions,
-			queued_followups: completed.queuedFollowups,
-			usage_input: completed.usageInput,
-			usage_output: completed.usageOutput,
-			usage_cache_read: completed.usageCacheRead,
-			usage_cache_write: completed.usageCacheWrite,
-			prompt_code_selected: completed.promptCodeSelected,
-			prompt_code_snippet: completed.promptCodeSnippet,
+			...completed.metrics,
 		});
 	}
 
 	pi.on("input", async (event, ctx) => {
 		if (active && event.source !== "extension" && event.streamingBehavior === "steer") {
-			active.operatorInterruptions += 1;
+			active.metrics.operator_interruptions += 1;
 		}
 		if (active && event.source !== "extension" && event.streamingBehavior === "followUp") {
-			active.queuedFollowups += 1;
+			active.metrics.queued_followups += 1;
 		}
 		if (!eligibleOperatorInput(event)) {
 			if (
@@ -278,8 +269,8 @@ export default function (pi: ExtensionAPI) {
 
 			if (assignment.arm === "treatment") await registerTreatment(ctx);
 			const activeTools = setCodeActive(assignment.arm === "treatment");
-			active.promptCodeSelected = assignment.arm === "treatment";
-			active.promptCodeSnippet = assignment.arm === "treatment";
+			active.metrics.prompt_code_selected = assignment.arm === "treatment";
+			active.metrics.prompt_code_snippet = assignment.arm === "treatment";
 			appendExposure(paths, {
 				index: assignment.index,
 				arm: assignment.arm,
@@ -300,41 +291,39 @@ export default function (pi: ExtensionAPI) {
 		}
 	});
 
-	pi.on("agent_start", () => {
-		if (active) active.agentRuns += 1;
-	});
-
-	pi.on("turn_start", () => {
-		if (active) active.modelTurns += 1;
-	});
+	function increment(metric: "agent_runs" | "model_turns"): void {
+		if (active) active.metrics[metric] += 1;
+	}
+	pi.on("agent_start", () => increment("agent_runs"));
+	pi.on("turn_start", () => increment("model_turns"));
 
 	pi.on("tool_execution_start", (event) => {
 		if (!active) return;
-		active.totalToolCalls += 1;
-		if (event.toolName === "code") active.codeInvocations += 1;
-		else active.directToolCalls += 1;
+		active.metrics.total_tool_calls += 1;
+		if (event.toolName === "code") active.metrics.code_invocations += 1;
+		else active.metrics.direct_tool_calls += 1;
 	});
 
 	pi.on("tool_execution_end", (event) => {
 		if (!active) return;
-		if (event.isError) active.toolFailures += 1;
-		if (event.toolName === "code" && event.isError) active.codeFailures += 1;
+		if (event.isError) active.metrics.tool_failures += 1;
+		if (event.toolName === "code" && event.isError) active.metrics.code_failures += 1;
 	});
 
 	pi.on("tool_result", (event) => {
 		if (!active || event.toolName !== "code") return;
 		const details = event.details as { calls?: unknown[]; status?: string } | undefined;
-		if (Array.isArray(details?.calls)) active.codeInnerCalls += details.calls.length;
-		if (details?.status === "error" && !event.isError) active.codeFailures += 1;
+		if (Array.isArray(details?.calls)) active.metrics.code_inner_calls += details.calls.length;
+		if (details?.status === "error" && !event.isError) active.metrics.code_failures += 1;
 	});
 
 	pi.on("message_end", (event) => {
 		if (!active || event.message.role !== "assistant") return;
 		active.lastStopReason = event.message.stopReason;
-		active.usageInput += event.message.usage.input;
-		active.usageOutput += event.message.usage.output;
-		active.usageCacheRead += event.message.usage.cacheRead;
-		active.usageCacheWrite += event.message.usage.cacheWrite;
+		active.metrics.usage_input += event.message.usage.input;
+		active.metrics.usage_output += event.message.usage.output;
+		active.metrics.usage_cache_read += event.message.usage.cacheRead;
+		active.metrics.usage_cache_write += event.message.usage.cacheWrite;
 	});
 
 	pi.on("agent_settled", (_event, ctx) => {
