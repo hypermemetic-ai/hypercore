@@ -4,7 +4,7 @@ title: Stop creating work sessions — session-absent as the default Change post
 status: To Do
 assignee: []
 created_date: '2026-07-21 05:55'
-updated_date: '2026-07-21 05:58'
+updated_date: '2026-07-21 06:47'
 labels: []
 dependencies: []
 documentation:
@@ -39,3 +39,9 @@ This Change is itself born session-absent: no work session was created for it; i
 - [ ] #4 full Repository test suite green including the updated ratchet exact prose baseline
 - [ ] #5 decision-9 record minted in this checkout and riding this PR
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+DEVIATION (one-time, operator-approved 2026-07-21, unblock-route card 'Waive envelope once'): the fresh-context code review for this Change is dispatched WITHOUT outputSchema — adapter confinement intact, strict completion envelope waived for this review only. Cause: pi-subagents places the structured-output capture file under /tmp/pi-subagents-uid-<uid>/... while qq-dispatch's runtime root defaults to /tmp/qq-delegate-runtime; the fail-closed guard (bin/qq-dispatch:128-151) correctly refuses the mismatch (reviewer runs bd7ae303, 6d128bec died at start). Diagnosis: researcher run 622ddb35 (cited findings: guard correct, topology mismatch; implementer 13b192b0 had bypassed the adapter entirely because PI_SUBAGENT_PI_BINARY was not yet active in this session). Durable fix owned by t-128 (QQ_DISPATCH_RUNTIME_ROOT carried in the sourced shell/extension surface). Not a precedent: strict envelopes resume for all dispatches once the runtime-root env is carried.
+<!-- SECTION:NOTES:END -->
