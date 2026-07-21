@@ -57,6 +57,11 @@ started child after ten minutes, block with `no thread after 10m`. A terminal
 nonzero result or missing/invalid structured output fails dispatch. Reconstruct
 after dispatcher loss from Tasks, native artifacts, transcripts, and worktrees.
 
+A child's confined suite run is best-effort because Landlock cannot pass
+`/dev/fd` process substitution; children report those failures as
+`inconclusive-under-substrate`. Binding green comes from the owner's native
+rerun of `for t in tests/test-*.sh; do bash "$t"; done` plus CI.
+
 ## Verify and close
 
 The envelope reports per-ticket status, commits, files, Check results,

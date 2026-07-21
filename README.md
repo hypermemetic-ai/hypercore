@@ -121,6 +121,10 @@ Set the dispatcher-side pi-subagents config at
 
 qq delegate visibility uses run artifacts and status, so the intercom bridge
 stays off instead of adding bridge tools to the staged child configuration.
+A child's confined suite run is best-effort because Landlock cannot pass
+`/dev/fd` process substitution; children report those failures as
+`inconclusive-under-substrate`. Binding green comes from the owner's native
+rerun of `for t in tests/test-*.sh; do bash "$t"; done` plus CI.
 
 The adapter and manifests are authoritative qq configuration from primary
 `main`; do not retarget these variables to a Change worktree's copies.
