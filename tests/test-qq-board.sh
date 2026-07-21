@@ -299,8 +299,11 @@ jq -e --arg scratch "$scratch_root" '
 [ -f "$scratch_root/report-only-sentinel" ] \
   || fail 'inspect replaced the scratch generation'
 
-# An unchanged aggregate is not republished: the symlink keeps its
-# generation, the sentinel persists, and nothing is disposed.
+[ -f "$scratch_root/.signature" ] \
+  || fail 'published generation carries no signature'
+
+# An unchanged aggregate is not republished and creates no churn: same
+# generation, sentinel persists, trash stays empty.
 run_board 0 reconcile --repo "$a_worktree"
 assert_equal "$scratch_root" "$(jq -r '.state.scratch_root' "$tmp/result.json")" \
   'linked invocation selected a different scratch tree'
@@ -313,6 +316,10 @@ jq -e '
   || fail 'unchanged board was republished'
 [ -f "$scratch_root/report-only-sentinel" ] \
   || fail 'unchanged board lost its generation'
+if [ -d "$XDG_CACHE_HOME/qq/board/.trash" ]; then
+  [ "$(find "$XDG_CACHE_HOME/qq/board/.trash" -mindepth 1 -maxdepth 1 | wc -l)" -eq 0 ] \
+    || fail 'unchanged board churned the trash'
+fi
 assert_equal "$sources_before" "$(source_digest)" \
   'second materialization changed a source Task record'
 assert_equal "$primary_before" "$(primary_digest)" \
@@ -350,7 +357,7 @@ ln -s "$XDG_CACHE_HOME/qq/board/../../../repo" "$scratch_root"
 run_board 0 reconcile --repo "$repo"
 jq -e '
   .status == "done"
-  and any(.state.notes[]; contains("Skipped disposing of a scratch target"))
+  and any(.state.notes[]; contains("Refused to dispose of an ineligible scratch target"))
 ' "$tmp/result.json" >/dev/null
 [ -d "$repo/backlog/tasks" ] || fail 'disposal escaped into the fixture repo'
 [ -L "$scratch_root" ] || fail 'publish did not replace the malformed link'
@@ -367,11 +374,31 @@ run_board 0 reconcile --repo "$repo"
   || fail 'disposal deleted a same-cache foreign target'
 jq -e '
   .status == "done"
-  and any(.state.notes[]; contains("Skipped disposing of a scratch target"))
+  and any(.state.notes[]; contains("Refused to dispose of an ineligible scratch target"))
 ' "$tmp/result.json" >/dev/null
 [ -L "$scratch_root" ] && [ -d "$scratch_root/backlog/tasks" ] \
   || fail 'foreign-target run left no board'
 rm -rf "$victim"
+
+# A byte-identical foreign target is never trusted: its missing signature
+# forces a fresh publication and the disposal refusal names it.
+foreign="$XDG_CACHE_HOME/qq/board/.foreign"
+mkdir -p "$foreign"
+cp -r "$scratch_root/backlog" "$foreign/"
+rm -f "$scratch_root"
+ln -s "$foreign" "$scratch_root"
+run_board 0 reconcile --repo "$repo"
+jq -e '
+  .status == "done"
+  and ([.state.notes[] | select(contains("Board unchanged"))] | length == 0)
+  and any(.state.notes[]; contains("Refused to dispose of an ineligible scratch target"))
+' "$tmp/result.json" >/dev/null
+case "$(readlink "$scratch_root")" in
+  "$XDG_CACHE_HOME"/qq/board/.*.gen.*) ;;
+  *) fail 'foreign identical target was kept as the board' ;;
+esac
+[ -d "$foreign/backlog" ] || fail 'foreign identical target was disposed'
+rm -rf "$foreign"
 
 # A failed participation read degrades loudly: the note names the worktree
 # and every record there participates, so truth is never silently hidden.

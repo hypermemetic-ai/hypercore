@@ -405,19 +405,52 @@ aggregate_tree() {
 board_temp=
 reads_tmp=
 
+# Disposal eligibility is ownership by construction: a direct child whose
+# name is exactly this Repository's generation shape (mktemp's six
+# alphanumeric characters — a regex, since glob wildcards match '/'), or
+# the stale pre-symlink directory at scratch_root itself, intersecting no
+# listed checkout in either direction.
+disposal_eligible() {
+  local target="$1" base worktree_path
+  case "$target" in
+    "$board_parent"/*) ;;
+    *) return 1 ;;
+  esac
+  base="${target##*/}"
+  if [ "$target" != "$scratch_root" ] \
+    && [[ ! "$base" =~ ^\.${repo_key}\.gen\.[A-Za-z0-9]{6}$ ]]; then
+    return 1
+  fi
+  for worktree_path in "${worktree_paths[@]}"; do
+    if [ "$target" = "$worktree_path" ] \
+      || [[ "$target" = "$worktree_path"/* ]] \
+      || [[ "$worktree_path" = "$target"/* ]]; then
+      return 1
+    fi
+  done
+  return 0
+}
+
 # Disposal is a move into the cache-local trash, never a recursive delete:
 # a guard mis-match costs a recoverable move, not rm -rf on a checkout.
 # Trash expiry rides qq-reap's weekly debris scan.
 dispose_dir() {
   local target="$1"
   [ -d "$target" ] || return 0
+  if ! disposal_eligible "$target"; then
+    append_note "Refused to dispose of an ineligible scratch target: $target"
+    return 1
+  fi
   mkdir -p -- "$board_parent/.trash" || return 1
   mv -- "$target" "$board_parent/.trash/${target##*/}.$(date +%s).$RANDOM"
 }
 
 cleanup_materialization() {
   case "$board_temp" in
-    "$board_parent"/.*) dispose_dir "$board_temp" 2>/dev/null || true ;;
+    "$board_parent"/.*)
+      dispose_dir "$board_temp" 2>/dev/null \
+        || printf 'warning: scratch generation left behind: %s\n' "$board_temp" >&2
+      ;;
   esac
   if [ -n "$reads_tmp" ]; then
     rm -f -- "$reads_tmp"
@@ -559,12 +592,56 @@ fi
 
 board_temp=
 
+board_signature() {
+  local index task_id
+  {
+    "$sha256sum_bin" -- "$primary_config"
+    for index in "${!task_ids[@]}"; do
+      task_id="${task_ids[$index]}"
+      printf '%s\t%s\t%s\t%s\n' \
+        "$task_id" "${task_name_by_id[$task_id]}" \
+        "${task_hash_by_id[$task_id]}" "${derived_statuses[$index]}"
+    done
+  } | "$sha256sum_bin" | awk '{print $1}'
+}
+
 materialize_board() {
   local index task_id destination rewrite
-  local link_temp previous_target
+  local link_temp previous_target current_signature new_signature
 
   mkdir -p -- "$board_parent" \
     || qq_engine_error "Could not create scratch-board parent: $board_parent"
+  new_signature="$(board_signature)"
+
+  # Publish atomically: scratch_root is a symlink swapped onto a complete
+  # generation by rename, so a renderer always sees a whole board.
+  previous_target=
+  if [ -L "$scratch_root" ]; then
+    if ! previous_target="$(readlink -f -- "$scratch_root" 2>/dev/null)"; then
+      append_note "Could not resolve the previous scratch target; replacing the link without disposal."
+      previous_target=
+    fi
+  elif [ -e "$scratch_root" ]; then
+    # A stale directory from before the symlink scheme is disposed like
+    # any other generation (dispose_dir enforces eligibility).
+    if ! dispose_dir "$scratch_root"; then
+      qq_engine_error "Could not dispose of the stale scratch directory: $scratch_root"
+    fi
+  fi
+
+  # An unchanged aggregate is not republished — the signature is compared
+  # before anything is built, so the watch loop creates no churn. Only an
+  # owned generation's signature is trusted; a foreign target is replaced
+  # and reported through the disposal refusal.
+  current_signature=
+  if [ -n "$previous_target" ] && disposal_eligible "$previous_target"; then
+    current_signature="$(cat -- "$previous_target/.signature" 2>/dev/null || true)"
+  fi
+  if [ -n "$current_signature" ] && [ "$current_signature" = "$new_signature" ]; then
+    append_note 'Board unchanged; kept the current generation.'
+    return 0
+  fi
+
   board_temp="$(mktemp -d "$board_parent/.${repo_key}.gen.XXXXXX")" \
     || qq_engine_error 'Could not allocate a scratch-board generation.'
   mkdir -p -- "$board_temp/backlog/tasks" \
@@ -594,37 +671,8 @@ materialize_board() {
         || qq_engine_error "Could not publish derived Task status: $task_id"
     fi
   done
-
-  # Publish atomically: scratch_root is a symlink swapped onto a complete
-  # generation by rename, so a renderer always sees a whole board.
-  previous_target=
-  if [ -L "$scratch_root" ]; then
-    if ! previous_target="$(readlink -f -- "$scratch_root" 2>/dev/null)"; then
-      append_note "Could not resolve the previous scratch target; replacing the link without disposal."
-      previous_target=
-    fi
-  elif [ -e "$scratch_root" ]; then
-    # A stale directory generation from before the symlink scheme is
-    # disposed like any other generation.
-    case "$scratch_root" in
-      "$board_parent"/?*)
-        dispose_dir "$scratch_root" \
-          || qq_engine_error "Could not dispose of the stale scratch directory: $scratch_root"
-        ;;
-    esac
-  fi
-
-  # An unchanged aggregate is not republished: the watch loop only swaps
-  # the generation when the board actually changed.
-  if [ -n "$previous_target" ] && [ -d "$previous_target/backlog" ] \
-    && diff -rq "$board_temp/backlog" "$previous_target/backlog" >/dev/null 2>&1; then
-    if dispose_dir "$board_temp"; then
-      board_temp=
-      append_note 'Board unchanged; kept the current generation.'
-      return 0
-    fi
-    qq_engine_error 'Could not dispose of the unchanged scratch generation.'
-  fi
+  printf '%s\n' "$new_signature" >"$board_temp/.signature" \
+    || qq_engine_error 'Could not write the scratch-board signature.'
 
   link_temp="$(mktemp -u "$board_parent/.${repo_key}.link.XXXXXX")" \
     || qq_engine_error 'Could not reserve the scratch-board link name.'
@@ -636,33 +684,13 @@ materialize_board() {
   fi
   board_temp=
 
-  # Disposal eligibility is ownership by construction: a direct child
-  # generation of this Repository (mktemp's six slash-free characters),
-  # intersecting no listed checkout in either direction.
-  dispose_target=
-  case "$previous_target" in
-    "$board_parent"/\."$repo_key".gen.??????)
-      dispose_target="$previous_target"
-      for worktree_path in "${worktree_paths[@]}"; do
-        if [ "$dispose_target" = "$worktree_path" ] \
-          || [[ "$dispose_target" = "$worktree_path"/* ]] \
-          || [[ "$worktree_path" = "$dispose_target"/* ]]; then
-          dispose_target=
-          break
-        fi
-      done
-      ;;
-  esac
-  if [ -n "$dispose_target" ]; then
-    board_temp="$dispose_target"
+  if [ -n "$previous_target" ]; then
+    board_temp="$previous_target"
     if dispose_dir "$board_temp"; then
       board_temp=
     else
       board_temp=
-      append_note "Could not dispose of the previous scratch generation: $dispose_target"
     fi
-  elif [ -n "$previous_target" ]; then
-    append_note "Skipped disposing of a scratch target outside this board's generations: $previous_target"
   fi
 }
 
