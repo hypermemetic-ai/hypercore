@@ -40,7 +40,7 @@ worktrees.
 
 ```ts
 const completionEnvelopeSchema=JSON.parse(readFileSync("<absolute-worktree>/delegation/manifests/completion-envelope.schema.json","utf8"))
-subagent({chain:[{agent:"implementer",task:"Read-and-perform:<absolute-brief-path>",outputSchema:completionEnvelopeSchema}],cwd:"<absolute-worktree>",context:"fresh",async:true,timeoutMs:1800000})
+subagent({chain:[{agent:"implementer",task:"Read-and-perform:<absolute-brief-path>",outputSchema:completionEnvelopeSchema,acceptance:{level:"none",reason:"qq acceptance is the strict envelope plus owner tree verification plus fresh review"}}],cwd:"<absolute-worktree>",context:"fresh",async:true,timeoutMs:1800000})
 ```
 
 Use only absolute paths: the task points to the work order, `cwd` to its
