@@ -420,9 +420,8 @@ disposal_eligible() {
     return 1
   fi
   for worktree_path in "${worktree_paths[@]}"; do
-    if [ "$target" = "$worktree_path" ] \
-      || [[ "$target" = "$worktree_path"/* ]] \
-      || [[ "$worktree_path" = "$target"/* ]]; then
+    if [[ "$target/" = "$worktree_path/"* ]] \
+      || [[ "$worktree_path/" = "$target/"* ]]; then
       return 1
     fi
   done
@@ -456,7 +455,6 @@ cleanup_materialization() {
   esac
   if [ -n "$reads_tmp" ]; then
     rm -f -- "$reads_tmp"
-    reads_tmp=
   fi
 }
 trap cleanup_materialization EXIT
@@ -592,8 +590,6 @@ if [ "$mode" = inspect ] || [ "$dry_run" = true ]; then
   effective_dry_run=true
 fi
 
-board_temp=
-
 board_signature() {
   local index task_id
   {
@@ -626,9 +622,8 @@ materialize_board() {
   elif [ -e "$scratch_root" ]; then
     # A stale directory from before the symlink scheme is disposed like
     # any other generation (dispose_dir enforces eligibility).
-    if ! dispose_dir "$scratch_root"; then
-      qq_engine_error "Could not dispose of the stale scratch directory: $scratch_root"
-    fi
+    dispose_dir "$scratch_root" \
+      || qq_engine_error "Could not dispose of the stale scratch directory: $scratch_root"
   fi
 
   # An unchanged aggregate is not republished — the signature is compared
@@ -685,15 +680,7 @@ materialize_board() {
     qq_engine_error 'Could not publish the scratch board tree.'
   fi
   board_temp=
-
-  if [ -n "$previous_target" ]; then
-    board_temp="$previous_target"
-    if dispose_dir "$board_temp"; then
-      board_temp=
-    else
-      board_temp=
-    fi
-  fi
+  dispose_dir "$previous_target" || true
 }
 
 materialized=false
