@@ -22,7 +22,8 @@ context options: --trace-id ID --span-id ID --parent-span-id ID --root-span-id I
 record options:  --phase PHASE --status STATUS --source SOURCE --attribute KEY=VALUE
 
 qq-dispatch writes raw exit-code status; summarize resolves teardown signals
-from <runtime-root>/async-subagent-runs/<run.id>/status.json at read time.
+from <runtime-root>/async-subagent-runs/<run.id>/status.json at read time:
+complete becomes ok; failed, stopped, or unresolved outcomes remain error.
 --json includes each span's raw and resolved status. runtime-root is
 QQ_DISPATCH_RUNTIME_ROOT or ${TMPDIR:-/tmp}/pi-subagents-uid-<uid>.
 EOF
