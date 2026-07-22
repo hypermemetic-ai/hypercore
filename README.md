@@ -295,10 +295,10 @@ variables are absent, it mints `QQ_TRACE_ID` and a session-root span ID, sets
 both `PI_ROOT_SPAN_ID` and `PI_PARENT_SPAN_ID` to that root, and records a
 zero-duration, phase-less `invoke_workflow` structural marker. Explicitly set
 values always win; delegate sessions inherit all three variables through
-`qq-dispatch`, so the extension is a no-op there. Each top-level dispatch is
-therefore a direct child of the accountable session root. The extension logs
-its IDs once as `[qq-trace-context] trace_id=… root_span_id=…`; observation
-failure is non-fatal.
+`qq-dispatch`, so the extension is a no-op there. With no pre-set span context,
+each top-level dispatch is therefore a direct child of the accountable session
+root. The extension logs its IDs once as `[qq-trace-context] trace_id=…
+root_span_id=…`; observation failure is non-fatal.
 
 Use those logged IDs to import the session JSONL's coarse wall-time span into
 the same trace after the session:
