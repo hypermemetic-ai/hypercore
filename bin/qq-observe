@@ -122,6 +122,7 @@ command, store_file, *args = sys.argv[1:]
 HEX16 = re.compile(r"^[0-9a-f]{16}$")
 HEX32 = re.compile(r"^[0-9a-f]{32}$")
 PHASES = {"orientation", "alignment", "implementation", "review", "research", "delivery"}
+STATUS_JSON_CAP = 1024 * 1024
 SPAN_FIELDS = {
     "schema_version", "trace_id", "span_id", "parent_span_id", "root_span_id",
     "name", "phase", "actor", "start_time", "end_time", "duration_ms",
@@ -344,9 +345,12 @@ def resolved_span_status(item):
         fd = os.open(status_path, flags)
         if not stat.S_ISREG(os.fstat(fd).st_mode):
             return detail
-        with os.fdopen(fd, encoding="utf-8") as source:
+        with os.fdopen(fd, "rb") as source:
             fd = None
-            record = json.load(source)
+            payload = source.read(STATUS_JSON_CAP + 1)
+            if len(payload) > STATUS_JSON_CAP:
+                return detail
+            record = json.loads(payload.decode("utf-8"))
     except (OSError, ValueError, UnicodeError, RecursionError):
         return detail
     finally:
@@ -356,11 +360,9 @@ def resolved_span_status(item):
     if not isinstance(record, dict):
         return detail
     state = record.get("state")
-    if state == "complete":
-        detail["status"] = "ok"
-        detail["outcome"]["resolved"] = state
-    elif state in ("failed", "stopped"):
-        detail["status"] = "error"
+    status = {"complete": "ok", "failed": "error", "stopped": "error"}.get(state)
+    if status:
+        detail["status"] = status
         detail["outcome"]["resolved"] = state
     return detail
 
