@@ -1,0 +1,19 @@
+{
+  "kimi-coding": {
+    "key": "test-kimi-token-not-a-secret",
+    "type": "api_key"
+  },
+  "openai-codex": {
+    "access": "test-codex-token-not-a-secret",
+    "accountId": "test-account",
+    "expires": 4102444800000,
+    "refresh": "test-refresh-token-not-a-secret",
+    "type": "oauth"
+  },
+  "anthropic": {
+    "access": "test-anthropic-token-not-a-secret",
+    "expires": 4102444800000,
+    "refresh": "test-refresh-token-not-a-secret",
+    "type": "oauth"
+  }
+}
