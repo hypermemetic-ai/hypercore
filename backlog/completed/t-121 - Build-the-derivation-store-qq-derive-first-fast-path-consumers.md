@@ -3,7 +3,7 @@ id: T-121
 title: >-
   Derivation store qq-derive — candidate intervention pending observation
   evidence
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-07-20 17:52'
 updated_date: '2026-07-22 00:16'
@@ -20,6 +20,8 @@ ordinal: 51000
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
+
+RETIRED 2026-07-24 (operator ruling, accountable project-home session): "T-121 can just be retired because the observer takes over all of that job." The T-142 observer arc (post-hoc analysis over full session records, architect-tab consumption) subsumes the observation-and-intervention role this store was a candidate for. The 2026-07-20 design remains on file below as evidence; no derivation store is built.
 REFRAMED 2026-07-21 (operator rulings, accountable project-home session; reshape plan = doc-73): the derivation store is no longer foundational. It is one candidate latency intervention that T-127's observation evidence will select, reshape, or kill. Blocked by T-127, whose baseline measurements are the selecting evidence.
 
 The 2026-07-20 operator-approved design stays on file below; its pre-chosen consumer list (orientation digest, reviewer-brief pre-generation, review-context reuse, research/review fan-outs, deliver-change pipelining) and its 'foundational fast-path capability' framing were DE-APPROVED 2026-07-21 in favor of observation-first: measure where wall-time actually goes, then build only what the data selects.
