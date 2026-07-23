@@ -160,3 +160,7 @@ rigs. No cross-Repository scope.
   research run: 381k tokens / $10.86); bounded by top-N and chunking caps.
 - PR #205 (T-142 + doc-80) lands first; the Task's decision ledger switches from
   exchange citations to decision-record ids in Change 1, before Task finalization.
+
+## Amendment 2026-07-23 — observer aim widened: design questions, architect role
+
+Operator directive (accountable project-home session, 2026-07-23; dated note and decision-ledger entry on T-142, commit 2af37b7 landing via PR #215): the observer's aim widens from performance and efficiency to genuine design questions — the observer acts as harness architect. Motive: a delivery session burned ~50k chars of reasoning on manual word-level arithmetic to hold the prose ratchet's exact-equality budget; the harness's own design created the tight spot, and signal-anchored discovery alone would have scored the episode green. Consequences bound into the build Changes: (1) the taxonomy gains a design-question/system-design episode class; (2) the deterministic pre-pass gains reasoning-volume/contortion signals; (3) the remedy contract opens — proposals may reach any harness level, remaining cited, ranked, smallest-remedy-framed, and operator-disposed. The rails are unchanged: read-only analysis, findings are proposals, nothing auto-applies, the operator disposes. Change ② carries the taxonomy class, the signals, the schema, and the procedure.
