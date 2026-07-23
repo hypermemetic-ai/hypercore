@@ -112,6 +112,7 @@ run_41="$XDG_STATE_HOME/qq/observer/runs/pr-41"
 jq -e --arg repo "$(realpath "$repo")" '
   .schema == "qq-observer.package" and .schema_version == 1
   and .pr == 41 and .branch == "feature" and .repo == $repo
+  and .variant == "guided"
   and ([.sessions[] | select(.role == "delegate" and .evidence == "live-worktree-branch")] | length) == 1
   and ([.sessions[] | select(.role == "delegate" and .evidence == "retired-worktree-content")] | length) == 1
   and ([.sessions[] | select(.role == "accountable" and .evidence == "parent-of-delegate")] | length) == 2
@@ -125,6 +126,29 @@ jq -e '.skills == [{name:"fixture",description:"Fixture skill at merge time."}]'
 assert_equal 4 "$(find "$run_41/sessions" -type f | wc -l)" 'session transcript count is wrong'
 assert_equal 4 "$(find "$run_41/facts" -type f | wc -l)" 'facts count is wrong'
 assert_equal 4 "$(find "$run_41/signals" -type f | wc -l)" 'signals count is wrong'
+jq -e '[.sessions[] | has("signals")] | all' "$run_41/package.json" >/dev/null \
+  || fail 'guided package omitted a session signals pointer'
+
+# Blind calibration packages retain transcripts and facts but omit every signal artifact.
+"$OBSERVE" assemble --pr 41 --repo "$repo" --variant blind \
+  >"$tmp/assembled-41-blind.json"
+blind_run_41="$XDG_STATE_HOME/qq/observer/runs/pr-41-blind"
+jq -e '
+  .schema == "qq-observer.package" and .schema_version == 1
+  and .variant == "blind"
+  and ([.sessions[] | has("signals")] | all | not)
+' "$blind_run_41/package.json" >/dev/null \
+  || fail 'blind package manifest retained guided signal pointers'
+assert_equal 4 "$(find "$blind_run_41/sessions" -type f | wc -l)" \
+  'blind session transcript count is wrong'
+assert_equal 4 "$(find "$blind_run_41/facts" -type f | wc -l)" \
+  'blind facts count is wrong'
+[ ! -e "$blind_run_41/signals" ] || fail 'blind package wrote a signals directory'
+[ "$blind_run_41" != "$run_41" ] || fail 'guided and blind variants shared a run directory'
+"$OBSERVE" assemble --pr 41 --repo "$repo" --variant blind \
+  >"$tmp/reassembled-41-blind.json"
+jq -e '.status == "already assembled"' "$tmp/reassembled-41-blind.json" >/dev/null \
+  || fail 'blind reassembly was not idempotent'
 
 "$OBSERVE" assemble --pr 41 --repo "$repo" >"$tmp/reassembled-41.json"
 jq -e '.status == "already assembled"' "$tmp/reassembled-41.json" >/dev/null \

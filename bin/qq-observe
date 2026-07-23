@@ -21,7 +21,7 @@ usage:
   qq-observe signals SESSION.jsonl
   qq-observe validate-analysis ANALYSIS.json SESSION.jsonl [SESSION.jsonl...] \
     --facts SESSION_PATH=FACTS_PATH [--facts SESSION_PATH=FACTS_PATH...]
-  qq-observe assemble --pr N --repo ROOT [--worktree-root DIR]
+  qq-observe assemble --pr N --repo ROOT [--worktree-root DIR] [--variant guided|blind]
   qq-observe verify-delivery --repo ROOT [--since ISO]
   qq-observe render-doc --run DIR
   qq-observe finalize --run DIR (--analysis FILE | --failed REASON) \
@@ -545,11 +545,14 @@ def append_unknown(items, path, reason):
 
 
 def assemble(values):
-    options = parse_flags(values, {"--pr", "--repo", "--worktree-root"})
+    options = parse_flags(values, {"--pr", "--repo", "--worktree-root", "--variant"})
     if "--pr" not in options or "--repo" not in options:
         fail("assemble requires --pr and --repo")
     if not re.fullmatch(r"[1-9][0-9]*", options["--pr"]):
         fail("--pr must be a positive integer")
+    variant = options.get("--variant", "guided")
+    if variant not in ("guided", "blind"):
+        fail("--variant must be guided or blind")
     pr = int(options["--pr"])
     repo, common = git_root(options["--repo"])
 
@@ -583,7 +586,8 @@ def assemble(values):
                             label="merge-commit canonicalization")
 
     runs_root = observer_runs_root(create=True)
-    run_dir = runs_root / f"pr-{pr}"
+    run_name = f"pr-{pr}" if variant == "guided" else f"pr-{pr}-blind"
+    run_dir = runs_root / run_name
     ensure_directory(run_dir, runs_root)
     package_path = run_dir / "package.json"
     existing_package = False
@@ -598,6 +602,7 @@ def assemble(values):
             or package.get("repo") != os.fspath(repo)
             or package.get("branch") != branch
             or package.get("merge_commit") != merge_commit
+            or package.get("variant", "guided") != variant
         ):
             fail(f"append-only conflict at {package_path}", 65)
         existing_package = True
@@ -849,7 +854,10 @@ def assemble(values):
         facts_rel = f"facts/{label}.json"
         signals_rel = f"signals/{label}.json"
         atomic_append(run_dir / session_rel, read_regular(source, "selected session transcript"))
-        for subcommand, relative in (("facts", facts_rel), ("signals", signals_rel)):
+        derivatives = [("facts", facts_rel)]
+        if variant == "guided":
+            derivatives.append(("signals", signals_rel))
+        for subcommand, relative in derivatives:
             process = run_process(
                 [self_path, subcommand, os.fspath(run_dir / session_rel)],
                 f"qq-observe {subcommand}", cwd=repo,
@@ -865,8 +873,11 @@ def assemble(values):
             "role": row["role"],
             "evidence": row["evidence"],
             "facts": os.fspath((run_dir / facts_rel).resolve(strict=True)),
-            "signals": os.fspath((run_dir / signals_rel).resolve(strict=True)),
         }
+        if variant == "guided":
+            package_row["signals"] = os.fspath(
+                (run_dir / signals_rel).resolve(strict=True)
+            )
         if "run_id" in row:
             package_row["run_id"] = row["run_id"]
         packaged_sessions.append(package_row)
@@ -937,6 +948,7 @@ def assemble(values):
         "merge_commit": merge_commit,
         "merged_at": merged_at_value,
         "assembled_at": utc_now(),
+        "variant": variant,
         "repo": os.fspath(repo),
         "sessions": packaged_sessions,
         "warnings": warnings,
@@ -949,7 +961,7 @@ def assemble(values):
     emit({
         "status": "assembled", "run_dir": os.fspath(run_dir),
         "sessions": len(packaged_sessions), "warnings": len(warnings),
-        "unknown_entries": len(unknown),
+        "unknown_entries": len(unknown), "variant": variant,
     })
 
 
@@ -1036,6 +1048,8 @@ def minimal_analysis(item):
             isinstance(episode["rank"], bool) or not isinstance(episode["rank"], int)
         ):
             fail(f"analysis schema violation: episodes[{index}].rank must be an integer")
+        if "no_signal" in episode and not isinstance(episode["no_signal"], bool):
+            fail(f"analysis schema violation: episodes[{index}].no_signal must be a boolean")
         for citation in episode["evidence"]:
             if (
                 not isinstance(citation, dict)
@@ -1337,14 +1351,57 @@ HEX16 = re.compile(r"^[0-9a-f]{16}$")
 HEX32 = re.compile(r"^[0-9a-f]{32}$")
 PHASES = {"orientation", "alignment", "implementation", "review", "research", "delivery"}
 STATUS_JSON_CAP = 1024 * 1024
-# Tunable v1 heuristics from the 2026-07-23 operator note.
+# Tunable deterministic heuristics from the 2026-07-23/24 operator notes.
 REASONING_VOLUME_CHARS = 20000
 REASONING_CONTORTION_MESSAGES = 3
 REASONING_CONTORTION_CHARS = 5000
+STALL_GAP_ENTRIES = 40
+OPERATOR_REQUEST_TOOL_NAME_IDIOMS = (
+    re.compile(r"^operator_stage$", re.IGNORECASE),
+    re.compile(r"^(?:operator_request|request_operator)$", re.IGNORECASE),
+)
+OPERATOR_REQUEST_ARGUMENT_IDIOMS = (
+    re.compile(r"\bherdr\s+notification\s+show\b", re.IGNORECASE),
+    re.compile(r'"(?:operator_directed|operatorDirected)":true', re.IGNORECASE),
+    re.compile(r'"(?:recipient|target)":"operator"', re.IGNORECASE),
+)
+HERDR_NOTIFICATION_TOOL_NAME_IDIOMS = (
+    re.compile(r"(?:^|[_-])notification(?:$|[_-])", re.IGNORECASE),
+)
+HERDR_TOOL_NAME_IDIOMS = (
+    re.compile(r"^herdr$", re.IGNORECASE),
+)
+NOTIFICATION_ARGUMENT_IDIOMS = (
+    re.compile(r"\bnotification\b", re.IGNORECASE),
+)
+NOTIFICATION_SHOW_ARGUMENT_IDIOMS = (
+    re.compile(r"\bshow\b", re.IGNORECASE),
+)
+MUTATING_TOOL_NAMES = ("edit", "write")
+COMMIT_SHAPED_COMMAND_IDIOMS = (
+    re.compile(
+        r'(?:^|[;&|"]\s*)git(?:\s+[^;&|\s]+){0,12}\s+commit\b',
+        re.IGNORECASE,
+    ),
+)
+CHECK_SHAPED_COMMAND_IDIOMS = (
+    re.compile(r"tests/", re.IGNORECASE),
+    re.compile(r"\bratchet\b", re.IGNORECASE),
+    re.compile(r"\bshell-tests\b", re.IGNORECASE),
+    re.compile(r"\bgh\s+pr\s+checks\b", re.IGNORECASE),
+)
+COMPLETION_CLAIM_IDIOMS = re.compile(
+    r"\b(?:checks?\s+pass(?:ed)?|green|ready\s+to\s+merge|"
+    r"all\s+tests?\s+pass(?:ed)?|done\s+and\s+verified)\b",
+    re.IGNORECASE,
+)
 ANALYSIS_KINDS = {
     "tool-gap.capability-unknown", "tool-gap.tool-missing", "instruction-conflict",
     "instruction-deficiency", "tool-misuse", "friction", "waste", "failure",
-    "substrate", "design-question",
+    "substrate", "design-question", "operator-seam.unconfirmed-assumption",
+    "operator-seam.unseen-request", "operator-seam.misread-direction",
+    "operator-seam.misleading-claim", "operator-seam.stale-world",
+    "operator-seam.cross-session", "operator-seam.abandonment",
 }
 ANALYSIS_ROOT_CAUSE_LOCATIONS = {
     "work-order", "skill", "instruction", "tool", "agent-behavior", "substrate",
@@ -1813,6 +1870,7 @@ def new_session_analysis(entries, observed):
         "calls": [],
         "results": [],
         "users": [],
+        "assistant_texts": [],
         "assistant_reasoning": [],
         "message_roles": [],
         "compactions": [],
@@ -1926,6 +1984,7 @@ def parse_pi(analysis):
             analysis["users"].append((line, content_text(content)))
         if role == "assistant":
             add_usage(analysis, message.get("usage"), usage_names)
+            analysis["assistant_texts"].append((line, content_text(content)))
         if role == "toolResult":
             analysis["blocks"]["toolResult"] += 1
             call_id = message.get("toolCallId")
@@ -2057,6 +2116,36 @@ def session_facts(analysis):
     }
 
 
+def matches_any(value, idioms):
+    return any(idiom.search(value) for idiom in idioms)
+
+
+def operator_request_call(call):
+    name = call["name"]
+    arguments = call["arguments"]
+    if matches_any(name, OPERATOR_REQUEST_TOOL_NAME_IDIOMS):
+        return True
+    if matches_any(arguments, OPERATOR_REQUEST_ARGUMENT_IDIOMS):
+        return True
+    if (
+        matches_any(name, HERDR_NOTIFICATION_TOOL_NAME_IDIOMS)
+        and matches_any(arguments, NOTIFICATION_SHOW_ARGUMENT_IDIOMS)
+    ):
+        return True
+    return (
+        matches_any(name, HERDR_TOOL_NAME_IDIOMS)
+        and matches_any(arguments, NOTIFICATION_ARGUMENT_IDIOMS)
+        and matches_any(arguments, NOTIFICATION_SHOW_ARGUMENT_IDIOMS)
+    )
+
+
+def mutating_call(call):
+    name = call["name"].lower()
+    if name in MUTATING_TOOL_NAMES:
+        return True
+    return name == "bash" and matches_any(call["arguments"], COMMIT_SHAPED_COMMAND_IDIOMS)
+
+
 def session_signals(analysis):
     episodes = []
     calls = sorted(analysis["calls"], key=lambda call: call["line"])
@@ -2064,6 +2153,59 @@ def session_signals(analysis):
         (result for result in analysis["results"] if result["error"]),
         key=lambda result: result["line"],
     )
+
+    results_by_call = {}
+    for result in analysis["results"]:
+        if result["call_line"] is not None:
+            results_by_call.setdefault(result["call_line"], []).append(result["line"])
+    user_lines = sorted(line for line, _ in analysis["users"])
+    agent_lines = [
+        line for line, role in analysis["message_roles"] if role != "user"
+    ]
+    for request in (call for call in calls if operator_request_call(call)):
+        next_user = next((line for line in user_lines if line > request["line"]), None)
+        request_entries = [request["line"]] + [
+            line for line in sorted(results_by_call.get(request["line"], []))
+            if next_user is None or line < next_user
+        ]
+        if next_user is None:
+            episodes.append({
+                "kind": "operator_request_unacknowledged",
+                "entries": list(dict.fromkeys(request_entries)),
+            })
+            continue
+        intervening = sum(
+            request["line"] < line < next_user for line in agent_lines
+        )
+        if intervening >= STALL_GAP_ENTRIES:
+            episodes.append({
+                "kind": "operator_request_stalled",
+                "entries": list(dict.fromkeys(request_entries + [next_user])),
+            })
+
+    mutating_calls = [call for call in calls if mutating_call(call)]
+    check_calls = [
+        call for call in calls
+        if call["name"].lower() in ("bash", "shell")
+        and matches_any(call["arguments"], CHECK_SHAPED_COMMAND_IDIOMS)
+    ]
+    for claim_line, text in analysis["assistant_texts"]:
+        if not COMPLETION_CLAIM_IDIOMS.search(text):
+            continue
+        previous_mutations = [
+            call for call in mutating_calls if call["line"] < claim_line
+        ]
+        if not previous_mutations:
+            continue
+        mutation = previous_mutations[-1]
+        verified = any(
+            mutation["line"] < call["line"] < claim_line for call in check_calls
+        )
+        if not verified:
+            episodes.append({
+                "kind": "unverified_completion_claim",
+                "entries": [mutation["line"], claim_line],
+            })
 
     for result in errors:
         later = [
@@ -2253,9 +2395,11 @@ def validate_analysis_shape(item):
     }
     for episode_index, episode in enumerate(episodes):
         label = f"episodes[{episode_index}]"
-        analysis_object(episode, episode_fields, label, optional={"rank"})
+        analysis_object(episode, episode_fields, label, optional={"rank", "no_signal"})
         if "rank" in episode:
             analysis_integer(episode["rank"], f"{label}.rank", minimum=1)
+        if "no_signal" in episode and not isinstance(episode["no_signal"], bool):
+            fail(f"analysis schema violation: {label}.no_signal must be a boolean")
         analysis_string(episode["kind"], f"{label}.kind")
         if episode["kind"] not in ANALYSIS_KINDS:
             fail(f"analysis schema violation: {label}.kind is not in the taxonomy")
