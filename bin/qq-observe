@@ -1141,7 +1141,7 @@ def verify_delivery(values):
         since_time = dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=7)
         since = since_time.replace(microsecond=0).isoformat().replace("+00:00", "Z")
     log = checked(
-        [git_binary, "-C", os.fspath(repo), "log", "main",
+        [git_binary, "-C", os.fspath(repo), "log", "main", "--first-parent",
          f"--since={since_time.isoformat()}", "--format=%H%x00%s"],
         "local main history inspection",
     )

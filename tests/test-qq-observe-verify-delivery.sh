@@ -61,6 +61,24 @@ jq -e '
   and .unresolved_commits == []
 ' "$tmp/standard.json" >/dev/null || fail 'standard merge was not covered'
 
+inwindow_repo="$tmp/inwindow"
+init_repo "$inwindow_repo"
+git -C "$inwindow_repo" switch -qc inwindow-feature
+commit_empty "$inwindow_repo" "in-window branch work" "$window_date"
+git -C "$inwindow_repo" switch -q main
+GIT_AUTHOR_DATE="$window_date" GIT_COMMITTER_DATE="$window_date" \
+  git -C "$inwindow_repo" -c user.name=test -c user.email=test@example.invalid \
+    merge -q --no-ff -m 'Merge pull request #31 from fixture/inwindow-feature' \
+      inwindow-feature
+cover_pr 31
+"$OBSERVE" verify-delivery --repo "$inwindow_repo" --since "$since" \
+  >"$tmp/inwindow.json"
+jq -e '
+  .ok == true and .status == "covered"
+  and .prs == [31] and .covered == [31] and .uncovered == []
+  and .unresolved_commits == []
+' "$tmp/inwindow.json" >/dev/null || fail 'in-window branch work counted as a landed Change'
+
 squash_repo="$tmp/squash"
 init_repo "$squash_repo"
 commit_empty "$squash_repo" 'Squashed fixture change (#12)' "$window_date"
