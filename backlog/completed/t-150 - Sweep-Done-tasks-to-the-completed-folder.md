@@ -1,10 +1,10 @@
 ---
 id: T-150
 title: Sweep Done tasks to the completed folder
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-07-23 20:19'
-updated_date: '2026-07-23 20:19'
+updated_date: '2026-07-23 20:27'
 labels: []
 dependencies: []
 ordinal: 69000
