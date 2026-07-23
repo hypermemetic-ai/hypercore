@@ -61,6 +61,10 @@ fake_gh="$tmp/gh"
 cat >"$fake_gh" <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail
+if [ -n "${GH_MUST_NOT_RUN:-}" ]; then
+  : >"$GH_MUST_NOT_RUN"
+  exit 99
+fi
 [ "$1 $2" = "pr view" ]
 pr="$3"
 case "$pr" in
@@ -143,16 +147,26 @@ assert_equal 5 "$(find "$run_41/signals" -type f | wc -l)" 'signals count is wro
 jq -e '[.sessions[] | has("signals")] | all' "$run_41/package.json" >/dev/null \
   || fail 'guided package omitted a session signals pointer'
 
-# Blind calibration packages retain transcripts and facts but omit every signal artifact.
+# Blind calibration packages derive only from the frozen guided package. They do
+# not repeat gh/runtime/session discovery after the accountable transcript advances.
+export GH_MUST_NOT_RUN="$tmp/blind-touched-gh"
 "$OBSERVE" assemble --pr 41 --repo "$repo" --variant blind \
   >"$tmp/assembled-41-blind.json"
+unset GH_MUST_NOT_RUN
+[ ! -e "$tmp/blind-touched-gh" ] || fail 'blind assembly touched gh instead of deriving from guided'
 blind_run_41="$XDG_STATE_HOME/qq/observer/runs/pr-41-blind"
 jq -e '
   .schema == "qq-observer.package" and .schema_version == 1
-  and .variant == "blind"
+  and .variant == "blind" and .derived_from == "pr-41"
   and ([.sessions[] | has("signals")] | all | not)
 ' "$blind_run_41/package.json" >/dev/null \
-  || fail 'blind package manifest retained guided signal pointers'
+  || fail 'blind package manifest did not derive from guided without signal pointers'
+jq -S 'del(.variant,.derived_from) | .sessions |= map(del(.facts,.signals))' \
+  "$blind_run_41/package.json" >"$tmp/blind-comparable.json"
+jq -S 'del(.variant) | .sessions |= map(del(.facts,.signals))' \
+  "$run_41/package.json" >"$tmp/guided-comparable.json"
+cmp "$tmp/guided-comparable.json" "$tmp/blind-comparable.json" \
+  || fail 'blind package identity or session inputs differ from guided'
 assert_equal 5 "$(find "$blind_run_41/sessions" -type f | wc -l)" \
   'blind session transcript count is wrong'
 assert_equal 5 "$(find "$blind_run_41/facts" -type f | wc -l)" \
@@ -163,6 +177,20 @@ assert_equal 5 "$(find "$blind_run_41/facts" -type f | wc -l)" \
   >"$tmp/reassembled-41-blind.json"
 jq -e '.status == "already assembled"' "$tmp/reassembled-41-blind.json" >/dev/null \
   || fail 'blind reassembly was not idempotent'
+
+export GH_MUST_NOT_RUN="$tmp/absent-guided-touched-gh"
+set +e
+"$OBSERVE" assemble --pr 99 --repo "$repo" --variant blind \
+  >"$tmp/absent-guided.stdout" 2>"$tmp/absent-guided.stderr"
+status=$?
+set -e
+unset GH_MUST_NOT_RUN
+assert_equal 65 "$status" 'blind assembly without guided package was accepted'
+[ ! -e "$tmp/absent-guided-touched-gh" ] \
+  || fail 'blind assembly consulted gh when guided package was absent'
+assert_file_contains "$tmp/absent-guided.stderr" 'guided package is required'
+[ ! -e "$XDG_STATE_HOME/qq/observer/runs/pr-99-blind" ] \
+  || fail 'absent guided package left a blind run directory'
 
 "$OBSERVE" assemble --pr 41 --repo "$repo" >"$tmp/reassembled-41.json"
 jq -e '.status == "already assembled"' "$tmp/reassembled-41.json" >/dev/null \

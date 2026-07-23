@@ -544,6 +544,103 @@ def append_unknown(items, path, reason):
         items.append(row)
 
 
+def clone_input_tree(source, destination, runs_root):
+    try:
+        source_info = os.lstat(source)
+    except OSError as error:
+        fail(f"cannot inspect guided package input {source}: {error}", 65)
+    if not stat.S_ISDIR(source_info.st_mode):
+        fail(f"guided package input is not a directory: {source}", 65)
+    ensure_directory(destination, runs_root)
+    try:
+        entries = sorted(source.iterdir(), key=lambda item: item.name)
+    except OSError as error:
+        fail(f"cannot enumerate guided package input {source}: {error}", 65)
+    for entry in entries:
+        target = destination / entry.name
+        try:
+            info = os.lstat(entry)
+        except OSError as error:
+            fail(f"cannot inspect guided package input {entry}: {error}", 65)
+        if stat.S_ISDIR(info.st_mode):
+            clone_input_tree(entry, target, runs_root)
+        elif stat.S_ISREG(info.st_mode):
+            atomic_append(target, read_regular(entry, "guided package input"))
+        else:
+            fail(f"guided package input is not a regular file or directory: {entry}", 65)
+
+
+def assemble_blind(pr, repo, runs_root):
+    guided_name = f"pr-{pr}"
+    guided_dir = runs_root / guided_name
+    guided_path = guided_dir / "package.json"
+    if not regular_file(guided_path):
+        fail(f"guided package is required before blind assembly: {guided_path}", 65)
+    guided = json_document(
+        read_regular(guided_path, "guided observer package"),
+        "guided observer package",
+    )
+    if (
+        not isinstance(guided, dict)
+        or guided.get("schema") != "qq-observer.package"
+        or isinstance(guided.get("schema_version"), bool)
+        or guided.get("schema_version") != 1
+        or guided.get("pr") != pr
+        or guided.get("repo") != os.fspath(repo)
+        or guided.get("variant", "guided") != "guided"
+        or not isinstance(guided.get("sessions"), list)
+    ):
+        fail(f"guided package has the wrong identity or shape: {guided_path}", 65)
+
+    run_dir = runs_root / f"{guided_name}-blind"
+    blind = json.loads(json.dumps(guided))
+    blind["variant"] = "blind"
+    blind["derived_from"] = guided_name
+    for row in blind["sessions"]:
+        if not isinstance(row, dict):
+            fail("guided package session has the wrong shape", 65)
+        label = row.get("label")
+        if not isinstance(label, str) or not SAFE_COMPONENT.fullmatch(label):
+            fail("guided package session has an unsafe label", 65)
+        guided_session = guided_dir / "sessions" / f"{label}.jsonl"
+        guided_facts = guided_dir / "facts" / f"{label}.json"
+        if not regular_file(guided_session) or not regular_file(guided_facts):
+            fail(f"guided package session inputs are incomplete: {label}", 65)
+        row["facts"] = os.fspath(run_dir / "facts" / f"{label}.json")
+        row.pop("signals", None)
+
+    package_data = (
+        json.dumps(blind, separators=(",", ":"), sort_keys=True) + "\n"
+    ).encode()
+    package_path = run_dir / "package.json"
+    if package_path.exists() or package_path.is_symlink():
+        if read_regular(package_path, "blind observer package") != package_data:
+            fail(f"append-only conflict at {package_path}", 65)
+        for marker in ("analysis.json", "analysis_failed.json"):
+            marker_path = run_dir / marker
+            if marker_path.exists() or marker_path.is_symlink():
+                read_regular(marker_path, f"finalized analysis {marker_path}")
+                emit({"status": "already finalized", "run_dir": os.fspath(run_dir)})
+        emit({"status": "already assembled", "run_dir": os.fspath(run_dir)})
+
+    ensure_directory(run_dir, runs_root)
+    clone_input_tree(guided_dir / "sessions", run_dir / "sessions", runs_root)
+    clone_input_tree(guided_dir / "facts", run_dir / "facts", runs_root)
+    atomic_append(
+        run_dir / "inventory.json",
+        read_regular(guided_dir / "inventory.json", "guided package inventory"),
+    )
+    clone_input_tree(guided_dir / "corpus", run_dir / "corpus", runs_root)
+    atomic_append(package_path, package_data)
+    emit({
+        "status": "assembled", "run_dir": os.fspath(run_dir),
+        "sessions": len(blind["sessions"]),
+        "warnings": len(blind.get("warnings", [])),
+        "unknown_entries": len(blind.get("unknown_entries", [])),
+        "variant": "blind", "derived_from": guided_name,
+    })
+
+
 def assemble(values):
     options = parse_flags(values, {"--pr", "--repo", "--worktree-root", "--variant"})
     if "--pr" not in options or "--repo" not in options:
@@ -555,6 +652,9 @@ def assemble(values):
         fail("--variant must be guided or blind")
     pr = int(options["--pr"])
     repo, common = git_root(options["--repo"])
+    runs_root = observer_runs_root(create=True)
+    if variant == "blind":
+        assemble_blind(pr, repo, runs_root)
 
     gh = run_process(
         [gh_binary, "pr", "view", str(pr), "--json",
@@ -585,8 +685,7 @@ def assemble(values):
     merge_commit = git_text(repo, "rev-parse", f"{merge_commit}^{{commit}}",
                             label="merge-commit canonicalization")
 
-    runs_root = observer_runs_root(create=True)
-    run_name = f"pr-{pr}" if variant == "guided" else f"pr-{pr}-blind"
+    run_name = f"pr-{pr}"
     run_dir = runs_root / run_name
     ensure_directory(run_dir, runs_root)
     package_path = run_dir / "package.json"

@@ -168,11 +168,14 @@ episodes. Findings remain proposals for the operator.
 
 ## Dual-run calibration protocol
 
-Analyze each of the first five real post-launch runs twice. First analyze its
-guided package. Then assemble and analyze the blind calibration package with
-`qq-observe assemble --variant blind`; the assembler uses a separate
-append-only run directory, omits all signals, and records `variant: "blind"`.
-Do not expose the guided result or signals to the blind analyst.
+Analyze each of the first five real post-launch runs twice. First assemble and
+analyze its guided package. Then assemble and analyze the blind calibration
+package with `qq-observe assemble --variant blind`. Blind assembly derives from
+the frozen guided package by construction: it clones the guided transcripts,
+facts, inventory, corpus, and package identity into a separate append-only run
+directory without repeating discovery, omits all signals, and records
+`variant: "blind"` plus `derived_from: "pr-N"`. Do not expose the guided result
+or signals to the blind analyst.
 
 In the architect discussion compare the two retained episode sets. Treat
 signals-only findings as false-positive candidates and blind-only findings as
