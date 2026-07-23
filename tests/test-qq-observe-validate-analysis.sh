@@ -32,7 +32,7 @@ ln -s "$session_a" "$session_a_link"
 roundtrip_session="$tmp/roundtrip-session.jsonl"
 cat >"$roundtrip_session" <<'JSONL'
 {"type":"session","version":3,"timestamp":"2026-07-23T00:00:00.000000Z"}
-{"type":"message","timestamp":"2026-07-23T00:00:00.000500Z","message":{"role":"assistant","content":[{"type":"text","text":"half millisecond"}],"usage":{"input":0.5,"output":0.5,"cacheRead":0.5,"cacheWrite":0.25}}}
+{"type":"message","timestamp":"2026-07-23T00:00:00.000500Z","message":{"role":"assistant","content":[{"type":"text","text":"half millisecond"}],"usage":{"input":0.5,"output":0.25,"cacheRead":0.5,"cacheWrite":0.25}}}
 {"type":"message","timestamp":"2026-07-23T00:00:00.001500Z","message":{"role":"assistant","content":[{"type":"text","text":"fractional usage"}],"usage":{"input":0.5,"output":0.5,"cacheWrite":0.25}}}
 JSONL
 roundtrip_facts="$tmp/roundtrip-facts.json"
