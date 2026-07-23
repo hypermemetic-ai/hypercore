@@ -121,6 +121,70 @@ jq -s -e '[.[] | select(.type == "finding_seen" and .pr == 3 and .recurrence_key
   "$events" >/dev/null || fail 'finalize did not auto-feed the ledger'
 [ -f "$run_3/.ledger-applied" ] || fail 'finalize did not mark the ledger update applied'
 
+# A ledger failure leaves the analysis durable but not covered until repair.
+coverage_repo="$tmp/coverage-repo"
+git init -q -b main "$coverage_repo"
+GIT_AUTHOR_DATE=2026-08-07T10:00:00Z GIT_COMMITTER_DATE=2026-08-07T10:00:00Z \
+  git -C "$coverage_repo" -c user.name=test -c user.email=test@example.invalid \
+    commit --allow-empty -qm 'Ledger failure fixture (#7)'
+run_7="$runs/pr-7"
+mkdir -p "$run_7/sessions" "$run_7/facts"
+session_7="$run_7/sessions/fixture.jsonl"
+cat >"$session_7" <<'JSONL'
+{"type":"session","version":3,"timestamp":"2026-08-07T10:00:00Z"}
+{"type":"message","timestamp":"2026-08-07T10:00:00.100Z","message":{"role":"assistant","content":"ledger failure fixture","usage":{"input":4,"output":6}}}
+JSONL
+"$OBSERVE" facts "$session_7" >"$run_7/facts/fixture.json"
+jq -cn --arg repo "$coverage_repo" '{
+  schema:"qq-observer.package",schema_version:1,pr:7,variant:"guided",
+  assembled_at:"2026-08-03T11:00:00Z",repo:$repo,
+  sessions:[{label:"fixture",role:"accountable",evidence:"fixture"}]
+}' >"$run_7/package.json"
+turns="$(jq '[.turns_by_role[]] | add' "$run_7/facts/fixture.json")"
+tokens="$(jq '(.token_usage.input // 0) + (.token_usage.output // 0)' "$run_7/facts/fixture.json")"
+duration="$(jq '.wall_clock.duration_ms' "$run_7/facts/fixture.json")"
+analysis_7="$tmp/analysis-7.json"
+jq -n --arg session "$session_7" --argjson turns "$turns" \
+  --argjson tokens "$tokens" --argjson duration "$duration" '{
+  schema:"qq-observer.analysis",schema_version:1,
+  run:{change:"PR-7",sessions:[$session]},
+  episodes:[{
+    kind:"waste",title:"Ledger failure opportunity",sessions:[$session],
+    evidence:[{session:$session,entries:[2],quote:"ledger failure fixture"}],
+    what_happened:"Fixture event.",root_cause:"Fixture cause.",
+    root_cause_location:"harness-design",
+    cost:{turns:$turns,tokens:$tokens,duration_ms:$duration,source:("facts:"+$session)},
+    remedy:{type:"process",smallest_change:"Use the fixture remedy."},
+    confidence:"high",confidence_why:"Direct fixture.",recurrence_key:"ledger-failure"
+  }],dropped_signals:[],limitations:"Fixture."
+}' >"$analysis_7"
+chmod 400 "$events"
+set +e
+"$OBSERVE" finalize --run "$run_7" --analysis "$analysis_7" \
+  --analyst-trace "$session_7" >"$tmp/finalized-7.stdout" 2>"$tmp/finalized-7.stderr"
+status=$?
+chmod 600 "$events"
+set -e
+assert_equal 65 "$status" 'finalize succeeded when the ledger was unavailable'
+assert_file_contains "$tmp/finalized-7.stderr" 'ledger event store'
+[ -f "$run_7/analysis.json" ] || fail 'ledger failure discarded analysis.json'
+[ -f "$run_7/analysis.md" ] || fail 'ledger failure discarded analysis.md'
+[ ! -e "$run_7/.ledger-applied" ] || fail 'ledger failure wrote the applied marker'
+set +e
+"$OBSERVE" verify-delivery --repo "$coverage_repo" --since 2026-01-01T00:00:00Z \
+  >"$tmp/uncovered-7.json"
+status=$?
+set -e
+assert_equal 1 "$status" 'analysis without a ledger marker counted as covered'
+jq -e '.covered == [] and .uncovered == [7]' "$tmp/uncovered-7.json" >/dev/null \
+  || fail 'ledger failure was not reported as uncovered'
+"$OBSERVE" ledger-update --run "$run_7" >"$tmp/repaired-7.json"
+[ -f "$run_7/.ledger-applied" ] || fail 'ledger repair did not write the applied marker'
+"$OBSERVE" verify-delivery --repo "$coverage_repo" --since 2026-01-01T00:00:00Z \
+  >"$tmp/covered-7.json"
+jq -e '.ok == true and .covered == [7] and .uncovered == []' \
+  "$tmp/covered-7.json" >/dev/null || fail 'ledger repair did not restore coverage'
+
 # Failed finalize is terminal coverage, but never a finding source.
 run_4="$runs/pr-4"
 mkdir -p "$run_4"
@@ -209,7 +273,7 @@ assert_file_contains "$tmp/digest.md" '| 3 | 1 | `gamma`' \
 assert_file_contains "$tmp/digest.md" 'guided-only'
 assert_file_contains "$tmp/digest.md" 'blind-only'
 assert_file_contains "$tmp/digest.md" 'unabsorbed'
-assert_file_contains "$tmp/digest.md" 'Coverage: 6 finalized, 1 failed.'
+assert_file_contains "$tmp/digest.md" 'Coverage: 5 finalized, 1 failed.'
 assert_file_contains "$tmp/digest.md" 'Unknown ledger entries: 1.'
 digest_path="$(find "$XDG_STATE_HOME/qq/observer/digests" -type f -name '*.md')"
 cmp "$tmp/digest.md" "$digest_path" >/dev/null || fail 'stored digest differs from stdout'

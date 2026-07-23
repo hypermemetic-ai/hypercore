@@ -1183,7 +1183,8 @@ def verify_delivery(values):
     uncovered = []
     for pr in prs:
         run = runs_root / f"pr-{pr}"
-        if regular_file(run / "analysis.json") or regular_file(run / "analysis_failed.json"):
+        analyzed = regular_file(run / "analysis.json") and regular_file(run / ".ledger-applied")
+        if analyzed or regular_file(run / "analysis_failed.json"):
             covered.append(pr)
         else:
             uncovered.append(pr)
@@ -1650,9 +1651,10 @@ def observer_run_rows(since=None):
         timestamp_value = time_value(timestamp)
         if since is not None and timestamp_value < since:
             continue
-        analyzed = regular_file(run_dir / "analysis.json")
+        analysis_present = regular_file(run_dir / "analysis.json")
+        analyzed = analysis_present and regular_file(run_dir / ".ledger-applied")
         failed = regular_file(run_dir / "analysis_failed.json")
-        if analyzed and failed:
+        if analysis_present and failed:
             fail(f"observer run has both terminal markers: {run_dir}", 65)
         discussed_path = run_dir / "discussed.json"
         discussed = regular_file(discussed_path)

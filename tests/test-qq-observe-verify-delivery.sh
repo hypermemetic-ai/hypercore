@@ -91,6 +91,29 @@ jq -e '
   and .unresolved_commits == []
 ' "$tmp/squash.json" >/dev/null || fail 'GitHub squash title was not covered'
 
+ledger_repo="$tmp/ledger"
+init_repo "$ledger_repo"
+commit_empty "$ledger_repo" 'Ledger marker fixture (#13)' "$window_date"
+ledger_run="$XDG_STATE_HOME/qq/observer/runs/pr-13"
+mkdir -p "$ledger_run"
+printf '{"schema":"qq-observer.analysis","schema_version":1}\n' >"$ledger_run/analysis.json"
+set +e
+"$OBSERVE" verify-delivery --repo "$ledger_repo" --since "$since" \
+  >"$tmp/ledger-uncovered.json"
+status=$?
+set -e
+assert_equal 1 "$status" 'successful analysis without ledger marker counted as covered'
+jq -e '
+  .ok == false and .status == "uncovered Changes present"
+  and .prs == [13] and .covered == [] and .uncovered == [13]
+' "$tmp/ledger-uncovered.json" >/dev/null || fail 'missing ledger marker was not uncovered'
+printf '{"schema":"qq-observer.ledger-applied","schema_version":1}\n' \
+  >"$ledger_run/.ledger-applied"
+"$OBSERVE" verify-delivery --repo "$ledger_repo" --since "$since" \
+  >"$tmp/ledger-covered.json"
+jq -e '.ok == true and .covered == [13] and .uncovered == []' \
+  "$tmp/ledger-covered.json" >/dev/null || fail 'ledger marker did not restore coverage'
+
 custom_repo="$tmp/custom"
 init_repo "$custom_repo"
 merge_subject "$custom_repo" custom-feature 'Release the custom fixture'
