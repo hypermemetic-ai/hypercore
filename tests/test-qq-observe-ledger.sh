@@ -228,6 +228,46 @@ jq -e '.covered == [] and .uncovered == [7]' "$tmp/uncovered-7.json" >/dev/null 
 jq -e '.ok == true and .covered == [7] and .uncovered == []' \
   "$tmp/covered-7.json" >/dev/null || fail 'ledger repair did not restore coverage'
 
+# A source marker alone does not certify coverage until every episode is in the feed.
+GIT_AUTHOR_DATE=2026-08-08T10:00:00Z GIT_COMMITTER_DATE=2026-08-08T10:00:00Z \
+  git -C "$coverage_repo" -c user.name=test -c user.email=test@example.invalid \
+    commit --allow-empty -qm 'Marker crash fixture (#8)'
+run_8="$(make_run pr-8 8 guided 2026-08-08T10:00:00Z "$first_episodes")"
+"$OBSERVE" ledger-update --run "$run_8" >"$tmp/update-8.json"
+run_8_seq="$(jq '.written_seq' "$run_8/.ledger-applied")"
+jq -c --argjson seq "$run_8_seq" 'select(.written_seq != $seq)' "$events" \
+  >"$tmp/events-without-8.jsonl"
+mv "$tmp/events-without-8.jsonl" "$events"
+chmod 600 "$events"
+set +e
+"$OBSERVE" verify-delivery --repo "$coverage_repo" --since 2026-01-01T00:00:00Z \
+  >"$tmp/uncovered-8.json"
+status=$?
+set -e
+assert_equal 1 "$status" 'marker with two missing finding events counted as covered'
+jq -e '.covered == [7] and .uncovered == [8]' "$tmp/uncovered-8.json" >/dev/null \
+  || fail 'incomplete marker coverage was not reported for its PR'
+jq -e '.episode_count == 2' "$run_8/.ledger-applied" >/dev/null \
+  || fail 'ledger marker did not certify its analysis episode count'
+"$OBSERVE" ledger-update --run "$run_8" >"$tmp/repaired-8.json"
+"$OBSERVE" verify-delivery --repo "$coverage_repo" --since 2026-01-01T00:00:00Z \
+  >"$tmp/covered-8.json"
+jq -e '.ok == true and .covered == [7,8] and .uncovered == []' \
+  "$tmp/covered-8.json" >/dev/null || fail 'event retry did not complete marker coverage'
+
+# A certified empty analysis is covered by exactly zero finding events.
+GIT_AUTHOR_DATE=2026-08-09T10:00:00Z GIT_COMMITTER_DATE=2026-08-09T10:00:00Z \
+  git -C "$coverage_repo" -c user.name=test -c user.email=test@example.invalid \
+    commit --allow-empty -qm 'Empty analysis fixture (#9)'
+run_9="$(make_run pr-9 9 guided 2026-08-09T10:00:00Z '[]')"
+"$OBSERVE" ledger-update --run "$run_9" >"$tmp/update-9.json"
+jq -e '.episode_count == 0' "$run_9/.ledger-applied" >/dev/null \
+  || fail 'empty analysis marker does not certify zero episodes'
+"$OBSERVE" verify-delivery --repo "$coverage_repo" --since 2026-01-01T00:00:00Z \
+  >"$tmp/covered-9.json"
+jq -e '.ok == true and .covered == [7,8,9] and .uncovered == []' \
+  "$tmp/covered-9.json" >/dev/null || fail 'empty analysis was not covered by zero findings'
+
 # Failed finalize is terminal coverage, but never a finding source.
 run_4="$runs/pr-4"
 mkdir -p "$run_4"
@@ -285,7 +325,8 @@ assert_equal 65 "$status" 'malformed outcomes were accepted'
 
 "$OBSERVE" rounds >"$tmp/rounds.json"
 jq -e '
-  (.[0].pr == 4 and .[0].failed == true and .[0].discussed == false)
+  (.[0].pr == 9 and .[0].analyzed == true and .[0].discussed == false)
+  and any(.[]; .pr == 4 and .failed == true and .discussed == false)
   and (.[-1].pr == 2 and .[-1].discussed == true)
   and ([.[] | select(.discussed == false) | .ts] ==
        ([.[] | select(.discussed == false) | .ts] | sort | reverse))
@@ -398,9 +439,9 @@ jq -cn '{
 # Unknown event shapes are counted rather than silently interpreted.
 printf '{"schema":"qq-observer.future-event","schema_version":99}\n' >>"$events"
 "$OBSERVE" digest >"$tmp/digest.md"
-assert_file_contains "$tmp/digest.md" '| 9 | 2 | `alpha`' \
+assert_file_contains "$tmp/digest.md" '| 13.5 | 3 | `alpha`' \
   'accepted recurrence did not receive its 1.5 multiplier'
-assert_file_contains "$tmp/digest.md" '| 3 | 2 | `beta`' \
+assert_file_contains "$tmp/digest.md" '| 4.5 | 3 | `beta`' \
   'rejected recurrence did not receive its 0.5 multiplier'
 assert_file_contains "$tmp/digest.md" '| 3 | 1 | `gamma`' \
   'open finding ranking is wrong'
@@ -410,7 +451,7 @@ assert_file_contains "$tmp/digest.md" \
 assert_file_contains "$tmp/digest.md" 'guided-only'
 assert_file_contains "$tmp/digest.md" 'blind-only'
 assert_file_contains "$tmp/digest.md" 'unabsorbed'
-assert_file_contains "$tmp/digest.md" 'Coverage: 5 finalized, 1 failed.'
+assert_file_contains "$tmp/digest.md" 'Coverage: 7 finalized, 1 failed.'
 assert_file_contains "$tmp/digest.md" 'Unknown ledger entries: 1.'
 digest_path="$(find "$XDG_STATE_HOME/qq/observer/digests" -type f -name '*.md')"
 cmp "$tmp/digest.md" "$digest_path" >/dev/null || fail 'stored digest differs from stdout'
@@ -571,7 +612,7 @@ chronology_2="$(make_run pr-2 2 guided 2026-11-02T10:00:00Z "$chronology_episode
 chronology_3="$(make_run pr-3 3 guided 2026-11-03T10:00:00Z "$chronology_episodes")"
 "$OBSERVE" ledger-update --run "$chronology_2" >"$tmp/chronology-update-2.json"
 "$OBSERVE" ledger-update --run "$chronology_3" >"$tmp/chronology-update-3.json"
-jq -c 'del(.written_at, .written_seq)' "$chronology_3/.ledger-applied" \
+jq -c 'del(.written_at, .written_seq, .episode_count)' "$chronology_3/.ledger-applied" \
   >"$tmp/chronology-legacy-marker-3.json"
 mv "$tmp/chronology-legacy-marker-3.json" "$chronology_3/.ledger-applied"
 touch -d '2099-01-01T00:00:00.000Z' "$chronology_3/.ledger-applied"

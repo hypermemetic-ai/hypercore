@@ -96,7 +96,8 @@ init_repo "$ledger_repo"
 commit_empty "$ledger_repo" 'Ledger marker fixture (#13)' "$window_date"
 ledger_run="$XDG_STATE_HOME/qq/observer/runs/pr-13"
 mkdir -p "$ledger_run"
-printf '{"schema":"qq-observer.analysis","schema_version":1}\n' >"$ledger_run/analysis.json"
+printf '%s\n' '{"schema":"qq-observer.analysis","schema_version":1,"run":{"change":"fixture","sessions":["/fixture/session.jsonl"]},"episodes":[],"dropped_signals":[],"limitations":"Fixture."}' \
+  >"$ledger_run/analysis.json"
 set +e
 "$OBSERVE" verify-delivery --repo "$ledger_repo" --since "$since" \
   >"$tmp/ledger-uncovered.json"
@@ -107,12 +108,25 @@ jq -e '
   .ok == false and .status == "uncovered Changes present"
   and .prs == [13] and .covered == [] and .uncovered == [13]
 ' "$tmp/ledger-uncovered.json" >/dev/null || fail 'missing ledger marker was not uncovered'
-printf '{"schema":"qq-observer.ledger-applied","schema_version":1}\n' \
+printf '%s\n' \
+  '{"analysis_sha256":"0000000000000000000000000000000000000000000000000000000000000000","episode_count":0,"schema":"qq-observer.ledger-applied","schema_version":1,"written_at":"2026-01-01T00:00:00.000Z","written_seq":1}' \
   >"$ledger_run/.ledger-applied"
+set +e
+"$OBSERVE" verify-delivery --repo "$ledger_repo" --since "$since" \
+  >"$tmp/ledger-wrong-hash.json"
+status=$?
+set -e
+assert_equal 1 "$status" 'ledger marker with the wrong analysis hash counted as covered'
+analysis_sha256="$(sha256sum "$ledger_run/analysis.json" | awk '{print $1}')"
+jq -cnS --arg sha "$analysis_sha256" '{
+  analysis_sha256:$sha,episode_count:0,
+  schema:"qq-observer.ledger-applied",schema_version:1,
+  written_at:"2026-01-01T00:00:00.000Z",written_seq:1
+}' >"$ledger_run/.ledger-applied"
 "$OBSERVE" verify-delivery --repo "$ledger_repo" --since "$since" \
   >"$tmp/ledger-covered.json"
 jq -e '.ok == true and .covered == [13] and .uncovered == []' \
-  "$tmp/ledger-covered.json" >/dev/null || fail 'ledger marker did not restore coverage'
+  "$tmp/ledger-covered.json" >/dev/null || fail 'certified empty analysis was not covered'
 
 custom_repo="$tmp/custom"
 init_repo "$custom_repo"

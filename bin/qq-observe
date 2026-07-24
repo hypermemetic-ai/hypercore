@@ -1217,11 +1217,38 @@ def verify_delivery(values):
             prs.add(int(match.group(1)))
     prs = sorted(prs)
     runs_root = observer_runs_root(create=False)
+    finding_counts = {}
+    events_path = runs_root.parent / "ledger" / "events.jsonl"
+    if os.path.lexists(events_path):
+        if not regular_file(events_path):
+            fail(f"ledger event store is not a regular file: {events_path}", 65)
+        fd = open_ledger_events()
+        try:
+            events, _ = read_ledger_events(fd)
+        finally:
+            close_ledger_events(fd)
+        for event in events:
+            if event["type"] == "finding_seen":
+                finding_counts[event["pr"]] = finding_counts.get(event["pr"], 0) + 1
     covered = []
     uncovered = []
     for pr in prs:
         run = runs_root / f"pr-{pr}"
-        analyzed = regular_file(run / "analysis.json") and regular_file(run / ".ledger-applied")
+        analyzed = False
+        analysis_path = run / "analysis.json"
+        marker_path = run / ".ledger-applied"
+        if regular_file(analysis_path) and regular_file(marker_path):
+            raw = read_regular(analysis_path, "finalized analysis")
+            marker = json_document(
+                read_regular(marker_path, "ledger-applied marker"),
+                "ledger-applied marker",
+            )
+            analysis_sha256 = hashlib.sha256(raw).hexdigest()
+            analyzed = (
+                valid_ledger_marker(marker, analysis_sha256)
+                and "episode_count" in marker
+                and finding_counts.get(pr, 0) == marker["episode_count"]
+            )
         if analyzed or regular_file(run / "analysis_failed.json"):
             covered.append(pr)
         else:
@@ -1493,20 +1520,25 @@ def append_events(events):
 
 
 def valid_ledger_marker(item, analysis_sha256):
+    legacy = {"schema", "schema_version", "analysis_sha256"}
+    current = legacy | {"written_at", "written_seq", "episode_count"}
     if (
         not isinstance(item, dict)
-        or set(item) not in (
-            {"schema", "schema_version", "analysis_sha256"},
-            {"schema", "schema_version", "analysis_sha256", "written_at"},
-            {
-                "schema", "schema_version", "analysis_sha256", "written_at",
-                "written_seq",
-            },
-        )
+        or set(item) not in (legacy, legacy | {"written_at"}, legacy | {
+            "written_at", "written_seq",
+        }, current)
         or item.get("schema") != "qq-observer.ledger-applied"
         or item.get("schema_version") != 1
         or item.get("analysis_sha256") != analysis_sha256
         or ("written_seq" in item and not valid_written_seq(item["written_seq"]))
+        or (
+            "episode_count" in item
+            and (
+                not isinstance(item["episode_count"], int)
+                or isinstance(item["episode_count"], bool)
+                or item["episode_count"] < 0
+            )
+        )
     ):
         return False
     if "written_at" not in item:
@@ -1932,8 +1964,9 @@ def ledger_update_run(
         if marker_record is None:
             marker_record = {
                 "schema": "qq-observer.ledger-applied", "schema_version": 1,
-                "analysis_sha256": analysis_sha256, "written_at": utc_now(),
-                "written_seq": next_feed_sequence(),
+                "analysis_sha256": analysis_sha256,
+                "episode_count": len(analysis["episodes"]),
+                "written_at": utc_now(), "written_seq": next_feed_sequence(),
             }
             marker_data = (
                 json.dumps(marker_record, separators=(",", ":"), sort_keys=True) + "\n"
