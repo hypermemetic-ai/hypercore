@@ -1,10 +1,10 @@
 ---
 id: T-158
 title: Collapse qq footer to one row
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-07-24 18:59'
-updated_date: '2026-07-24 20:00'
+updated_date: '2026-07-24 20:12'
 labels: []
 dependencies: []
 documentation:
@@ -33,7 +33,7 @@ Decision ledger:
 - [x] #1 Footer renders exactly one row containing cwd/branch/session/status plus context usage/quota/provider/model/thinking, with compact information right-aligned
 - [x] #2 No dollar cost or subscription marker is rendered
 - [x] #3 Quota polling/parsing and status filtering behavior remain unchanged
-- [ ] #4 Focused footer test and full native suite pass
+- [x] #4 Focused footer test and full native suite pass
 <!-- AC:END -->
 
 ## Final Summary
@@ -42,4 +42,6 @@ Decision ledger:
 Delivered PR #238. The qq footer now renders one terminal row: cwd/branch/session/status remain left, while context usage, optional active-provider quota bars, and provider/model/thinking form the right-aligned compact group. Session dollar cost and the subscription marker were removed, together with their dead helpers and test harness data. Focused footer Check passed; full native suite passed 33/33 locally and GitHub shell-tests passed. Fresh-context review returned PASS with production nonblank LOC -27 and decision points -18; no same-fix-smaller regeneration was needed. Visual UAT was explicitly skipped by the operator in favor of deterministic render evidence. PR creation was briefly blocked by GitHub’s acknowledged Pull Requests incident and succeeded without changing the branch after the service recovered enough to accept it.
 
 Reactivated after the post-finalization focused Check intermittently failed while waiting for the asynchronous fixture-backed quota repaint. This is the same timing-flake class recorded by T-149; T-158 remains open until the affected Check is made deterministic, rerun, and fresh-review accepted.
+
+Reactivation resolved in 05b5e01: the focused harness now waits on a finite 2-second wall-clock deadline with 10 ms scheduler yields instead of assuming asynchronous fixture I/O completes within 100 `setImmediate` turns. Post-fix evidence: focused Check PASS, 20/20 stress passes, full native suite 33/33 PASS, fresh fix-delta review PASS, and GitHub shell-tests PASS. Fix delta is test-only (production LOC 0, decision points 0).
 <!-- SECTION:FINAL_SUMMARY:END -->
