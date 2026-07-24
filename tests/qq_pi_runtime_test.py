@@ -545,6 +545,26 @@ class RuntimeTests(unittest.TestCase):
         self.assert_refuses(lambda: self.fixture.engine.install(first), "inventory")
         self.assertEqual(os.readlink(self.fixture.spec.data_root / "current"), current_before)
 
+    def test_active_verify_and_execute_do_not_write_installed_runtime(self) -> None:
+        artifact = self.fixture.artifact(self.temp, "read-only-active")
+        installed = self.fixture.engine.install(artifact)
+        binary = installed["binary"]
+        real_temporary_directory = tempfile.TemporaryDirectory
+        probe_parents: list[Path | None] = []
+
+        def temporary_directory(*args: Any, **kwargs: Any) -> Any:
+            parent = kwargs.get("dir")
+            self.assertNotEqual(parent, self.fixture.spec.data_root)
+            probe_parents.append(parent)
+            return real_temporary_directory(*args, **kwargs)
+
+        with mock.patch.object(runtime.tempfile, "TemporaryDirectory", side_effect=temporary_directory):
+            self.assertTrue(self.fixture.engine.verify_active()["valid"])
+            with mock.patch.object(runtime.os, "execv") as execute:
+                self.fixture.engine.execute(["--version"])
+            execute.assert_called_once_with(binary, [binary, "--version"])
+        self.assertEqual(probe_parents, [None, None])
+
     def test_generation_root_refuses_before_install_or_rollback_mutation(self) -> None:
         artifact = self.fixture.artifact(self.temp, "generation-root")
         data = self.fixture.spec.data_root

@@ -4,13 +4,17 @@ title: Build qq-owned patched Pi execution-profile seam
 status: In Progress
 assignee: []
 created_date: '2026-07-24 07:07'
-updated_date: '2026-07-24 10:40'
+updated_date: '2026-07-24 22:14'
 labels: []
 dependencies: []
 documentation:
   - doc-87
   - doc-88
   - doc-91
+modified_files:
+  - bin/qq-pi-runtime
+  - tests/qq_pi_runtime_test.py
+  - backlog/tasks/t-153 - Build-qq-owned-patched-Pi-execution-profile-seam.md
 type: feature
 ordinal: 69000
 ---
@@ -44,3 +48,9 @@ Decision ledger:
 <!-- SECTION:PLAN:BEGIN -->
 Capture the approved plan and durable decision, then implement and verify the pinned qq-owned Pi patch, deterministic builder/installer, and faux-provider conformance coverage before machine activation.
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Post-merge activation on 2026-07-24 exposed one composition blocker before T-154.2 promotion could finish: `qq-dispatch` correctly made the installed runtime read-only under Landstrip, but every `qq-pi-runtime exec` identity check attempted to create `.identity-*` beneath that immutable data root and failed before the child Pi session existed. The narrow correction keeps artifact inspection scratch colocated but gives active verify/exec identity probes their ambient private TMPDIR; no binary authority, integrity check, provider behavior, or Landstrip grant changes. Unit/runtime/dispatch Checks pass, and real-provider canonical reviewer async `020dfc57-580e-4e81-87fe-55206c22122f` plus resumed `00bb68ed` completed through the installed pi-subagents pin, corrected worktree wrapper, qq-dispatch, and Landstrip.
+<!-- SECTION:NOTES:END -->
