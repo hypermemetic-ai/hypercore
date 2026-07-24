@@ -127,7 +127,7 @@ function parseDigest(stdout) {
     throw new Error("digest ranked tables are out of order");
   }
   const suffix = lines.slice(open.end + 1).join("\n");
-  if (!/^## Signal-tuning candidates\n\n\| PR \| Direction \| Evidence \| Signal kind \| Episode title \| Recurrence key \|\n\| ---: \| --- \| --- \| --- \| --- \| --- \|\n(?:\| .* \|\n)+\nCoverage: [0-9]+ finalized, [0-9]+ failed\.\nUnknown ledger entries: [0-9]+\.\n(?![\s\S])/.test(suffix)) {
+  if (!/^## Signal-tuning candidates\n\n\| PR \| Direction \| Evidence \| Signal kind \| Episode title \| Recurrence key \|\n\| ---: \| --- \| --- \| --- \| --- \| --- \|\n(?:\| — \| None \| — \| — \| — \| — \|\n|(?:\| #[1-9][0-9]* \| (?:prune|promote) \| (?:guided-only|blind-only|unabsorbed) \| (?:—|(?:\\[\\|]|[^\\|\n])+) \| (?:\\[\\|]|[^\\|\n])+ \| `(?:\\[\\|]|[^\\|\n])+` \|\n)+)\nCoverage: [0-9]+ finalized, [0-9]+ failed\.\nUnknown ledger entries: [0-9]+\.\n(?![\s\S])/.test(suffix)) {
     throw new Error("digest suffix is malformed");
   }
   return { markdown: stdout, selectorTitle: `Current observer digest\n\n${opportunities.text}\n\n${open.text}` };

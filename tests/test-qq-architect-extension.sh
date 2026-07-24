@@ -160,6 +160,10 @@ async function testDigestFailuresNotifyAndStop() {
     execution("not-markdown"),
     execution(digest().replace("## Open findings", "## Missing findings")),
     execution(truncatedAfterOpenTable),
+    execution(digest().replace(
+      "| — | None | — | — | — | — |\n\nCoverage:",
+      "| invalid |\n\nCoverage:",
+    )),
     execution(digest({ open: [
       "| 2 | nope | `broken-key` | Broken row | `friction` | #8 | high | none (×1) |",
     ] })),
@@ -199,7 +203,10 @@ async function testDigestFirstSelectorAndKickoff() {
     open: [
       "| 1 | 1 | `open-key` | Open issue | `friction` | #11 | low | none (×1) |",
     ],
-  });
+  }).replace(
+    "| — | None | — | — | — | — |\n\nCoverage:",
+    "| #12 | promote | guided-only | friction | Useful \\| title | `repeat\\|key` |\n| #13 | prune | unabsorbed | — | Placeholder kind | `other-key` |\n\nCoverage:",
+  );
   const h = createHarness([
     execution(currentDigest),
     rounds([
