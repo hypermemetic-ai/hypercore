@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Resolve a Repository's persistent main-checkout Herdr home. Inspection is
-# read-only; focus-board finds and focuses its dedicated Backlog-board tab.
+# read-only; focus actions find and focus one dedicated home-workspace tab.
 set -euo pipefail
 
 usage() {
-  printf 'usage: qq-herdr-home <inspect|focus-board> --repo <repository-path>\n' >&2
+  printf 'usage: qq-herdr-home <inspect|focus-board|focus-architect> --repo <path>\n' >&2
   exit 1
 }
 
@@ -22,7 +22,7 @@ action="$1"
 [ "$2" = "--repo" ] || usage
 repo_arg="$3"
 case "$action" in
-  inspect | focus-board) ;;
+  inspect | focus-board | focus-architect) ;;
   *) usage ;;
 esac
 
@@ -134,6 +134,39 @@ if [ "$action" = "focus-board" ]; then
   ' <<<"$tab_info" >/dev/null 2>&1 \
     || die "Backlog board focus was not confirmed"
   focused=true
+elif [ "$action" = "focus-architect" ]; then
+  tabs="$({ "$HERDR" tab list --workspace "$home_workspace" 2>/dev/null || true; })"
+  jq -e '.result.tabs | type == "array"' <<<"$tabs" >/dev/null 2>&1 \
+    || die "cannot inspect home workspace tabs"
+
+  architect_tabs=()
+  mapfile -t architect_tabs < <(
+    jq -r --arg workspace "$home_workspace" '
+      .result.tabs[]
+      | select(.workspace_id == $workspace and .label == "architect")
+      | [.tab_id, .pane_count] | @tsv
+    ' <<<"$tabs"
+  )
+  [ "${#architect_tabs[@]}" -eq 1 ] \
+    || die "expected exactly one architect tab in home workspace $home_workspace (found ${#architect_tabs[@]})"
+  IFS=$'\t' read -r architect_tab architect_pane_count <<<"${architect_tabs[0]}"
+  if [ -z "$architect_tab" ] \
+    || ! [[ "$architect_pane_count" =~ ^[0-9]+$ ]]; then
+    die "architect tab metadata is incomplete"
+  fi
+  [ "$architect_pane_count" -eq 1 ] \
+    || die "architect tab $architect_tab must contain exactly one pane (found $architect_pane_count)"
+
+  "$HERDR" tab focus "$architect_tab" >/dev/null 2>&1 \
+    || die "could not focus architect tab $architect_tab"
+  tab_info="$({ "$HERDR" tab get "$architect_tab" 2>/dev/null || true; })"
+  jq -e --arg tab "$architect_tab" --arg workspace "$home_workspace" '
+    .result.tab.tab_id == $tab
+    and .result.tab.workspace_id == $workspace
+    and .result.tab.focused == true
+  ' <<<"$tab_info" >/dev/null 2>&1 \
+    || die "architect tab focus was not confirmed"
+  focused=true
 fi
 
 jq -cn \
@@ -143,6 +176,7 @@ jq -cn \
   --arg home_workspace_id "$home_workspace" \
   --arg board_tab_id "${board_tab-}" \
   --arg board_pane_id "${board_pane-}" \
+  --arg architect_tab_id "${architect_tab-}" \
   --argjson focused "$focused" \
   '{
     action: $action,
@@ -154,4 +188,6 @@ jq -cn \
   + if $action == "focus-board" then {
       board_tab_id: $board_tab_id,
       board_pane_id: $board_pane_id
+    } elif $action == "focus-architect" then {
+      architect_tab_id: $architect_tab_id
     } else {} end'

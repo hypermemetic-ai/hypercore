@@ -45,6 +45,17 @@ case "${1:-} ${2:-}" in
         ]}}'
     fi
     ;;
+  "tab list")
+    if [ "${FAKE_NO_ARCHITECT:-}" = 1 ]; then
+      printf '%s\n' '{"result":{"tabs":[{"tab_id":"wHome:tBoard","workspace_id":"wHome","label":"board","pane_count":1},{"tab_id":"wHome:tGeneral","workspace_id":"wHome","label":"general","pane_count":1}]}}'
+    elif [ "${FAKE_MULTI_ARCHITECT:-}" = 1 ]; then
+      printf '%s\n' '{"result":{"tabs":[{"tab_id":"wHome:tBoard","workspace_id":"wHome","label":"board","pane_count":1},{"tab_id":"wHome:tArchitect","workspace_id":"wHome","label":"architect","pane_count":1},{"tab_id":"wHome:tArchitect2","workspace_id":"wHome","label":"architect","pane_count":1}]}}'
+    elif [ "${FAKE_SPLIT_ARCHITECT:-}" = 1 ]; then
+      printf '%s\n' '{"result":{"tabs":[{"tab_id":"wHome:tBoard","workspace_id":"wHome","label":"board","pane_count":1},{"tab_id":"wHome:tArchitect","workspace_id":"wHome","label":"architect","pane_count":2}]}}'
+    else
+      printf '%s\n' '{"result":{"tabs":[{"tab_id":"wHome:tBoard","workspace_id":"wHome","label":"board","pane_count":1},{"tab_id":"wHome:tArchitect","workspace_id":"wHome","label":"architect","pane_count":1},{"tab_id":"wHome:tGeneral","workspace_id":"wHome","label":"general","pane_count":1}]}}'
+    fi
+    ;;
   "pane list")
     if [ "${FAKE_MULTI_BOARD:-}" = 1 ]; then
       printf '%s\n' '{"result":{"panes":[{"pane_id":"wHome:pBoard","tab_id":"wHome:tBoard"},{"pane_id":"wHome:pGeneral","tab_id":"wHome:tGeneral"},{"pane_id":"wHome:pBoard2","tab_id":"wHome:tOther"}]}}'
@@ -68,10 +79,11 @@ case "${1:-} ${2:-}" in
     printf '%s\n' '{"result":{"type":"ok"}}'
     ;;
   "tab get")
+    tab="${3:-}"
     if [ "${FAKE_FOCUS_UNCONFIRMED:-}" = 1 ]; then
-      printf '%s\n' '{"result":{"tab":{"tab_id":"wHome:tBoard","workspace_id":"wHome","focused":false}}}'
+      jq -cn --arg tab "$tab" '{result:{tab:{tab_id:$tab,workspace_id:"wHome",focused:false}}}'
     else
-      printf '%s\n' '{"result":{"tab":{"tab_id":"wHome:tBoard","workspace_id":"wHome","focused":true}}}'
+      jq -cn --arg tab "$tab" '{result:{tab:{tab_id:$tab,workspace_id:"wHome",focused:true}}}'
     fi
     ;;
   *)
@@ -91,6 +103,7 @@ reset_fake() {
   : >"$log"
   unset FAKE_FOCUS_FAIL FAKE_FOCUS_UNCONFIRMED FAKE_MULTI_BOARD
   unset FAKE_MULTI_HOME FAKE_NO_BOARD FAKE_NO_HOME FAKE_SPLIT_BOARD
+  unset FAKE_MULTI_ARCHITECT FAKE_NO_ARCHITECT FAKE_SPLIT_ARCHITECT
 }
 
 expect_failure() {
@@ -103,6 +116,15 @@ expect_failure() {
 }
 
 reset_fake
+set +e
+"$HOME_CMD" unsupported --repo "$repo" >"$tmp/usage.out" 2>"$tmp/usage.err"
+status=$?
+set -e
+assert_equal 1 "$status" 'unsupported action did not report usage failure'
+grep -Fxq 'usage: qq-herdr-home <inspect|focus-board|focus-architect> --repo <path>' \
+  "$tmp/usage.err"
+
+reset_fake
 result="$("$HOME_CMD" inspect --repo "$repo")"
 jq -e --arg checkout "$main_checkout" '
   (keys == ["action", "focused", "home_workspace_id", "main_checkout", "repo_root"])
@@ -112,8 +134,8 @@ jq -e --arg checkout "$main_checkout" '
   and .home_workspace_id == "wHome"
   and .focused == false
 ' <<<"$result" >/dev/null
-if grep -Eq '^(pane list|pane process-info|tab focus|tab get) ' "$log"; then
-  fail "inspect performed board discovery or changed focus"
+if grep -Eq '^(pane list|pane process-info|tab list|tab focus|tab get) ' "$log"; then
+  fail "inspect performed tab discovery or changed focus"
 fi
 
 reset_fake
@@ -135,6 +157,24 @@ if grep -Eq '^(pane move|pane close|worktree remove) ' "$log"; then
 fi
 
 reset_fake
+result="$("$HOME_CMD" focus-architect --repo "$repo")"
+jq -e --arg checkout "$main_checkout" '
+  (keys == ["action", "architect_tab_id", "focused", "home_workspace_id", "main_checkout", "repo_root"])
+  and .action == "focus-architect"
+  and .repo_root == $checkout
+  and .main_checkout == $checkout
+  and .home_workspace_id == "wHome"
+  and .architect_tab_id == "wHome:tArchitect"
+  and .focused == true
+' <<<"$result" >/dev/null
+grep -Fxq 'tab list --workspace wHome' "$log"
+grep -Fxq 'tab focus wHome:tArchitect' "$log"
+grep -Fxq 'tab get wHome:tArchitect' "$log"
+if grep -Eq '^(pane list|pane process-info|pane move|pane close|worktree remove) ' "$log"; then
+  fail "focus-architect did not locate solely by tab label or changed topology"
+fi
+
+reset_fake
 export FAKE_NO_HOME=1
 expect_failure 'expected exactly one persistent Herdr home' inspect --repo "$repo"
 
@@ -153,6 +193,18 @@ expect_failure 'expected exactly one Backlog-board pane' focus-board --repo "$re
 reset_fake
 export FAKE_SPLIT_BOARD=1
 expect_failure 'must contain exactly one pane' focus-board --repo "$repo"
+
+reset_fake
+export FAKE_NO_ARCHITECT=1
+expect_failure 'expected exactly one architect tab' focus-architect --repo "$repo"
+
+reset_fake
+export FAKE_MULTI_ARCHITECT=1
+expect_failure 'expected exactly one architect tab' focus-architect --repo "$repo"
+
+reset_fake
+export FAKE_SPLIT_ARCHITECT=1
+expect_failure 'must contain exactly one pane' focus-architect --repo "$repo"
 
 reset_fake
 export FAKE_FOCUS_FAIL=1

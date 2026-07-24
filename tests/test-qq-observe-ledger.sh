@@ -336,6 +336,52 @@ jq -e '
        ([.[] | select(.discussed == false) | .ts] | sort | reverse))
   and all(.[]; keys == ["analyzed","discussed","failed","pr","ts","variant"])
 ' "$tmp/rounds.json" >/dev/null || fail 'rounds were not undiscussed-first then newest-first'
+coverage_before="$(jq -c '{
+  finalized: ([.[] | select(.analyzed)] | length),
+  failed: ([.[] | select(.failed)] | length)
+}' "$tmp/rounds.json")"
+printf '[]\n' >"$tmp/empty-outcomes.json"
+"$OBSERVE" mark-discussed --run "$run_4" --outcomes "$tmp/empty-outcomes.json" \
+  >"$tmp/discussed-failed.json"
+
+"$OBSERVE" mark-discussed --run "$run_1" --outcomes "$outcomes" \
+  --twin "$run_1_blind" >"$tmp/discussed-twins.json"
+jq -e --argjson pr 1 '
+  .type == "disposition" and .pr == $pr and .variant == "guided"
+  and .outcomes[0].verdict == "accepted" and (.note | not)
+  and (.written_seq | type == "number")
+' "$run_1/discussed.json" >/dev/null || fail 'guided twin discussed mark has the wrong shape'
+jq -e --argjson pr 1 '
+  .type == "disposition" and .pr == $pr and .variant == "blind"
+  and .outcomes == [] and .note == "discussed with guided twin"
+  and (.written_seq | type == "number")
+' "$run_1_blind/discussed.json" >/dev/null || fail 'blind twin discussed mark lacks its relationship'
+[ "$(jq '.written_seq' "$run_1/discussed.json")" -lt \
+  "$(jq '.written_seq' "$run_1_blind/discussed.json")" ] \
+  || fail 'guided and blind discussed marks do not follow durable write order'
+cp "$run_1/discussed.json" "$tmp/guided-twin-discussed-before.json"
+cp "$run_1_blind/discussed.json" "$tmp/blind-twin-discussed-before.json"
+"$OBSERVE" mark-discussed --run "$run_1" --outcomes "$outcomes" \
+  --twin "$run_1_blind" >"$tmp/discussed-twins-again.json"
+cmp "$tmp/guided-twin-discussed-before.json" "$run_1/discussed.json" >/dev/null \
+  || fail 'twin retry rewrote the guided discussed mark'
+cmp "$tmp/blind-twin-discussed-before.json" "$run_1_blind/discussed.json" >/dev/null \
+  || fail 'twin retry rewrote the blind discussed mark'
+jq -e '.status == "already discussed" and .twin_status == "already discussed"' \
+  "$tmp/discussed-twins-again.json" >/dev/null \
+  || fail 'idempotent twin retry reported the wrong statuses'
+"$OBSERVE" rounds >"$tmp/rounds-after-discussion.json"
+coverage_after="$(jq -c '{
+  finalized: ([.[] | select(.analyzed)] | length),
+  failed: ([.[] | select(.failed)] | length)
+}' "$tmp/rounds-after-discussion.json")"
+assert_equal "$coverage_before" "$coverage_after" \
+  'discussion marks changed finalized or failed analysis coverage'
+jq -e '
+  any(.[]; .pr == 4 and .variant == "guided" and .failed and .discussed)
+  and ([.[] | select(.pr == 1 and .discussed)] | length == 2)
+' "$tmp/rounds-after-discussion.json" >/dev/null \
+  || fail 'failed or twin discussion marks were not reflected by rounds'
 
 # Guided/blind comparison records both set differences and unabsorbed signals.
 common="$(make_episode common friction 'Common episode')"
@@ -1028,6 +1074,36 @@ assert_equal 65 "$status" 'ledger update proceeded without acquiring its writer 
 [ ! -e "$lock_run_4/.ledger-applied" ] \
   || fail 'failed writer-lock acquisition fabricated ledger state'
 rm -rf "$ledger_lock"
+
+# Empty guided and blind dispositions remain distinct and retain their metadata on rebuild.
+export XDG_STATE_HOME="$tmp/twin-disposition-rebuild-state"
+runs="$XDG_STATE_HOME/qq/observer/runs"
+events="$XDG_STATE_HOME/qq/observer/ledger/events.jsonl"
+twin_failed_guided="$(make_run pr-97 97 guided 2026-12-05T10:00:00Z '[]')"
+twin_failed_blind="$(make_run pr-97-blind 97 blind 2026-12-05T10:01:00Z '[]')"
+rm "$twin_failed_guided/analysis.json" "$twin_failed_blind/analysis.json"
+printf '%s\n' '{"schema":"qq-observer.analysis","schema_version":1,"status":"analysis_failed","reason":"fixture"}' \
+  >"$twin_failed_guided/analysis_failed.json"
+printf '%s\n' '{"schema":"qq-observer.analysis","schema_version":1,"status":"analysis_failed","reason":"fixture"}' \
+  >"$twin_failed_blind/analysis_failed.json"
+jq -cn '{
+  schema:"qq-observer.ledger-event",schema_version:1,written_seq:1,
+  ts:"2026-12-05T11:00:00Z",type:"disposition",pr:97,outcomes:[],
+  note:"legacy guided discussion"
+}' >"$twin_failed_guided/discussed.json"
+jq -cn '{
+  schema:"qq-observer.ledger-event",schema_version:1,written_seq:2,
+  ts:"2026-12-05T11:00:01Z",type:"disposition",pr:97,variant:"blind",outcomes:[],
+  note:"discussed with guided twin"
+}' >"$twin_failed_blind/discussed.json"
+"$OBSERVE" ledger-rebuild >"$tmp/twin-disposition-rebuild.json"
+jq -s -e '
+  [.[] | select(.type == "disposition" and .pr == 97) | {variant,note}] == [
+    {variant:"guided",note:"legacy guided discussion"},
+    {variant:"blind",note:"discussed with guided twin"}
+  ]
+' "$events" >/dev/null \
+  || fail 'guided and blind dispositions collided or lost replay metadata'
 
 export XDG_STATE_HOME="$primary_state"
 runs="$primary_runs"
