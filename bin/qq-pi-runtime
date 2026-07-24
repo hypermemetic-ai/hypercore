@@ -1235,10 +1235,11 @@ class RuntimeEngine:
         ):
             raise RuntimeFailure("artifact inventory does not contain one executable Pi binary")
 
-    def _check_binary_identity(self, binary: Path, temporary_parent: Path) -> None:
+    def _check_binary_identity(self, binary: Path, temporary_parent: Path | None) -> None:
         if not binary.is_file() or binary.is_symlink() or not os.access(binary, os.X_OK):
             raise RuntimeFailure("Pi binary is absent, linked, or non-executable")
-        temporary_parent.mkdir(parents=True, exist_ok=True)
+        if temporary_parent is not None:
+            temporary_parent.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory(prefix=".identity-", dir=temporary_parent) as temporary_name:
             root = Path(temporary_name)
             environment = self._offline_environment(root, binary, binary, root / "npm-cache")
@@ -1338,7 +1339,9 @@ class RuntimeEngine:
         bundle = path / "bundle"
         self._verify_inventory(bundle, artifact_manifest["inventory"])
         binary = bundle / "pi"
-        self._check_binary_identity(binary, self.spec.data_root)
+        # Verification must not write beneath the immutable installed runtime.
+        # Confined delegates receive a private writable TMPDIR for this probe.
+        self._check_binary_identity(binary, None)
         return binary.resolve(strict=True)
 
     def _atomic_symlink(self, target: str, link: Path) -> None:
