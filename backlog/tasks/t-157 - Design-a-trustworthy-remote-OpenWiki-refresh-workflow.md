@@ -1,10 +1,10 @@
 ---
 id: T-157
 title: Design a trustworthy remote OpenWiki refresh workflow
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-07-24 18:53'
-updated_date: '2026-07-24 21:00'
+updated_date: '2026-07-24 21:10'
 labels: []
 dependencies: []
 documentation:
@@ -40,10 +40,10 @@ Decision ledger:
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 A cited, confidence-tagged report verifies upstream release/main freshness semantics, trigger customization, provider/model/effort and remote-auth options, automated-merge mechanics, and known gaps from primary sources and safe probes
-- [ ] #2 The approved implementation plan explains the receipt/recheck/automatic-repair mechanism and defines exact provenance semantics, remote triggers, single-writer behavior, narrow merge rails, synchronization, failure handling, rollout acceptance, operating signals, and rollback
-- [ ] #3 The role-model consequence is explicit: generation is an implementer assignment, semantic checking supplies reviewer evidence, and no librarian/custodian role is created absent a residual Actor-level invariant
-- [ ] #4 The Change mutates no GitHub setting or secret, performs no inference, installs or pins no runtime, adds no production workflow, and does not hand-edit or regenerate openwiki/
+- [x] #1 A cited, confidence-tagged report verifies upstream release/main freshness semantics, trigger customization, provider/model/effort and remote-auth options, automated-merge mechanics, and known gaps from primary sources and safe probes
+- [x] #2 The approved implementation plan explains the receipt/recheck/automatic-repair mechanism and defines exact provenance semantics, remote triggers, single-writer behavior, narrow merge rails, synchronization, failure handling, rollout acceptance, operating signals, and rollback
+- [x] #3 The role-model consequence is explicit: generation is an implementer assignment, semantic checking supplies reviewer evidence, and no librarian/custodian role is created absent a residual Actor-level invariant
+- [x] #4 The Change mutates no GitHub setting or secret, performs no inference, installs or pins no runtime, adds no production workflow, and does not hand-edit or regenerate openwiki/
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -68,4 +68,20 @@ Approved rollout: land an inactive foundation, operate remote generation with op
 2026-07-24 review convergence disposition: GitHub concurrency ordering is not treated as newer-wins. The operator selected the generation layer as owner: one non-cancelling serialized latest-state worker, wake-up events rather than ordered source assignments, current-status preflight, and final stale-output discard. Semantic reviews are uncancelled and exact-base/head gated.
 
 2026-07-24 provider-overlap disposition: serialization covers generation only. Read-only semantic reviews may overlap after becoming obsolete post-gate; exact later gates prevent publication or merge. The operator preferred that quota trade-off to a cross-workflow semaphore or combined coordinator.
+
+2026-07-24 review evidence: initial fresh review found cross-workflow self-cancellation; fix review found unordered review cancellation; convergence review found unordered generation cancellation. The operator assigned coalescing to a non-cancelling latest-state generation worker and separately accepted generation-only serialization. Final fresh-context review inspected the complete staged Change and returned PASS with no blocker. Its structured verdict was valid; only the child notification hook failed because intercom was unavailable.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Delivered the research-only design for a trustworthy remote OpenWiki refresh workflow.
+
+- doc-96 verifies the upstream release gate, global-delta update semantics, Kimi/OpenAI subscription paths, current GitHub settings, merge mechanics, provenance gaps, and role consequence from primary sources.
+- doc-97 records the operator-approved mechanism: receipt-bound output, successful publisher evidence, ordinary CI, fresh semantic assessment, exact App/scope/head gates, latest-main recheck, and receipt-visible automatic repair for the final non-atomic race.
+- Generation is a non-cancelling serialized latest-state worker; event order is irrelevant. Semantic reviews are uncancelled and exact-gated; the operator accepted rare read-only review overlap while serialization remains generation-only.
+- Activation waits for an immutable OpenWiki release containing #365 and #457, Kimi entitlement confirmation, and separately aligned foundation/rollout Changes.
+- No workflow, setting, secret, runtime, provider call, or generated OpenWiki page changed.
+
+Checks: complete local shell suite passed; changed Markdown has zero LSP diagnostics; Backlog records parse; diff whitespace check passed; final fresh-context review passed; PR #240 shell-tests passed.
+<!-- SECTION:FINAL_SUMMARY:END -->
