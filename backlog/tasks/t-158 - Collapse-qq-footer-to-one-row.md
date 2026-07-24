@@ -1,10 +1,10 @@
 ---
 id: T-158
 title: Collapse qq footer to one row
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-07-24 18:59'
-updated_date: '2026-07-24 18:59'
+updated_date: '2026-07-24 19:59'
 labels: []
 dependencies: []
 documentation:
@@ -30,8 +30,14 @@ Decision ledger:
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Footer renders exactly one row containing cwd/branch/session/status plus context usage/quota/provider/model/thinking, with compact information right-aligned
-- [ ] #2 No dollar cost or subscription marker is rendered
-- [ ] #3 Quota polling/parsing and status filtering behavior remain unchanged
-- [ ] #4 Focused footer test and full native suite pass
+- [x] #1 Footer renders exactly one row containing cwd/branch/session/status plus context usage/quota/provider/model/thinking, with compact information right-aligned
+- [x] #2 No dollar cost or subscription marker is rendered
+- [x] #3 Quota polling/parsing and status filtering behavior remain unchanged
+- [x] #4 Focused footer test and full native suite pass
 <!-- AC:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Delivered PR #238. The qq footer now renders one terminal row: cwd/branch/session/status remain left, while context usage, optional active-provider quota bars, and provider/model/thinking form the right-aligned compact group. Session dollar cost and the subscription marker were removed, together with their dead helpers and test harness data. Focused footer Check passed; full native suite passed 33/33 locally and GitHub shell-tests passed. Fresh-context review returned PASS with production nonblank LOC -27 and decision points -18; no same-fix-smaller regeneration was needed. Visual UAT was explicitly skipped by the operator in favor of deterministic render evidence. PR creation was briefly blocked by GitHub’s acknowledged Pull Requests incident and succeeded without changing the branch after the service recovered enough to accept it.
+<!-- SECTION:FINAL_SUMMARY:END -->
