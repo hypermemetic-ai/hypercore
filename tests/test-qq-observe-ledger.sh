@@ -337,6 +337,33 @@ jq -e '
   and all(.[]; keys == ["analyzed","discussed","failed","pr","ts","variant"])
 ' "$tmp/rounds.json" >/dev/null || fail 'rounds were not undiscussed-first then newest-first'
 
+"$OBSERVE" mark-discussed --run "$run_1" --outcomes "$outcomes" \
+  --twin "$run_1_blind" >"$tmp/discussed-twins.json"
+jq -e --argjson pr 1 '
+  .type == "disposition" and .pr == $pr and .outcomes[0].verdict == "accepted"
+  and (.variant | not) and (.note | not)
+  and (.written_seq | type == "number")
+' "$run_1/discussed.json" >/dev/null || fail 'guided twin discussed mark has the wrong shape'
+jq -e --argjson pr 1 '
+  .type == "disposition" and .pr == $pr and .variant == "blind"
+  and .outcomes == [] and .note == "discussed with guided twin"
+  and (.written_seq | type == "number")
+' "$run_1_blind/discussed.json" >/dev/null || fail 'blind twin discussed mark lacks its relationship'
+[ "$(jq '.written_seq' "$run_1/discussed.json")" -lt \
+  "$(jq '.written_seq' "$run_1_blind/discussed.json")" ] \
+  || fail 'guided and blind discussed marks do not follow durable write order'
+cp "$run_1/discussed.json" "$tmp/guided-twin-discussed-before.json"
+cp "$run_1_blind/discussed.json" "$tmp/blind-twin-discussed-before.json"
+"$OBSERVE" mark-discussed --run "$run_1" --outcomes "$outcomes" \
+  --twin "$run_1_blind" >"$tmp/discussed-twins-again.json"
+cmp "$tmp/guided-twin-discussed-before.json" "$run_1/discussed.json" >/dev/null \
+  || fail 'twin retry rewrote the guided discussed mark'
+cmp "$tmp/blind-twin-discussed-before.json" "$run_1_blind/discussed.json" >/dev/null \
+  || fail 'twin retry rewrote the blind discussed mark'
+jq -e '.status == "already discussed" and .twin_status == "already discussed"' \
+  "$tmp/discussed-twins-again.json" >/dev/null \
+  || fail 'idempotent twin retry reported the wrong statuses'
+
 # Guided/blind comparison records both set differences and unabsorbed signals.
 common="$(make_episode common friction 'Common episode')"
 guided_only="$(make_episode guided-only waste 'Guided-only episode')"

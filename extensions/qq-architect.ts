@@ -377,11 +377,22 @@ export default function register(pi, deps = {}) {
         });
         await setMode(outcomesPath, 0o600);
 
+        const markArguments = [
+          "mark-discussed", "--run", runDir, "--outcomes", outcomesPath,
+        ];
+        const blindDir = roundDirectory(runsRoot, { pr, variant: "blind" });
+        if (
+          await isRegularFile(join(blindDir, "analysis.json"), inspectFile)
+          || await isRegularFile(join(blindDir, "analysis_failed.json"), inspectFile)
+        ) {
+          markArguments.push("--twin", blindDir);
+        }
+
         let execution;
         try {
           execution = await run(
             OBSERVE_COMMAND,
-            ["mark-discussed", "--run", runDir, "--outcomes", outcomesPath],
+            markArguments,
             { cwd: ctx.cwd },
           );
         } catch (error) {

@@ -195,6 +195,11 @@ async function testFailedRoundCanBeMarkedDiscussed() {
 
 async function testDiscussedHappyPath() {
   const run = await makeRun(14);
+  const blindRun = await makeRun(14, "blind");
+  await writeFile(
+    join(blindRun, "analysis_failed.json"),
+    '{"status":"analysis_failed","reason":"blind analyst failed"}\n',
+  );
   await writeFile(join(run, "analysis.json"), JSON.stringify({
     episodes: [
       { rank: 1, kind: "friction", title: "First episode", recurrence_key: "first" },
@@ -204,10 +209,11 @@ async function testDiscussedHappyPath() {
   }));
   let captured;
   const h = createHarness([
-    rounds([row(14)]),
+    rounds([row(14), row(14, { variant: "blind" })]),
     async (call) => {
       assert.deepEqual(call.args.slice(0, 4), ["mark-discussed", "--run", run, "--outcomes"]);
       const outcomesPath = call.args[4];
+      assert.deepEqual(call.args.slice(5), ["--twin", blindRun]);
       captured = JSON.parse(await readFile(outcomesPath, "utf8"));
       assert.equal((await stat(outcomesPath)).mode & 0o777, 0o600);
       return execution('{"status":"discussed"}\n');

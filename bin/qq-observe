@@ -29,7 +29,7 @@ usage:
   qq-observe ledger-update --run DIR
   qq-observe ledger-rebuild
   qq-observe digest [--since ISO]
-  qq-observe mark-discussed --run DIR --outcomes FILE.json
+  qq-observe mark-discussed --run DIR --outcomes FILE.json [--twin DIR]
   qq-observe rounds
   qq-observe record-comparison --guided DIR --blind DIR
 
@@ -2183,15 +2183,28 @@ def ledger_rebuild(values):
 
 
 def mark_discussed(values):
-    options = parse_flags(values, {"--run", "--outcomes"})
-    if set(options) != {"--run", "--outcomes"}:
+    options = parse_flags(values, {"--run", "--outcomes", "--twin"})
+    if not {"--run", "--outcomes"}.issubset(options):
         fail("mark-discussed requires --run and --outcomes")
     run_dir = run_directory(options["--run"])
-    pr, _, _ = package_identity(run_dir)
+    pr, variant, _ = package_identity(run_dir)
     outcomes_path = canonical_existing(options["--outcomes"], "outcomes input")
     outcomes = json_document(read_regular(outcomes_path, "outcomes input"), "outcomes input")
     if not valid_outcomes(outcomes):
         fail("outcomes schema violation", 65)
+
+    twin_dir = None
+    if "--twin" in options:
+        twin_dir = run_directory(options["--twin"])
+        twin_pr, twin_variant, _ = package_identity(twin_dir)
+        if variant != "guided" or twin_variant != "blind" or twin_pr != pr:
+            fail("discussed twin must be the blind variant of the guided run", 65)
+        if not (
+            regular_file(twin_dir / "analysis.json")
+            or regular_file(twin_dir / "analysis_failed.json")
+        ):
+            fail("discussed twin is not finalized", 65)
+
     path = run_dir / "discussed.json"
     old = existing_bytes(path)
     if old is not None:
@@ -2202,18 +2215,50 @@ def mark_discussed(values):
             fail(f"append-only conflict at {path}", 65)
         mark_written = False
     else:
+        mark_written = False
+
+    twin_path = None
+    twin_old = None
+    if twin_dir is not None:
+        twin_path = twin_dir / "discussed.json"
+        twin_old = existing_bytes(twin_path)
+        if twin_old is not None:
+            twin_event = json_document(twin_old, "blind twin discussed mark")
+            if not valid_ledger_event(twin_event) or twin_event.get("type") != "disposition":
+                fail(f"invalid discussed mark at {twin_path}", 65)
+            if (
+                twin_event["pr"] != pr or twin_event["outcomes"] != []
+                or twin_event.get("variant") != "blind"
+                or twin_event.get("note") != "discussed with guided twin"
+            ):
+                fail(f"append-only conflict at {twin_path}", 65)
+
+    if old is None:
         event = ledger_event(
             "disposition", pr=pr, outcomes=outcomes,
             written_seq=next_feed_sequence(),
         )
         mark_written = atomic_append(path, ledger_event_bytes(event))
+
+    twin_written = False
+    if twin_dir is not None and twin_old is None:
+        twin_event = ledger_event(
+            "disposition", pr=pr, variant="blind", outcomes=[],
+            note="discussed with guided twin", written_seq=next_feed_sequence(),
+        )
+        twin_written = atomic_append(twin_path, ledger_event_bytes(twin_event))
+
     result = materialize_ledger()
     event_added = any(
         item["type"] == "disposition" and item["pr"] == pr
         and item["outcomes"] == outcomes for item in result["_added_events"]
     )
     status = "discussed" if mark_written or event_added else "already discussed"
-    emit({"status": status, "run_dir": os.fspath(run_dir)})
+    response = {"status": status, "run_dir": os.fspath(run_dir)}
+    if twin_dir is not None:
+        response["twin_status"] = "discussed" if twin_written else "already discussed"
+        response["twin_dir"] = os.fspath(twin_dir)
+    emit(response)
 
 
 def observer_run_rows(since=None):
