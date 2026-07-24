@@ -55,15 +55,57 @@ directly, so day-to-day changes — adding, editing, or removing a Skill or a
 command — are live everywhere with no install step. A machine is bootstrapped
 once.
 
-Pi 0.80.10 or newer is the accountable runtime in each Repository's project
-home. Install current Pi and Herdr's native Pi integration, then verify the Pi
-version is at least 0.80.10:
+qq's accountable runtime is the exact patched Pi identity
+`0.81.1+qq.execution-profile.1` on Linux x64. `bin/qq-pi-runtime` is the sole
+builder, artifact verifier, generation installer, and runtime resolver;
+`bin/pi` is the PATH-level command. It never falls back to a stock or global
+Pi. A missing, corrupt, writable, foreign-owned, unpatched, or stale generation
+therefore refuses launch instead of silently selecting another executable.
+
+Only `fetch` performs network work. It downloads the manifest-pinned Pi source,
+Node/npm, and Bun archives, verifies their SHA-256 digests, and hydrates the npm
+cache from the exact upstream locks without lifecycle scripts. Because the
+release source omits its generated model-data directory, fetch also verifies
+and caches that directory from the exact `@earendil-works/pi-ai@0.81.1`
+tarball named by the release's install lock and pinned in the durable manifest;
+it never refreshes a live model catalog. `build` consumes those inputs offline,
+applies the durable patch, and emits a deterministic, self-describing artifact.
+Keep artifacts outside the Repository; they are derived machine state and must
+not be committed.
 
 ```bash
-npm install -g --ignore-scripts @earendil-works/pi-coding-agent@latest
-pi --version
-herdr integration install pi
+artifact="${XDG_CACHE_HOME:-$HOME/.cache}/qq/pi-runtime/pi-0.81.1-qq.tar.gz"
+bin/qq-pi-runtime fetch
+bin/qq-pi-runtime build --output "$artifact"
+bin/qq-pi-runtime inspect-artifact "$artifact"
+bin/qq-pi-runtime install "$artifact"
+bin/qq-pi-runtime verify
 ```
+
+Installation publishes an immutable content-addressed generation, atomically
+moves `current`, and retains exactly the preceding known-good generation as
+`previous`. Reinstalling the identical active artifact is idempotent. Verify an
+active runtime at any time, or exchange `current` and `previous` atomically;
+running rollback again rolls forward:
+
+```bash
+bin/qq-pi-runtime verify
+bin/qq-pi-runtime rollback
+```
+
+After this Change is merged, the agent-owned activation procedure runs the
+install and verify commands, sources the cockpit shell, confirms that
+`command -v pi` is this checkout's `bin/pi`, checks the exact `pi --version`,
+and reruns
+`herdr integration install pi` so future root and architect tabs inherit the
+verified wrapper. Ticket implementation and tests do not mutate the live
+installation or Herdr integration.
+
+Every Pi upgrade is an explicit qq Change: update the pinned source and
+Linux-x64 toolchain hashes, rebase and review the patch, rerun conformance and
+two-build reproducibility Checks, then install only the reviewed artifact.
+Moving tags, `@latest`, global Pi, and raw-binary overrides are not runtime
+authorities.
 
 ### Temporary pi-subagents bridge
 
@@ -84,10 +126,12 @@ failures under parent schema validation. This closes the observed terminal
 recovery hole without trusting unvalidated child prose or changing any other
 pi-subagents behavior.
 
-For a new install, use Pi's Git-package syntax with that exact commit. npm
+For a new install, use the verified qq `pi` wrapper and Pi's Git-package
+syntax with that exact commit. The bridge remains compatible with the patched
+runtime; it does not authorize stock-Pi fallback. npm
 packages, branches, tags, version ranges, moving refs, and local paths are not
-authoritative pi-subagents install sources. Install the Landstrip binary
-package directly into Pi's operator-owned npm tree. Do NOT
+authoritative pi-subagents install sources. Install the Landstrip binary package
+directly into Pi's operator-owned npm tree. Do NOT
 `pi install npm:pi-landstrip`: registering that extension makes it wrap the
 accountable session's own Bash in a sandbox, and unversioned installs drift from
 the adapter's pinned Landstrip version (`delegation/policies/roles.json`).
@@ -421,7 +465,8 @@ splits.
 On a machine with the retired Skill mount, remove it if it exists (after
 checking it points into this checkout): `rm -r ~/.codex/skills`.
 
-Source the shell surface from `.bashrc`; it prepends `bin/` to `PATH` and
+Source the shell surface from `.bashrc`; it prepends `bin/` to `PATH`, making
+qq's verified `bin/pi` wrapper authoritative ahead of any stock/global Pi, and
 provides the cockpit navigation helpers:
 
 ```bash
