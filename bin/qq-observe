@@ -1636,11 +1636,67 @@ def maximum_recorded_sequence():
     return maximum
 
 
+def read_high_water():
+    path = observer_store_root(create=True) / "ledger" / ".high-water"
+    if not os.path.lexists(os.fspath(path)):
+        return 0
+    raw = read_regular(path, "ledger high-water")
+    try:
+        text = raw.decode("ascii").strip()
+    except UnicodeDecodeError:
+        fail("ledger high-water is not ASCII", 65)
+    if not re.fullmatch(r"[0-9]{1,19}", text):
+        fail("ledger high-water is not a non-negative integer", 65)
+    return int(text)
+
+
+def replace_file(path, data):
+    path = Path(path)
+    ensure_directory(path.parent)
+    directory = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+    temporary = None
+    try:
+        name = f".{path.name}.tmp-{os.getpid()}-{os.urandom(8).hex()}"
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+        try:
+            fd = os.open(name, flags, 0o600, dir_fd=directory)
+            temporary = name
+        except FileExistsError:
+            fail(f"cannot allocate temporary file for {path}", 65)
+        try:
+            view = memoryview(data)
+            while view:
+                written = os.write(fd, view)
+                view = view[written:]
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+        if os.path.lexists(os.path.join(os.fspath(path.parent), path.name)):
+            os.unlink(path.name, dir_fd=directory)
+        os.link(temporary, path.name, src_dir_fd=directory, dst_dir_fd=directory,
+                follow_symlinks=False)
+        os.fsync(directory)
+    finally:
+        if temporary is not None:
+            try:
+                os.unlink(temporary, dir_fd=directory)
+            except FileNotFoundError:
+                pass
+        os.close(directory)
+
+
 def next_feed_sequence():
-    # Every caller holds the store-wide writer lock. Existing materialized
-    # events preserve a deleted source record's high-water mark until this
-    # operation allocates its replacement sequence and rebuilds the view.
-    return maximum_recorded_sequence() + 1
+    # Every caller holds the store-wide writer lock. The high-water file is
+    # the one ledger-state value that is never derived: it records the
+    # greatest sequence ever allocated, surviving record deletion and
+    # full-view rebuilds. Removing the whole ledger directory (the
+    # documented recovery path) resets it to the surviving records' maximum.
+    allocated = max(read_high_water(), maximum_recorded_sequence()) + 1
+    replace_file(
+        observer_store_root(create=True) / "ledger" / ".high-water",
+        f"{allocated}\n".encode("ascii"),
+    )
+    return allocated
 
 
 def open_ledger_writer_lock():
@@ -1950,7 +2006,10 @@ def materialize_findings(
         )
         if not valid_ledger_event(event):
             fail(f"analysis episode {index} cannot be represented as a ledger event", 65)
-        identity = (pr, key, kind, episode["title"])
+        episode_digest = hashlib.sha256(
+            json.dumps(episode, separators=(",", ":"), sort_keys=True).encode("utf-8")
+        ).hexdigest()
+        identity = (pr, key, kind, episode["title"], episode_digest)
         if identity not in seen_findings:
             events.append(event)
             seen_findings.add(identity)

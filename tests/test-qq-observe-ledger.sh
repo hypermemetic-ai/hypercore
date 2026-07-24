@@ -680,6 +680,35 @@ jq -e '.written_seq == 2' "$replacement_run/.ledger-applied" >/dev/null \
 jq -s -e 'length == 2 and all(.[]; .written_seq == 2 and .pr == 81)' \
   "$events" >/dev/null || fail 'deleted source remained in the materialized ledger'
 
+# A full rebuild after deleting the max-sequence record must not enable reuse.
+export XDG_STATE_HOME="$tmp/water-rebuild-state"
+runs="$XDG_STATE_HOME/qq/observer/runs"
+events="$XDG_STATE_HOME/qq/observer/ledger/events.jsonl"
+water_1="$(make_run pr-90 90 guided 2026-11-01T10:00:00Z "$first_episodes")"
+water_2="$(make_run pr-91 91 guided 2026-11-01T10:01:00Z "$first_episodes")"
+"$OBSERVE" ledger-update --run "$water_1" >"$tmp/water-1.json"
+"$OBSERVE" ledger-update --run "$water_2" >"$tmp/water-2.json"
+rm -rf "$water_2"
+"$OBSERVE" ledger-rebuild >"$tmp/water-rebuild.json"
+water_3="$(make_run pr-92 92 guided 2026-11-01T10:02:00Z "$first_episodes")"
+"$OBSERVE" ledger-update --run "$water_3" >"$tmp/water-3.json"
+jq -e '.written_seq == 3' "$water_3/.ledger-applied" >/dev/null \
+  || fail 'rebuild after deleting the max record enabled sequence reuse'
+
+# Distinct episodes sharing one identity tuple are all fed and counted.
+export XDG_STATE_HOME="$tmp/duplicate-identity-state"
+runs="$XDG_STATE_HOME/qq/observer/runs"
+events="$XDG_STATE_HOME/qq/observer/ledger/events.jsonl"
+dup_a="$(make_episode duplicate waste 'Duplicate identity opportunity')"
+dup_b="$(jq -cn --argjson base "$dup_a" '$base | .what_happened = "Distinct second episode."')"
+dup_episodes="$(jq -cn --argjson a "$dup_a" --argjson b "$dup_b" '[$a,$b]')"
+dup_run="$(make_run pr-95 95 guided 2026-11-05T10:00:00Z "$dup_episodes")"
+"$OBSERVE" ledger-update --run "$dup_run" >"$tmp/dup-update.json"
+jq -e '.episode_count == 2' "$dup_run/.ledger-applied" >/dev/null \
+  || fail 'duplicate-identity marker lost its episode count'
+jq -s -e '[.[] | select(.type == "finding_seen")] | length == 2' \
+  "$events" >/dev/null || fail 'distinct duplicate-identity episodes were suppressed'
+
 # Nanosecond mtimes preserve same-timestamp legacy disposition chronology during recovery.
 export XDG_STATE_HOME="$tmp/chronology-state"
 runs="$XDG_STATE_HOME/qq/observer/runs"
