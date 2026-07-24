@@ -607,6 +607,21 @@ class RuntimeTests(unittest.TestCase):
         result = fixture.engine.install(artifact)
         return fixture, artifact, result
 
+    def test_verify_uses_tmpdir_without_writing_runtime_root(self) -> None:
+        fixture, _artifact, _result = self._fresh_installed("read-only-runtime")
+        scratch = self.temp / "identity-scratch"
+        scratch.mkdir(mode=0o700)
+        before = sorted(path.name for path in fixture.spec.data_root.iterdir())
+        fixture.spec.data_root.chmod(0o555)
+        try:
+            with mock.patch.object(tempfile, "tempdir", str(scratch)):
+                verified = fixture.engine.verify_active()
+        finally:
+            fixture.spec.data_root.chmod(0o700)
+        self.assertTrue(verified["valid"])
+        self.assertEqual(sorted(path.name for path in fixture.spec.data_root.iterdir()), before)
+        self.assertEqual(list(scratch.iterdir()), [])
+
     def test_verify_traversal_owner_writable_extra_missing_tamper_and_stock_refusals(self) -> None:
         mutations = {
             "traversal": lambda fixture, generation: (

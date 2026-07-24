@@ -1338,7 +1338,7 @@ class RuntimeEngine:
         bundle = path / "bundle"
         self._verify_inventory(bundle, artifact_manifest["inventory"])
         binary = bundle / "pi"
-        self._check_binary_identity(binary, self.spec.data_root)
+        self._check_binary_identity(binary, Path(tempfile.gettempdir()))
         return binary.resolve(strict=True)
 
     def _atomic_symlink(self, target: str, link: Path) -> None:
