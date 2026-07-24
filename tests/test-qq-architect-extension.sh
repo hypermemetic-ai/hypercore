@@ -297,6 +297,22 @@ async function testPartialTwinMarkCanBeCompleted() {
   assert.ok(h.notifications.some(({ message }) => message.includes('"twin_status":"discussed"')));
 }
 
+async function testUnanalyzedBlindTwinIsNotCompletable() {
+  await makeRun(21);
+  const h = createHarness([
+    rounds([
+      row(21, { discussed: true }),
+      row(21, { variant: "blind", analyzed: false, failed: false }),
+    ]),
+    async () => {
+      throw new Error("mark-discussed must not run for an unanalyzed blind twin");
+    },
+  ]);
+  await invoke(h, "architect-discussed", "21");
+  assert.ok(h.notifications.some(({ message }) =>
+    message.includes("blind twin is not yet analyzed")));
+}
+
 async function testAlreadyDiscussedAndHeadlessRefuseEarly() {
   const discussed = createHarness([
     rounds([
@@ -325,6 +341,7 @@ await testFailedRoundCanBeMarkedDiscussed();
 await testDiscussedHappyPath();
 await testRefusalIsSurfaced();
 await testPartialTwinMarkCanBeCompleted();
+await testUnanalyzedBlindTwinIsNotCompletable();
 await testAlreadyDiscussedAndHeadlessRefuseEarly();
 
 console.log("test-qq-architect-extension: pass");

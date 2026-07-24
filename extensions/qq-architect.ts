@@ -270,7 +270,16 @@ export default function register(pi, deps = {}) {
       const blindRow = rows.find(
         (candidate) => candidate.pr === pr && candidate.variant === "blind",
       );
-      const completingTwin = row.discussed && blindRow !== undefined && !blindRow.discussed;
+      const blindReady =
+        blindRow !== undefined && (blindRow.analyzed || blindRow.failed);
+      const completingTwin = row.discussed && blindReady && !blindRow.discussed;
+      if (row.discussed && blindRow !== undefined && !blindRow.discussed && !blindReady) {
+        ctx.ui.notify(
+          `Observer round pr-${pr} is discussed; its blind twin is not yet analyzed — nothing to complete.`,
+          "warning",
+        );
+        return;
+      }
       if (row.discussed && !completingTwin) {
         ctx.ui.notify(
           `Observer round pr-${pr} is already discussed; no append-only mark was attempted.`,
