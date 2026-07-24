@@ -2013,7 +2013,6 @@ def materialize_findings(
                         "confidence", "confidence_why",
                     )
                 } | {
-                    "no_signal": episode.get("no_signal", False),
                     "evidence": [
                         {"entries": item["entries"], "quote": item["quote"]}
                         for item in episode["evidence"]
