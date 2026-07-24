@@ -55,7 +55,7 @@ run_1="$(make_run pr-1 1 guided 2026-08-01T10:00:00Z "$first_episodes")"
 run_1_blind="$(make_run pr-1-blind 1 blind 2026-08-01T10:01:00Z "$first_episodes")"
 run_2="$(make_run pr-2 2 guided 2026-08-02T10:00:00Z "$first_episodes")"
 
-# Opening the append log repairs a crash-torn tail before reading or appending.
+# Every write replaces a torn or otherwise stale view from durable records.
 mkdir -p "$(dirname "$events")"
 printf '%s\n' '{"schema":"qq-observer.ledger-event","schema_version":1,"ts":"2026-08-01T09:00:00Z","type":"disposition","pr":99,"outcomes":[]}' >"$events"
 printf '%s' '{"schema":"qq-observer.ledger-event","schema_version":1,"ts":' >>"$events"
@@ -64,11 +64,11 @@ chmod 600 "$events"
 jq -e '.findings == 2 and .promoted == 0 and .already_applied == false' \
   "$tmp/update-1.json" >/dev/null || fail 'first ledger update has the wrong result'
 jq -s -e '
-  length == 3
-  and .[0].type == "disposition" and .[0].pr == 99
+  length == 2
   and ([.[] | select(.type == "finding_seen") | .recurrence_key] == ["alpha","beta"])
-' "$events" >/dev/null || fail 'torn ledger tail was not repaired before append'
-[ -f "$run_1/.ledger-applied" ] || fail 'torn-tail recovery did not write the applied marker'
+  and all(.[]; .variant == "guided")
+' "$events" >/dev/null || fail 'full materialization did not replace the stale ledger view'
+[ -f "$run_1/.ledger-applied" ] || fail 'materialization did not write the applied marker'
 jq -e '
   .schema == "qq-observer.ledger-applied" and .schema_version == 1
   and (.analysis_sha256 | test("^[0-9a-f]{64}$"))
@@ -89,6 +89,10 @@ assert_equal 600 "$(stat -c '%a' "$events")" 'ledger event store is not private'
 "$OBSERVE" ledger-update --run "$run_1_blind" >"$tmp/update-same-pr.json"
 assert_equal 0 "$(jq '.promoted' "$tmp/update-same-pr.json")" \
   'a second run of the same PR caused promotion'
+assert_equal 2 "$(jq -s '[.[] | select(.type == "finding_seen")] | length' "$events")" \
+  'guided/blind copies of the same findings were not globally deduplicated'
+jq -s -e 'all(.[] | select(.type == "finding_seen"); .variant == "guided")' \
+  "$events" >/dev/null || fail 'finding events did not retain their package variant'
 "$OBSERVE" ledger-update --run "$run_2" >"$tmp/update-2.json"
 jq -e '.findings == 2 and .promoted == 2' "$tmp/update-2.json" >/dev/null \
   || fail 'second distinct PR did not promote both recurrence keys'
@@ -579,8 +583,102 @@ rm -rf "$(dirname "$events")"
 "$OBSERVE" ledger-update --run "$rebuild_25" >"$tmp/rebuild-update-25.json"
 jq -e '.written_seq == 5' "$rebuild_25/.ledger-applied" >/dev/null \
   || fail 'source records did not allocate max written_seq plus one'
-jq -s -e 'length == 2 and all(.[]; .written_seq == 5)' "$events" >/dev/null \
-  || fail 'post-recovery events collided with pre-loss record sequences'
+jq -s -e '
+  length == 10
+  and ([.[] | select(.written_seq == 5 and .type == "finding_seen" and .pr == 25)] | length == 2)
+  and ([.[] | select(.written_seq == 5 and .type == "promoted" and .recurrence_key == "beta")] | length == 1)
+' "$events" >/dev/null || fail 'post-recovery materialization lost or collided with source sequences'
+
+# A crash after marker persistence leaves coverage fail-closed. The next write's
+# full materialization restores the finding and promotion from all records.
+export XDG_STATE_HOME="$tmp/promotion-crash-state"
+runs="$XDG_STATE_HOME/qq/observer/runs"
+events="$XDG_STATE_HOME/qq/observer/ledger/events.jsonl"
+promotion_episode="$(make_episode crash-promotion waste 'Crash promotion opportunity')"
+promotion_episodes="$(jq -cn --argjson episode "$promotion_episode" '[$episode]')"
+promotion_70="$(make_run pr-70 70 guided 2026-10-30T10:00:00Z "$promotion_episodes")"
+promotion_71="$(make_run pr-71 71 guided 2026-10-30T10:01:00Z "$promotion_episodes")"
+promotion_72="$(make_run pr-72 72 guided 2026-10-30T10:02:00Z '[]')"
+"$OBSERVE" ledger-update --run "$promotion_70" >"$tmp/promotion-70.json"
+real_python="$(command -v python3)"
+marker_crash_python="$tmp/marker-crash-python3"
+cat >"$marker_crash_python" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+if [ "${1:-}" != - ]; then
+  exec "$REAL_PYTHON3" "$@"
+fi
+script="$CRASH_TMP/marker-crash-$$.py"
+trap 'rm -f "$script"' EXIT
+"$REAL_PYTHON3" -c '
+import sys
+source = sys.stdin.read()
+needle = "    marker, marker_written = persist_ledger_marker(run_dir)\n    result = materialize_ledger()\n"
+if source.count(needle) != 1:
+    raise SystemExit("marker/materialization boundary not found")
+replacement = "    marker, marker_written = persist_ledger_marker(run_dir)\n    raise SystemExit(99)\n    result = materialize_ledger()\n"
+sys.stdout.write(source.replace(needle, replacement))
+' >"$script"
+"$REAL_PYTHON3" "$script" "${@:2}"
+SH
+chmod 700 "$marker_crash_python"
+set +e
+REAL_PYTHON3="$real_python" CRASH_TMP="$tmp" QQ_PYTHON3_BIN="$marker_crash_python" \
+  "$OBSERVE" ledger-update --run "$promotion_71" \
+  >"$tmp/promotion-crash.stdout" 2>"$tmp/promotion-crash.stderr"
+status=$?
+set -e
+assert_equal 99 "$status" 'marker-persistence crash injection did not fire'
+jq -e '.written_seq == 2 and .episode_count == 1' \
+  "$promotion_71/.ledger-applied" >/dev/null \
+  || fail 'crash did not leave the complete durable marker'
+assert_equal 0 "$(jq -s '[.[] | select(.type == "finding_seen" and .pr == 71)] | length' "$events")" \
+  'crash unexpectedly materialized the second finding'
+assert_equal 0 "$(jq -s '[.[] | select(.type == "promoted")] | length' "$events")" \
+  'crash unexpectedly materialized promotion'
+promotion_repo="$tmp/promotion-coverage-repo"
+git init -q -b main "$promotion_repo"
+GIT_AUTHOR_DATE=2026-10-30T10:01:00Z GIT_COMMITTER_DATE=2026-10-30T10:01:00Z \
+  git -C "$promotion_repo" -c user.name=test -c user.email=test@example.invalid \
+    commit --allow-empty -qm 'Promotion crash fixture (#71)'
+set +e
+"$OBSERVE" verify-delivery --repo "$promotion_repo" --since 2026-01-01T00:00:00Z \
+  >"$tmp/promotion-uncovered.json"
+status=$?
+set -e
+assert_equal 1 "$status" 'persisted marker without its materialized finding was covered'
+jq -e '.covered == [] and .uncovered == [71]' \
+  "$tmp/promotion-uncovered.json" >/dev/null \
+  || fail 'marker/materialization crash was not reported as uncovered'
+"$OBSERVE" ledger-update --run "$promotion_72" >"$tmp/promotion-72.json"
+jq -s -e '
+  ([.[] | select(.type == "finding_seen") | {pr,variant}] ==
+    [{pr:70,variant:"guided"},{pr:71,variant:"guided"}])
+  and ([.[] | select(.type == "promoted") | {key:.recurrence_key,prs,written_seq}] ==
+    [{key:"crash-promotion",prs:[70,71],written_seq:2}])
+' "$events" >/dev/null || fail 'next write omitted crash-interleaved promotion'
+"$OBSERVE" verify-delivery --repo "$promotion_repo" --since 2026-01-01T00:00:00Z \
+  >"$tmp/promotion-covered.json"
+jq -e '.ok == true and .covered == [71]' "$tmp/promotion-covered.json" >/dev/null \
+  || fail 'next write did not close crash-interleaved coverage'
+cp "$events" "$tmp/promotion-live.jsonl"
+"$OBSERVE" ledger-rebuild >"$tmp/promotion-rebuild.json"
+cmp "$tmp/promotion-live.jsonl" "$events" >/dev/null \
+  || fail 'live materialization and explicit rebuild differ byte-for-byte'
+
+# Allocation retains a deleted record's high-water mark from the existing view.
+export XDG_STATE_HOME="$tmp/deleted-sequence-state"
+runs="$XDG_STATE_HOME/qq/observer/runs"
+events="$XDG_STATE_HOME/qq/observer/ledger/events.jsonl"
+deleted_run="$(make_run pr-80 80 guided 2026-10-31T10:00:00Z "$first_episodes")"
+"$OBSERVE" ledger-update --run "$deleted_run" >"$tmp/deleted-seed.json"
+rm -rf "$deleted_run"
+replacement_run="$(make_run pr-81 81 guided 2026-10-31T10:01:00Z "$first_episodes")"
+"$OBSERVE" ledger-update --run "$replacement_run" >"$tmp/deleted-replacement.json"
+jq -e '.written_seq == 2' "$replacement_run/.ledger-applied" >/dev/null \
+  || fail 'deleting the max-sequence record caused sequence reuse'
+jq -s -e 'length == 2 and all(.[]; .written_seq == 2 and .pr == 81)' \
+  "$events" >/dev/null || fail 'deleted source remained in the materialized ledger'
 
 # Nanosecond mtimes preserve same-timestamp legacy disposition chronology during recovery.
 export XDG_STATE_HOME="$tmp/chronology-state"
@@ -652,10 +750,10 @@ trap 'rm -f "$script"' EXIT
 "$REAL_PYTHON3" -c '
 import sys
 source = sys.stdin.read()
-needle = '\''            status = "recorded"\n        previous, _ = read_ledger_events(fd)\n'\''
+needle = '\''        status = "recorded"\n    materialize_ledger()\n'\''
 if source.count(needle) != 1:
-    raise SystemExit("comparison record/events boundary not found")
-replacement = '\''            status = "recorded"\n            raise SystemExit(99)\n        previous, _ = read_ledger_events(fd)\n'\''
+    raise SystemExit("comparison record/materialization boundary not found")
+replacement = '\''        status = "recorded"\n        raise SystemExit(99)\n    materialize_ledger()\n'\''
 sys.stdout.write(source.replace(needle, replacement))
 ' >"$script"
 "$REAL_PYTHON3" "$script" "${@:2}"
@@ -670,8 +768,9 @@ set -e
 assert_equal 99 "$status" 'comparison crash injection did not fire'
 [ -f "$crash_guided/comparison.json" ] \
   || fail 'comparison crash did not leave its durable record'
-assert_equal 0 "$(jq -s '[.[] | select(.type == "signal_tune_candidate" and .pr == 30)] | length' "$events")" \
-  'comparison crash appended candidates before the injected exit'
+[ ! -e "$events" ] \
+  || assert_equal 0 "$(jq -s '[.[] | select(.type == "signal_tune_candidate" and .pr == 30)] | length' "$events")" \
+    'comparison crash materialized candidates before the injected exit'
 "$OBSERVE" record-comparison --guided "$crash_guided" --blind "$crash_blind" \
   >"$tmp/comparison-crash-retry.json"
 assert_equal 1 "$(jq -s '[.[] | select(.type == "signal_tune_candidate" and .pr == 30)] | length' "$events")" \
@@ -784,56 +883,18 @@ lock_run_3="$(make_run pr-63 63 guided 2026-12-04T10:02:00Z "$lock_episodes")"
 "$OBSERVE" ledger-update --run "$lock_run_1" >"$tmp/lock-seed-1.json"
 "$OBSERVE" ledger-update --run "$lock_run_2" >"$tmp/lock-seed-2.json"
 rm "$events"
-real_python="$(command -v python3)"
-serialized_python="$tmp/serialized-python3"
-cat >"$serialized_python" <<'SH'
-#!/usr/bin/env bash
-set -euo pipefail
-if [ "${1:-}" != - ]; then
-  exec "$REAL_PYTHON3" "$@"
-fi
-printf 'ready\n' >>"$SERIAL_READY"
-while [ ! -e "$SERIAL_GATE" ]; do sleep 0.01; done
-# Make the new update win the writer lock so rebuild must ignore its logically
-# later event while replaying the two older source records.
-if [ "${3:-}" = ledger-rebuild ]; then sleep 0.1; fi
-script="$SERIAL_TMP/serialized-$$.py"
-trap 'rm -f "$script"' EXIT
-"$REAL_PYTHON3" -c '
-import sys
-source = sys.stdin.read()
-needle = "    finally:\n        close_ledger_events(fd)\n    existing_dispositions = {\n"
-if source.count(needle) != 1:
-    raise SystemExit("ledger rebuild read/replay boundary not found")
-replacement = "    finally:\n        close_ledger_events(fd)\n    __import__(\"time\").sleep(0.25)\n    existing_dispositions = {\n"
-sys.stdout.write(source.replace(needle, replacement))
-' >"$script"
-"$REAL_PYTHON3" "$script" "${@:2}"
-SH
-chmod 700 "$serialized_python"
-serial_ready="$tmp/serial-ready"
-serial_gate="$tmp/serial-gate"
-: >"$serial_ready"
 (
-  REAL_PYTHON3="$real_python" SERIAL_READY="$serial_ready" SERIAL_GATE="$serial_gate" \
-    SERIAL_TMP="$tmp" QQ_PYTHON3_BIN="$serialized_python" \
-    "$OBSERVE" ledger-rebuild >"$tmp/concurrent-rebuild-1.json"
+  "$OBSERVE" ledger-rebuild >"$tmp/concurrent-rebuild-1.json"
 ) &
 rebuild_pid_1=$!
 (
-  REAL_PYTHON3="$real_python" SERIAL_READY="$serial_ready" SERIAL_GATE="$serial_gate" \
-    SERIAL_TMP="$tmp" QQ_PYTHON3_BIN="$serialized_python" \
-    "$OBSERVE" ledger-rebuild >"$tmp/concurrent-rebuild-2.json"
+  "$OBSERVE" ledger-rebuild >"$tmp/concurrent-rebuild-2.json"
 ) &
 rebuild_pid_2=$!
 (
-  REAL_PYTHON3="$real_python" SERIAL_READY="$serial_ready" SERIAL_GATE="$serial_gate" \
-    SERIAL_TMP="$tmp" QQ_PYTHON3_BIN="$serialized_python" \
-    "$OBSERVE" ledger-update --run "$lock_run_3" >"$tmp/concurrent-update.json"
+  "$OBSERVE" ledger-update --run "$lock_run_3" >"$tmp/concurrent-update.json"
 ) &
 update_pid=$!
-while [ "$(wc -l <"$serial_ready")" -lt 3 ]; do sleep 0.01; done
-: >"$serial_gate"
 wait "$rebuild_pid_1"
 wait "$rebuild_pid_2"
 wait "$update_pid"
@@ -841,33 +902,12 @@ jq -s -e '
   ([.[] | select(.type == "finding_seen")] | length == 3)
   and ([.[] | select(.type == "promoted") | .prs] == [[61,62]])
 ' "$events" >/dev/null || fail 'concurrent ledger writers replayed stale membership'
-
-# Physical writer order must equal the source-sequence composition.
-actual_state="$XDG_STATE_HOME"
-actual_events="$events"
-export XDG_STATE_HOME="$tmp/sequential-ledger-state"
-runs="$XDG_STATE_HOME/qq/observer/runs"
-events="$XDG_STATE_HOME/qq/observer/ledger/events.jsonl"
-sequential_run_1="$(make_run pr-61 61 guided 2026-12-04T10:00:00Z "$lock_episodes")"
-sequential_run_2="$(make_run pr-62 62 guided 2026-12-04T10:01:00Z "$lock_episodes")"
-sequential_run_3="$(make_run pr-63 63 guided 2026-12-04T10:02:00Z "$lock_episodes")"
-"$OBSERVE" ledger-update --run "$sequential_run_1" >"$tmp/sequential-seed-1.json"
-"$OBSERVE" ledger-update --run "$sequential_run_2" >"$tmp/sequential-seed-2.json"
-rm "$events"
-"$OBSERVE" ledger-rebuild >"$tmp/sequential-rebuild-1.json"
-"$OBSERVE" ledger-rebuild >"$tmp/sequential-rebuild-2.json"
-"$OBSERVE" ledger-update --run "$sequential_run_3" >"$tmp/sequential-update.json"
-jq -cS -s 'sort_by(.written_seq, .type, (.pr // 0), (.recurrence_key // ""))[]' \
-  "$actual_events" >"$tmp/concurrent-events-canonical.jsonl"
-jq -cS -s 'sort_by(.written_seq, .type, (.pr // 0), (.recurrence_key // ""))[]' \
-  "$events" >"$tmp/sequential-events-canonical.jsonl"
-cmp "$tmp/concurrent-events-canonical.jsonl" "$tmp/sequential-events-canonical.jsonl" >/dev/null \
-  || fail 'concurrent writer result differs from its sequential composition'
+cp "$events" "$tmp/concurrent-events.jsonl"
+"$OBSERVE" ledger-rebuild >"$tmp/concurrent-final-rebuild.json"
+cmp "$tmp/concurrent-events.jsonl" "$events" >/dev/null \
+  || fail 'concurrent writer result differs from a full rebuild'
 
 # An unusable lock path refuses mutation rather than proceeding unlocked.
-export XDG_STATE_HOME="$actual_state"
-runs="$XDG_STATE_HOME/qq/observer/runs"
-events="$actual_events"
 ledger_lock="$(dirname "$events")/.lock"
 [ -f "$ledger_lock" ] || fail 'ledger writer lock file was not created'
 assert_equal 600 "$(stat -c '%a' "$ledger_lock")" 'ledger writer lock is not private'
