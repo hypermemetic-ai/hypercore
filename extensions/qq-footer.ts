@@ -274,33 +274,6 @@ function extensionStatuses(footerData) {
     .filter(Boolean);
 }
 
-function sessionCost(ctx) {
-  let total = 0;
-  let entries = [];
-  try {
-    const branch = ctx.sessionManager?.getBranch?.();
-    if (Array.isArray(branch)) entries = branch;
-  } catch {
-    return total;
-  }
-  for (const entry of entries) {
-    const message = entry?.message;
-    if (message?.role !== "assistant") continue;
-    const value = message?.usage?.cost?.total;
-    if (typeof value === "number" && Number.isFinite(value)) total += value;
-  }
-  return total;
-}
-
-function subscriptionBacked(ctx) {
-  if (ctx.model?.provider === "kimi-coding") return true;
-  try {
-    return ctx.modelRegistry?.isUsingOAuth?.(ctx.model) === true;
-  } catch {
-    return false;
-  }
-}
-
 function contextText(ctx) {
   let usage;
   try {
@@ -381,23 +354,21 @@ function createFooter(pi, ctx, tui, theme, footerData, quotaCache, widthKit) {
       const statuses = extensionStatuses(footerData);
       if (statuses.length > 0) first += ` • ${statuses.join(" ")}`;
 
-      const cost = `$${sessionCost(ctx).toFixed(3)}${subscriptionBacked(ctx) ? " (sub)" : ""}`;
-      const leftParts = [contextText(ctx), cost];
+      const compactParts = [contextText(ctx)];
       const provider = ctx.model?.provider;
       const quotas = quotaText(provider, quotaCache.get(provider));
-      if (quotas !== "") leftParts.push(quotas);
-      const second = rightAlignedLine(
-        leftParts.join(" • "),
-        rightText(pi, ctx, footerData),
+      if (quotas !== "") compactParts.push(quotas);
+      const model = rightText(pi, ctx, footerData);
+      if (model !== "") compactParts.push(model);
+      const line = rightAlignedLine(
+        singleLine(first),
+        compactParts.join(" • "),
         w,
         measure,
         cut,
       );
 
-      return [
-        theme.fg("dim", cut(singleLine(first), w)),
-        theme.fg("dim", second),
-      ];
+      return [theme.fg("dim", line)];
     },
     invalidate() {},
     dispose() {
