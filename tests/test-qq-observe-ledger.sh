@@ -336,6 +336,13 @@ jq -e '
        ([.[] | select(.discussed == false) | .ts] | sort | reverse))
   and all(.[]; keys == ["analyzed","discussed","failed","pr","ts","variant"])
 ' "$tmp/rounds.json" >/dev/null || fail 'rounds were not undiscussed-first then newest-first'
+coverage_before="$(jq -c '{
+  finalized: ([.[] | select(.analyzed)] | length),
+  failed: ([.[] | select(.failed)] | length)
+}' "$tmp/rounds.json")"
+printf '[]\n' >"$tmp/empty-outcomes.json"
+"$OBSERVE" mark-discussed --run "$run_4" --outcomes "$tmp/empty-outcomes.json" \
+  >"$tmp/discussed-failed.json"
 
 "$OBSERVE" mark-discussed --run "$run_1" --outcomes "$outcomes" \
   --twin "$run_1_blind" >"$tmp/discussed-twins.json"
@@ -363,6 +370,18 @@ cmp "$tmp/blind-twin-discussed-before.json" "$run_1_blind/discussed.json" >/dev/
 jq -e '.status == "already discussed" and .twin_status == "already discussed"' \
   "$tmp/discussed-twins-again.json" >/dev/null \
   || fail 'idempotent twin retry reported the wrong statuses'
+"$OBSERVE" rounds >"$tmp/rounds-after-discussion.json"
+coverage_after="$(jq -c '{
+  finalized: ([.[] | select(.analyzed)] | length),
+  failed: ([.[] | select(.failed)] | length)
+}' "$tmp/rounds-after-discussion.json")"
+assert_equal "$coverage_before" "$coverage_after" \
+  'discussion marks changed finalized or failed analysis coverage'
+jq -e '
+  any(.[]; .pr == 4 and .variant == "guided" and .failed and .discussed)
+  and ([.[] | select(.pr == 1 and .discussed)] | length == 2)
+' "$tmp/rounds-after-discussion.json" >/dev/null \
+  || fail 'failed or twin discussion marks were not reflected by rounds'
 
 # Guided/blind comparison records both set differences and unabsorbed signals.
 common="$(make_episode common friction 'Common episode')"
