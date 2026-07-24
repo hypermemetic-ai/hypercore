@@ -867,9 +867,12 @@ class RuntimeTests(unittest.TestCase):
         landstrip.chmod(0o755)
         delegated_log = self.temp / "delegated-pi-args"
         landstrip_log = self.temp / "landstrip-args"
+        node_binary = shutil.which("node")
+        self.assertIsNotNone(node_binary)
         delegated_environment = {
             **environment,
             "PATH": f"{fake_bin}:{ROOT / 'bin'}:/usr/bin:/bin",
+            "QQ_NODE_BIN": node_binary,
             "QQ_PI_BIN": str(stock),
             "TMPDIR": str(launcher_tmp),
             "QQ_LANDSTRIP_BIN": str(landstrip),
