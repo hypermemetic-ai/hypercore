@@ -116,6 +116,7 @@ import sys
 
 self_path, command, git_binary, gh_binary, *args = sys.argv[1:]
 SAFE_COMPONENT = re.compile(r"^[A-Za-z0-9._-]+$")
+SESSION_UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 PR_MERGE = re.compile(r"^Merge pull request #(\d+)\b")
 PR_SQUASH = re.compile(r"(?:^|\s)\(#(\d+)\)$")
 STATUS_CAP = 1024 * 1024
@@ -414,6 +415,44 @@ def regular_file(path):
         return stat.S_ISREG(os.lstat(path).st_mode)
     except OSError:
         return False
+
+
+def accountable_session(session_id):
+    identity = f"accountable session path {session_id}"
+    if os.path.isabs(session_id):
+        matches = [Path(session_id)]
+    else:
+        if not SESSION_UUID.fullmatch(session_id):
+            raise ValueError("sessionId is neither an absolute path nor a Pi session UUID")
+        identity = f"accountable session UUID {session_id}"
+        home = os.environ.get("HOME")
+        if not home or not os.path.isabs(home):
+            return None, f"{identity} requires an absolute HOME"
+        sessions_root = Path(home) / ".pi" / "agent" / "sessions"
+        try:
+            sessions_root = sessions_root.resolve(strict=True)
+            suffix = f"_{session_id}.jsonl"
+            matches = [
+                candidate
+                for directory in sessions_root.iterdir()
+                if stat.S_ISDIR(os.lstat(directory).st_mode)
+                for candidate in directory.iterdir()
+                if candidate.name.endswith(suffix)
+                and stat.S_ISREG(os.lstat(candidate).st_mode)
+            ]
+        except (OSError, RuntimeError, ValueError):
+            return None, f"{identity} could not scan {sessions_root}"
+        if len(matches) != 1:
+            return None, (
+                f"{identity} matched {len(matches)} regular files under {sessions_root}"
+            )
+    candidate = matches[0]
+    if not regular_file(candidate):
+        return None, f"{identity} is missing or not a regular file"
+    valid, reason = pi_first_record(candidate)
+    if not valid:
+        return None, f"{identity} is not Pi v3: {reason}"
+    return Path(os.path.realpath(candidate)), None
 
 
 def time_value(value):
@@ -804,8 +843,8 @@ def assemble(values):
                     raise ValueError("top level is not an object")
                 session_id = status_record.get("sessionId")
                 cwd_value = status_record.get("cwd")
-                if not isinstance(session_id, str) or not os.path.isabs(session_id):
-                    raise ValueError("sessionId is not an absolute path")
+                if not isinstance(session_id, str):
+                    raise ValueError("sessionId is not a string")
                 if not isinstance(cwd_value, str) or not os.path.isabs(cwd_value):
                     raise ValueError("cwd is not an absolute path")
                 started_at = time_value(status_record.get("startedAt"))
@@ -819,10 +858,15 @@ def assemble(values):
                     or not isinstance(status_record.get("state"), str)
                 ):
                     raise ValueError("status metadata has the wrong shape")
+                parent, parent_issue = accountable_session(session_id)
             except (OSError, UnicodeDecodeError, ValueError, RecursionError):
                 append_unknown(unknown, status_path, "malformed delegate status.json")
                 continue
-            parent = Path(os.path.realpath(session_id))
+            if parent_issue is not None:
+                append_unknown(unknown, status_path, parent_issue)
+                warnings.append(
+                    f"delegate {run_id} accountable session is unavailable: {parent_issue}"
+                )
             cwd_path = Path(os.path.realpath(cwd_value))
             status_records[run_id] = {
                 "path": status_path, "parent": parent, "cwd": cwd_path,
@@ -866,6 +910,7 @@ def assemble(values):
             if (
                 within(cwd_path, worktree_root)
                 and window_start <= started_at <= window_end
+                and parent is not None
                 and regular_file(parent)
                 and content_contains(parent, branch)
             ):
@@ -882,6 +927,9 @@ def assemble(values):
                         unknown, session_file,
                         "weak delegate sessionFile is missing or non-regular",
                     )
+                    continue
+                if not (session_validity := pi_first_record(session_file))[0]:
+                    append_unknown(unknown, session_file, f"weak delegate {session_validity[1]}")
                     continue
                 branch_match = content_match(session_file, branch)
                 if branch_match is None:
@@ -934,9 +982,10 @@ def assemble(values):
 
     for run_id in sorted(selected_runs):
         parent = status_records[run_id]["parent"]
-        stem = parent.stem
-        identifier = stem.rsplit("_", 1)[-1]
-        add_session(parent, f"accountable-{identifier}", "accountable", "parent-of-delegate")
+        if parent is not None:
+            stem = parent.stem
+            identifier = stem.rsplit("_", 1)[-1]
+            add_session(parent, f"accountable-{identifier}", "accountable", "parent-of-delegate")
 
     scanned_jsonl = set()
     for run_id in sorted(selected_runs):

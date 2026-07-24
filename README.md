@@ -9,7 +9,7 @@ preferences.
 qq uses seven descriptive entities:
 
 | entity | owner or surface |
-|---|---|
+| --- | --- |
 | **Actor** | the operator and replaceable agents |
 | **Repository** | Git and GitHub |
 | **Task** | Backlog.md |
@@ -65,15 +65,44 @@ pi --version
 herdr integration install pi
 ```
 
-Install the delegation orchestrator into Pi, and the Landstrip binary
-package directly into Pi's operator-owned npm tree. Do NOT `pi install
-npm:pi-landstrip`: registering the extension makes it wrap the accountable
-session's own Bash in a sandbox, and unversioned installs drift from the
-adapter's pinned Landstrip version (delegation/policies/roles.json).
+### Temporary pi-subagents bridge
+
+Delegation temporarily uses a qq-owned pi-subagents bridge while T-154.2 builds
+the narrow qq runtime. Its authoritative Pi package source is the exact,
+immutable fork pin
+`git:github.com/hypermemetic-ai/pi-subagents@b7c531c238469e43866a1fe6697cb44279158c1c`.
+The fork commit's sole parent is the exact upstream
+[`nicobailon/pi-subagents`](https://github.com/nicobailon/pi-subagents) base
+`f1540b09283a1c176a0c721878453c6382ecd399`; the exact fork commit is
+`b7c531c238469e43866a1fe6697cb44279158c1c` in
+[`hypermemetic-ai/pi-subagents`](https://github.com/hypermemetic-ai/pi-subagents).
+
+The bridge carries one behavioral delta: a successful terminal
+`structured_output` tool result is a trusted recovery watermark. Failed tool
+results, bare calls, missing or invalid captures, and later errors remain
+failures under parent schema validation. This closes the observed terminal
+recovery hole without trusting unvalidated child prose or changing any other
+pi-subagents behavior.
+
+For a new install, use Pi's Git-package syntax with that exact commit. npm
+packages, branches, tags, version ranges, moving refs, and local paths are not
+authoritative pi-subagents install sources. Install the Landstrip binary
+package directly into Pi's operator-owned npm tree. Do NOT
+`pi install npm:pi-landstrip`: registering that extension makes it wrap the
+accountable session's own Bash in a sandbox, and unversioned installs drift from
+the adapter's pinned Landstrip version (`delegation/policies/roles.json`).
 
 ```bash
-pi install npm:pi-subagents
+pi install git:github.com/hypermemetic-ai/pi-subagents@b7c531c238469e43866a1fe6697cb44279158c1c
 npm install --prefix ~/.pi/agent/npm --legacy-peer-deps @landstrip/landstrip-linux-x64@0.17.31
+```
+
+Migrate an npm install by removing its recorded source before installing the
+pin (use the exact old settings source instead when migrating another source):
+
+```bash
+pi remove npm:pi-subagents
+pi install git:github.com/hypermemetic-ai/pi-subagents@b7c531c238469e43866a1fe6697cb44279158c1c
 ```
 
 (On macOS/Windows install the matching `@landstrip/landstrip-<platform>-<arch>`
@@ -81,6 +110,139 @@ package at the same version.) The Landstrip binary then lives beneath
 `~/.pi/agent/npm`. `qq-dispatch` resolves that operator Pi copy by default, or
 the absolute `QQ_LANDSTRIP_BIN` override when one is set. It does not resolve a
 Repository-local `.pi/npm` copy.
+
+#### Bridge maintenance
+
+Reconstruct the current bridge from its exact base and verify its provenance
+before preparing an update:
+
+```bash
+work="$(mktemp -d)"
+base=f1540b09283a1c176a0c721878453c6382ecd399
+pin=b7c531c238469e43866a1fe6697cb44279158c1c
+git clone https://github.com/nicobailon/pi-subagents.git "$work/pi-subagents"
+git -C "$work/pi-subagents" remote add fork https://github.com/hypermemetic-ai/pi-subagents.git
+git -C "$work/pi-subagents" fetch fork "$pin"
+test "$(git -C "$work/pi-subagents" rev-parse "$pin^")" = "$base"
+git -C "$work/pi-subagents" switch --detach "$pin"
+```
+
+For a deliberate update, start from the exact reviewed upstream commit, apply
+only the bridge delta, review the complete staged delta, and run the package's
+full suite before creating and publishing a new commit:
+
+```bash
+new_base=<exact-reviewed-upstream-commit>
+git -C "$work/pi-subagents" fetch origin "$new_base"
+git -C "$work/pi-subagents" switch -c qq-bridge-update "$new_base"
+git -C "$work/pi-subagents" cherry-pick -n "$pin"
+# Resolve only the deliberate bridge delta, then stage its reviewed paths.
+git -C "$work/pi-subagents" add <reviewed-paths>
+git -C "$work/pi-subagents" diff --cached --check
+git -C "$work/pi-subagents" diff --cached
+# Continue only after source review accepts this complete staged delta.
+npm --prefix "$work/pi-subagents" ci
+test ! -e /var/tmp/.agents
+test ! -e /var/tmp/.pi
+test_root="$(mktemp -d /var/tmp/pi-subagents-test.XXXXXX)"
+trap 'rm -rf "$test_root"' EXIT
+env -u PI_SUBAGENT_PI_BINARY -u PI_SUBAGENT_EXTRA_AGENT_DIRS \
+  -u QQ_DISPATCH_RUNTIME_ROOT -u PI_SUBAGENT_STRUCTURED_OUTPUT_CAPTURE \
+  -u PI_SUBAGENT_STRUCTURED_OUTPUT_SCHEMA TMPDIR="$test_root" \
+  npm --prefix "$work/pi-subagents" run test:all
+git -C "$work/pi-subagents" commit -m 'fix: preserve terminal structured output'
+new_pin="$(git -C "$work/pi-subagents" rev-parse HEAD)"
+test "$(git -C "$work/pi-subagents" rev-parse HEAD^)" = "$new_base"
+git -C "$work/pi-subagents" push fork "$new_pin:refs/heads/qq-bridge-$new_pin"
+```
+
+Publish each accepted commit under a new hash-named ref; never force-update or
+delete that publication ref. Update this README's pin and focused Check with
+`new_pin` through the ordinary qq Change. Then remove the old exact source and
+install the new exact source; never install the update by branch or tag:
+
+```bash
+old_source=git:github.com/hypermemetic-ai/pi-subagents@b7c531c238469e43866a1fe6697cb44279158c1c
+new_source=git:github.com/hypermemetic-ai/pi-subagents@<new-exact-commit>
+pi remove "$old_source"
+pi install "$new_source"
+```
+
+Verify user settings, every combined user/project package identity, and the
+installed checkout's Git HEAD and source before reloading:
+
+```bash
+source=git:github.com/hypermemetic-ai/pi-subagents@b7c531c238469e43866a1fe6697cb44279158c1c
+pin=b7c531c238469e43866a1fe6697cb44279158c1c
+checkout="$HOME/.pi/agent/git/github.com/hypermemetic-ai/pi-subagents"
+jq -e --arg source "$source" '
+  [
+    (.packages // [])[]
+    | (if type == "string" then . else .source? // empty end)
+    | select(. == $source)
+  ] == [$source]
+' "$HOME/.pi/agent/settings.json"
+SOURCE="$source" PI_PACKAGE_LIST="$(FORCE_COLOR=0 pi list --approve)" python3 - <<'PY_VERIFY_PI_SUBAGENTS'
+import json
+import os
+from pathlib import Path
+
+expected = os.environ["SOURCE"]
+settings_paths = [Path.home() / ".pi" / "agent" / "settings.json", Path.cwd() / ".pi" / "settings.json"]
+for settings_path in settings_paths:
+    if not settings_path.is_file():
+        continue
+    settings = json.loads(settings_path.read_text())
+    for entry in settings.get("packages", []):
+        package_source = entry if isinstance(entry, str) else entry.get("source")
+        if (
+            not isinstance(package_source, str)
+            or not package_source
+            or package_source != package_source.strip()
+            or not package_source.isprintable()
+            or package_source.endswith(" (filtered)")
+        ):
+            raise SystemExit(f"ambiguous package source in {settings_path}")
+
+records = []
+for line in os.environ["PI_PACKAGE_LIST"].splitlines():
+    if line.startswith("  ") and not line.startswith("    "):
+        records.append([line.strip().removesuffix(" (filtered)"), None])
+    elif line.startswith("    ") and records:
+        records[-1][1] = line.strip()
+
+authorities = []
+for package_source, installed_path in records:
+    package_name = None
+    if package_source != expected:
+        if not installed_path:
+            raise SystemExit(f"unresolved package identity: {package_source}")
+        manifest = Path(installed_path) / "package.json"
+        try:
+            document = json.loads(manifest.read_text())
+            package_name = document.get("name")
+        except (OSError, json.JSONDecodeError) as error:
+            raise SystemExit(f"invalid package identity for {package_source}: {error}")
+        if not isinstance(package_name, str) or not package_name.strip():
+            raise SystemExit(f"invalid package name for {package_source}")
+    if package_source == expected or package_name == "pi-subagents":
+        authorities.append(package_source)
+if authorities != [expected]:
+    raise SystemExit(f"unexpected pi-subagents authorities: {authorities}")
+PY_VERIFY_PI_SUBAGENTS
+test "$(git -C "$checkout" rev-parse HEAD)" = "$pin"
+test -z "$(git -C "$checkout" status --porcelain)"
+test "$(git -C "$checkout" remote get-url origin)" = https://github.com/hypermemetic-ai/pi-subagents
+```
+
+Relaunch Pi or run `/reload`. Moving refs and `pi update` or other automatic
+package movement are forbidden for this bridge: delegation is production
+infrastructure, so movement without a deliberate source review breaks the
+provenance and invalidates the test evidence bound to the installed commit.
+
+Retire the bridge only when T-154.2's implementation-neutral contract suite
+passes, production Skills and observer assembly use the qq runtime, and the
+installed fork pin is removed.
 
 Mount the qq Skill root directly into Pi. This is one root mount, so Skill
 membership stays live by construction:

@@ -30,7 +30,7 @@ the Change and code without inheriting the author's conclusions.
 
    ```ts
    const completionEnvelopeSchema=JSON.parse(readFileSync("<absolute-change-worktree>/delegation/manifests/completion-envelope.schema.json","utf8"))
-   subagent({chain:[{agent:"reviewer",task:"Read-and-perform:<absolute-brief-path>",outputSchema:completionEnvelopeSchema,acceptance:{level:"none",reason:"per the manifests"}}],cwd:"<absolute-change-worktree>",context:"fresh",async:true,timeoutMs:900000})
+   subagent({agent:"reviewer",task:"Read-and-perform:<absolute-brief-path>",outputSchema:completionEnvelopeSchema,acceptance:{level:"none",reason:"per the manifests"},cwd:"<absolute-change-worktree>",context:"fresh",async:true,timeoutMs:900000})
    ```
 
    Paths absolute; brief temporary. Pi-subagents owns lifecycle/artifacts;
@@ -50,19 +50,19 @@ the Change and code without inheriting the author's conclusions.
 
 ## Verify and close
 
-7. Verify each finding. Confirm a failure with a constructed input, state, or
+1. Verify each finding. Confirm a failure with a constructed input, state, or
    sequence observed to fail; confirm intent against scope and diff. Deduplicate
    and rank confirmed findings only. Clusters may require a model decision, not
    a patch queue. Stop at review unless fixes were requested.
-8. Fix only introduced, reproduced, supported, in-scope failures, choosing the
+2. Fix only introduced, reproduced, supported, in-scope failures, choosing the
    smallest resulting system; diff size only breaks ties. Display parallel net
    production-LOC and decision-point deltas per fix commit. Growth in either
    spends one mechanical same-fix-smaller regeneration: Checks pass and strictly
    smaller takes it; otherwise the original stands without justification prose.
    Rerun affected Checks and review the fix delta.
-9. A finding class fixed in two prior rounds trips the convergence breaker:
+3. A finding class fixed in two prior rounds trips the convergence breaker:
    halt at the last green state and ask which layer owns the invariant.
-10. Infrastructure failure (sandbox kill, API error, intact-session timeout):
-    resume the child; conclusion states (formed findings, invalid output,
-    context gap): dispatch fresh. Never narrow scope or soften intent for a
-    pass; repeated failure blocks.
+4. Infrastructure failure (sandbox/API error or intact-session timeout): resume
+   with `timeoutMs:900000` and no other contract override. Formed findings,
+   invalid output, or context gap dispatch fresh. Never narrow scope or intent;
+   repeated failure blocks.
