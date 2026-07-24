@@ -116,6 +116,15 @@ expect_failure() {
 }
 
 reset_fake
+set +e
+"$HOME_CMD" unsupported --repo "$repo" >"$tmp/usage.out" 2>"$tmp/usage.err"
+status=$?
+set -e
+assert_equal 1 "$status" 'unsupported action did not report usage failure'
+grep -Fxq 'usage: qq-herdr-home <inspect|focus-board|focus-architect> --repo <path>' \
+  "$tmp/usage.err"
+
+reset_fake
 result="$("$HOME_CMD" inspect --repo "$repo")"
 jq -e --arg checkout "$main_checkout" '
   (keys == ["action", "focused", "home_workspace_id", "main_checkout", "repo_root"])
