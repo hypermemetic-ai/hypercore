@@ -195,6 +195,12 @@ alignment, Task and Change judgment, work orders, verdicts, UAT, and handoff.
 Bounded implementation, fresh review, and research run through pi-subagents;
 `qq-dispatch` is only its fail-closed Landstrip adapter.
 
+For an existing aligned Change, `/handoff <Task-ID>` is the standard transfer
+to a fresh accountable Pi tab. It resolves the Task's unique linked checkout,
+verifies its durable plan and ownership rails, starts the receiver in the
+persistent project home, and restores caller focus. This transfers accountable
+ownership; it is distinct from bounded child delegation through pi-subagents.
+
 ### Local latency observation
 
 `qq-observe` writes append-only JSONL spans to

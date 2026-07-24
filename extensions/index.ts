@@ -13,6 +13,7 @@ import registerOperatorStage from "./qq-operator-stage.ts";
 import registerBacklogGuard from "./qq-backlog-guard.ts";
 import registerQqFooter from "./qq-footer.ts";
 import registerArchitect from "./qq-architect.ts";
+import registerHandoff from "./qq-handoff.ts";
 
 export default function register(pi) {
   registerPrWatch(pi);
@@ -22,4 +23,5 @@ export default function register(pi) {
   registerBacklogGuard(pi);
   registerQqFooter(pi);
   registerArchitect(pi);
+  registerHandoff(pi);
 }

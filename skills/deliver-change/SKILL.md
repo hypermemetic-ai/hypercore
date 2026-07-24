@@ -13,20 +13,21 @@ qq engines unconditionally: they own containment, degradation, and rails.
    to cite what settled every consequential decision—a Backlog decision record,
    approved Task, asked-and-answered exchange, or verbatim operator opt-out—or
    say `none`. Dispositions do not transfer. An uncited decision returns to
-   alignment. Mint and cite a decision record when its reach exceeds this
-   Change. Confirm branch and worktree isolation.
+   alignment. Cite a decision record for broader reach. Confirm
+   branch and worktree isolation.
 2. Call `qq-herdr-home inspect --repo <root>`. The Change is born as a plain
    linked worktree from the agreed base; no Herdr workspace is created. The
    Task record lives here: new work is born through Backlog's CLI; legacy
    tracked records are edited on this branch, never primary `main`. Capture
    the approved plan per `grilling`, its doc id cited in the ledger. Dispatch
    from project home; work in checkout. Cockpit attachment never blocks.
-3. Implement through one complete work order and `delegate-batch`; verify the
-   completion envelope against the tree. Use `research` for decision-grade
-   evidence and retain judgment. Run Checks observing the changed behavior.
-   In-boundary simplification that shrinks or preserves state space is
-   pre-authorized: proceed without realignment and show it in the envelope.
-   Boundary changes still align.
+   Transfer an existing aligned Change with `/handoff <Task-ID>`; its
+   receiver continues this Skill; handoff is no delegation.
+3. Implement through one complete work order and `delegate-batch`; verify its
+   envelope against the tree. Use `research` for decision-grade evidence. Run
+   Checks observing changed behavior. In-boundary state-space shrinkage or
+   preservation needs no realignment but appears in the envelope; boundary
+   changes align.
 4. Run fresh-context `code-review` after local verification for every
    non-trivial Change. Its brief declares trust boundaries beside the threat
    model. Verify findings, fix only confirmed in-scope failures, rerun affected

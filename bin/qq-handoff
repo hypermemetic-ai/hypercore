@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Start one accountable Pi handoff through the structured qq-handoff engine.
+set -euo pipefail
+
+self="$(readlink -f -- "${BASH_SOURCE[0]}")"
+# shellcheck source=bin/lib/qq-bin.sh
+source "$(dirname "$self")/lib/qq-bin.sh"
+
+engine_dependency_error() {
+  printf '%s\n' '{"schema":"qq-handoff/v1","version":1,"engine":"qq-handoff","action":"unknown","status":"error","message":"a required qq-handoff executable is unavailable","rails":[]}'
+  exit 1
+}
+
+qq_resolve_bin python3 || engine_dependency_error
+python_bin="$QQ_BIN_RESULT"
+qq_resolve_bin git || engine_dependency_error
+export QQ_GIT_BIN="$QQ_BIN_RESULT"
+qq_resolve_bin herdr || engine_dependency_error
+export QQ_HERDR_BIN="$QQ_BIN_RESULT"
+exec "$python_bin" "$(dirname "$self")/lib/qq-handoff.py" "$@"
