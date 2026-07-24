@@ -20,6 +20,8 @@ pi_subagent_sess="$parent_tmp/pi-subagent-sessions"
 mkdir -p "$test_home" "$pi_subagent_own_temp"
 export HOME="$test_home"
 export TMPDIR="$parent_tmp"
+export XDG_CACHE_HOME="$tmp/xdg-cache"
+export XDG_DATA_HOME="$tmp/xdg-data"
 
 # The adapter requires the dispatcher-side pi-subagents config to name the
 # session root (README Install); stage it for every dispatch in this suite.
@@ -55,6 +57,8 @@ done
 FAST_EXTENSION="$ROOT/extensions/qq-codex-fast.ts"
 [ -f "$FAST_EXTENSION" ] || fail "GPT-5.6 fast-mode extension is missing: $FAST_EXTENSION"
 assert_file_contains "$DISPATCH" 'qq-codex-fast.ts'
+assert_file_contains "$DISPATCH" "pi_binary=\"\$bin_dir/pi\""
+assert_file_not_matches "$DISPATCH" 'qq_resolve_bin pi'
 assert_file_contains "$FAST_EXTENSION" 'service_tier'
 assert_file_contains "$FAST_EXTENSION" 'before_provider_request'
 jq -e '
@@ -124,6 +128,10 @@ cat >"$fake_pi" <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [ "${1:-}" = --version ]; then
+  printf '0.81.1+qq.execution-profile.1\n'
+  exit 0
+fi
 printf '%s\0' "$@" >"$FAKE_PI_ARGS"
 env | LC_ALL=C sort >"$FAKE_PI_ENV"
 if [ -n "${FAKE_EXPECT_AUTH_SOURCE:-}" ]; then
@@ -149,11 +157,48 @@ chmod +x "$fake_pi"
 runtime_root="$tmp/runtime"
 mkdir -p "$runtime_root"
 export QQ_LANDSTRIP_BIN="$fake_landstrip"
-export QQ_PI_BIN="$fake_pi"
 export QQ_DISPATCH_RUNTIME_ROOT="$runtime_root"
 export QQ_DISPATCH_TIMEOUT=2s
 export FAKE_PI_ARGS="$tmp/pi.args"
 export FAKE_PI_ENV="$tmp/pi.env"
+
+# Install an isolated fixture generation. Dispatch must reach it only through
+# this checkout's bin/pi wrapper, never through PATH or QQ_PI_BIN.
+python3 - "$ROOT" "$fake_pi" "$tmp" <<'PY_RUNTIME'
+import importlib.machinery
+import importlib.util
+from pathlib import Path
+import shutil
+import sys
+
+root, fake_pi, scratch = map(Path, sys.argv[1:])
+loader = importlib.machinery.SourceFileLoader("qq_dispatch_runtime", str(root / "bin/qq-pi-runtime"))
+spec = importlib.util.spec_from_loader(loader.name, loader)
+assert spec is not None
+runtime = importlib.util.module_from_spec(spec)
+sys.modules[loader.name] = runtime
+loader.exec_module(runtime)
+engine = runtime.RuntimeEngine(runtime.RuntimeSpec.production())
+bundle = scratch / "dispatch-runtime-bundle"
+bundle.mkdir()
+shutil.copy2(fake_pi, bundle / "pi")
+artifact = scratch / "dispatch-runtime.tar.gz"
+engine.create_artifact(bundle, artifact)
+engine.install(artifact)
+PY_RUNTIME
+
+stock_bin="$tmp/stock-bin"
+stock_counter="$tmp/stock-counter"
+mkdir -p "$stock_bin"
+cat >"$stock_bin/pi" <<SH
+#!/usr/bin/env bash
+printf 'stock\\n' >>'$stock_counter'
+exit 93
+SH
+chmod +x "$stock_bin/pi"
+export QQ_PI_BIN="$stock_bin/pi"
+PATH="$stock_bin:$PATH"
+export PATH
 
 git_common_dir="$(
   git -C "$ROOT" rev-parse --path-format=absolute --git-common-dir
@@ -287,6 +332,7 @@ PY
       "$policy_snapshot" >/dev/null
   fi
 done
+[ ! -e "$stock_counter" ] || fail 'stock-first PATH or QQ_PI_BIN displaced the worktree Pi wrapper'
 
 # Correlation propagation experiment: qq-dispatch receives accountable-side
 # context and the stubbed child records the environment that crosses the policy.
@@ -449,6 +495,17 @@ cp "$fake_landstrip" "$operator_landstrip"
 ) >"$tmp/operator-npm.stdout" 2>"$tmp/operator-npm.stderr"
 assert_file_contains "$tmp/operator-npm.stdout" 'pi-live-event role=reviewer'
 
+stage_runtime_surface() {
+  local checkout="$1"
+  mkdir -p "$checkout/patches/pi/v0.81.1"
+  cp "$ROOT/bin/pi" "$checkout/bin/pi"
+  cp "$ROOT/bin/qq-pi-runtime" "$checkout/bin/qq-pi-runtime"
+  cp "$ROOT/patches/pi/v0.81.1/manifest.json" \
+    "$checkout/patches/pi/v0.81.1/manifest.json"
+  cp "$ROOT/patches/pi/v0.81.1/qq-execution-profile.patch" \
+    "$checkout/patches/pi/v0.81.1/qq-execution-profile.patch"
+}
+
 # Exercise distinct common/per-worktree Git metadata even when the checkout
 # running this suite is a primary checkout, as it is in ordinary CI clones.
 fixture_primary="$tmp/linked-fixture-primary"
@@ -466,6 +523,7 @@ for fixture_checkout in "$fixture_primary" "$fixture_worktree"; do
     "$fixture_checkout/delegation/policies" \
     "$fixture_checkout/extensions"
   cp "$DISPATCH" "$fixture_checkout/bin/qq-dispatch"
+  stage_runtime_surface "$fixture_checkout"
   cp "$ROOT/bin/lib/qq-bin.sh" "$fixture_checkout/bin/lib/qq-bin.sh"
   cp "$RENDERER" "$fixture_checkout/bin/lib/qq-render-landstrip-policy.mjs"
   cp "$SUPERVISOR" "$fixture_checkout/bin/lib/qq-process-tree-supervisor.py"
@@ -818,6 +876,7 @@ policy_fixture="$tmp/policy-fixture"
 mkdir -p "$policy_fixture/bin/lib" "$policy_fixture/extensions"
 git init -q "$policy_fixture"
 cp "$DISPATCH" "$policy_fixture/bin/qq-dispatch"
+stage_runtime_surface "$policy_fixture"
 cp "$ROOT/bin/lib/qq-bin.sh" "$policy_fixture/bin/lib/qq-bin.sh"
 cp "$RENDERER" "$policy_fixture/bin/lib/qq-render-landstrip-policy.mjs"
 cp "$SUPERVISOR" "$policy_fixture/bin/lib/qq-process-tree-supervisor.py"
@@ -841,6 +900,18 @@ assert_file_contains "$tmp/malformed-policy.stderr" \
   'Landstrip policy rendering failed'
 [ ! -s "$FAKE_PI_ARGS" ] || fail 'malformed policy launched Pi'
 
+rm "$policy_fixture/bin/pi"
+ln -s "$ROOT/bin/pi" "$policy_fixture/bin/pi"
+run_failure linked-worktree-pi "$policy_fixture" \
+  env PI_SUBAGENT_CHILD_AGENT=reviewer "$policy_fixture/bin/qq-dispatch" --json
+assert_file_contains "$tmp/linked-worktree-pi.stderr" \
+  'worktree Pi wrapper is unavailable or linked'
+rm "$policy_fixture/bin/pi"
+run_failure missing-worktree-pi "$policy_fixture" \
+  env PI_SUBAGENT_CHILD_AGENT=reviewer "$policy_fixture/bin/qq-dispatch" --json
+assert_file_contains "$tmp/missing-worktree-pi.stderr" \
+  'worktree Pi wrapper is unavailable or linked'
+
 export FAKE_PI_MODE=wedge
 export FAKE_CHILD_PID="$tmp/wedged-child.pid"
 set +e
@@ -848,7 +919,7 @@ set +e
   cd "$ROOT"
   PI_SUBAGENT_CHILD_AGENT=implementer \
   PI_SUBAGENT_RUN_ID=timeout-smoke \
-  QQ_DISPATCH_TIMEOUT=0.2s \
+  QQ_DISPATCH_TIMEOUT=2s \
   FAKE_POLICY_SNAPSHOT="$tmp/timeout-policy.json" \
     "$DISPATCH" --json
 ) >"$tmp/timeout.stdout" 2>"$tmp/timeout.stderr"
