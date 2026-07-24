@@ -191,7 +191,8 @@ if key == ["agent", "start"]:
 if key == ["agent", "prompt"]:
     if mode == "prompt_malformed": print("{not-json"); raise SystemExit(0)
     if mode == "prompt_failed": emit({"result":{"type":"agent_prompt_failed"}}, 3)
-    emit({"result":{"type":"agent_prompted","agent":{"agent":"pi","pane_id":"w:pNew","agent_status":"working"}}})
+    prompt_state = "idle" if mode == "prompt_idle" else "working"
+    emit({"result":{"type":"agent_prompted","agent":{"agent":"pi","pane_id":"w:pNew","agent_status":prompt_state}}})
 if key == ["agent", "focus"]:
     if mode == "focus_restore_failed": emit({"error":{"code":"focus_failed"}}, 1)
     current["focused"] = True; save(); emit({"result":{"type":"agent_focused","agent":argv[2]}})
@@ -380,6 +381,15 @@ assert receipt["transaction"]["cleanup"] == "created tab preserved; Pi may be li
 assert receipt["transaction"]["agent_reinspection"]["kind"] == "codex"
 assert receipt["transaction"]["agent_reinspection"]["verified"] is False
 assert json.loads(state.read_text())["tab"] is True
+assert receipt["transaction"]["focus_restoration"]["verified"] is True
+assert not any(call[:2] == ["tab","close"] for call in calls())
+
+# A code-zero prompt receipt without the correlated working transition remains uncertain.
+reset("prompt_idle")
+receipt = invoke(1,"start","T-155","--repo",main)
+assert receipt["transaction"]["prompt_submission"]["submitted"] is False
+assert receipt["transaction"]["prompt_submission"]["working_transition_observed"] is False
+assert receipt["transaction"]["cleanup"] == "created tab preserved; prompt may have been accepted"
 assert receipt["transaction"]["focus_restoration"]["verified"] is True
 assert not any(call[:2] == ["tab","close"] for call in calls())
 
