@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "manifestVersion": 1,
+  "upstream": {
+    "repository": "https://github.com/earendil-works/pi",
+    "releaseTag": "v0.81.1",
+    "commit": "20be4b18d4c57487f8993d2762bace129f0cf7c6",
+    "sourceArchive": {
+      "url": "https://github.com/earendil-works/pi/releases/download/v0.81.1/pi-0.81.1-source.tar.gz",
+      "sha256": "fb9bb7d7e8887e890824a08de588124350045da2cce763c5e6fd98d7141af31c",
+      "topLevelDirectory": "pi-0.81.1"
+    }
+  },
+  "stockPiVersion": "0.81.1",
+  "patchedIdentity": {
+    "packageVersion": "0.81.1",
+    "buildIdentity": "qq.execution-profile.1",
+    "reportedVersion": "0.81.1+qq.execution-profile.1"
+  },
+  "patch": {
+    "path": "qq-execution-profile.patch",
+    "sha256": "5578086c363145aada2c5c10b27bce304f1795ec0d79bc483b736727da7bc57c",
+    "stripComponents": 1
+  },
+  "supportedPlatforms": [
+    "linux-x64"
+  ],
+  "changedUpstreamPaths": [
+    "packages/ai/src/api/openai-codex-responses.ts",
+    "packages/ai/src/api/openai-responses-shared.ts",
+    "packages/ai/src/api/openai-responses.ts",
+    "packages/ai/src/api/simple-options.ts",
+    "packages/ai/src/execution-profile.ts",
+    "packages/ai/src/index.ts",
+    "packages/ai/src/providers/faux.ts",
+    "packages/ai/src/providers/openai-codex.ts",
+    "packages/ai/src/providers/openai.ts",
+    "packages/ai/src/types.ts",
+    "packages/ai/test/execution-profile-service-class.test.ts",
+    "packages/ai/test/openai-codex-stream.test.ts",
+    "packages/coding-agent/package.json",
+    "packages/coding-agent/src/config.ts",
+    "packages/coding-agent/src/core/agent-session.ts",
+    "packages/coding-agent/src/core/compaction/compaction.ts",
+    "packages/coding-agent/src/core/extensions/index.ts",
+    "packages/coding-agent/src/core/extensions/loader.ts",
+    "packages/coding-agent/src/core/extensions/runner.ts",
+    "packages/coding-agent/src/core/extensions/types.ts",
+    "packages/coding-agent/src/core/model-runtime.ts",
+    "packages/coding-agent/src/core/remote-catalog-provider.ts",
+    "packages/coding-agent/src/index.ts",
+    "packages/coding-agent/test/compaction-summary-reasoning.test.ts",
+    "packages/coding-agent/test/suite/harness.ts",
+    "packages/coding-agent/test/suite/regressions/153-execution-profile.test.ts"
+  ]
+}
