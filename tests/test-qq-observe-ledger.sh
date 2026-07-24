@@ -751,6 +751,122 @@ sed '/^Generated:/d' "$tmp/logical-order-b.md" >"$tmp/logical-order-b-normalized
 cmp "$tmp/logical-order-a-normalized.md" "$tmp/logical-order-b-normalized.md" >/dev/null \
   || fail 'digest changed when only ledger physical order changed'
 
+# A store-wide writer lock serializes rebuilds with every other ledger mutator.
+export XDG_STATE_HOME="$tmp/concurrent-ledger-state"
+runs="$XDG_STATE_HOME/qq/observer/runs"
+events="$XDG_STATE_HOME/qq/observer/ledger/events.jsonl"
+lock_episode="$(make_episode serialized waste 'Serialized opportunity')"
+lock_episodes="$(jq -cn --argjson episode "$lock_episode" '[$episode]')"
+lock_run_1="$(make_run pr-61 61 guided 2026-12-04T10:00:00Z "$lock_episodes")"
+lock_run_2="$(make_run pr-62 62 guided 2026-12-04T10:01:00Z "$lock_episodes")"
+lock_run_3="$(make_run pr-63 63 guided 2026-12-04T10:02:00Z "$lock_episodes")"
+"$OBSERVE" ledger-update --run "$lock_run_1" >"$tmp/lock-seed-1.json"
+"$OBSERVE" ledger-update --run "$lock_run_2" >"$tmp/lock-seed-2.json"
+rm "$events"
+real_python="$(command -v python3)"
+serialized_python="$tmp/serialized-python3"
+cat >"$serialized_python" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+if [ "${1:-}" != - ]; then
+  exec "$REAL_PYTHON3" "$@"
+fi
+printf 'ready\n' >>"$SERIAL_READY"
+while [ ! -e "$SERIAL_GATE" ]; do sleep 0.01; done
+script="$SERIAL_TMP/serialized-$$.py"
+trap 'rm -f "$script"' EXIT
+"$REAL_PYTHON3" -c '
+import sys
+source = sys.stdin.read()
+needle = "    finally:\n        close_ledger_events(fd)\n    existing_findings = {\n"
+if source.count(needle) != 1:
+    raise SystemExit("ledger rebuild read/replay boundary not found")
+replacement = "    finally:\n        close_ledger_events(fd)\n    __import__(\"time\").sleep(0.25)\n    existing_findings = {\n"
+sys.stdout.write(source.replace(needle, replacement))
+' >"$script"
+"$REAL_PYTHON3" "$script" "${@:2}"
+SH
+chmod 700 "$serialized_python"
+serial_ready="$tmp/serial-ready"
+serial_gate="$tmp/serial-gate"
+: >"$serial_ready"
+(
+  REAL_PYTHON3="$real_python" SERIAL_READY="$serial_ready" SERIAL_GATE="$serial_gate" \
+    SERIAL_TMP="$tmp" QQ_PYTHON3_BIN="$serialized_python" \
+    "$OBSERVE" ledger-rebuild >"$tmp/concurrent-rebuild-1.json"
+) &
+rebuild_pid_1=$!
+(
+  REAL_PYTHON3="$real_python" SERIAL_READY="$serial_ready" SERIAL_GATE="$serial_gate" \
+    SERIAL_TMP="$tmp" QQ_PYTHON3_BIN="$serialized_python" \
+    "$OBSERVE" ledger-rebuild >"$tmp/concurrent-rebuild-2.json"
+) &
+rebuild_pid_2=$!
+(
+  REAL_PYTHON3="$real_python" SERIAL_READY="$serial_ready" SERIAL_GATE="$serial_gate" \
+    SERIAL_TMP="$tmp" QQ_PYTHON3_BIN="$serialized_python" \
+    "$OBSERVE" ledger-update --run "$lock_run_3" >"$tmp/concurrent-update.json"
+) &
+update_pid=$!
+while [ "$(wc -l <"$serial_ready")" -lt 3 ]; do sleep 0.01; done
+: >"$serial_gate"
+wait "$rebuild_pid_1"
+wait "$rebuild_pid_2"
+wait "$update_pid"
+jq -s -e '
+  ([.[] | select(.type == "finding_seen")] | length == 3)
+  and ([.[] | select(.type == "promoted")] | length == 1)
+' "$events" >/dev/null || fail 'concurrent ledger writers replayed stale membership'
+
+# Compare with the sequential composition selected by the winning writer.
+actual_promoted_with_63="$(jq -s '[.[] | select(.type == "promoted" and (.prs | index(63)))] | length' "$events")"
+actual_state="$XDG_STATE_HOME"
+actual_events="$events"
+export XDG_STATE_HOME="$tmp/sequential-ledger-state"
+runs="$XDG_STATE_HOME/qq/observer/runs"
+events="$XDG_STATE_HOME/qq/observer/ledger/events.jsonl"
+sequential_run_1="$(make_run pr-61 61 guided 2026-12-04T10:00:00Z "$lock_episodes")"
+sequential_run_2="$(make_run pr-62 62 guided 2026-12-04T10:01:00Z "$lock_episodes")"
+sequential_run_3="$(make_run pr-63 63 guided 2026-12-04T10:02:00Z "$lock_episodes")"
+"$OBSERVE" ledger-update --run "$sequential_run_1" >"$tmp/sequential-seed-1.json"
+"$OBSERVE" ledger-update --run "$sequential_run_2" >"$tmp/sequential-seed-2.json"
+rm "$events"
+if [ "$actual_promoted_with_63" -eq 1 ]; then
+  "$OBSERVE" ledger-update --run "$sequential_run_3" >"$tmp/sequential-update.json"
+  "$OBSERVE" ledger-rebuild >"$tmp/sequential-rebuild-1.json"
+  "$OBSERVE" ledger-rebuild >"$tmp/sequential-rebuild-2.json"
+else
+  "$OBSERVE" ledger-rebuild >"$tmp/sequential-rebuild-1.json"
+  "$OBSERVE" ledger-rebuild >"$tmp/sequential-rebuild-2.json"
+  "$OBSERVE" ledger-update --run "$sequential_run_3" >"$tmp/sequential-update.json"
+fi
+jq -cS -s 'sort_by(.written_seq, .type, (.pr // 0), (.recurrence_key // ""))[]' \
+  "$actual_events" >"$tmp/concurrent-events-canonical.jsonl"
+jq -cS -s 'sort_by(.written_seq, .type, (.pr // 0), (.recurrence_key // ""))[]' \
+  "$events" >"$tmp/sequential-events-canonical.jsonl"
+cmp "$tmp/concurrent-events-canonical.jsonl" "$tmp/sequential-events-canonical.jsonl" >/dev/null \
+  || fail 'concurrent writer result differs from its sequential composition'
+
+# An unusable lock path refuses mutation rather than proceeding unlocked.
+export XDG_STATE_HOME="$actual_state"
+runs="$XDG_STATE_HOME/qq/observer/runs"
+events="$actual_events"
+ledger_lock="$(dirname "$events")/.lock"
+[ -f "$ledger_lock" ] || fail 'ledger writer lock file was not created'
+assert_equal 600 "$(stat -c '%a' "$ledger_lock")" 'ledger writer lock is not private'
+rm "$ledger_lock"
+mkdir "$ledger_lock"
+lock_run_4="$(make_run pr-64 64 guided 2026-12-04T10:03:00Z "$lock_episodes")"
+set +e
+"$OBSERVE" ledger-update --run "$lock_run_4" \
+  >"$tmp/lock-path.stdout" 2>"$tmp/lock-path.stderr"
+status=$?
+set -e
+assert_equal 65 "$status" 'ledger update proceeded without acquiring its writer lock'
+[ ! -e "$lock_run_4/.ledger-applied" ] \
+  || fail 'failed writer-lock acquisition fabricated ledger state'
+rm -rf "$ledger_lock"
+
 export XDG_STATE_HOME="$primary_state"
 runs="$primary_runs"
 events="$primary_events"

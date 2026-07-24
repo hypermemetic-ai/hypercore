@@ -1668,6 +1668,51 @@ def next_feed_sequence():
             os.close(directory)
 
 
+def open_ledger_writer_lock():
+    root = observer_store_root(create=True)
+    ledger_dir = root / "ledger"
+    ensure_directory(ledger_dir, root)
+    path = ledger_dir / ".lock"
+    try:
+        info = os.lstat(path)
+    except FileNotFoundError:
+        info = None
+    except OSError as error:
+        fail(f"cannot inspect ledger writer lock: {error}", 65)
+    if info is not None and not stat.S_ISREG(info.st_mode):
+        fail("ledger writer lock is not a regular file", 65)
+    directory = None
+    try:
+        directory = os.open(ledger_dir, os.O_RDONLY | os.O_DIRECTORY)
+        resolved = os.path.realpath(f"/proc/self/fd/{directory}")
+        if resolved != os.fspath(ledger_dir):
+            fail("ledger directory changed during writer lock open", 65)
+        flags = os.O_RDWR | os.O_CREAT | os.O_NONBLOCK
+        flags |= getattr(os, "O_NOFOLLOW", 0)
+        fd = os.open(path.name, flags, 0o600, dir_fd=directory)
+    except OSError as error:
+        fail(f"cannot open ledger writer lock: {error}", 65)
+    finally:
+        if directory is not None:
+            os.close(directory)
+    if not stat.S_ISREG(os.fstat(fd).st_mode):
+        os.close(fd)
+        fail("ledger writer lock is not a regular file", 65)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+    except OSError as error:
+        os.close(fd)
+        fail(f"cannot acquire ledger writer lock: {error}", 65)
+    return fd
+
+
+def close_ledger_writer_lock(fd):
+    try:
+        fcntl.flock(fd, fcntl.LOCK_UN)
+    finally:
+        os.close(fd)
+
+
 def repair_ledger_tail(fd):
     end = os.lseek(fd, 0, os.SEEK_END)
     if end == 0:
@@ -2685,28 +2730,38 @@ def finalize(values):
     emit({"status": "finalized", "run_dir": os.fspath(run_dir), "written": changed})
 
 
-if command == "assemble":
-    assemble(args)
-elif command == "verify-delivery":
-    verify_delivery(args)
-elif command == "render-doc":
-    render_doc(args)
-elif command == "finalize":
-    finalize(args)
-elif command == "ledger-update":
-    ledger_update(args)
-elif command == "ledger-rebuild":
-    ledger_rebuild(args)
-elif command == "digest":
-    digest(args)
-elif command == "mark-discussed":
-    mark_discussed(args)
-elif command == "rounds":
-    rounds(args)
-elif command == "record-comparison":
-    record_comparison(args)
-else:
-    fail(f"unknown package command: {command}")
+ledger_writer = None
+try:
+    if command in {
+        "finalize", "ledger-update", "ledger-rebuild", "mark-discussed",
+        "record-comparison",
+    }:
+        ledger_writer = open_ledger_writer_lock()
+    if command == "assemble":
+        assemble(args)
+    elif command == "verify-delivery":
+        verify_delivery(args)
+    elif command == "render-doc":
+        render_doc(args)
+    elif command == "finalize":
+        finalize(args)
+    elif command == "ledger-update":
+        ledger_update(args)
+    elif command == "ledger-rebuild":
+        ledger_rebuild(args)
+    elif command == "digest":
+        digest(args)
+    elif command == "mark-discussed":
+        mark_discussed(args)
+    elif command == "rounds":
+        rounds(args)
+    elif command == "record-comparison":
+        record_comparison(args)
+    else:
+        fail(f"unknown package command: {command}")
+finally:
+    if ledger_writer is not None:
+        close_ledger_writer_lock(ledger_writer)
 PY_ASSEMBLER
     ;;
 esac
