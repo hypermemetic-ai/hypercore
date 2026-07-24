@@ -1,14 +1,25 @@
 ---
 id: T-155
 title: Add one-command accountable Change handoff
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-07-24 07:27'
-updated_date: '2026-07-24 07:33'
+updated_date: '2026-07-24 09:18'
 labels: []
 dependencies: []
+references:
+  - 'https://github.com/hypermemetic-ai/qq/pull/234'
 documentation:
   - doc-90
+modified_files:
+  - README.md
+  - bin/qq-handoff
+  - bin/lib/qq-handoff.py
+  - extensions/index.ts
+  - extensions/qq-handoff.ts
+  - skills/deliver-change/SKILL.md
+  - tests/test-qq-handoff.sh
+  - tests/test-qq-handoff-extension.sh
 priority: high
 type: feature
 ordinal: 72000
@@ -36,11 +47,17 @@ Use the attached approved plan. Realign before adding Change creation, context i
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 The globally mounted qq extension registers `/handoff <Task-ID>` and invokes a tested qq engine directly without an LLM or prompt-template intermediary.
-- [ ] #2 The engine resolves exactly one same-Repository linked non-main checkout containing the nonterminal Task and refuses missing, ambiguous, detached, primary-main, ledger-less, or plan-less candidates before creating a tab.
-- [ ] #3 The engine refuses another active Pi owner in the target checkout, creates one fresh Pi tab in the persistent project home, submits the standard accountable-owner prompt, confirms the new session is working, and restores the caller’s original focus.
-- [ ] #4 Startup failure cleanup is bounded and evidence-preserving, and success returns a machine-readable receipt naming Task, branch, checkout, workspace, tab, pane, agent, and observed state.
-- [ ] #5 V1 cannot create or align a Task, branch, worktree, plan, or pull request; cannot inherit conversation context; and cannot launch non-Pi or cross-Repository sessions.
-- [ ] #6 Deterministic tests cover every refusal, duplicate-owner detection, prompt contents, focus restoration, cleanup boundary, and successful lifecycle, followed by a fresh live Herdr/Pi handoff probe.
-- [ ] #7 README and methodology guidance document `/handoff` as the standard transfer step and distinguish accountable-session handoff from delegated child execution.
+- [x] #1 The globally mounted qq extension registers `/handoff <Task-ID>` and invokes a tested qq engine directly without an LLM or prompt-template intermediary.
+- [x] #2 The engine resolves exactly one same-Repository linked non-main checkout containing the nonterminal Task and refuses missing, ambiguous, detached, primary-main, ledger-less, or plan-less candidates before creating a tab.
+- [x] #3 The engine refuses another active Pi owner in the target checkout, creates one fresh Pi tab in the persistent project home, submits the standard accountable-owner prompt, confirms the new session is working, and restores the caller’s original focus.
+- [x] #4 Startup failure cleanup is bounded and evidence-preserving, and success returns a machine-readable receipt naming Task, branch, checkout, workspace, tab, pane, agent, and observed state.
+- [x] #5 V1 cannot create or align a Task, branch, worktree, plan, or pull request; cannot inherit conversation context; and cannot launch non-Pi or cross-Repository sessions.
+- [x] #6 Deterministic tests cover every refusal, duplicate-owner detection, prompt contents, focus restoration, cleanup boundary, and successful lifecycle, followed by a fresh live Herdr/Pi handoff probe.
+- [x] #7 README and methodology guidance document `/handoff` as the standard transfer step and distinguish accountable-session handoff from delegated child execution.
 <!-- AC:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Implemented the fail-closed qq-handoff JSON engine and globally mounted direct /handoff command for existing aligned Changes. Deterministic refusal/transaction fixtures and the complete 32-test suite pass. A live Pi 0.81.1 / Herdr 0.7.5 probe reached a fresh working session, verified the fixed prompt and session receipt, restored exact caller focus, and retired only disposable resources. Fresh-context review findings were reproduced and fixed; the independent fix-delta review passed. Pull request: https://github.com/hypermemetic-ai/qq/pull/234.
+<!-- SECTION:FINAL_SUMMARY:END -->
