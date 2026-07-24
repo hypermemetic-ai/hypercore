@@ -565,6 +565,21 @@ class RuntimeTests(unittest.TestCase):
             execute.assert_called_once_with(binary, [binary, "--version"])
         self.assertEqual(probe_parents, [None, None])
 
+    def test_install_and_rollback_keep_colocated_identity_scratch(self) -> None:
+        first_artifact = self.fixture.artifact(self.temp, "colocated-one")
+        second_artifact = self.fixture.artifact(self.temp, "colocated-two")
+        unavailable_ambient_tmp = self.temp / "absent-ambient-tmp"
+        with mock.patch.object(tempfile, "tempdir", str(unavailable_ambient_tmp)):
+            first = self.fixture.engine.install(first_artifact)
+            second = self.fixture.engine.install(second_artifact)
+            rolled_back = self.fixture.engine.rollback()
+        self.assertEqual(rolled_back["generation"], first["generation"])
+        self.assertEqual(
+            os.readlink(self.fixture.spec.data_root / "previous"),
+            f"generations/{second['generation']}",
+        )
+        self.assertFalse(unavailable_ambient_tmp.exists())
+
     def test_generation_root_refuses_before_install_or_rollback_mutation(self) -> None:
         artifact = self.fixture.artifact(self.temp, "generation-root")
         data = self.fixture.spec.data_root
