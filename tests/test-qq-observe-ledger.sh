@@ -73,7 +73,8 @@ jq -e '
   .schema == "qq-observer.ledger-applied" and .schema_version == 1
   and (.analysis_sha256 | test("^[0-9a-f]{64}$"))
   and (.written_at | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"))
-' "$run_1/.ledger-applied" >/dev/null || fail 'ledger marker lacks its internal write time'
+  and .written_seq == 1
+' "$run_1/.ledger-applied" >/dev/null || fail 'ledger marker lacks its durable write order'
 jq -s -e '
   [.[] | select(.type == "finding_seen")]
   | length == 2
@@ -104,16 +105,26 @@ jq -e '.already_applied == true and .findings == 0 and .promoted == 0' \
   "$tmp/update-idempotent.json" >/dev/null || fail 'idempotent update result is wrong'
 [ -f "$run_2/.ledger-applied" ] || fail 'ledger-applied marker was not written'
 
-# A retry after events were fsynced but before the marker was written is a no-op.
-rm "$run_2/.ledger-applied"
+# A retry after the source marker was fsynced but before its events completes the feed.
+run_2_seq="$(jq '.written_seq' "$run_2/.ledger-applied")"
+cp "$run_2/.ledger-applied" "$tmp/run-2-marker-before-retry.json"
 before="$(wc -l <"$events")"
-"$OBSERVE" ledger-update --run "$run_2" >"$tmp/update-after-marker-crash.json"
+jq -c --argjson seq "$run_2_seq" 'select(.written_seq != $seq)' "$events" \
+  >"$tmp/events-before-run-2.jsonl"
+mv "$tmp/events-before-run-2.jsonl" "$events"
+chmod 600 "$events"
+"$OBSERVE" ledger-update --run "$run_2" >"$tmp/update-after-event-crash.json"
 assert_equal "$before" "$(wc -l <"$events")" \
-  'marker-write crash recovery duplicated finding events'
-jq -e '.findings == 0 and .promoted == 0 and .already_applied == false' \
-  "$tmp/update-after-marker-crash.json" >/dev/null \
-  || fail 'marker-write crash recovery has the wrong result'
-[ -f "$run_2/.ledger-applied" ] || fail 'marker-write crash recovery did not write the marker'
+  'source-first crash recovery restored the wrong event count'
+jq -e '.findings == 2 and .promoted == 2 and .already_applied == false' \
+  "$tmp/update-after-event-crash.json" >/dev/null \
+  || fail 'source-first crash recovery has the wrong result'
+cmp "$tmp/run-2-marker-before-retry.json" "$run_2/.ledger-applied" >/dev/null \
+  || fail 'source-first crash recovery rewrote the durable marker'
+jq -s -e --argjson seq "$run_2_seq" '
+  all(.[] | select((.type == "finding_seen" and .pr == 2) or .type == "promoted");
+      .written_seq == $seq)
+' "$events" >/dev/null || fail 'recovered events lost their source marker sequence'
 
 # Successful finalize feeds the ledger without a separate ledger-update command.
 run_3="$runs/pr-3"
@@ -298,6 +309,7 @@ jq -e --arg guided "$run_5" --arg blind "$run_5_blind" '
   .schema == "qq-observer.comparison" and .schema_version == 1
   and .guided == $guided and .blind == $blind
   and (.written_at | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"))
+  and (.written_seq | type == "number") and .written_seq > 0
   and (.candidates | length == 3)
 ' "$run_5/comparison.json" >/dev/null || fail 'comparison record has the wrong shape'
 jq -s -e '
@@ -471,20 +483,25 @@ rebuild_unmarked="$(make_run pr-24 24 guided 2026-10-24T10:00:00Z "$first_episod
 "$OBSERVE" ledger-update --run "$rebuild_20" >"$tmp/rebuild-update-20.json"
 "$OBSERVE" mark-discussed --run "$rebuild_21" --outcomes "$outcomes" \
   >"$tmp/rebuild-discussed-21.json"
-jq -c '.ts = "2026-10-21T10:00:00.300Z"' "$rebuild_21/discussed.json" \
-  >"$tmp/rebuild-discussed-record-21.json"
-mv "$tmp/rebuild-discussed-record-21.json" "$rebuild_21/discussed.json"
 "$OBSERVE" record-comparison --guided "$rebuild_20" --blind "$rebuild_20_blind" \
   >"$tmp/rebuild-comparison-20.json"
-jq -c '.written_at = "2026-10-21T10:00:00.400Z"' "$rebuild_20/comparison.json" \
-  >"$tmp/rebuild-comparison-record-20.json"
-mv "$tmp/rebuild-comparison-record-20.json" "$rebuild_20/comparison.json"
-touch -d '2030-01-01T00:00:00.100Z' "$rebuild_21/.ledger-applied"
-touch -d '2030-01-01T00:00:00.000Z' "$rebuild_20/.ledger-applied"
-touch -d '2030-01-01T00:00:00.000Z' \
-  "$rebuild_21/discussed.json" "$rebuild_20/comparison.json"
-jq -cS 'if .type == "disposition" or .type == "signal_tune_candidate" then del(.ts) else . end' \
-  "$events" >"$tmp/pre-loss-events.jsonl"
+jq -s -e 'map(.written_seq) == [1,2,3,4]' \
+  "$rebuild_21/.ledger-applied" "$rebuild_20/.ledger-applied" \
+  "$rebuild_21/discussed.json" "$rebuild_20/comparison.json" >/dev/null \
+  || fail 'ledger-feeding records did not receive monotonic cross-kind sequences'
+assert_equal 4 "$(cat "$XDG_STATE_HOME/qq/observer/feed-seq")" \
+  'feed sequence counter did not retain the latest allocated sequence'
+jq -s -e '
+  all(.[] | select(.type == "finding_seen" and .pr == 21); .written_seq == 1)
+  and all(.[] | select((.type == "finding_seen" and .pr == 20) or .type == "promoted"); .written_seq == 2)
+  and all(.[] | select(.type == "disposition"); .written_seq == 3)
+  and all(.[] | select(.type == "signal_tune_candidate"); .written_seq == 4)
+' "$events" >/dev/null || fail 'ledger events do not carry their source record sequence'
+touch -d '2030-01-01T00:00:00.400Z' "$rebuild_21/.ledger-applied"
+touch -d '2030-01-01T00:00:00.300Z' "$rebuild_20/.ledger-applied"
+touch -d '2030-01-01T00:00:00.200Z' "$rebuild_21/discussed.json"
+touch -d '2030-01-01T00:00:00.100Z' "$rebuild_20/comparison.json"
+cp "$events" "$tmp/pre-loss-events.jsonl"
 
 "$OBSERVE" ledger-rebuild >"$tmp/rebuild-intact.json"
 jq -e '
@@ -493,15 +510,14 @@ jq -e '
 ' "$tmp/rebuild-intact.json" >/dev/null || fail 'intact-ledger rebuild was not a no-op'
 
 rm -rf "$(dirname "$events")"
+rm "$XDG_STATE_HOME/qq/observer/feed-seq"
 "$OBSERVE" ledger-rebuild >"$tmp/rebuilt.json"
 jq -e '
   .runs_seen == 6 and .runs_replayed == 2
   and .events_appended == 7 and .events_skipped == 0
 ' "$tmp/rebuilt.json" >/dev/null || fail 'lost-ledger rebuild summary is wrong'
-jq -cS 'if .type == "disposition" or .type == "signal_tune_candidate" then del(.ts) else . end' \
-  "$events" >"$tmp/rebuilt-events.jsonl"
-cmp "$tmp/pre-loss-events.jsonl" "$tmp/rebuilt-events.jsonl" >/dev/null \
-  || fail 'chronological rebuild did not reproduce the pre-loss event sequence'
+cmp "$tmp/pre-loss-events.jsonl" "$events" >/dev/null \
+  || fail 'sequence-ordered rebuild did not reproduce the pre-loss ledger bytes'
 jq -s -e '
   ([.[] | .type] | sort) ==
     ["disposition","finding_seen","finding_seen","finding_seen","finding_seen","promoted","signal_tune_candidate"]
@@ -510,10 +526,6 @@ jq -s -e '
   and ([.[] | select(.type == "signal_tune_candidate")] | length == 1
        and .[0].recurrence_key == "beta" and .[0].direction == "prune")
 ' "$events" >/dev/null || fail 'rebuild did not restore every durable event kind'
-jq -s -e '
-  ([.[] | select(.type == "disposition") | .ts] == ["2026-10-21T10:00:00.300Z"])
-  and ([.[] | select(.type == "signal_tune_candidate") | .ts] == ["2026-10-21T10:00:00.400Z"])
-' "$events" >/dev/null || fail 'replayed durable events do not use internal record timestamps'
 
 before="$(wc -l <"$events")"
 "$OBSERVE" ledger-rebuild >"$tmp/rebuilt-again.json"
@@ -523,7 +535,33 @@ jq -e '
   and .events_appended == 0 and .events_skipped == 7
 ' "$tmp/rebuilt-again.json" >/dev/null || fail 'second rebuild was not a full no-op'
 
-# Equal mtimes cannot reverse same-second disposition chronology during recovery.
+# Loss of both derived state and its counter recovers above every source sequence.
+rebuild_25="$(make_run pr-25 25 guided 2026-10-25T10:00:00Z "$first_episodes")"
+rm -rf "$(dirname "$events")"
+rm -f "$XDG_STATE_HOME/qq/observer/feed-seq"
+"$OBSERVE" ledger-update --run "$rebuild_25" >"$tmp/rebuild-update-25.json"
+jq -e '.written_seq == 5' "$rebuild_25/.ledger-applied" >/dev/null \
+  || fail 'missing feed counter did not recover to max existing written_seq plus one'
+assert_equal 5 "$(cat "$XDG_STATE_HOME/qq/observer/feed-seq")" \
+  'recovered feed counter has the wrong value'
+jq -s -e 'length == 2 and all(.[]; .written_seq == 5)' "$events" >/dev/null \
+  || fail 'post-recovery events collided with pre-loss record sequences'
+
+# Existing counter garbage refuses a write rather than guessing an order.
+rebuild_26="$(make_run pr-26 26 guided 2026-10-26T10:00:00Z "$first_episodes")"
+rm "$XDG_STATE_HOME/qq/observer/feed-seq"
+printf 'not-a-sequence\n' >"$XDG_STATE_HOME/qq/observer/feed-seq"
+set +e
+"$OBSERVE" ledger-update --run "$rebuild_26" \
+  >"$tmp/garbage-seq.stdout" 2>"$tmp/garbage-seq.stderr"
+status=$?
+set -e
+assert_equal 65 "$status" 'garbage feed sequence was accepted'
+assert_file_contains "$tmp/garbage-seq.stderr" 'feed sequence contains garbage'
+[ ! -e "$rebuild_26/.ledger-applied" ] \
+  || fail 'garbage feed sequence fabricated a ledger marker'
+
+# Nanosecond mtimes preserve same-timestamp legacy disposition chronology during recovery.
 export XDG_STATE_HOME="$tmp/chronology-state"
 runs="$XDG_STATE_HOME/qq/observer/runs"
 events="$XDG_STATE_HOME/qq/observer/ledger/events.jsonl"
@@ -533,7 +571,7 @@ chronology_2="$(make_run pr-2 2 guided 2026-11-02T10:00:00Z "$chronology_episode
 chronology_3="$(make_run pr-3 3 guided 2026-11-03T10:00:00Z "$chronology_episodes")"
 "$OBSERVE" ledger-update --run "$chronology_2" >"$tmp/chronology-update-2.json"
 "$OBSERVE" ledger-update --run "$chronology_3" >"$tmp/chronology-update-3.json"
-jq -c 'del(.written_at)' "$chronology_3/.ledger-applied" \
+jq -c 'del(.written_at, .written_seq)' "$chronology_3/.ledger-applied" \
   >"$tmp/chronology-legacy-marker-3.json"
 mv "$tmp/chronology-legacy-marker-3.json" "$chronology_3/.ledger-applied"
 touch -d '2099-01-01T00:00:00.000Z' "$chronology_3/.ledger-applied"
@@ -545,18 +583,18 @@ jq -cn '[{recurrence_key:"chronology",verdict:"rejected",task_refs:[],note:"Newe
   >"$rejected_outcome"
 jq -cn --argjson outcomes "$(cat "$accepted_outcome")" '{
   schema:"qq-observer.ledger-event",schema_version:1,
-  ts:"2026-11-04T10:00:00.100Z",type:"disposition",pr:3,outcomes:$outcomes
+  ts:"2026-11-04T10:00:00.000Z",type:"disposition",pr:3,outcomes:$outcomes
 }' >"$chronology_3/discussed.json"
 "$OBSERVE" mark-discussed --run "$chronology_3" --outcomes "$accepted_outcome" \
   >"$tmp/chronology-discussed-3.json"
 jq -cn --argjson outcomes "$(cat "$rejected_outcome")" '{
   schema:"qq-observer.ledger-event",schema_version:1,
-  ts:"2026-11-04T10:00:00.900Z",type:"disposition",pr:2,outcomes:$outcomes
+  ts:"2026-11-04T10:00:00.000Z",type:"disposition",pr:2,outcomes:$outcomes
 }' >"$chronology_2/discussed.json"
 "$OBSERVE" mark-discussed --run "$chronology_2" --outcomes "$rejected_outcome" \
   >"$tmp/chronology-discussed-2.json"
-touch -d '2030-01-01T00:00:00.000Z' \
-  "$chronology_3/discussed.json" "$chronology_2/discussed.json"
+touch -d '2030-01-01T00:00:00.000000100Z' "$chronology_3/discussed.json"
+touch -d '2030-01-01T00:00:00.000000900Z' "$chronology_2/discussed.json"
 "$OBSERVE" digest >"$tmp/chronology-before-loss.md"
 assert_file_contains "$tmp/chronology-before-loss.md" \
   '| 3 | 2 | `chronology` | Chronology opportunity | `waste` | #2, #3 | high, high | rejected (×0.5) |' \
@@ -623,6 +661,36 @@ rm -rf "$(dirname "$events")"
 jq -cS . "$events" >"$tmp/comparison-after-loss.jsonl"
 cmp "$tmp/comparison-before-loss.jsonl" "$tmp/comparison-after-loss.jsonl" >/dev/null \
   || fail 'comparison event set changed after rebuild from durable record'
+
+# Identical candidates in two durable comparison records are globally unique.
+export XDG_STATE_HOME="$tmp/comparison-dedupe-state"
+runs="$XDG_STATE_HOME/qq/observer/runs"
+events="$XDG_STATE_HOME/qq/observer/ledger/events.jsonl"
+dedupe_common="$(make_episode dedupe-common friction 'Dedupe common episode')"
+dedupe_only="$(make_episode dedupe-only waste 'Dedupe guided-only episode')"
+dedupe_guided_episodes="$(jq -cn --argjson common "$dedupe_common" --argjson only "$dedupe_only" '[$common,$only]')"
+dedupe_blind_episodes="$(jq -cn --argjson common "$dedupe_common" '[$common]')"
+dedupe_guided_1="$(make_run pr-40-a 40 guided 2026-12-02T10:00:00Z "$dedupe_guided_episodes")"
+dedupe_blind_1="$(make_run pr-40-a-blind 40 blind 2026-12-02T10:01:00Z "$dedupe_blind_episodes")"
+dedupe_guided_2="$(make_run pr-40-b 40 guided 2026-12-02T10:02:00Z "$dedupe_guided_episodes")"
+dedupe_blind_2="$(make_run pr-40-b-blind 40 blind 2026-12-02T10:03:00Z "$dedupe_blind_episodes")"
+"$OBSERVE" record-comparison --guided "$dedupe_guided_1" --blind "$dedupe_blind_1" \
+  >"$tmp/comparison-dedupe-1.json"
+"$OBSERVE" record-comparison --guided "$dedupe_guided_2" --blind "$dedupe_blind_2" \
+  >"$tmp/comparison-dedupe-2.json"
+jq -s -e 'map(.written_seq) == [1,2]' \
+  "$dedupe_guided_1/comparison.json" "$dedupe_guided_2/comparison.json" >/dev/null \
+  || fail 'duplicate comparison records did not retain distinct source sequences'
+assert_equal 1 "$(jq -s '[.[] | select(.type == "signal_tune_candidate")] | length' "$events")" \
+  'duplicate comparison records emitted duplicate live candidates'
+jq -cS . "$events" >"$tmp/comparison-dedupe-before-loss.jsonl"
+rm -rf "$(dirname "$events")"
+"$OBSERVE" ledger-rebuild >"$tmp/comparison-dedupe-rebuild.json"
+assert_equal 1 "$(jq -s '[.[] | select(.type == "signal_tune_candidate")] | length' "$events")" \
+  'duplicate comparison records emitted duplicate rebuilt candidates'
+jq -cS . "$events" >"$tmp/comparison-dedupe-after-loss.jsonl"
+cmp "$tmp/comparison-dedupe-before-loss.jsonl" "$tmp/comparison-dedupe-after-loss.jsonl" >/dev/null \
+  || fail 'globally deduplicated comparison rebuild was not byte-exact'
 
 export XDG_STATE_HOME="$primary_state"
 runs="$primary_runs"

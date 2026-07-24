@@ -45,7 +45,9 @@ facts, signals, and validate-analysis accept Pi v3 session JSONL. Signal
 entries and unknown-entry citations are 1-based physical JSONL line numbers.
 validate-analysis requires one --facts SESSION_PATH=FACTS_PATH pair per session.
 facts emits token fields as integer-rounded accumulated totals (Python half-to-even);
-fields with no observed value remain null.
+fields with no observed value remain null. Ledger events are stored at
+<observer-store>/ledger/events.jsonl; durable feed order is stored at
+<observer-store>/feed-seq.
 EOF
   exit 64
 }
@@ -1419,6 +1421,10 @@ def valid_outcomes(value):
     return True
 
 
+def valid_written_seq(value):
+    return isinstance(value, int) and not isinstance(value, bool) and value > 0
+
+
 def valid_ledger_event(item):
     if (
         not isinstance(item, dict)
@@ -1426,6 +1432,7 @@ def valid_ledger_event(item):
         or item.get("schema_version") != LEDGER_VERSION
         or not isinstance(item.get("ts"), str)
         or not isinstance(item.get("type"), str)
+        or ("written_seq" in item and not valid_written_seq(item["written_seq"]))
     ):
         return False
     try:
@@ -1491,10 +1498,15 @@ def valid_ledger_marker(item, analysis_sha256):
         or set(item) not in (
             {"schema", "schema_version", "analysis_sha256"},
             {"schema", "schema_version", "analysis_sha256", "written_at"},
+            {
+                "schema", "schema_version", "analysis_sha256", "written_at",
+                "written_seq",
+            },
         )
         or item.get("schema") != "qq-observer.ledger-applied"
         or item.get("schema_version") != 1
         or item.get("analysis_sha256") != analysis_sha256
+        or ("written_seq" in item and not valid_written_seq(item["written_seq"]))
     ):
         return False
     if "written_at" not in item:
@@ -1509,17 +1521,19 @@ def valid_ledger_marker(item, analysis_sha256):
 
 
 def valid_comparison_record(item):
+    required = {
+        "schema", "schema_version", "guided", "blind", "written_at", "candidates",
+    }
     if (
         not isinstance(item, dict)
-        or set(item) != {
-            "schema", "schema_version", "guided", "blind", "written_at", "candidates",
-        }
+        or set(item) not in (required, required | {"written_seq"})
         or item.get("schema") != COMPARISON_SCHEMA
         or item.get("schema_version") != COMPARISON_VERSION
         or not isinstance(item.get("guided"), str) or not item["guided"]
         or not isinstance(item.get("blind"), str) or not item["blind"]
         or not isinstance(item.get("written_at"), str)
         or not isinstance(item.get("candidates"), list)
+        or ("written_seq" in item and not valid_written_seq(item["written_seq"]))
     ):
         return False
     try:
@@ -1539,6 +1553,8 @@ def valid_comparison_record(item):
             "schema": LEDGER_SCHEMA, "schema_version": LEDGER_VERSION,
             "ts": item["written_at"], "type": "signal_tune_candidate", **candidate,
         }
+        if "written_seq" in item:
+            event["written_seq"] = item["written_seq"]
         if not valid_ledger_event(event):
             return False
         identity = json.dumps(candidate, separators=(",", ":"), sort_keys=True)
@@ -1561,6 +1577,95 @@ def mtime_timestamp(info):
         microseconds=nanoseconds // 1000,
     )
     return value.isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+def maximum_recorded_sequence():
+    maximum = 0
+    for run_dir in observer_run_directories():
+        for name in (".ledger-applied", "discussed.json", "comparison.json"):
+            path = run_dir / name
+            if not os.path.lexists(path):
+                continue
+            record = json_document(
+                read_regular(path, f"feed record {path}"), f"feed record {path}",
+            )
+            if not isinstance(record, dict):
+                fail(f"feed record has the wrong shape: {path}", 65)
+            if "written_seq" not in record:
+                continue
+            written_seq = record["written_seq"]
+            if not valid_written_seq(written_seq):
+                fail(f"invalid written_seq at {path}", 65)
+            maximum = max(maximum, written_seq)
+    return maximum
+
+
+def next_feed_sequence():
+    root = observer_store_root(create=True)
+    path = root / "feed-seq"
+    try:
+        directory = os.open(root, os.O_RDONLY | os.O_DIRECTORY)
+    except OSError as error:
+        fail(f"cannot open observer store for feed sequence: {error}", 65)
+    try:
+        fcntl.flock(directory, fcntl.LOCK_EX)
+    except OSError as error:
+        os.close(directory)
+        fail(f"cannot lock observer store for feed sequence: {error}", 65)
+    fd = None
+    try:
+        try:
+            info = os.lstat(path)
+            created = False
+        except FileNotFoundError:
+            info = None
+            created = True
+        except OSError as error:
+            fail(f"cannot inspect observer feed sequence: {error}", 65)
+        if info is not None and not stat.S_ISREG(info.st_mode):
+            fail("observer feed sequence is not a regular file", 65)
+        flags = os.O_RDWR | os.O_NONBLOCK | getattr(os, "O_NOFOLLOW", 0)
+        if created:
+            flags |= os.O_CREAT
+        try:
+            fd = os.open(path, flags, 0o600)
+        except OSError as error:
+            fail(f"cannot open observer feed sequence: {error}", 65)
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            fail("observer feed sequence is not a regular file", 65)
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        if created:
+            if os.fstat(fd).st_size != 0:
+                fail("observer feed sequence changed during creation", 65)
+            written_seq = maximum_recorded_sequence() + 1
+        else:
+            try:
+                size = os.fstat(fd).st_size
+                if size < 2 or size > 1024:
+                    fail("observer feed sequence contains garbage", 65)
+                raw = os.pread(fd, size, 0)
+            except OSError as error:
+                fail(f"cannot read observer feed sequence: {error}", 65)
+            if len(raw) != size or not re.fullmatch(rb"[1-9][0-9]*\n", raw):
+                fail("observer feed sequence contains garbage", 65)
+            written_seq = int(raw[:-1]) + 1
+        data = f"{written_seq}\n".encode("ascii")
+        try:
+            if os.pwrite(fd, data, 0) != len(data):
+                fail("cannot write complete observer feed sequence", 65)
+            os.fsync(fd)
+            if created:
+                os.fsync(directory)
+        except OSError as error:
+            fail(f"cannot write observer feed sequence: {error}", 65)
+        return written_seq
+    finally:
+        if fd is not None:
+            os.close(fd)
+        try:
+            fcntl.flock(directory, fcntl.LOCK_UN)
+        finally:
+            os.close(directory)
 
 
 def repair_ledger_tail(fd):
@@ -1590,6 +1695,7 @@ def open_ledger_events():
     # The ledger is derived from run packages. Appends and tail repair protect
     # process-crash modes; power-loss metadata ordering is an accepted residual
     # risk. Recovery is to remove this directory and run ledger-rebuild.
+    # Feed order is carried by written_seq, never inferred from timestamps.
     ledger_dir = root / "ledger"
     ensure_directory(ledger_dir, root)
     path = ledger_dir / "events.jsonl"
@@ -1683,7 +1789,9 @@ def append_ledger_events(fd, events):
         fail(f"cannot append ledger events: {error}", 65)
 
 
-def ledger_update_run(run_dir, skipped_promotions=None):
+def ledger_update_run(
+    run_dir, skipped_promotions=None, seen_findings=None, seen_promotions=None,
+):
     analysis_path = run_dir / "analysis.json"
     if not regular_file(analysis_path):
         fail(f"finalized analysis is missing: {analysis_path}", 65)
@@ -1694,16 +1802,9 @@ def ledger_update_run(run_dir, skipped_promotions=None):
     marker = run_dir / ".ledger-applied"
     analysis_sha256 = hashlib.sha256(raw).hexdigest()
     old_marker = existing_bytes(marker)
-    if old_marker is None:
-        marker_record = {
-            "schema": "qq-observer.ledger-applied", "schema_version": 1,
-            "analysis_sha256": analysis_sha256, "written_at": utc_now(),
-        }
-        marker_data = (
-            json.dumps(marker_record, separators=(",", ":"), sort_keys=True) + "\n"
-        ).encode("utf-8")
-        marker_exists = False
-    else:
+    marker_record = None
+    marker_exists = old_marker is not None
+    if old_marker is not None:
         marker_record = json_document(old_marker, "ledger-applied marker")
         canonical_marker = (
             json.dumps(marker_record, separators=(",", ":"), sort_keys=True) + "\n"
@@ -1713,18 +1814,23 @@ def ledger_update_run(run_dir, skipped_promotions=None):
             or old_marker != canonical_marker
         ):
             fail(f"append-only conflict at {marker}", 65)
-        marker_data = old_marker
-        marker_exists = True
     fd = open_ledger_events()
     try:
         previous, _ = read_ledger_events(fd)
-        already_promoted = {
-            event["recurrence_key"] for event in previous if event["type"] == "promoted"
-        }
-        existing_findings = {
-            (event["pr"], event["recurrence_key"], event["kind"], event["title"])
-            for event in previous if event["type"] == "finding_seen"
-        }
+        written_seq = (
+            None if marker_record is None else marker_record.get("written_seq")
+        )
+        sequence_fields = {} if written_seq is None else {"written_seq": written_seq}
+        if seen_promotions is None:
+            seen_promotions = {
+                event["recurrence_key"]
+                for event in previous if event["type"] == "promoted"
+            }
+        if seen_findings is None:
+            seen_findings = {
+                (event["pr"], event["recurrence_key"], event["kind"], event["title"])
+                for event in previous if event["type"] == "finding_seen"
+            }
         prs_by_key = {}
         kinds_by_key = {}
         for event in previous:
@@ -1749,13 +1855,14 @@ def ledger_update_run(run_dir, skipped_promotions=None):
                 title=episode["title"], rank=rank, confidence=confidence,
                 no_signal=no_signal,
                 cost={field: cost[field] for field in ("turns", "tokens", "duration_ms")},
+                **sequence_fields,
             )
             if not valid_ledger_event(event):
                 fail(f"analysis episode {index} cannot be represented as a ledger event", 65)
             identity = (pr, key, kind, episode["title"])
-            if identity not in existing_findings:
+            if identity not in seen_findings:
                 findings.append(event)
-                existing_findings.add(identity)
+                seen_findings.add(identity)
             else:
                 events_skipped += 1
             prs_by_key.setdefault(key, set()).add(pr)
@@ -1765,16 +1872,28 @@ def ledger_update_run(run_dir, skipped_promotions=None):
             prs = sorted(prs_by_key[key])
             if len(prs) < 2:
                 continue
-            if key not in already_promoted:
+            if key not in seen_promotions:
                 promotions.append(ledger_event(
                     "promoted", ts=timestamp, recurrence_key=key,
-                    kind=kinds_by_key[key], prs=prs,
+                    kind=kinds_by_key[key], prs=prs, **sequence_fields,
                 ))
+                seen_promotions.add(key)
             elif skipped_promotions is not None and key not in skipped_promotions:
                 events_skipped += 1
                 skipped_promotions.add(key)
+        if marker_record is None:
+            marker_record = {
+                "schema": "qq-observer.ledger-applied", "schema_version": 1,
+                "analysis_sha256": analysis_sha256, "written_at": utc_now(),
+                "written_seq": next_feed_sequence(),
+            }
+            marker_data = (
+                json.dumps(marker_record, separators=(",", ":"), sort_keys=True) + "\n"
+            ).encode("utf-8")
+            atomic_append(marker, marker_data)
+            for event in findings + promotions:
+                event["written_seq"] = marker_record["written_seq"]
         append_ledger_events(fd, findings + promotions)
-        atomic_append(marker, marker_data)
         return {
             "findings": len(findings), "promoted": len(promotions),
             "events_skipped": events_skipped,
@@ -1809,21 +1928,25 @@ def comparison_candidate_identity(event):
     )
 
 
-def replay_record_timestamp(path, info, field, label):
+def replay_record_metadata(path, info, field, label):
     record = json_document(read_regular(path, label), label)
     timestamp = record.get(field) if isinstance(record, dict) else None
     if timestamp is None:
-        return mtime_timestamp(info)
-    if not isinstance(timestamp, str):
+        timestamp = mtime_timestamp(info)
+    elif not isinstance(timestamp, str):
         fail(f"invalid internal timestamp at {path}", 65)
     try:
-        value = time_value(timestamp)
+        timestamp_value = time_value(timestamp)
     except ValueError:
         fail(f"invalid internal timestamp at {path}", 65)
-    return value.isoformat(timespec="milliseconds").replace("+00:00", "Z")
+    has_written_seq = isinstance(record, dict) and "written_seq" in record
+    written_seq = record["written_seq"] if has_written_seq else None
+    if has_written_seq and not valid_written_seq(written_seq):
+        fail(f"invalid written_seq at {path}", 65)
+    return timestamp, timestamp_value, written_seq
 
 
-def replay_disposition(run_dir, timestamp, existing):
+def replay_disposition(run_dir, timestamp, written_seq, existing):
     path = run_dir / "discussed.json"
     mark = json_document(read_regular(path, "discussed mark"), "discussed mark")
     pr, _, _ = package_identity(run_dir)
@@ -1835,15 +1958,17 @@ def replay_disposition(run_dir, timestamp, existing):
     identity = (pr, json.dumps(mark["outcomes"], separators=(",", ":"), sort_keys=True))
     if identity in existing:
         return 0, 1
+    sequence_fields = {} if written_seq is None else {"written_seq": written_seq}
     event = ledger_event(
         "disposition", ts=timestamp, pr=pr, outcomes=mark["outcomes"],
+        **sequence_fields,
     )
     existing.add(identity)
     append_events([event])
     return 1, 0
 
 
-def replay_comparison(run_dir, timestamp, available):
+def replay_comparison(run_dir, timestamp, written_seq, existing):
     path = run_dir / "comparison.json"
     record = json_document(read_regular(path, "comparison record"), "comparison record")
     pr, variant, _ = package_identity(run_dir)
@@ -1856,16 +1981,19 @@ def replay_comparison(run_dir, timestamp, available):
         fail(f"invalid comparison record at {path}", 65)
     events = []
     skipped = 0
+    sequence_fields = {} if written_seq is None else {"written_seq": written_seq}
     for candidate in record["candidates"]:
         identity = comparison_candidate_identity(candidate)
-        if available.get(identity, 0):
-            available[identity] -= 1
+        if identity in existing:
             skipped += 1
             continue
-        event = ledger_event("signal_tune_candidate", ts=timestamp, **candidate)
+        event = ledger_event(
+            "signal_tune_candidate", ts=timestamp, **candidate, **sequence_fields,
+        )
         if not valid_ledger_event(event):
             fail(f"invalid comparison candidate at {path}", 65)
         events.append(event)
+        existing.add(identity)
     append_events(events)
     return len(events), skipped
 
@@ -1876,6 +2004,7 @@ def ledger_rebuild(values):
     run_dirs = observer_run_directories()
     replay_items = []
     replayed_runs = set()
+    sequenced_records = {}
     for run_dir in run_dirs:
         run_items = []
         analysis = run_dir / "analysis.json"
@@ -1885,9 +2014,11 @@ def ledger_rebuild(values):
             and regular_file(analysis) and regular_file(marker)
         ):
             info = os.lstat(marker)
+            timestamp, timestamp_value, written_seq = replay_record_metadata(
+                marker, info, "written_at", "ledger-applied marker",
+            )
             run_items.append((
-                "finding_seen", info,
-                replay_record_timestamp(marker, info, "written_at", "ledger-applied marker"),
+                "finding_seen", info, timestamp, timestamp_value, written_seq,
             ))
         for name, kind, field, label in (
             ("discussed.json", "disposition", "ts", "discussed mark"),
@@ -1901,51 +2032,73 @@ def ledger_rebuild(values):
                     fail(f"cannot inspect replay record {path}: {error}", 65)
                 if not stat.S_ISREG(info.st_mode):
                     fail(f"replay record is not a regular file: {path}", 65)
+                timestamp, timestamp_value, written_seq = replay_record_metadata(
+                    path, info, field, label,
+                )
                 run_items.append((
-                    kind, info, replay_record_timestamp(path, info, field, label),
+                    kind, info, timestamp, timestamp_value, written_seq,
                 ))
         if run_items:
             pr, _, _ = package_identity(run_dir)
-            replay_items.extend(
-                (time_value(timestamp), pr, kind, run_dir, timestamp)
-                for kind, _, timestamp in run_items
-            )
+            for kind, info, timestamp, timestamp_value, written_seq in run_items:
+                if written_seq is None:
+                    sort_key = (
+                        0, timestamp_value, info.st_mtime_ns, pr, kind,
+                    )
+                else:
+                    if written_seq in sequenced_records:
+                        fail(
+                            f"duplicate written_seq {written_seq} at "
+                            f"{sequenced_records[written_seq]} and {run_dir}", 65,
+                        )
+                    sequenced_records[written_seq] = run_dir
+                    sort_key = (1, written_seq)
+                replay_items.append((
+                    sort_key, kind, run_dir, timestamp, written_seq,
+                ))
             replayed_runs.add(run_dir)
-    replay_items.sort(key=lambda item: item[:3])
+    replay_items.sort(key=lambda item: item[0])
 
     fd = open_ledger_events()
     try:
         previous, _ = read_ledger_events(fd)
     finally:
         close_ledger_events(fd)
+    existing_findings = {
+        (event["pr"], event["recurrence_key"], event["kind"], event["title"])
+        for event in previous if event["type"] == "finding_seen"
+    }
+    existing_promotions = {
+        event["recurrence_key"] for event in previous if event["type"] == "promoted"
+    }
     existing_dispositions = {
         (event["pr"], json.dumps(event["outcomes"], separators=(",", ":"), sort_keys=True))
         for event in previous if event["type"] == "disposition"
     }
-    available_candidates = {}
-    for event in previous:
-        if event["type"] != "signal_tune_candidate":
-            continue
-        identity = comparison_candidate_identity(event)
-        available_candidates[identity] = available_candidates.get(identity, 0) + 1
+    existing_candidates = {
+        comparison_candidate_identity(event)
+        for event in previous if event["type"] == "signal_tune_candidate"
+    }
 
     events_appended = 0
     events_skipped = 0
     skipped_promotions = set()
-    for _, _, kind, run_dir, timestamp in replay_items:
+    for _, kind, run_dir, timestamp, written_seq in replay_items:
         if kind == "finding_seen":
-            result = ledger_update_run(run_dir, skipped_promotions)
+            result = ledger_update_run(
+                run_dir, skipped_promotions, existing_findings, existing_promotions,
+            )
             events_appended += result["findings"] + result["promoted"]
             events_skipped += result["events_skipped"]
         elif kind == "disposition":
             appended, skipped = replay_disposition(
-                run_dir, timestamp, existing_dispositions,
+                run_dir, timestamp, written_seq, existing_dispositions,
             )
             events_appended += appended
             events_skipped += skipped
         else:
             appended, skipped = replay_comparison(
-                run_dir, timestamp, available_candidates,
+                run_dir, timestamp, written_seq, existing_candidates,
             )
             events_appended += appended
             events_skipped += skipped
@@ -1977,7 +2130,10 @@ def mark_discussed(values):
                 fail(f"append-only conflict at {path}", 65)
             mark_written = False
         else:
-            event = ledger_event("disposition", pr=pr, outcomes=outcomes)
+            event = ledger_event(
+                "disposition", pr=pr, outcomes=outcomes,
+                written_seq=next_feed_sequence(),
+            )
             mark_written = atomic_append(
                 path,
                 (json.dumps(event, separators=(",", ":"), sort_keys=True) + "\n").encode("utf-8"),
@@ -2049,20 +2205,13 @@ def digest_score_rows(events):
         elif event["type"] == "promoted":
             promoted.add(event["recurrence_key"])
     latest_by_key = {
-        key: max(
-            history,
-            key=lambda entry: (time_value(entry[1]["ts"]), entry[0]),
-        )[1]
+        key: max(history, key=lambda entry: entry[0])[1]
         for key, history in findings.items()
     }
     kind_by_key = {key: event["kind"] for key, event in latest_by_key.items()}
     key_verdict = {}
     kind_verdict = {}
-    newest_first = sorted(
-        enumerate(events),
-        key=lambda entry: (time_value(entry[1]["ts"]), entry[0]),
-        reverse=True,
-    )
+    newest_first = reversed(list(enumerate(events)))
     for _, event in newest_first:
         if event["type"] != "disposition":
             continue
@@ -2244,7 +2393,8 @@ def record_comparison(values):
             record = {
                 "schema": COMPARISON_SCHEMA, "schema_version": COMPARISON_VERSION,
                 "guided": os.fspath(guided_dir), "blind": os.fspath(blind_dir),
-                "written_at": utc_now(), "candidates": candidates,
+                "written_at": utc_now(), "written_seq": next_feed_sequence(),
+                "candidates": candidates,
             }
             if not valid_comparison_record(record):
                 fail("comparison produced an invalid durable record", 65)
@@ -2259,12 +2409,17 @@ def record_comparison(values):
             for event in previous if event["type"] == "signal_tune_candidate"
         }
         events = []
+        sequence_fields = (
+            {} if "written_seq" not in record
+            else {"written_seq": record["written_seq"]}
+        )
         for candidate in record["candidates"]:
             identity = comparison_candidate_identity(candidate)
             if identity in existing_candidates:
                 continue
             events.append(ledger_event(
                 "signal_tune_candidate", ts=record["written_at"], **candidate,
+                **sequence_fields,
             ))
             existing_candidates.add(identity)
         append_ledger_events(fd, events)
