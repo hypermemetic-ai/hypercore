@@ -16,9 +16,10 @@
 /cockpit/herdr/config.toml
 
 # pi project-local state (plan loop, settings) — live agent state, never tracked;
-# .pi/extensions/ IS tracked (project-local extensions are repository content)
+# .pi/extensions/ and .pi/prompts/ ARE tracked project-local content
 /.pi/*
 !/.pi/extensions/
+!/.pi/prompts/
 
 # machine-managed codex system skills — local installs, never tracked
 /skills/.system/
